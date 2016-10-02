@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+<meta content="utf-8" http-equiv="encoding">
+
+<title>3-sphere explorer</title>
+
+<style>
+	body {
+		margin: 0px;
+		overflow: hidden;
+	}
+
+	#info {
+		position: absolute;
+		top: 0px; width: 100%;
+		padding: 20px;
+		color: white;
+		text-align: center;
+	}
+	
+	#info a:link {
+				color: white;
+	}
+		
+	#info a:visited {
+		color: white;
+	}
+</style>
+
+<script type="text/javascript" src="lib/glMatrix-0.9.5.min.js"></script>
+
+<script type="text/javascript" src="utils/webgl_utils.js"></script>
+<script type="text/javascript" src="data/sphere.js"></script>
+
+
+
+<!-- simple pix shader -->
+<script id="shader-simple-fs" type="x-shader/x-fragment">
+	//#extension GL_EXT_frag_depth : enable
+
+	precision mediump float;
+	uniform vec4 uColor;
+	//varying float depthPassthru;
+	
+	void main(void) {
+		gl_FragColor = uColor;
+		//gl_FragDepth = depthPassthru;
+	}
+</script>
+<!-- vertex shader -->
+<!-- note that taking in 3vector for vertex positions since generally objects are significantly smaller than the 3-sphere radius, so can project them onto unit 3sphere
+(set w=1 and normalise to r=1) or j ust set w=1. --> 
+<!-- if normalisation is used, i expect will be more efficient to generate 4-vector vertiex buffers and pass those in -->
+<!-- mvmatrix will be an SO4 matrix. pmatrix will try a standard projection matrix -->
+<!-- possibly want to output additional varying to pass some depth variable -->
+<!-- TODO use textured shader to check that that interpolates in sensible way (ie perspective projection observed for rectangles). -->
+<script id="shader-simple-vs" type="x-shader/x-vertex">
+	attribute vec3 aVertexPosition;
+	uniform mat4 uMVMatrix;
+	uniform mat4 uPMatrix;
+	//varying float depthPassthru;
+			
+	void main(void) {
+		vec4 transformedCoord = uMVMatrix * vec4(aVertexPosition, 1.0);	//maybe should normalise this
+		gl_Position = uPMatrix * vec4(transformedCoord.xyz, 1.0);	//use the xyz co-rds with standard rendering.
+
+		//depthPassthru = transformedCoord.w;
+
+		//gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+	}
+</script>
+
+
+
+
+
+<script type="text/javascript">
+
+var shaderProgramColored;
+function initShaders(){				
+	shaderProgramColored = loadShader( "shader-simple-vs", "shader-simple-fs",{
+					attributes:["aVertexPosition"],
+					uniforms:["uPMatrix","uMVMatrix","uColor"]
+					});
+}
+
+
+
+
+
+var vertexPositionBuffer;
+var vertexIndexBuffer;
+
+function initBuffers(){
+	var sphereData = makeSphereData(61,32,0.05);
+
+	vertexPositionBuffer = gl.createBuffer();
+	bufferArrayData(vertexPositionBuffer, sphereData.vertices, 3);
+
+	var indexData = sphereData.indices;
+	vertexIndexBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer);
+	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indexData), gl.STATIC_DRAW);
+	vertexIndexBuffer.itemSize = 3;
+	vertexIndexBuffer.numItems = indexData.length;
+	
+	function bufferArrayData(buffer, arr, size){
+		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW);
+		buffer.itemSize = size;
+		buffer.numItems = arr.length / size;
+	}
+}
+
+function drawScene(frameTime){
+	resizecanvas();
+
+	requestAnimationFrame(drawScene);
+
+	mat4.perspective(120.0, gl.viewportWidth/ gl.viewportHeight, 0.01, 10, pMatrix); 
+		
+	//mat4.set(playerMatrix, playerCamera);
+	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+	
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	
+	drawWorldScene(frameTime, 0);
+}
+
+function drawWorldScene(frameTime) {		
+	//lots more to go here!!
+
+	//draw spheres
+	gl.useProgram(shaderProgramColored);		//TODO add this shader program
+	gl.uniform4fv(shaderProgramColored.uniforms.uColor, [1.0, 0.0, 0.0, 0.5]);	
+	
+	//create lines of spheres.
+	//unsure which order to apply transformations, so keep simple initially - lines of spheres crossing through default point
+
+	var numBallsInRing = 20.0;
+	var startAng = Math.PI / numBallsInRing;
+	var angleStep = startAng * 2.0;
+	
+	gl.uniform4fv(shaderProgramColored.uniforms.uColor, [1.0, 0.0, 0.0, 0.5]);	//RED
+	mat4.set(playerCamera, mvMatrix);
+	//try moving in z first so can see...
+	//zmove4matCols(mvMatrix, -0.5);
+	
+	xmove4mat(mvMatrix, startAng);
+	for (var ii=0;ii<numBallsInRing;ii++){
+		xmove4mat(mvMatrix, angleStep);
+		drawSphere();
+	}
+	
+	
+	gl.uniform4fv(shaderProgramColored.uniforms.uColor, [0.0, 1.0, 0.0, 0.5]);	//GREEN
+	mat4.set(playerCamera, mvMatrix);
+	//try moving in z first so can see...
+	//zmove4matCols(mvMatrix, -0.5);
+	
+	ymove4mat(mvMatrix, startAng);
+	for (var ii=0;ii<numBallsInRing;ii++){
+		ymove4mat(mvMatrix, angleStep);
+		drawSphere();
+	}
+	
+	gl.uniform4fv(shaderProgramColored.uniforms.uColor, [0.0, 0.0, 1.0, 0.5]);	//BLUE
+	mat4.set(playerCamera, mvMatrix);
+	
+	zmove4mat(mvMatrix, startAng);
+	for (var ii=0;ii<numBallsInRing;ii++){
+		zmove4mat(mvMatrix, angleStep);
+		drawSphere();
+	}
+	
+}
+
+
+function drawSphere(){
+	gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
+    gl.vertexAttribPointer(shaderProgramColored.attributes.aVertexPosition, vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer);
+		
+    setMatrixUniforms(shaderProgramColored);
+				
+    gl.drawElements(gl.TRIANGLES, vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+}
+
+
+
+
+//need all of these???
+var mvMatrix = mat4.create();
+var pMatrix = mat4.create();
+var playerMatrix = mat4.create();
+var playerCamera = mat4.create();
+
+function setMatrixUniforms(shaderProgram) {
+    gl.uniformMatrix4fv(shaderProgram.uniforms.uPMatrix, false, pMatrix);
+    gl.uniformMatrix4fv(shaderProgram.uniforms.uMVMatrix, false, mvMatrix);
+}
+
+function setupScene() {
+	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+	
+	mat4.identity(playerMatrix);
+	mat4.identity(playerCamera);	//not sure why have 2 matrices here...
+}
+
+var texture;
+function initTexture() {
+	texture = gl.createTexture();
+	texture.image = new Image();
+	texture.image.onload = function() {
+		gl.bindTexture(gl.TEXTURE_2D, texture);
+		//gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+		gl.generateMipmap(gl.TEXTURE_2D);
+		gl.bindTexture(gl.TEXTURE_2D, null);
+	}
+	texture.image.src = "img/ash_uvgrid01.jpg";
+}
+
+var canvas;
+function init(){
+
+
+window.addEventListener("keydown",function(evt){
+		console.log("key pressed : " + evt.keyCode);
+		var willPreventDefault=true;
+		switch (evt.keyCode){
+			case 87:				//W
+				movePlayer(0.01);
+				break;
+			case 83:				//S
+				movePlayer(-0.01);
+				break;
+			case 65:				//A
+				movePlayerLeft(0.01);
+				break;
+			case 68:				//D
+				movePlayerLeft(-0.01);
+				break;
+				/*
+			case 39:
+				turnPlayer(0.02);
+				break;
+			case 37:
+				turnPlayer(-0.02);
+				break;
+				*/
+			case 81:				//Q
+				rollPlayer(-0.02);	
+				break;
+			case 69:				//E
+				rollPlayer(0.02);	
+				break;
+				
+			case 32:				//spacebar
+				movePlayerUp(-0.01);
+				break;
+			case 17:				//ctrl
+				movePlayerUp(0.01);
+				break;
+				/*
+			default:
+				willPreventDefault=false;
+				break;
+			case 38:
+				pitchPlayer(-0.02);		//up arrow
+				break;
+			case 40:
+				pitchPlayer(0.02);
+				break;
+			*/
+		}
+		if (willPreventDefault){evt.preventDefault()};
+	})
+
+	canvas = document.getElementById("mycanvas");
+
+	
+	initGL();
+	initShaders();
+	initTexture();
+	initBuffers();
+	gl.clearColor(0.2, 0.2, 0.2, 1.0);
+    gl.enable(gl.DEPTH_TEST);
+	//gl.disable(gl.DEPTH_TEST);	//seems to have no effect??? (semi opaque seems to overwrite) or possibly blending isn't on by default
+	setupScene();
+	requestAnimationFrame(drawScene);
+}
+
+
+function xmove4mat(mat, angle){
+	rotate4mat(mat, 0, 3, angle);
+}
+function ymove4mat(mat, angle){
+	rotate4mat(mat, 1, 3, angle);
+}
+function zmove4mat(mat, angle){
+	rotate4mat(mat, 2, 3, angle);
+}
+
+function rotate4mat(mat, col1, col2, angle){
+	rotate4matRows(mat, col1, col2, angle);	//convenient to switch between trying rows and columns
+}
+
+function rotate4matCols(mat, col1, col2, angle){
+	//"rotate" the 4matrix about principal axes. unsure whether rows or columns consistent with other gl stuff
+	//for the time being, just pick one and go with it. (going with columns)
+	//maybe better to use angle/axis type rotation, but explicitly doing different rotations is easier to understand
+	
+	//4matrix is SO4, rotating col 0-2 into column 3 is a "translation" on the 3-sphere, rotating 0-2 into another column of 0-2 is like a rotation about a fixed point on the 3-sphere
+	
+	//todo how to add scaling into this.
+	
+	//the matrix is arraylike. mat[0] is top left c0r0, mat[1] is c1r0 etc
+	var tempVal;
+	var sAng = Math.sin(angle);
+	var cAng = Math.cos(angle);
+	for ( ;col1<16;col1+=4, col2+=4){
+		tempVal = sAng*mat[col2] + cAng*mat[col1];
+		mat[col2] = cAng*mat[col2] - sAng*mat[col1];
+		mat[col1] = tempVal;
+	}
+}
+
+function rotate4matRows(mat, row1, row2, angle){
+
+	var tempVal;
+	var sAng = Math.sin(angle);
+	var cAng = Math.cos(angle);
+	var idx1 = row1*4;
+	var idx2 = row2*4;
+	
+	for (var idx =0;idx<4;idx++,idx1++, idx2++){
+		tempVal = sAng*mat[idx2] + cAng*mat[idx1];
+		mat[idx2] = cAng*mat[idx2] - sAng*mat[idx1];
+		mat[idx1] = tempVal;
+	}
+}
+
+
+
+
+
+function movePlayer(amount){
+	zmove4mat(playerCamera, amount);
+}
+function movePlayerLeft(amount){
+	xmove4mat(playerCamera, amount);
+}
+function movePlayerUp(amount){
+	ymove4mat(playerCamera, amount);
+}
+function rollPlayer(amount){
+	rotate4mat(playerCamera, 0, 1, amount);
+}
+
+
+
+
+
+</script>
+
+
+
+
+</head>
+
+
+
+<body onload="init()">
+<div id="info">3-sphere visualised in WebGL demo.<a href="https://github.com/filbs111/3sphere-explorer" target="_blank">https://github.com/filbs111/3sphere-explorer</a></div>
+		
+
+<canvas id="mycanvas" width="1920" height="1080">CANVAS TO GO HERE</canvas>
+
+
+</body>
+
+
+</html>
