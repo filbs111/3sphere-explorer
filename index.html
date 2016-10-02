@@ -34,6 +34,7 @@
 
 <script type="text/javascript" src="utils/webgl_utils.js"></script>
 <script type="text/javascript" src="data/sphere.js"></script>
+<script type="text/javascript" src="data/levelCubeData.js"></script>
 
 
 
@@ -43,10 +44,10 @@
 
 	precision mediump float;
 	uniform vec4 uColor;
-	//varying float depthPassthru;
+	varying float fog;
 	
 	void main(void) {
-		gl_FragColor = uColor;
+		gl_FragColor = vec4( fog* uColor.xyz, 1.0);		
 		//gl_FragDepth = depthPassthru;
 	}
 </script>
@@ -61,18 +62,52 @@
 	attribute vec3 aVertexPosition;
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
-	//varying float depthPassthru;
+	varying float fog;
 			
 	void main(void) {
 		vec4 transformedCoord = uMVMatrix * vec4(aVertexPosition, 1.0);	//maybe should normalise this
 		gl_Position = uPMatrix * vec4(transformedCoord.xyz, 1.0);	//use the xyz co-rds with standard rendering.
 
-		//depthPassthru = transformedCoord.w;
+		fog = 1.0+ transformedCoord.z;	//plausibly can just access this from the frag shader via some standard variable anyway
+										//is 1.0 at camera, goes to 0 quarter way around the 3-sphere, gets back to 1 halfway around.
 
 		//gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
 	}
 </script>
 
+
+<!-- tex mapped pix shader -->
+<script id="shader-texmap-fs" type="x-shader/x-fragment">
+	precision mediump float;
+	varying vec2 vTextureCoord;
+	uniform sampler2D uSampler;
+	uniform vec4 uColor;
+	varying float fog;
+
+	void main(void) {
+		//gl_FragColor = uColor*texture2D(uSampler, vTextureCoord);
+		
+		gl_FragColor = uColor*fog*texture2D(uSampler, vTextureCoord);
+		gl_FragColor.a =1.0;
+	}
+</script>
+<!-- vertex shader with tex coords -->
+<script id="shader-texmap-vs" type="x-shader/x-vertex">
+	attribute vec3 aVertexPosition;
+	attribute vec2 aTextureCoord;
+	varying vec2 vTextureCoord;
+	uniform mat4 uMVMatrix;
+	uniform mat4 uPMatrix;
+	varying float fog;
+	
+	void main(void) {
+		//gl_Position = uPMatrix * uMVMatrix * vec4(0.01*aVertexPosition, 1.0);	//note 0.01 to make cube smaller - todo scaling as part of mvMatrix
+		vec4 transformedCoord = uMVMatrix * vec4(0.02*aVertexPosition, 1.0);	//maybe should normalise this
+		gl_Position = uPMatrix * vec4(transformedCoord.xyz, 1.0);	//use the xyz co-rds with standard rendering.
+		fog = 1.0 + transformedCoord.z;
+		vTextureCoord = aTextureCoord;
+	}
+</script>
 
 
 
@@ -85,6 +120,10 @@ function initShaders(){
 					attributes:["aVertexPosition"],
 					uniforms:["uPMatrix","uMVMatrix","uColor"]
 					});
+	shaderProgramTexmap = loadShader( "shader-texmap-vs", "shader-texmap-fs",{
+					attributes:["aVertexPosition", "aTextureCoord"],
+					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor"]
+					});
 }
 
 
@@ -93,6 +132,10 @@ function initShaders(){
 
 var vertexPositionBuffer;
 var vertexIndexBuffer;
+
+var cubeVertexPositionBuffer;
+var cubeVertexTextureCoordBuffer;
+var cubeVertexIndexBuffer;
 
 function initBuffers(){
 	var sphereData = makeSphereData(61,32,0.05);
@@ -107,6 +150,20 @@ function initBuffers(){
 	vertexIndexBuffer.itemSize = 3;
 	vertexIndexBuffer.numItems = indexData.length;
 	
+	//cube. data is in data/levelCubeData.js
+	cubeVertexPositionBuffer= gl.createBuffer();
+	bufferArrayData(cubeVertexPositionBuffer, levelCubeData.vertices, 3);
+	
+	cubeVertexTextureCoordBuffer= gl.createBuffer();
+	bufferArrayData(cubeVertexTextureCoordBuffer, levelCubeData.uvcoords, 2);
+	
+	cubeVertexIndexBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
+	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(levelCubeData.indices), gl.STATIC_DRAW);
+	cubeVertexIndexBuffer.itemSize = 3;
+	cubeVertexIndexBuffer.numItems = levelCubeData.indices.length;
+	
+	
 	function bufferArrayData(buffer, arr, size){
 		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW);
@@ -120,7 +177,7 @@ function drawScene(frameTime){
 
 	requestAnimationFrame(drawScene);
 
-	mat4.perspective(120.0, gl.viewportWidth/ gl.viewportHeight, 0.01, 10, pMatrix); 
+	mat4.perspective(90.0, gl.viewportWidth/ gl.viewportHeight, 0.01, 10, pMatrix); 
 		
 	//mat4.set(playerMatrix, playerCamera);
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
@@ -131,11 +188,11 @@ function drawScene(frameTime){
 }
 
 function drawWorldScene(frameTime) {		
-	//lots more to go here!!
-
-	//draw spheres
-	gl.useProgram(shaderProgramColored);		//TODO add this shader program
-	gl.uniform4fv(shaderProgramColored.uniforms.uColor, [1.0, 0.0, 0.0, 0.5]);	
+	
+	//var activeShaderProgram = shaderProgramColored;	//draw spheres
+	var activeShaderProgram = shaderProgramTexmap;	//draw cubes
+	
+	gl.useProgram(activeShaderProgram);
 	
 	//create lines of spheres.
 	//unsure which order to apply transformations, so keep simple initially - lines of spheres crossing through default point
@@ -144,7 +201,7 @@ function drawWorldScene(frameTime) {
 	var startAng = Math.PI / numBallsInRing;
 	var angleStep = startAng * 2.0;
 	
-	gl.uniform4fv(shaderProgramColored.uniforms.uColor, [1.0, 0.0, 0.0, 0.5]);	//RED
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 0.4, 1.0]);	//RED
 	mat4.set(playerCamera, mvMatrix);
 	//try moving in z first so can see...
 	//zmove4matCols(mvMatrix, -0.5);
@@ -152,11 +209,11 @@ function drawWorldScene(frameTime) {
 	xmove4mat(mvMatrix, startAng);
 	for (var ii=0;ii<numBallsInRing;ii++){
 		xmove4mat(mvMatrix, angleStep);
-		drawSphere();
+		drawItem();
 	}
 	
 	
-	gl.uniform4fv(shaderProgramColored.uniforms.uColor, [0.0, 1.0, 0.0, 0.5]);	//GREEN
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
 	mat4.set(playerCamera, mvMatrix);
 	//try moving in z first so can see...
 	//zmove4matCols(mvMatrix, -0.5);
@@ -164,20 +221,25 @@ function drawWorldScene(frameTime) {
 	ymove4mat(mvMatrix, startAng);
 	for (var ii=0;ii<numBallsInRing;ii++){
 		ymove4mat(mvMatrix, angleStep);
-		drawSphere();
+		drawItem();
 	}
 	
-	gl.uniform4fv(shaderProgramColored.uniforms.uColor, [0.0, 0.0, 1.0, 0.5]);	//BLUE
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 1.0, 1.0]);	//BLUE
 	mat4.set(playerCamera, mvMatrix);
 	
 	zmove4mat(mvMatrix, startAng);
 	for (var ii=0;ii<numBallsInRing;ii++){
 		zmove4mat(mvMatrix, angleStep);
-		drawSphere();
+		drawItem();
 	}
 	
 }
 
+
+function drawItem(){
+	//drawSphere();
+	drawCube();
+}
 
 function drawSphere(){
 	gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
@@ -190,6 +252,29 @@ function drawSphere(){
     gl.drawElements(gl.TRIANGLES, vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 }
 
+function drawCube(){
+
+	//gl.useProgram(shaderProgramTexmap);
+	//gl.enableVertexAttribArray(1);
+	
+	//a lot of this stuff likely doesn't need to be done every time when draing a load of cubes sequentially
+	
+	gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
+	gl.vertexAttribPointer(shaderProgramTexmap.attributes.aVertexPosition, cubeVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexTextureCoordBuffer);
+	gl.vertexAttribPointer(shaderProgramTexmap.attributes.aTextureCoord, cubeVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
+	setMatrixUniforms(shaderProgramTexmap);
+	
+	//gl.uniform4fv(shaderProgramTexmap.uniforms.uTintColor, [1.0,0.5,0.5,1.0]);	//set tint colour
+	
+	gl.activeTexture(gl.TEXTURE0);
+	gl.bindTexture(gl.TEXTURE_2D, texture);
+	gl.uniform1i(shaderProgramTexmap.uniforms.uSampler, 0);
+	
+	gl.drawElements(gl.TRIANGLES, cubeVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+}
 
 
 
