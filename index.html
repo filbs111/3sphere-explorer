@@ -102,7 +102,7 @@
 	
 	void main(void) {
 		//gl_Position = uPMatrix * uMVMatrix * vec4(0.01*aVertexPosition, 1.0);	//note 0.01 to make cube smaller - todo scaling as part of mvMatrix
-		vec4 transformedCoord = uMVMatrix * vec4(0.02*aVertexPosition, 1.0);	//maybe should normalise this
+		vec4 transformedCoord = uMVMatrix * vec4(0.05*aVertexPosition, 1.0);	//maybe should normalise this
 		gl_Position = uPMatrix * vec4(transformedCoord.xyz, 1.0);	//use the xyz co-rds with standard rendering.
 		
 		//change z value such that, when divided by gl_Position.w, gives some depth that increases with distance around hypersphere. maybe better done via matrices
@@ -201,12 +201,16 @@ function drawWorldScene(frameTime) {
 	//create lines of spheres.
 	//unsure which order to apply transformations, so keep simple initially - lines of spheres crossing through default point
 
+	var invertedPlayerCamera = mat4.create();
+	mat4.set(playerCamera, invertedPlayerCamera);
+	mat4.transpose(invertedPlayerCamera);
+	
 	var numBallsInRing = 20.0;
 	var startAng = Math.PI / numBallsInRing;
 	var angleStep = startAng * 2.0;
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 0.4, 1.0]);	//RED
-	mat4.set(playerCamera, mvMatrix);
+	mat4.set(invertedPlayerCamera, mvMatrix);
 	//try moving in z first so can see...
 	//zmove4matCols(mvMatrix, -0.5);
 	
@@ -218,7 +222,7 @@ function drawWorldScene(frameTime) {
 	
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
-	mat4.set(playerCamera, mvMatrix);
+	mat4.set(invertedPlayerCamera, mvMatrix);
 	//try moving in z first so can see...
 	//zmove4matCols(mvMatrix, -0.5);
 	
@@ -229,7 +233,7 @@ function drawWorldScene(frameTime) {
 	}
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 1.0, 1.0]);	//BLUE
-	mat4.set(playerCamera, mvMatrix);
+	mat4.set(invertedPlayerCamera, mvMatrix);
 	
 	zmove4mat(mvMatrix, startAng);
 	for (var ii=0;ii<numBallsInRing;ii++){
@@ -336,14 +340,12 @@ window.addEventListener("keydown",function(evt){
 			case 68:				//D
 				movePlayerLeft(-0.01);
 				break;
-				/*
 			case 39:
 				turnPlayer(0.02);
 				break;
 			case 37:
 				turnPlayer(-0.02);
 				break;
-				*/
 			case 81:				//Q
 				rollPlayer(-0.02);	
 				break;
@@ -357,17 +359,15 @@ window.addEventListener("keydown",function(evt){
 			case 17:				//ctrl
 				movePlayerUp(0.01);
 				break;
-				/*
-			default:
-				willPreventDefault=false;
-				break;
 			case 38:
 				pitchPlayer(-0.02);		//up arrow
 				break;
 			case 40:
 				pitchPlayer(0.02);
 				break;
-			*/
+			default:
+				willPreventDefault=false;
+				break;
 		}
 		if (willPreventDefault){evt.preventDefault()};
 	})
@@ -441,16 +441,22 @@ function rotate4matRows(mat, row1, row2, angle){
 
 
 function movePlayer(amount){
-	zmove4mat(playerCamera, amount);
+	zmove4mat(playerCamera, -amount);
 }
 function movePlayerLeft(amount){
-	xmove4mat(playerCamera, amount);
+	xmove4mat(playerCamera, -amount);
 }
 function movePlayerUp(amount){
-	ymove4mat(playerCamera, amount);
+	ymove4mat(playerCamera, -amount);
 }
 function rollPlayer(amount){
-	rotate4mat(playerCamera, 0, 1, amount);
+	rotate4mat(playerCamera, 0, 1, -amount);
+}
+function turnPlayer(amount){
+	rotate4mat(playerCamera, 0, 2, amount);
+}
+function pitchPlayer(amount){
+	rotate4mat(playerCamera, 1, 2, -amount);
 }
 
 
