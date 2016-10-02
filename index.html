@@ -104,7 +104,11 @@
 		//gl_Position = uPMatrix * uMVMatrix * vec4(0.01*aVertexPosition, 1.0);	//note 0.01 to make cube smaller - todo scaling as part of mvMatrix
 		vec4 transformedCoord = uMVMatrix * vec4(0.02*aVertexPosition, 1.0);	//maybe should normalise this
 		gl_Position = uPMatrix * vec4(transformedCoord.xyz, 1.0);	//use the xyz co-rds with standard rendering.
-		fog = 1.0 + transformedCoord.z;
+		
+		//change z value such that, when divided by gl_Position.w, gives some depth that increases with distance around hypersphere. maybe better done via matrices
+		gl_Position.z = gl_Position.w * (transformedCoord.w);
+		
+		fog = 1.0-transformedCoord.w;
 		vTextureCoord = aTextureCoord;
 	}
 </script>
@@ -375,7 +379,7 @@ window.addEventListener("keydown",function(evt){
 	initShaders();
 	initTexture();
 	initBuffers();
-	gl.clearColor(0.2, 0.2, 0.2, 1.0);
+	gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.enable(gl.DEPTH_TEST);
 	//gl.disable(gl.DEPTH_TEST);	//seems to have no effect??? (semi opaque seems to overwrite) or possibly blending isn't on by default
 	setupScene();
