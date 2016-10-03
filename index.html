@@ -79,7 +79,7 @@
 <!-- tex mapped pix shader -->
 <script id="shader-texmap-fs" type="x-shader/x-fragment">
 	precision mediump float;
-	varying vec2 vTextureCoord;
+	varying vec3 vTextureCoord;
 	uniform sampler2D uSampler;
 	uniform vec4 uColor;
 	varying float fog;
@@ -87,7 +87,7 @@
 	void main(void) {
 		//gl_FragColor = uColor*texture2D(uSampler, vTextureCoord);
 		
-		gl_FragColor = uColor*fog*texture2D(uSampler, vTextureCoord);
+		gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord);
 		gl_FragColor.a =1.0;
 	}
 </script>
@@ -95,21 +95,20 @@
 <script id="shader-texmap-vs" type="x-shader/x-vertex">
 	attribute vec3 aVertexPosition;
 	attribute vec2 aTextureCoord;
-	varying vec2 vTextureCoord;
+	varying vec3 vTextureCoord;
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
 	varying float fog;
 	
 	void main(void) {
-		//gl_Position = uPMatrix * uMVMatrix * vec4(0.01*aVertexPosition, 1.0);	//note 0.01 to make cube smaller - todo scaling as part of mvMatrix
-		vec4 transformedCoord = uMVMatrix * vec4(0.05*aVertexPosition, 1.0);	//maybe should normalise this
-		gl_Position = uPMatrix * vec4(transformedCoord.xyz, 1.0);	//use the xyz co-rds with standard rendering.
+		vec4 transformedCoord = uMVMatrix * normalize(vec4(0.1*aVertexPosition, 1.0)); //note 0.1 to make cube smaller - todo scaling as part of mvMatrix
 		
-		//change z value such that, when divided by gl_Position.w, gives some depth that increases with distance around hypersphere. maybe better done via matrices
-		gl_Position.z = gl_Position.w * (transformedCoord.w);
+		gl_Position = uPMatrix * vec4((transformedCoord.xyz)/(1.0+transformedCoord.w), 1.0);
 		
-		fog = 1.0-transformedCoord.w;
-		vTextureCoord = aTextureCoord;
+		fog = 0.5*(1.0 + transformedCoord.w);
+		
+		float myZ = 1.0/(1.0+transformedCoord.w);
+		vTextureCoord = vec3( aTextureCoord.st*myZ, myZ );
 	}
 </script>
 
@@ -181,7 +180,7 @@ function drawScene(frameTime){
 
 	requestAnimationFrame(drawScene);
 
-	mat4.perspective(90.0, gl.viewportWidth/ gl.viewportHeight, 0.01, 10, pMatrix); 
+	mat4.perspective(90.0, gl.viewportWidth/ gl.viewportHeight, 0.01, 100, pMatrix); 
 		
 	//mat4.set(playerMatrix, playerCamera);
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
@@ -441,13 +440,13 @@ function rotate4matRows(mat, row1, row2, angle){
 
 
 function movePlayer(amount){
-	zmove4mat(playerCamera, -amount);
+	zmove4mat(playerCamera, amount);
 }
 function movePlayerLeft(amount){
-	xmove4mat(playerCamera, -amount);
+	xmove4mat(playerCamera, amount);
 }
 function movePlayerUp(amount){
-	ymove4mat(playerCamera, -amount);
+	ymove4mat(playerCamera, amount);
 }
 function rollPlayer(amount){
 	rotate4mat(playerCamera, 0, 1, -amount);
@@ -473,7 +472,7 @@ function pitchPlayer(amount){
 
 
 <body onload="init()">
-<div id="info">3-sphere visualised in WebGL demo.<a href="https://github.com/filbs111/3sphere-explorer" target="_blank">https://github.com/filbs111/3sphere-explorer</a></div>
+<div id="info">3-sphere visualised in WebGL demo. Arrow keys, QE to rotate, WASD, space/ctrl to translate.<a href="https://github.com/filbs111/3sphere-explorer" target="_blank">https://github.com/filbs111/3sphere-explorer</a></div>
 		
 
 <canvas id="mycanvas" width="1920" height="1080">CANVAS TO GO HERE</canvas>
