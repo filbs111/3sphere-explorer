@@ -204,7 +204,7 @@ function drawWorldScene(frameTime) {
 	mat4.set(playerCamera, invertedPlayerCamera);
 	mat4.transpose(invertedPlayerCamera);
 	
-	var numBallsInRing = 20.0;
+	var numBallsInRing = 20;
 	var startAng = Math.PI / numBallsInRing;
 	var angleStep = startAng * 2.0;
 	
@@ -228,6 +228,26 @@ function drawWorldScene(frameTime) {
 	
 	rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
 	drawRing();
+	
+	
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.4, 1.0]);	//YELLOW
+	mat4.set(invertedPlayerCamera, mvMatrix);
+	xmove4mat(mvMatrix, Math.PI*0.5);
+	rotate4mat(mvMatrix, 0, 1, Math.PI*0.5);
+	drawRing();
+	
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 1.0, 1.0]);	//CYAN
+	mat4.set(invertedPlayerCamera, mvMatrix);
+	xmove4mat(mvMatrix, Math.PI*0.5);
+	rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
+	drawRing();
+	
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 1.0, 1.0]);	//MAGENTA
+	mat4.set(invertedPlayerCamera, mvMatrix);
+	ymove4mat(mvMatrix, Math.PI*0.5);
+	rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
+	drawRing();
+	
 	
 	function drawRing(){
 		xmove4mat(mvMatrix, startAng);
