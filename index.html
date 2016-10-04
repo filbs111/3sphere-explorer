@@ -213,31 +213,28 @@ function drawWorldScene(frameTime) {
 	//try moving in z first so can see...
 	//zmove4matCols(mvMatrix, -0.5);
 	
-	xmove4mat(mvMatrix, startAng);
-	for (var ii=0;ii<numBallsInRing;ii++){
-		xmove4mat(mvMatrix, angleStep);
-		drawItem();
-	}
-	
+	drawRing();
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
 	mat4.set(invertedPlayerCamera, mvMatrix);
 	//try moving in z first so can see...
 	//zmove4matCols(mvMatrix, -0.5);
 	
-	ymove4mat(mvMatrix, startAng);
-	for (var ii=0;ii<numBallsInRing;ii++){
-		ymove4mat(mvMatrix, angleStep);
-		drawItem();
-	}
+	rotate4mat(mvMatrix, 0, 1, Math.PI*0.5);
+	drawRing();
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 1.0, 1.0]);	//BLUE
 	mat4.set(invertedPlayerCamera, mvMatrix);
 	
-	zmove4mat(mvMatrix, startAng);
-	for (var ii=0;ii<numBallsInRing;ii++){
-		zmove4mat(mvMatrix, angleStep);
-		drawItem();
+	rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
+	drawRing();
+	
+	function drawRing(){
+		xmove4mat(mvMatrix, startAng);
+		for (var ii=0;ii<numBallsInRing;ii++){
+			xmove4mat(mvMatrix, angleStep);
+			drawItem();
+		}
 	}
 	
 }
