@@ -380,6 +380,10 @@ function setupScene() {
 	
 	mat4.identity(playerMatrix);
 	mat4.identity(playerCamera);	//not sure why have 2 matrices here...
+	
+	//start player off outside of boxes
+	movePlayerUp(-0.2);	//up is down!
+	movePlayerLeft(0.2);
 }
 
 var texture;
