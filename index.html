@@ -35,6 +35,7 @@
 <script type="text/javascript" src="utils/webgl_utils.js"></script>
 <script type="text/javascript" src="data/sphere.js"></script>
 <script type="text/javascript" src="data/levelCubeData.js"></script>
+<script type="text/javascript" src="data/tennisBall.js"></script>
 
 
 
@@ -113,17 +114,44 @@
 </script>
 
 
+<!-- vertex shader with tex coords and 4vector input positions (instead of projected 3vectors.)-->
+<script id="shader-texmap-vs-4vec" type="x-shader/x-vertex">
+	attribute vec4 aVertexPosition;
+	attribute vec2 aTextureCoord;
+	varying vec3 vTextureCoord;
+	uniform mat4 uMVMatrix;
+	uniform mat4 uPMatrix;
+	varying float fog;
+	
+	void main(void) {
+		vec4 transformedCoord = uMVMatrix * aVertexPosition;
+		
+		gl_Position = uPMatrix * vec4((transformedCoord.xyz)/(1.0+transformedCoord.w), 1.0);
+		
+		fog = 0.5*(1.0 + transformedCoord.w);
+		
+		float myZ = 1.0/(1.0+transformedCoord.w);
+		vTextureCoord = vec3( aTextureCoord.st*myZ, myZ );
+	}
+</script>
+
 
 
 <script type="text/javascript">
 
-var shaderProgramColored;
+var shaderProgramColored,
+	shaderProgramTexmap,
+	shaderProgramTexmap4Vec;
 function initShaders(){				
 	shaderProgramColored = loadShader( "shader-simple-vs", "shader-simple-fs",{
 					attributes:["aVertexPosition"],
 					uniforms:["uPMatrix","uMVMatrix","uColor"]
 					});
 	shaderProgramTexmap = loadShader( "shader-texmap-vs", "shader-texmap-fs",{
+					attributes:["aVertexPosition", "aTextureCoord"],
+					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor"]
+					});
+	shaderProgramTexmap4Vec = loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs",{
 					attributes:["aVertexPosition", "aTextureCoord"],
 					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor"]
 					});
@@ -139,6 +167,10 @@ var vertexIndexBuffer;
 var cubeVertexPositionBuffer;
 var cubeVertexTextureCoordBuffer;
 var cubeVertexIndexBuffer;
+
+var tennisBallVertexPositionBuffer,
+    tennisBallVertexTextureCoordBuffer,
+	tennisBallVertexIndexBuffer;
 
 function initBuffers(){
 	var sphereData = makeSphereData(61,32,0.05);
@@ -166,6 +198,16 @@ function initBuffers(){
 	cubeVertexIndexBuffer.itemSize = 3;
 	cubeVertexIndexBuffer.numItems = levelCubeData.indices.length;
 	
+	//"tennis ball". data in data/tennisBall.js
+	tennisBallVertexPositionBuffer = gl.createBuffer();
+	bufferArrayData(tennisBallVertexPositionBuffer, tennisBallData.vertices, 4);
+	tennisBallVertexTextureCoordBuffer= gl.createBuffer();
+	bufferArrayData(tennisBallVertexTextureCoordBuffer, tennisBallData.uvcoords, 2);
+	tennisBallVertexIndexBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, tennisBallVertexIndexBuffer);
+	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(tennisBallData.indices), gl.STATIC_DRAW);
+	tennisBallVertexIndexBuffer.itemSize = 3;
+	tennisBallVertexIndexBuffer.numItems = tennisBallData.indices.length;
 	
 	function bufferArrayData(buffer, arr, size){
 		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -191,7 +233,6 @@ function drawScene(frameTime){
 }
 
 function drawWorldScene(frameTime) {		
-	
 	//var activeShaderProgram = shaderProgramColored;	//draw spheres
 	var activeShaderProgram = shaderProgramTexmap;	//draw cubes
 	
@@ -236,13 +277,13 @@ function drawWorldScene(frameTime) {
 	rotate4mat(mvMatrix, 0, 1, Math.PI*0.5);
 	drawRing();
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 1.0, 1.0]);	//CYAN
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 1.0, 1.0]);	//MAGENTA
 	mat4.set(invertedPlayerCamera, mvMatrix);
 	xmove4mat(mvMatrix, Math.PI*0.5);
 	rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
 	drawRing();
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 1.0, 1.0]);	//MAGENTA
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 1.0, 1.0]);	//CYAN
 	mat4.set(invertedPlayerCamera, mvMatrix);
 	ymove4mat(mvMatrix, Math.PI*0.5);
 	rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
@@ -257,6 +298,12 @@ function drawWorldScene(frameTime) {
 		}
 	}
 	
+	
+	activeShaderProgram = shaderProgramTexmap4Vec;
+	gl.useProgram(activeShaderProgram);
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
+	mat4.set(invertedPlayerCamera, mvMatrix);
+	drawTennisBall();
 }
 
 
@@ -300,7 +347,22 @@ function drawCube(){
 	gl.drawElements(gl.TRIANGLES, cubeVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 }
 
-
+function drawTennisBall(){
+	gl.bindBuffer(gl.ARRAY_BUFFER, tennisBallVertexPositionBuffer);
+    gl.vertexAttribPointer(shaderProgramTexmap4Vec.attributes.aVertexPosition, tennisBallVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	
+	gl.bindBuffer(gl.ARRAY_BUFFER, tennisBallVertexTextureCoordBuffer);
+	gl.vertexAttribPointer(shaderProgramTexmap4Vec.attributes.aTextureCoord, tennisBallVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, tennisBallVertexIndexBuffer);
+	setMatrixUniforms(shaderProgramTexmap4Vec);
+	
+	gl.activeTexture(gl.TEXTURE0);
+	gl.bindTexture(gl.TEXTURE_2D, texture);
+	gl.uniform1i(shaderProgramTexmap4Vec.uniforms.uSampler, 0);
+	
+	gl.drawElements(gl.TRIANGLES, tennisBallVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+}
 
 //need all of these???
 var mvMatrix = mat4.create();
@@ -347,7 +409,7 @@ function init(){
 
 
 window.addEventListener("keydown",function(evt){
-		console.log("key pressed : " + evt.keyCode);
+		//console.log("key pressed : " + evt.keyCode);
 		var willPreventDefault=true;
 		switch (evt.keyCode){
 			case 87:				//W
@@ -409,14 +471,14 @@ window.addEventListener("keydown",function(evt){
 	});
 	canvas.addEventListener("mousemove", function(evt){
 		if (mouseInfo.dragging){
-			console.log("evt offsetX = " + evt.offsetX + ", offsetY = " + evt.offsetY);
-			console.log("moved : " + evt.movementX + ", movementY = " + evt.movementY);	//this is very nearly the same as the calculated version
-			console.log("calculated moved : " + (evt.offsetX - mouseInfo.x) + ", movementY = " + (evt.offsetY - mouseInfo.y) );
+			//console.log("evt offsetX = " + evt.offsetX + ", offsetY = " + evt.offsetY);
+			//console.log("moved : " + evt.movementX + ", movementY = " + evt.movementY);	//this is very nearly the same as the calculated version
+			//console.log("calculated moved : " + (evt.offsetX - mouseInfo.x) + ", movementY = " + (evt.offsetY - mouseInfo.y) );
 			mouseInfo.x = evt.offsetX;
 			mouseInfo.y = evt.offsetY;
 			
 			var pointingDir = getPointingDirectionFromScreenCoordinate({x:mouseInfo.x, y: mouseInfo.y});
-			console.log("pointingDir = " + pointingDir);
+			//console.log("pointingDir = " + pointingDir);
 			
 			//get the direction of current and previous mouse position.
 			//do a cross product to work out the angle rotated
