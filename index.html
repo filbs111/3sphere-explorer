@@ -30,6 +30,7 @@
 	}
 </style>
 
+<script type="text/javascript" src="lib/stats.min.js"></script>
 <script type="text/javascript" src="lib/glMatrix-0.9.5.min.js"></script>
 
 <script type="text/javascript" src="utils/webgl_utils.js"></script>
@@ -221,7 +222,9 @@ function drawScene(frameTime){
 	resizecanvas();
 
 	requestAnimationFrame(drawScene);
-
+	stats.end();
+	stats.begin();
+	
 	mat4.perspective(90.0, gl.viewportWidth/ gl.viewportHeight, 0.01, 100, pMatrix); 
 		
 	//mat4.set(playerMatrix, playerCamera);
@@ -408,11 +411,15 @@ var mouseInfo = {
 	dragging: false,
 	lastPointingDir:{}
 };
+var stats;
 var canvas;
 function init(){
 
+	stats = new Stats();
+	stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+	document.body.appendChild( stats.dom );
 
-window.addEventListener("keydown",function(evt){
+	window.addEventListener("keydown",function(evt){
 		//console.log("key pressed : " + evt.keyCode);
 		var willPreventDefault=true;
 		switch (evt.keyCode){
