@@ -30,6 +30,7 @@
 	}
 </style>
 
+<script type="text/javascript" src="lib/dat.gui.min.js"></script>
 <script type="text/javascript" src="lib/stats.min.js"></script>
 <script type="text/javascript" src="lib/glMatrix-0.9.5.min.js"></script>
 
@@ -257,7 +258,7 @@ function drawWorldScene(frameTime) {
 	//try moving in z first so can see...
 	//zmove4matCols(mvMatrix, -0.5);
 	
-	drawRing();
+	if (guiParams.drawShapes['boxes y=z=0']){drawRing();}
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
 	mat4.set(invertedPlayerCamera, mvMatrix);
@@ -265,32 +266,32 @@ function drawWorldScene(frameTime) {
 	//zmove4matCols(mvMatrix, -0.5);
 	
 	rotate4mat(mvMatrix, 0, 1, Math.PI*0.5);
-	drawRing();
+	if (guiParams.drawShapes['boxes x=z=0']){drawRing();}
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 1.0, 1.0]);	//BLUE
 	mat4.set(invertedPlayerCamera, mvMatrix);
 	
 	rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
-	drawRing();
+	if (guiParams.drawShapes['boxes x=y=0']){drawRing();}
 	
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.4, 1.0]);	//YELLOW
 	mat4.set(invertedPlayerCamera, mvMatrix);
 	xmove4mat(mvMatrix, Math.PI*0.5);
 	rotate4mat(mvMatrix, 0, 1, Math.PI*0.5);
-	drawRing();
+	if (guiParams.drawShapes['boxes z=w=0']){drawRing();}
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 1.0, 1.0]);	//MAGENTA
 	mat4.set(invertedPlayerCamera, mvMatrix);
 	xmove4mat(mvMatrix, Math.PI*0.5);
 	rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
-	drawRing();
+	if (guiParams.drawShapes['boxes y=w=0']){drawRing();}
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 1.0, 1.0]);	//CYAN
 	mat4.set(invertedPlayerCamera, mvMatrix);
 	ymove4mat(mvMatrix, Math.PI*0.5);
 	rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
-	drawRing();
+	if (guiParams.drawShapes['boxes x=w=0']){drawRing();}
 	
 	
 	function drawRing(){
@@ -301,12 +302,13 @@ function drawWorldScene(frameTime) {
 		}
 	}
 	
-	
-	activeShaderProgram = shaderProgramTexmap4Vec;
-	gl.useProgram(activeShaderProgram);
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
-	mat4.set(invertedPlayerCamera, mvMatrix);
-	drawTennisBall();
+	if (guiParams.drawShapes['x*x+y*y=z*z+w*w']){
+		activeShaderProgram = shaderProgramTexmap4Vec;
+		gl.useProgram(activeShaderProgram);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		drawTennisBall();
+	}
 }
 
 
@@ -412,6 +414,17 @@ var mouseInfo = {
 	lastPointingDir:{}
 };
 var stats;
+var guiParams={
+	drawShapes:{
+		'x*x+y*y=z*z+w*w':true,
+		'boxes y=z=0':true,	//x*x+w*w=1
+		'boxes x=z=0':true,	//y*y+w*w=1
+		'boxes x=y=0':true,	//z*z+w*w=1
+		'boxes x=w=0':true,
+		'boxes y=w=0':true,
+		'boxes z=w=0':true
+	}
+};
 var canvas;
 function init(){
 
@@ -419,6 +432,13 @@ function init(){
 	stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
 	document.body.appendChild( stats.dom );
 
+	var gui = new dat.GUI();
+	var drawShapesFolder = gui.addFolder('drawShapes');
+	for (shape in guiParams.drawShapes){
+		console.log(shape);
+		drawShapesFolder.add(guiParams.drawShapes, shape );
+	}
+	
 	window.addEventListener("keydown",function(evt){
 		//console.log("key pressed : " + evt.keyCode);
 		var willPreventDefault=true;
@@ -465,6 +485,7 @@ function init(){
 				break;
 		}
 		if (willPreventDefault){evt.preventDefault()};
+		printPlayerPosition();
 	})
 
 	canvas = document.getElementById("mycanvas");
@@ -590,6 +611,11 @@ function turnPlayer(amount){
 }
 function pitchPlayer(amount){
 	rotate4mat(playerCamera, 1, 2, -amount);
+}
+
+function printPlayerPosition(){
+	console.log('position: x = ' + playerCamera[12].toFixed(2) + ', y = ' + playerCamera[13].toFixed(2) + 
+						', z = ' + playerCamera[14].toFixed(2) + ', w = ' + playerCamera[15].toFixed(2) );
 }
 
 
