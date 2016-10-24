@@ -38,7 +38,7 @@
 <script type="text/javascript" src="data/sphere.js"></script>
 <script type="text/javascript" src="data/levelCubeData.js"></script>
 <script type="text/javascript" src="data/tennisBall.js"></script>
-
+<script type="text/javascript" src="data/cubeminussphere-wackyuvs.obj.json"></script>
 
 
 <!-- simple pix shader -->
@@ -175,6 +175,10 @@ var tennisBallVertexPositionBuffer,
     tennisBallVertexTextureCoordBuffer,
 	tennisBallVertexIndexBuffer;
 
+var blenderObjVertexPositionBuffer,
+    blenderObjVertexTextureCoordBuffer,
+	blenderObjVertexIndexBuffer;
+	
 function initBuffers(){
 	var sphereData = makeSphereData(61,32,0.05);
 
@@ -211,6 +215,35 @@ function initBuffers(){
 	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(tennisBallData.indices), gl.STATIC_DRAW);
 	tennisBallVertexIndexBuffer.itemSize = 3;
 	tennisBallVertexIndexBuffer.numItems = tennisBallData.indices.length;
+	
+	//load blender object
+	//TODO use XMLHTTPRequest or something
+	//for now have put "var myBlenderObjOrWhatever = " in front of contents of untitled.obj.json, and are referencing this directly as a script (similar to how are doing with shaders)
+	//this part will eventually want to make part of build process (so can load object just containing what need)
+	blenderObject = ( function(){
+		var meshToLoad = cubeMinusSphereBlender.meshes[0];
+		return {
+			vertices: meshToLoad.vertices,
+			normals: meshToLoad.normals,
+			uvcoords: meshToLoad.texturecoords[0],
+			indices: [].concat.apply([],meshToLoad.faces)	//trick from https://www.youtube.com/watch?v=sM9n73-HiNA t~ 28:30
+		}	
+	})();
+	
+	//scale it up - because at the mo using shader which scales everything down by factor of 10
+	for (var ii=0;ii<  blenderObject.vertices.length;ii++){
+		blenderObject.vertices[ii]*=10.0;
+	}
+	
+	blenderObjVertexPositionBuffer = gl.createBuffer();
+	bufferArrayData(blenderObjVertexPositionBuffer, blenderObject.vertices, 3);
+	blenderObjVertexTextureCoordBuffer= gl.createBuffer();
+	bufferArrayData(blenderObjVertexTextureCoordBuffer, blenderObject.uvcoords, 2);
+	blenderObjVertexIndexBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, blenderObjVertexIndexBuffer);
+	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(blenderObject.indices), gl.STATIC_DRAW);
+	blenderObjVertexIndexBuffer.itemSize = 3;
+	blenderObjVertexIndexBuffer.numItems = blenderObject.indices.length;
 	
 	function bufferArrayData(buffer, arr, size){
 		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -303,6 +336,33 @@ function drawWorldScene(frameTime) {
 		}
 	}
 	
+	//draw blender object - a csg cube minus sphere. draw 8 cells for tesseract.
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);	//WHITE
+	mat4.set(invertedPlayerCamera, mvMatrix);
+	drawBlenderObject();
+	xmove4mat(mvMatrix, Math.PI);	//opposite side - can use any x, y, z
+	drawBlenderObject();
+	xmove4mat(mvMatrix, Math.PI);	//and back again.
+	
+	//gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 0.4, 1.0]);	//RED
+	xmove4mat(mvMatrix, Math.PI*0.5);
+	drawBlenderObject();
+	xmove4mat(mvMatrix, Math.PI*1.0);
+	drawBlenderObject();
+	
+	//gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
+	ymove4mat(mvMatrix, Math.PI*0.5);
+	drawBlenderObject();
+	ymove4mat(mvMatrix, Math.PI);
+	drawBlenderObject();
+	
+	//gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 1.0, 1.0]);	//BLUE
+	zmove4mat(mvMatrix, Math.PI*0.5);
+	drawBlenderObject();
+	zmove4mat(mvMatrix, Math.PI);
+	drawBlenderObject();
+	
+	
 	activeShaderProgram = shaderProgramTexmap4Vec;
 	gl.useProgram(activeShaderProgram);
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
@@ -321,6 +381,7 @@ function drawWorldScene(frameTime) {
 		rotate4mat(mvMatrix, 0, 3, Math.PI*0.5);
 		drawTennisBall();
 	}
+	
 }
 
 
@@ -381,6 +442,23 @@ function drawTennisBall(){
 	gl.drawElements(gl.TRIANGLES, tennisBallVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 }
 
+function drawBlenderObject(){
+	gl.bindBuffer(gl.ARRAY_BUFFER, blenderObjVertexPositionBuffer);
+    gl.vertexAttribPointer(shaderProgramTexmap.attributes.aVertexPosition, blenderObjVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	
+	gl.bindBuffer(gl.ARRAY_BUFFER, blenderObjVertexTextureCoordBuffer);
+	gl.vertexAttribPointer(shaderProgramTexmap.attributes.aTextureCoord, blenderObjVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, blenderObjVertexIndexBuffer);
+	setMatrixUniforms(shaderProgramTexmap);
+	
+	gl.activeTexture(gl.TEXTURE0);
+	gl.bindTexture(gl.TEXTURE_2D, texture);
+	gl.uniform1i(shaderProgramTexmap.uniforms.uSampler, 0);
+	
+	gl.drawElements(gl.TRIANGLES, blenderObjVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+}
+
 //need all of these???
 var mvMatrix = mat4.create();
 var pMatrix = mat4.create();
@@ -416,7 +494,7 @@ function initTexture() {
 		gl.generateMipmap(gl.TEXTURE_2D);
 		gl.bindTexture(gl.TEXTURE_2D, null);
 	}
-	texture.image.src = "img/ash_uvgrid01.jpg";
+	texture.image.src = "img/ash_uvgrid01-grey.jpg";
 }
 
 var mouseInfo = {
