@@ -38,7 +38,7 @@
 <script type="text/javascript" src="data/sphere.js"></script>
 <script type="text/javascript" src="data/levelCubeData.js"></script>
 <script type="text/javascript" src="data/tennisBall.js"></script>
-<script type="text/javascript" src="data/cubeminussphere-wackyuvs.obj.json"></script>
+<script type="text/javascript" src="data/cube-frame-a1-cubeproj.obj.json"></script>
 
 
 <!-- simple pix shader -->
@@ -221,7 +221,7 @@ function initBuffers(){
 	//for now have put "var myBlenderObjOrWhatever = " in front of contents of untitled.obj.json, and are referencing this directly as a script (similar to how are doing with shaders)
 	//this part will eventually want to make part of build process (so can load object just containing what need)
 	blenderObject = ( function(){
-		var meshToLoad = cubeMinusSphereBlender.meshes[0];
+		var meshToLoad = cubeFrameData.meshes[0];
 		return {
 			vertices: meshToLoad.vertices,
 			normals: meshToLoad.normals,
@@ -232,7 +232,7 @@ function initBuffers(){
 	
 	//scale it up - because at the mo using shader which scales everything down by factor of 10
 	for (var ii=0;ii<  blenderObject.vertices.length;ii++){
-		blenderObject.vertices[ii]*=10.0;
+		blenderObject.vertices[ii]*=5.0;	//10 makes cubes touch (tesseract cells)
 	}
 	
 	blenderObjVertexPositionBuffer = gl.createBuffer();
@@ -491,6 +491,7 @@ function initTexture() {
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+		//gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 		gl.generateMipmap(gl.TEXTURE_2D);
 		gl.bindTexture(gl.TEXTURE_2D, null);
 	}
