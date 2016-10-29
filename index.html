@@ -105,13 +105,14 @@
 	varying float fog;
 	
 	void main(void) {
-		vec4 transformedCoord = uMVMatrix * normalize(vec4(0.1*aVertexPosition, 1.0)); //note 0.1 to make cube smaller - todo scaling as part of mvMatrix
+		vec4 aVertexPositionNormalized = normalize(vec4(0.1*aVertexPosition, 1.0)); //note 0.1 to make cube smaller - todo scaling as part of mvMatrix
+		vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
 		
 		gl_Position = uPMatrix * vec4((transformedCoord.xyz)/(1.0+transformedCoord.w), 1.0);
 		
 		fog = 0.5*(1.0 + transformedCoord.w);
 		
-		float myZ = 1.0/(1.0+transformedCoord.w);
+		float myZ = aVertexPositionNormalized.w/(1.0+transformedCoord.w);
 		vTextureCoord = vec3( aTextureCoord.st*myZ, myZ );
 	}
 </script>
@@ -496,6 +497,7 @@ function initTexture() {
 		gl.bindTexture(gl.TEXTURE_2D, null);
 	}
 	texture.image.src = "img/ash_uvgrid01-grey.jpg";
+	//texture.image.src = "img/cross.png";
 }
 
 var mouseInfo = {
