@@ -335,7 +335,8 @@ function drawWorldScene(frameTime) {
 	}
 	
 	//draw blender object - a csg cube minus sphere. draw 8 cells for tesseract.
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.5,0.5,0.5]);
+	var modelScale = guiParams["8-cell scale"];
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);	//WHITE
 	mat4.set(invertedPlayerCamera, mvMatrix);
@@ -519,6 +520,7 @@ var guiParams={
 		'boxes y=w=0':true,
 		'boxes z=w=0':true
 	},
+	"8-cell scale":0.5,
 	fogColor:'#aaaaaa'
 };
 var vecFogColor = [1.0,0.0,0.0,1.0];
@@ -538,6 +540,7 @@ function init(){
 		console.log(shape);
 		drawShapesFolder.add(guiParams.drawShapes, shape );
 	}
+	gui.add(guiParams,"8-cell scale",0.2,2.0,0.05);
 	
 	window.addEventListener("keydown",function(evt){
 		//console.log("key pressed : " + evt.keyCode);
