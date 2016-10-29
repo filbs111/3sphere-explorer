@@ -103,9 +103,10 @@
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
 	varying float fog;
+	uniform vec3 uModelScale;
 	
 	void main(void) {
-		vec4 aVertexPositionNormalized = normalize(vec4(0.1*aVertexPosition, 1.0)); //note 0.1 to make cube smaller - todo scaling as part of mvMatrix
+		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
 		vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
 		
 		gl_Position = uPMatrix * vec4((transformedCoord.xyz)/(1.0+transformedCoord.w), 1.0);
@@ -153,7 +154,7 @@ function initShaders(){
 					});
 	shaderProgramTexmap = loadShader( "shader-texmap-vs", "shader-texmap-fs",{
 					attributes:["aVertexPosition", "aTextureCoord"],
-					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor"]
+					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor","uModelScale"]
 					});
 	shaderProgramTexmap4Vec = loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs",{
 					attributes:["aVertexPosition", "aTextureCoord"],
@@ -231,11 +232,6 @@ function initBuffers(){
 		}	
 	})();
 	
-	//scale it up - because at the mo using shader which scales everything down by factor of 10
-	for (var ii=0;ii<  blenderObject.vertices.length;ii++){
-		blenderObject.vertices[ii]*=5.0;	//10 makes cubes touch (tesseract cells)
-	}
-	
 	blenderObjVertexPositionBuffer = gl.createBuffer();
 	bufferArrayData(blenderObjVertexPositionBuffer, blenderObject.vertices, 3);
 	blenderObjVertexTextureCoordBuffer= gl.createBuffer();
@@ -277,6 +273,7 @@ function drawWorldScene(frameTime) {
 	
 	gl.useProgram(activeShaderProgram);
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.1,0.1,0.1]);
 	//create lines of spheres.
 	//unsure which order to apply transformations, so keep simple initially - lines of spheres crossing through default point
 
@@ -338,6 +335,8 @@ function drawWorldScene(frameTime) {
 	}
 	
 	//draw blender object - a csg cube minus sphere. draw 8 cells for tesseract.
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.5,0.5,0.5]);
+	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);	//WHITE
 	mat4.set(invertedPlayerCamera, mvMatrix);
 	drawBlenderObject();
