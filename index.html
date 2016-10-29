@@ -38,7 +38,7 @@
 <script type="text/javascript" src="data/sphere.js"></script>
 <script type="text/javascript" src="data/levelCubeData.js"></script>
 <script type="text/javascript" src="data/tennisBall.js"></script>
-<script type="text/javascript" src="data/cube-frame-a1-cubeproj.obj.json"></script>
+<script type="text/javascript" src="data/cube-frame-a2-cubeproj.obj.json"></script>
 
 
 <!-- simple pix shader -->
@@ -87,11 +87,12 @@
 	uniform vec4 uColor;
 	varying float fog;
 	uniform vec4 uFogColor;
-
+	
 	void main(void) {
 		//gl_FragColor = uColor*texture2D(uSampler, vTextureCoord);
 		
 		gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
+		//gl_FragColor = (1.0-fog)*uFogColor;
 		gl_FragColor.a =1.0;
 	}
 </script>
@@ -257,7 +258,7 @@ function drawScene(frameTime){
 	stats.end();
 	stats.begin();
 	
-	mat4.perspective(90.0, gl.viewportWidth/ gl.viewportHeight, 0.01, 100, pMatrix); 
+	mat4.perspective(90.0, gl.viewportWidth/ gl.viewportHeight, 0.01, 10.0, pMatrix); 
 		
 	//mat4.set(playerMatrix, playerCamera);
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
@@ -639,6 +640,7 @@ function init(){
 	setFog(guiParams.fogColor);
     gl.enable(gl.DEPTH_TEST);
 	//gl.disable(gl.DEPTH_TEST);	//seems to have no effect??? (semi opaque seems to overwrite) or possibly blending isn't on by default
+	gl.enable(gl.CULL_FACE);
 	setupScene();
 	requestAnimationFrame(drawScene);
 	
