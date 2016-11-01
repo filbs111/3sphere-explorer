@@ -39,7 +39,7 @@
 <script type="text/javascript" src="data/levelCubeData.js"></script>
 <script type="text/javascript" src="data/tennisBall.js"></script>
 <script type="text/javascript" src="data/cube-frame-a2-cubeproj.obj.json"></script>
-
+<script type="text/javascript" src="data/octohedron-cubeproj.obj.json"></script>
 
 <!-- simple pix shader -->
 <script id="shader-simple-fs" type="x-shader/x-fragment">
@@ -178,9 +178,8 @@ var tennisBallVertexPositionBuffer,
     tennisBallVertexTextureCoordBuffer,
 	tennisBallVertexIndexBuffer;
 
-var blenderObjVertexPositionBuffer,
-    blenderObjVertexTextureCoordBuffer,
-	blenderObjVertexIndexBuffer;
+var cubeFrameBuffers={};
+var octoFrameBuffers={};	
 	
 function initBuffers(){
 	var sphereData = makeSphereData(61,32,0.05);
@@ -223,25 +222,11 @@ function initBuffers(){
 	//TODO use XMLHTTPRequest or something
 	//for now have put "var myBlenderObjOrWhatever = " in front of contents of untitled.obj.json, and are referencing this directly as a script (similar to how are doing with shaders)
 	//this part will eventually want to make part of build process (so can load object just containing what need)
-	blenderObject = ( function(){
-		var meshToLoad = cubeFrameData.meshes[0];
-		return {
-			vertices: meshToLoad.vertices,
-			normals: meshToLoad.normals,
-			uvcoords: meshToLoad.texturecoords[0],
-			indices: [].concat.apply([],meshToLoad.faces)	//trick from https://www.youtube.com/watch?v=sM9n73-HiNA t~ 28:30
-		}	
-	})();
+	var cubeFrameBlenderObject = loadBlenderExport(cubeFrameData.meshes[0]);
+	var octoFrameBlenderObject = loadBlenderExport(octoFrameData.meshes[0]);
 	
-	blenderObjVertexPositionBuffer = gl.createBuffer();
-	bufferArrayData(blenderObjVertexPositionBuffer, blenderObject.vertices, 3);
-	blenderObjVertexTextureCoordBuffer= gl.createBuffer();
-	bufferArrayData(blenderObjVertexTextureCoordBuffer, blenderObject.uvcoords, 2);
-	blenderObjVertexIndexBuffer = gl.createBuffer();
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, blenderObjVertexIndexBuffer);
-	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(blenderObject.indices), gl.STATIC_DRAW);
-	blenderObjVertexIndexBuffer.itemSize = 3;
-	blenderObjVertexIndexBuffer.numItems = blenderObject.indices.length;
+	loadBufferData(cubeFrameBuffers, cubeFrameBlenderObject);
+	loadBufferData(octoFrameBuffers, octoFrameBlenderObject);
 	
 	function bufferArrayData(buffer, arr, size){
 		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -249,6 +234,27 @@ function initBuffers(){
 		buffer.itemSize = size;
 		buffer.numItems = arr.length / size;
 	}
+	
+	function loadBufferData(bufferObj, sourceData){
+		bufferObj.vertexPositionBuffer = gl.createBuffer();
+		bufferArrayData(bufferObj.vertexPositionBuffer, sourceData.vertices, 3);
+		bufferObj.vertexTextureCoordBuffer= gl.createBuffer();
+		bufferArrayData(bufferObj.vertexTextureCoordBuffer, sourceData.uvcoords, 2);
+		bufferObj.vertexIndexBuffer = gl.createBuffer();
+		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
+		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(sourceData.indices), gl.STATIC_DRAW);
+		bufferObj.vertexIndexBuffer.itemSize = 3;
+		bufferObj.vertexIndexBuffer.numItems = sourceData.indices.length;
+	}
+	
+	function loadBlenderExport(meshToLoad){
+		return {
+			vertices: meshToLoad.vertices,
+			normals: meshToLoad.normals,
+			uvcoords: meshToLoad.texturecoords[0],
+			indices: [].concat.apply([],meshToLoad.faces)	//trick from https://www.youtube.com/watch?v=sM9n73-HiNA t~ 28:30
+		}	
+	};
 }
 
 function drawScene(frameTime){
@@ -258,7 +264,7 @@ function drawScene(frameTime){
 	stats.end();
 	stats.begin();
 	
-	mat4.perspective(90.0, gl.viewportWidth/ gl.viewportHeight, 0.01, 10.0, pMatrix); 
+	mat4.perspective(135.0, gl.viewportWidth/ gl.viewportHeight, 0.01, 10.0, pMatrix); 
 		
 	//mat4.set(playerMatrix, playerCamera);
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
@@ -339,31 +345,70 @@ function drawWorldScene(frameTime) {
 	var modelScale = guiParams["8-cell scale"];
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);	//WHITE
-	mat4.set(invertedPlayerCamera, mvMatrix);
-	drawBlenderObject();
-	xmove4mat(mvMatrix, Math.PI);	//opposite side - can use any x, y, z
-	drawBlenderObject();
-	xmove4mat(mvMatrix, Math.PI);	//and back again.
+	if (guiParams["draw 8-cell"]){
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);	//WHITE
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		drawCubeFrame();
+		xmove4mat(mvMatrix, Math.PI);	//opposite side - can use any x, y, z
+		drawCubeFrame();
+		xmove4mat(mvMatrix, Math.PI);	//and back again.
+		
+		//gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 0.4, 1.0]);	//RED
+		xmove4mat(mvMatrix, Math.PI*0.5);
+		drawCubeFrame();
+		xmove4mat(mvMatrix, Math.PI*1.0);
+		drawCubeFrame();
+		
+		//gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
+		ymove4mat(mvMatrix, Math.PI*0.5);
+		drawCubeFrame();
+		ymove4mat(mvMatrix, Math.PI);
+		drawCubeFrame();
+		
+		//gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 1.0, 1.0]);	//BLUE
+		zmove4mat(mvMatrix, Math.PI*0.5);
+		drawCubeFrame();
+		zmove4mat(mvMatrix, Math.PI);
+		drawCubeFrame();
+	}
 	
-	//gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 0.4, 1.0]);	//RED
-	xmove4mat(mvMatrix, Math.PI*0.5);
-	drawBlenderObject();
-	xmove4mat(mvMatrix, Math.PI*1.0);
-	drawBlenderObject();
-	
-	//gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
-	ymove4mat(mvMatrix, Math.PI*0.5);
-	drawBlenderObject();
-	ymove4mat(mvMatrix, Math.PI);
-	drawBlenderObject();
-	
-	//gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 1.0, 1.0]);	//BLUE
-	zmove4mat(mvMatrix, Math.PI*0.5);
-	drawBlenderObject();
-	zmove4mat(mvMatrix, Math.PI);
-	drawBlenderObject();
-	
+	if (guiParams["draw 24-cell"]){
+		//draw octohedron frame objects to show cells of 24-cell
+		modelScale = 1.0;
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+		
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 0.4, 1.0]);	//RED
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		drawOctoFrameRing();
+		
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		rotate4mat(mvMatrix, 0, 1, Math.PI*0.5);
+		drawOctoFrameRing();
+
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 1.0, 1.0]);	//BLUE
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
+		drawOctoFrameRing();
+		
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.4, 1.0]);	//YELLOW
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		xmove4mat(mvMatrix, Math.PI*0.5);
+		rotate4mat(mvMatrix, 0, 1, Math.PI*0.5);
+		drawOctoFrameRing();
+		
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 1.0, 1.0]);	//MAGENTA
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		xmove4mat(mvMatrix, Math.PI*0.5);
+		rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
+		drawOctoFrameRing();
+		
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 1.0, 1.0]);	//CYAN
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		ymove4mat(mvMatrix, Math.PI*0.5);
+		rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
+		drawOctoFrameRing();
+	}
 	
 	activeShaderProgram = shaderProgramTexmap4Vec;
 	gl.useProgram(activeShaderProgram);
@@ -382,6 +427,28 @@ function drawWorldScene(frameTime) {
 		mat4.set(invertedPlayerCamera, mvMatrix);
 		rotate4mat(mvMatrix, 0, 3, Math.PI*0.5);
 		drawTennisBall();
+	}
+	
+	function drawCubeFrame(){
+		drawObjectFromBuffers(cubeFrameBuffers);
+	}
+	function drawOctoFrame(){
+		drawObjectFromBuffers(octoFrameBuffers);
+	}
+	
+	function drawOctoFrameRing(){
+		rotate4mat(mvMatrix, 1, 2, Math.PI*0.25);
+	
+		//this is basically a copy of drawRing func. TODO generalise
+		var numInRing = 4;
+		var startAng = Math.PI / numInRing;
+		var angleStep = startAng * 2.0;
+		
+		xmove4mat(mvMatrix, startAng);
+		for (var ii=0;ii<numInRing;ii++){
+			xmove4mat(mvMatrix, angleStep);
+			drawOctoFrame();
+		}
 	}
 	
 }
@@ -444,21 +511,21 @@ function drawTennisBall(){
 	gl.drawElements(gl.TRIANGLES, tennisBallVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 }
 
-function drawBlenderObject(){
-	gl.bindBuffer(gl.ARRAY_BUFFER, blenderObjVertexPositionBuffer);
-    gl.vertexAttribPointer(shaderProgramTexmap.attributes.aVertexPosition, blenderObjVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+function drawObjectFromBuffers(bufferObj){
+	gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexPositionBuffer);
+    gl.vertexAttribPointer(shaderProgramTexmap.attributes.aVertexPosition, bufferObj.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	
-	gl.bindBuffer(gl.ARRAY_BUFFER, blenderObjVertexTextureCoordBuffer);
-	gl.vertexAttribPointer(shaderProgramTexmap.attributes.aTextureCoord, blenderObjVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexTextureCoordBuffer);
+	gl.vertexAttribPointer(shaderProgramTexmap.attributes.aTextureCoord, bufferObj.vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, blenderObjVertexIndexBuffer);
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
 	setMatrixUniforms(shaderProgramTexmap);
 	
 	gl.activeTexture(gl.TEXTURE0);
 	gl.bindTexture(gl.TEXTURE_2D, texture);
 	gl.uniform1i(shaderProgramTexmap.uniforms.uSampler, 0);
 	
-	gl.drawElements(gl.TRIANGLES, blenderObjVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+	gl.drawElements(gl.TRIANGLES, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 }
 
 //need all of these???
@@ -514,14 +581,16 @@ var guiParams={
 		'x*x+y*y=z*z+w*w':false,
 		'x*x+z*z=y*y+w*w':false,
 		'x*x+w*w=y*y+z*z':false,
-		'boxes y=z=0':true,	//x*x+w*w=1
-		'boxes x=z=0':true,	//y*y+w*w=1
-		'boxes x=y=0':true,	//z*z+w*w=1
-		'boxes x=w=0':true,
-		'boxes y=w=0':true,
-		'boxes z=w=0':true
+		'boxes y=z=0':false,	//x*x+w*w=1
+		'boxes x=z=0':false,	//y*y+w*w=1
+		'boxes x=y=0':false,	//z*z+w*w=1
+		'boxes x=w=0':false,
+		'boxes y=w=0':false,
+		'boxes z=w=0':false
 	},
-	"8-cell scale":0.5,
+	"8-cell scale":1.0,
+	"draw 8-cell":false,
+	"draw 24-cell":true,
 	fogColor:'#aaaaaa'
 };
 var vecFogColor = [1.0,0.0,0.0,1.0];
@@ -541,7 +610,9 @@ function init(){
 		console.log(shape);
 		drawShapesFolder.add(guiParams.drawShapes, shape );
 	}
+	gui.add(guiParams,"draw 8-cell",false);
 	gui.add(guiParams,"8-cell scale",0.2,2.0,0.05);
+	gui.add(guiParams,"draw 24-cell",true);
 	
 	window.addEventListener("keydown",function(evt){
 		//console.log("key pressed : " + evt.keyCode);
