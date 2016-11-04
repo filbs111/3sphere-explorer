@@ -110,11 +110,11 @@
 		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
 		vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
 		
-		gl_Position = uPMatrix * vec4((transformedCoord.xyz)/(1.0+transformedCoord.w), 1.0);
-		
+		gl_Position = uPMatrix * transformedCoord;
+
 		fog = 0.5*(1.0 + transformedCoord.w);
 		
-		float myZ = aVertexPositionNormalized.w/(1.0+transformedCoord.w);
+		float myZ = aVertexPositionNormalized.w;
 		vTextureCoord = vec3( aTextureCoord.st*myZ, myZ );
 	}
 </script>
@@ -132,12 +132,11 @@
 	void main(void) {
 		vec4 transformedCoord = uMVMatrix * aVertexPosition;
 		
-		gl_Position = uPMatrix * vec4((transformedCoord.xyz)/(1.0+transformedCoord.w), 1.0);
+		gl_Position = uPMatrix * transformedCoord;
 		
 		fog = 0.5*(1.0 + transformedCoord.w);
 		
-		float myZ = 1.0/(1.0+transformedCoord.w);
-		vTextureCoord = vec3( aTextureCoord.st*myZ, myZ );
+		vTextureCoord = vec3( aTextureCoord.st, 1.0 );
 	}
 </script>
 
@@ -264,8 +263,19 @@ function drawScene(frameTime){
 	stats.end();
 	stats.begin();
 	
-	mat4.perspective(135.0, gl.viewportWidth/ gl.viewportHeight, 0.01, 10.0, pMatrix); 
-		
+	//make a pmatrix for hemiphere perspective projection method.
+	mat4.identity(pMatrix);	//quickest way i know to set most terms to zero...
+	
+	var vFov = 135.0;
+	var fy = Math.tan((Math.PI/180.0)*vFov/2);
+	
+	pMatrix[0] = (gl.viewportHeight/gl.viewportWidth)/fy ;
+	pMatrix[5] = 1.0/fy;
+	pMatrix[11]	= -1;	//rotate w into z.
+	pMatrix[14] = -0.02;	//smaller = more z range. 1/50 gets ~same near clipping result as stereographic/perspective 0.01 near
+	pMatrix[10]	= 0;
+	pMatrix[15] = 0;
+
 	//mat4.set(playerMatrix, playerCamera);
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 	
