@@ -32,8 +32,7 @@
 
 <script type="text/javascript" src="lib/dat.gui.min.js"></script>
 <script type="text/javascript" src="lib/stats.min.js"></script>
-<script type="text/javascript" src="lib/glMatrix-0.9.5.min.js"></script>
-
+<script type="text/javascript" src="lib/gl-matrix-min.js"></script>
 <script type="text/javascript" src="utils/webgl_utils.js"></script>
 <script type="text/javascript" src="data/sphere.js"></script>
 <script type="text/javascript" src="data/levelCubeData.js"></script>
@@ -424,29 +423,49 @@ function drawWorldScene(frameTime) {
 		drawOctoFrameRing();
 	}
 	
-	//modelScale = 3;	//approx right number. maybe not exact
-	//var tetraMoveLength = 0.205;
+	//modelScale = 3.6475;	//found through trial and error. tried deriving it but got a different answer!
 	
-	modelScale = 0.5;	//approx right number. maybe not exact
-	var tetraMoveLength = 0.3;
+	//var tetraMoveLength = 0.160;
+	
+	modelScale = 0.5;	//small
+	//var tetraMoveLength = 0.225;
 	
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 	
 	//draw a tetrahedron
 	mat4.set(invertedPlayerCamera, mvMatrix);
-	rotate4mat(mvMatrix, 0, 1, Math.PI*1.0);	//turn upside down (roll)
 	drawTetraFrame();
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 1.0, 1.0]);	//MAGENTA
 	mat4.set(invertedPlayerCamera, mvMatrix);
-	ymove4mat(mvMatrix, -Math.PI*tetraMoveLength*modelScale);
+	rotate4mat(mvMatrix, 0, 1, Math.PI*1.0);	//turn upside down (roll)
+	//ymove4mat(mvMatrix, -Math.PI*tetraMoveLength*modelScale);
+	ymove4mat(mvMatrix, -modelScale/2);
 	drawTetraFrame();
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.4, 1.0]);	//YELLOW
 	mat4.set(invertedPlayerCamera, mvMatrix);
-	xyzmove4mat(mvMatrix,[0.1,0.0,0.01]);
+	
+	var tempRot = Math.atan(1.0/Math.sqrt(2));
+	rotate4mat(mvMatrix, 1, 2, tempRot*2);
+	//ymove4mat(mvMatrix, -Math.PI*tetraMoveLength*modelScale);
+	ymove4mat(mvMatrix, -modelScale/2);
 	drawTetraFrame();
-
+	
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
+	mat4.set(invertedPlayerCamera, mvMatrix);
+	xyzrotate4mat(mvMatrix,[ -tempRot, 0, -tempRot*Math.sqrt(3)]);
+	//ymove4mat(mvMatrix, -Math.PI*tetraMoveLength*modelScale);
+	ymove4mat(mvMatrix, -modelScale/2);
+	drawTetraFrame();
+	
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 0.4, 1.0]);	//RED
+	mat4.set(invertedPlayerCamera, mvMatrix);
+	xyzrotate4mat(mvMatrix,[ -tempRot, 0, tempRot*Math.sqrt(3)]);
+	//ymove4mat(mvMatrix, -Math.PI*tetraMoveLength*modelScale);
+	ymove4mat(mvMatrix, -modelScale/2);
+	drawTetraFrame();
+	
 	
 	activeShaderProgram = shaderProgramTexmap4Vec;
 	gl.useProgram(activeShaderProgram);
@@ -586,17 +605,8 @@ function setupScene() {
 	mat4.identity(playerMatrix);
 	mat4.identity(playerCamera);	//not sure why have 2 matrices here...
 	
-	/*
 	//start player off outside of boxes
-	movePlayerUp(-0.2);	//up is down!
-	//movePlayerLeft(0.2);
-	
-	movePlayer(-1.5);*/
-	
-	console.log("playerCamera: " +playerCamera);
 	xyzmove4mat(playerCamera,[0,0.5,-1.5]);
-	console.log("playerCamera: " +playerCamera);
-
 }
 
 var texture;
@@ -766,8 +776,8 @@ function init(){
 	initBuffers();
 	setFog(guiParams.fogColor);
     gl.enable(gl.DEPTH_TEST);
-	//gl.disable(gl.DEPTH_TEST);	//seems to have no effect??? (semi opaque seems to overwrite) or possibly blending isn't on by default
-	gl.enable(gl.CULL_FACE);
+	//gl.disable(gl.DEPTH_TEST);
+	//gl.enable(gl.CULL_FACE);
 	setupScene();
 	requestAnimationFrame(drawScene);
 	
@@ -856,6 +866,15 @@ function ymove4mat(mat, angle){
 }
 function zmove4mat(mat, angle){
 	rotate4mat(mat, 2, 3, angle);
+}
+
+function xyzrotate4mat(mat, rotatevector){
+	//angle/axis rotation.
+	//just make a fresh matrix, then multiply the input matrix by that.
+	var newMatrix = mat4.identity();
+	var rotationMag = Math.sqrt(rotatevector[0]*rotatevector[0] + rotatevector[1]*rotatevector[1] + rotatevector[2]*rotatevector[2]);
+	mat4.rotate(newMatrix, rotationMag, [rotatevector[0]/rotationMag, rotatevector[1]/rotationMag, rotatevector[2]/rotationMag] );
+	mat4.multiply(mat, newMatrix);
 }
 
 function rotate4mat(mat, col1, col2, angle){
