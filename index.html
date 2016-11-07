@@ -423,7 +423,7 @@ function drawWorldScene(frameTime) {
 		drawOctoFrameRing();
 	}
 	
-	var moveDist = (Math.PI - Math.acos(0.25))*2;
+	var moveDist = Math.acos(-0.25);
 	modelScale = 2*moveDist;
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 	
