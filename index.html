@@ -423,13 +423,8 @@ function drawWorldScene(frameTime) {
 		drawOctoFrameRing();
 	}
 	
-	//modelScale = 3.6475;	//found through trial and error. tried deriving it but got a different answer!
-	
-	//var tetraMoveLength = 0.160;
-	
-	modelScale = 0.5;	//small
-	//var tetraMoveLength = 0.225;
-	
+	var moveDist = (Math.PI - Math.acos(0.25))*2;
+	modelScale = 2*moveDist;
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 	
 	//draw a tetrahedron
@@ -439,8 +434,7 @@ function drawWorldScene(frameTime) {
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 1.0, 1.0]);	//MAGENTA
 	mat4.set(invertedPlayerCamera, mvMatrix);
 	rotate4mat(mvMatrix, 0, 1, Math.PI*1.0);	//turn upside down (roll)
-	//ymove4mat(mvMatrix, -Math.PI*tetraMoveLength*modelScale);
-	ymove4mat(mvMatrix, -modelScale/2);
+	ymove4mat(mvMatrix, -moveDist);
 	drawTetraFrame();
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.4, 1.0]);	//YELLOW
@@ -448,22 +442,19 @@ function drawWorldScene(frameTime) {
 	
 	var tempRot = Math.atan(1.0/Math.sqrt(2));
 	rotate4mat(mvMatrix, 1, 2, tempRot*2);
-	//ymove4mat(mvMatrix, -Math.PI*tetraMoveLength*modelScale);
-	ymove4mat(mvMatrix, -modelScale/2);
+	ymove4mat(mvMatrix, -moveDist);
 	drawTetraFrame();
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
 	mat4.set(invertedPlayerCamera, mvMatrix);
 	xyzrotate4mat(mvMatrix,[ -tempRot, 0, -tempRot*Math.sqrt(3)]);
-	//ymove4mat(mvMatrix, -Math.PI*tetraMoveLength*modelScale);
-	ymove4mat(mvMatrix, -modelScale/2);
+	ymove4mat(mvMatrix, -moveDist);
 	drawTetraFrame();
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 0.4, 1.0]);	//RED
 	mat4.set(invertedPlayerCamera, mvMatrix);
 	xyzrotate4mat(mvMatrix,[ -tempRot, 0, tempRot*Math.sqrt(3)]);
-	//ymove4mat(mvMatrix, -Math.PI*tetraMoveLength*modelScale);
-	ymove4mat(mvMatrix, -modelScale/2);
+	ymove4mat(mvMatrix, -moveDist);
 	drawTetraFrame();
 	
 	
