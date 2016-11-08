@@ -761,6 +761,10 @@ function init(){
 		}
 	});
 	
+	canvas.addEventListener("touchstart", handleTouchStart, false);
+	canvas.addEventListener("touchend", handleTouchEnd, false);
+	canvas.addEventListener("touchmove", handleTouchMove, false);
+	
 	initGL();
 	initShaders();
 	initTexture();
@@ -909,8 +913,6 @@ function rotate4matRows(mat, row1, row2, angle){
 
 
 
-
-
 function movePlayer(amount){
 	zmove4mat(playerCamera, amount);
 }
@@ -967,6 +969,84 @@ function crossProductHomgenous(dir1, dir2){
 	return output;
 }
 
+
+var ongoingTouches = {};
+
+function handleTouchStart(evt){
+	evt.preventDefault();
+	var touches = evt.changedTouches;
+	log( touches.length + " touches starting");
+		
+	for (var i = 0; i < touches.length; i++) {
+		var thisTouch = copyTouch(touches[i]);
+		var touchIdx = touches[i].identifier;
+		ongoingTouches[touchIdx] = thisTouch;
+		logtouchevent(touches[i],i);
+	}
+}
+
+function handleTouchMove(evt){
+	evt.preventDefault();
+	var touches = evt.changedTouches;
+	log( touches.length + " touches moving");
+	
+	for (var i = 0; i < touches.length; i++) {
+		
+		var thisTouch = copyTouch(touches[i]);
+		var touchIdx = touches[i].identifier;
+		
+		//copy previous position to new touch
+		toTouch = ongoingTouches[touchIdx];
+		thisTouch.oldx = toTouch.x;
+		thisTouch.oldy = toTouch.y;
+		ongoingTouches[touchIdx] = thisTouch;
+		
+		//do do the equivalent of mouse move
+		if (i==0){
+			//what behaviour will be if there are >1 touches?
+			
+			var oldPointingDir = getPointingDirectionFromScreenCoordinate({x:thisTouch.oldx, y: thisTouch.oldy});
+			var pointingDir = getPointingDirectionFromScreenCoordinate({x:thisTouch.x, y: thisTouch.y});
+			
+			var crossProd = crossProductHomgenous(pointingDir, oldPointingDir);
+			mouseInfo.lastPointingDir = pointingDir;
+			
+			//rotate player 
+			//since small angle, can get away with just doing successive euler rotations. TODO axis angle
+			//console.log("will turn by" + crossProd.x + ", " + crossProd.w);
+			pitchPlayer( -crossProd.x / crossProd.w);	//guess have - here because of unplanned handedness of screen, 3d co-ord systems
+			turnPlayer( crossProd.y / crossProd.w);
+			rollPlayer( crossProd.z / crossProd.w);
+		}
+		
+		logtouchevent(touches[i],i);
+	}
+}
+
+function handleTouchEnd(evt){
+	evt.preventDefault();
+	var touches = evt.changedTouches;
+	log( touches.length + " touches ending");
+	for (var i = 0; i < touches.length; i++) {
+		logtouchevent(touches[i],i);
+		delete ongoingTouches[touches.identifier];
+	}
+}
+
+function logtouchevent(t,i){
+	//log("i = " + i + " , idx = " + t.identifier + ". radiusX : " + t.radiusX + " , radiusY : " + t.radiusY);
+	log("i = " + i + " , idx = " + t.identifier + ". x : " + t.pageX + " , y : " + t.pageY);
+}
+
+//https://developer.mozilla.org/en-US/docs/Web/API/Touch_events
+//says this is useful since the touch object might change.
+function copyTouch(touch) {
+  return { x: touch.pageX, y: touch.pageY, force:touch.force };
+}
+
+function log(info){		//can to enable/disable logging globally
+	//console.log(info);
+}
 
 </script>
 
