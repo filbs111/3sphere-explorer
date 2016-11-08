@@ -423,40 +423,41 @@ function drawWorldScene(frameTime) {
 		drawOctoFrameRing();
 	}
 	
-	var moveDist = Math.acos(-0.25);
-	modelScale = 2*moveDist;
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
-	
-	//draw a tetrahedron
-	mat4.set(invertedPlayerCamera, mvMatrix);
-	drawTetraFrame();
-	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 1.0, 1.0]);	//MAGENTA
-	mat4.set(invertedPlayerCamera, mvMatrix);
-	rotate4mat(mvMatrix, 0, 1, Math.PI*1.0);	//turn upside down (roll)
-	ymove4mat(mvMatrix, -moveDist);
-	drawTetraFrame();
-	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.4, 1.0]);	//YELLOW
-	mat4.set(invertedPlayerCamera, mvMatrix);
-	
-	var tempRot = Math.atan(1.0/Math.sqrt(2));
-	rotate4mat(mvMatrix, 1, 2, tempRot*2);
-	ymove4mat(mvMatrix, -moveDist);
-	drawTetraFrame();
-	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
-	mat4.set(invertedPlayerCamera, mvMatrix);
-	xyzrotate4mat(mvMatrix,[ -tempRot, 0, -tempRot*Math.sqrt(3)]);
-	ymove4mat(mvMatrix, -moveDist);
-	drawTetraFrame();
-	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 0.4, 1.0]);	//RED
-	mat4.set(invertedPlayerCamera, mvMatrix);
-	xyzrotate4mat(mvMatrix,[ -tempRot, 0, tempRot*Math.sqrt(3)]);
-	ymove4mat(mvMatrix, -moveDist);
-	drawTetraFrame();
-	
+	if (guiParams["draw 5-cell"]){
+		var moveDist = Math.acos(-0.25);
+		modelScale = 2*moveDist;
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+		
+		//draw a tetrahedron
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		drawTetraFrame();
+		
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 1.0, 1.0]);	//MAGENTA
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		rotate4mat(mvMatrix, 0, 1, Math.PI*1.0);	//turn upside down (roll)
+		ymove4mat(mvMatrix, -moveDist);
+		drawTetraFrame();
+		
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.4, 1.0]);	//YELLOW
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		
+		var tempRot = Math.atan(1.0/Math.sqrt(2));
+		rotate4mat(mvMatrix, 1, 2, tempRot*2);
+		ymove4mat(mvMatrix, -moveDist);
+		drawTetraFrame();
+		
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		xyzrotate4mat(mvMatrix,[ -tempRot, 0, -tempRot*Math.sqrt(3)]);
+		ymove4mat(mvMatrix, -moveDist);
+		drawTetraFrame();
+		
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 0.4, 1.0]);	//RED
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		xyzrotate4mat(mvMatrix,[ -tempRot, 0, tempRot*Math.sqrt(3)]);
+		ymove4mat(mvMatrix, -moveDist);
+		drawTetraFrame();
+	}
 	
 	activeShaderProgram = shaderProgramTexmap4Vec;
 	gl.useProgram(activeShaderProgram);
@@ -638,9 +639,10 @@ var guiParams={
 		'boxes y=w=0':false,
 		'boxes z=w=0':false
 	},
+	"draw 5-cell":false,
 	"8-cell scale":1.0,
-	"draw 8-cell":false,
-	"draw 24-cell":false,
+	"draw 8-cell":true,
+	"draw 24-cell":true,
 	fogColor:'#aaaaaa'
 };
 var vecFogColor = [1.0,0.0,0.0,1.0];
@@ -660,6 +662,7 @@ function init(){
 		console.log(shape);
 		drawShapesFolder.add(guiParams.drawShapes, shape );
 	}
+	gui.add(guiParams,"draw 5-cell");
 	gui.add(guiParams,"draw 8-cell",false);
 	gui.add(guiParams,"8-cell scale",0.2,2.0,0.05);
 	gui.add(guiParams,"draw 24-cell",true);
