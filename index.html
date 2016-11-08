@@ -752,11 +752,8 @@ function init(){
 			mouseInfo.lastPointingDir = pointingDir;
 			
 			//rotate player 
-			//since small angle, can get away with just doing successive euler rotations. TODO axis angle
-			//console.log("will turn by" + crossProd.x + ", " + crossProd.w);
-			pitchPlayer( -crossProd.x / crossProd.w);	//guess have - here because of unplanned handedness of screen, 3d co-ord systems
-			turnPlayer( crossProd.y / crossProd.w);
-			rollPlayer( crossProd.z / crossProd.w);
+			//guess have signs here because of unplanned handedness of screen, 3d co-ord systems
+			xyzrotate4mat(playerCamera, [crossProd.x / crossProd.w, -crossProd.y / crossProd.w, -crossProd.z / crossProd.w]);
 			
 		}
 	});
@@ -1012,11 +1009,8 @@ function handleTouchMove(evt){
 			mouseInfo.lastPointingDir = pointingDir;
 			
 			//rotate player 
-			//since small angle, can get away with just doing successive euler rotations. TODO axis angle
-			//console.log("will turn by" + crossProd.x + ", " + crossProd.w);
-			pitchPlayer( -crossProd.x / crossProd.w);	//guess have - here because of unplanned handedness of screen, 3d co-ord systems
-			turnPlayer( crossProd.y / crossProd.w);
-			rollPlayer( crossProd.z / crossProd.w);
+			//guess have signs here because of unplanned handedness of screen, 3d co-ord systems
+			xyzrotate4mat(playerCamera, [crossProd.x / crossProd.w, -crossProd.y / crossProd.w, -crossProd.z / crossProd.w]);
 		}
 		
 		logtouchevent(touches[i],i);
