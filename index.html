@@ -507,6 +507,7 @@ function drawWorldScene(frameTime) {
 
 
 function drawItem(){
+	gl.enable(gl.CULL_FACE);
 	//drawSphere();
 	drawCube();
 }
@@ -523,7 +524,6 @@ function drawSphere(){
 }
 
 function drawCube(){
-
 	//gl.useProgram(shaderProgramTexmap);
 	//gl.enableVertexAttribArray(1);
 	
@@ -547,6 +547,7 @@ function drawCube(){
 }
 
 function drawTennisBall(){
+	gl.disable(gl.CULL_FACE);
 	gl.bindBuffer(gl.ARRAY_BUFFER, tennisBallVertexPositionBuffer);
     gl.vertexAttribPointer(shaderProgramTexmap4Vec.attributes.aVertexPosition, tennisBallVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	
@@ -564,6 +565,7 @@ function drawTennisBall(){
 }
 
 function drawObjectFromBuffers(bufferObj){
+	gl.enable(gl.CULL_FACE);
 	gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexPositionBuffer);
     gl.vertexAttribPointer(shaderProgramTexmap.attributes.aVertexPosition, bufferObj.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	
@@ -772,7 +774,6 @@ function init(){
 	setFog(guiParams.fogColor);
     gl.enable(gl.DEPTH_TEST);
 	//gl.disable(gl.DEPTH_TEST);
-	//gl.enable(gl.CULL_FACE);
 	setupScene();
 	requestAnimationFrame(drawScene);
 	
