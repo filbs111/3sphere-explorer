@@ -390,37 +390,37 @@ function drawWorldScene(frameTime) {
 		var moveAmount = Math.PI/3;	
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [cellScale,cellScale,cellScale]);
 
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);	//WHITE
-		mat4.set(invertedPlayerCamera, mvMatrix);
-		//drawTetraFrame();	//reference centred frame.
-		
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 0.4, 1.0]);	//RED
-		mat4.set(invertedPlayerCamera, mvMatrix);
 		var ang = -0.5*Math.sqrt(2)*Math.atan(Math.sqrt(2));
-		xyzrotate4mat(mvMatrix,[ -ang, 0, -ang]);
 		
-		xyzrotate4mat(mvMatrix,[0,Math.PI/12,0]);
-		ymove4mat(mvMatrix, moveAmount);	
-		drawTetraFrame();
+		var tmpMatrix = mat4.create();
+		mat4.set(invertedPlayerCamera, tmpMatrix);	//copy matrix so can reuse
+		drawHalf16Cells();
+		xyzrotate4mat(tmpMatrix,[ Math.PI, 0, 0]);
+		drawHalf16Cells();
 		
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 1.0, 1.0]);	//BLUE
-		ymove4mat(mvMatrix, Math.PI);
-		xyzrotate4mat(mvMatrix,[0,Math.PI,0]);
-		drawTetraFrame();
+		function drawHalf16Cells(){
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);	//WHITE
+			drawTetraFromPair(1,1,1);
+			drawTetraFromPair(-1,-1,5);
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.2, 0.2, 0.2, 1.0]);	//DARK
+			drawTetraFromPair(1,-1,-1);
+			drawTetraFromPair(-1,1,-5);
+		}
 		
-		
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
-		mat4.set(invertedPlayerCamera, mvMatrix);
-		xyzrotate4mat(mvMatrix,[ -ang, 0, ang]);
-		xyzrotate4mat(mvMatrix,[0,-Math.PI/12,0]);
-		ymove4mat(mvMatrix, moveAmount);
-		drawTetraFrame();
-		
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.4, 1.0]);	//YELLOW
-		ymove4mat(mvMatrix, Math.PI);
-		xyzrotate4mat(mvMatrix,[0,Math.PI,0]);
-		drawTetraFrame();
-		
+		function drawTetraFromPair(xsign,ysign,rotatesign){
+			mat4.set(tmpMatrix, mvMatrix);
+			
+			xyzrotate4mat(mvMatrix,[ -ang*xsign, 0, -ang*ysign]);
+			
+			xyzrotate4mat(mvMatrix,[0,rotatesign*Math.PI/12,0]);
+			ymove4mat(mvMatrix, moveAmount);
+
+			drawTetraFrame();
+			
+			ymove4mat(mvMatrix, Math.PI);
+			xyzrotate4mat(mvMatrix,[0,Math.PI,0]);
+			drawTetraFrame();
+		}
 		
 	}
 	
@@ -639,7 +639,7 @@ function setupScene() {
 	mat4.identity(playerCamera);	//not sure why have 2 matrices here...
 	
 	//start player off outside of boxes
-	xyzmove4mat(playerCamera,[0,0.5,-1.5]);
+	xyzmove4mat(playerCamera,[0,-0.2,-1.0]);
 }
 
 var texture;
@@ -681,7 +681,7 @@ var guiParams={
 		'boxes z=w=0':false
 	},
 	"draw 5-cell":false,
-	"8-cell scale":0.2,
+	"8-cell scale":1.0,
 	"draw 8-cell":true,
 	"draw 16-cell":true,
 	"draw 24-cell":false,
