@@ -385,6 +385,45 @@ function drawWorldScene(frameTime) {
 		drawCubeFrame();
 	}
 	
+	if (guiParams["draw 16-cell"]){
+		var cellScale = 4/Math.sqrt(6);		//in the model, vertices are 0.75*sqrt(2) from the centre, and want to scale to tan(PI/3)=sqrt(3)
+		var moveAmount = Math.PI/3;	
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [cellScale,cellScale,cellScale]);
+
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);	//WHITE
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		//drawTetraFrame();	//reference centred frame.
+		
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 0.4, 1.0]);	//RED
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		var ang = -0.5*Math.sqrt(2)*Math.atan(Math.sqrt(2));
+		xyzrotate4mat(mvMatrix,[ -ang, 0, -ang]);
+		
+		xyzrotate4mat(mvMatrix,[0,Math.PI/12,0]);
+		ymove4mat(mvMatrix, moveAmount);	
+		drawTetraFrame();
+		
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 1.0, 1.0]);	//BLUE
+		ymove4mat(mvMatrix, Math.PI);
+		xyzrotate4mat(mvMatrix,[0,Math.PI,0]);
+		drawTetraFrame();
+		
+		
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		xyzrotate4mat(mvMatrix,[ -ang, 0, ang]);
+		xyzrotate4mat(mvMatrix,[0,-Math.PI/12,0]);
+		ymove4mat(mvMatrix, moveAmount);
+		drawTetraFrame();
+		
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.4, 1.0]);	//YELLOW
+		ymove4mat(mvMatrix, Math.PI);
+		xyzrotate4mat(mvMatrix,[0,Math.PI,0]);
+		drawTetraFrame();
+		
+		
+	}
+	
 	modelScale = 1.0;
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 	
@@ -642,9 +681,10 @@ var guiParams={
 		'boxes z=w=0':false
 	},
 	"draw 5-cell":false,
-	"8-cell scale":1.0,
+	"8-cell scale":0.2,
 	"draw 8-cell":true,
-	"draw 24-cell":true,
+	"draw 16-cell":true,
+	"draw 24-cell":false,
 	fogColor:'#aaaaaa'
 };
 var vecFogColor = [1.0,0.0,0.0,1.0];
@@ -666,6 +706,7 @@ function init(){
 	}
 	gui.add(guiParams,"draw 5-cell");
 	gui.add(guiParams,"draw 8-cell",false);
+	gui.add(guiParams,"draw 16-cell");
 	gui.add(guiParams,"8-cell scale",0.2,2.0,0.05);
 	gui.add(guiParams,"draw 24-cell",true);
 	
