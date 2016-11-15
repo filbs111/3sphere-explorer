@@ -14,13 +14,12 @@ var tennisBallData = (function(){
 	var bbands =32;
 	
 	//indices. note would be more performant to use indexed vertex strips, but not that much in it.
-	//basically a wrapping grid.
-	//TODO unfortunately, texture mapping requires that don't use a wrapping grid. should use regular grid (ie with a seam)
+	//basically a grid.
 	for (var ii=0;ii<abands;ii++){
 		for (var jj=0;jj<bbands;jj++){
-			var iip = (ii+1)%abands;
-			var jja = jj*abands;
-			var jjpa = ((jj+1)%bbands)*abands;
+			var iip = ii+1;
+			var jja = jj*(abands+1);
+			var jjpa = jja+abands+1;
 			indexData.push( ii + jja);	//1st triangle in quad
 			indexData.push( iip + jja);
 			indexData.push( ii + jjpa);
@@ -44,20 +43,20 @@ var tennisBallData = (function(){
 	var cosCylRadius = Math.cos(cylRadius);
 	var sinCylRadius = Math.sin(cylRadius);
 	
-	for (var ii=0, ang=0, increment=Math.PI * 2.0 / abands; ii<abands;ii++,ang+=increment){
+	for (var ii=0, ang=0, increment=Math.PI * 2.0 / abands; ii<=abands;ii++,ang+=increment){
 		xvalues.push(cosCylRadius * Math.sin(ang));
 		yvalues.push(cosCylRadius * Math.cos(ang));
 	}
-	for (var ii=0, ang=0, increment=Math.PI * 2.0 / bbands;ii<bbands;ii++,ang+=increment){
+	for (var ii=0, ang=0, increment=Math.PI * 2.0 / bbands;ii<=bbands;ii++,ang+=increment){
 		zvalues.push(sinCylRadius * Math.sin(ang));
 		wvalues.push(sinCylRadius * Math.cos(ang));
 	}
 	
 	var x, y, z, w;
-	for (var ii=0;ii<abands;ii++){
+	for (var ii=0;ii<=abands;ii++){
 		x = xvalues[ii];
 		y = yvalues[ii];
-		for (var jj=0;jj<bbands;jj++){
+		for (var jj=0;jj<=bbands;jj++){
 			vertexPositionData.push(x);
 			vertexPositionData.push(y);
 			vertexPositionData.push(zvalues[jj]);
