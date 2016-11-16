@@ -40,6 +40,7 @@
 <script type="text/javascript" src="data/cube-frame-a1-cubeproj.obj.json"></script>
 <script type="text/javascript" src="data/octohedron-nosubdiv-cubeproj.obj.json"></script>
 <script type="text/javascript" src="data/tetra-frame.obj.json"></script>
+<script type="text/javascript" src="data/dodecahedron-frame-cubeproj.obj.json"></script>
 
 <!-- simple pix shader -->
 <script id="shader-simple-fs" type="x-shader/x-fragment">
@@ -180,6 +181,7 @@ var tennisBallVertexPositionBuffer,
 var cubeFrameBuffers={};
 var octoFrameBuffers={};	
 var tetraFrameBuffers={};	
+var dodecaFrameBuffers={};	
 	
 function initBuffers(){
 	var sphereData = makeSphereData(61,32,0.05);
@@ -225,10 +227,12 @@ function initBuffers(){
 	var cubeFrameBlenderObject = loadBlenderExport(cubeFrameData.meshes[0]);
 	var octoFrameBlenderObject = loadBlenderExport(octoFrameData.meshes[0]);
 	var tetraFrameBlenderObject = loadBlenderExport(tetraFrameData.meshes[0]);
+	var dodecaFrameBlenderObject = loadBlenderExport(dodecaFrameData.meshes[0]);
 	
 	loadBufferData(cubeFrameBuffers, cubeFrameBlenderObject);
 	loadBufferData(octoFrameBuffers, octoFrameBlenderObject);
 	loadBufferData(tetraFrameBuffers, tetraFrameBlenderObject);
+	loadBufferData(dodecaFrameBuffers, dodecaFrameBlenderObject);
 	
 	function bufferArrayData(buffer, arr, size){
 		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -498,6 +502,59 @@ function drawWorldScene(frameTime) {
 		drawTetraFrame();
 	}
 	
+	mat4.set(invertedPlayerCamera, mvMatrix);
+	//gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.85,0.85,0.85]);
+	//var dodecaScale=1.15;	//guess
+	//var dodecaMove = 0.4*Math.PI/Math.sqrt(5);	//guess
+	
+	var dodecaScale=0.5;	//guess
+	var dodecaMove = 0.2*Math.PI;
+	
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);	//WHITE
+	
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [dodecaScale,dodecaScale,dodecaScale]);
+	xyzrotate4mat(mvMatrix,[0,Math.PI,0]);
+	drawDodecaFrame();	//centre
+	ymove4mat(mvMatrix, Math.PI);
+	xyzrotate4mat(mvMatrix,[0,Math.PI,0]);	//rotate 180 about touching face
+	drawDodecaFrame();	//opposite side
+	
+	mat4.set(invertedPlayerCamera, mvMatrix);
+	xyzrotate4mat(mvMatrix,[0,0,Math.PI]);	//elevate
+	xyzrotate4mat(mvMatrix,[0,Math.PI,0]);	//rotate 180 about touching face
+	drawLineOfDodeca();	//downward
+	
+	mat4.set(invertedPlayerCamera, mvMatrix);
+	xyzrotate4mat(mvMatrix,[0,Math.PI,0]);	//rotate 180 about touching face
+	drawLineOfDodeca();	//upward
+	
+	for (var rotateStep=0;rotateStep<5;rotateStep++){
+		//https://en.wikipedia.org/wiki/Regular_icosahedron apparently verts of icosahedron (or centre of faces of dodecahedron at north, south poles, and latitiude+/-atan(0.5)) (see "spherical co-ordinates")
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 0.4, 1.0]);	//RED
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		xyzrotate4mat(mvMatrix,[0,rotateStep*0.4*Math.PI,0]);	//yrotate
+		xyzrotate4mat(mvMatrix,[0,0,Math.atan(2)]);	//elevate
+		drawLineOfDodeca();
+		
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		xyzrotate4mat(mvMatrix,[0,rotateStep*0.4*Math.PI,0]);	//yrotate
+		xyzrotate4mat(mvMatrix,[0,0,Math.PI+Math.atan(2)]);	//elevate
+		drawLineOfDodeca();
+	}
+	
+	function drawLineOfDodeca(){
+		for(var ii=0;ii<4;ii++){
+			xyzrotate4mat(mvMatrix,[0,Math.PI,0]);	//rotate 180 about touching face
+			ymove4mat(mvMatrix, dodecaMove);
+			drawDodecaFrame();
+		}
+	}
+	
+	
+	
+	
+	
 	activeShaderProgram = shaderProgramTexmap4Vec;
 	gl.useProgram(activeShaderProgram);
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
@@ -525,6 +582,9 @@ function drawWorldScene(frameTime) {
 	}
 	function drawTetraFrame(){
 		drawObjectFromBuffers(tetraFrameBuffers);
+	}
+	function drawDodecaFrame(){
+		drawObjectFromBuffers(dodecaFrameBuffers);
 	}
 	
 	function drawOctoFrameRing(){
@@ -682,8 +742,8 @@ var guiParams={
 	},
 	"draw 5-cell":false,
 	"8-cell scale":1.0,
-	"draw 8-cell":true,
-	"draw 16-cell":true,
+	"draw 8-cell":false,
+	"draw 16-cell":false,
 	"draw 24-cell":false,
 	fogColor:'#aaaaaa'
 };
