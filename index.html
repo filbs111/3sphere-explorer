@@ -455,9 +455,31 @@ function drawWorldScene(frameTime) {
 	}
 	
 	mat4.set(invertedPlayerCamera, mvMatrix);
+	
+	
+	//new draw dodeca stuff...
+	if (guiParams["draw 120-cell"]){
+		var cellMats = cellMatData.d120;
+		var dodecaScale=0.5;	//guess
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [dodecaScale,dodecaScale,dodecaScale]);
+		for (cc in cellMats){
+			var thisCell = cellMats[cc];
+			mat4.set(invertedPlayerCamera, mvMatrix);
+			mat4.multiply(mvMatrix,thisCell);
+			drawDodecaFrame();
+		}
+	}
+	
+	
+	
+	
+	
+	
 	//gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.85,0.85,0.85]);
 	//var dodecaScale=1.15;	//guess
 	//var dodecaMove = 0.4*Math.PI/Math.sqrt(5);	//guess
+	
+	/*
 	
 	var dodecaScale=0.5;	//guess
 	var dodecaMove = Math.PI/5;
@@ -529,6 +551,9 @@ function drawWorldScene(frameTime) {
 		xyzrotate4mat(mvMatrix,[0,Math.PI,0]);
 		xyzrotate4mat(mvMatrix,[0,0,-Math.atan((1+Math.sqrt(5))/(2+Math.sqrt(5)))]);
 		drawDodecaFrame();
+		
+		*/
+		
 		/*
 		
 		//drawLineOfDodeca(2);
@@ -547,6 +572,8 @@ function drawWorldScene(frameTime) {
 		ymove4mat(mvMatrix, 2*dodecaMove);
 		drawDodecaFrame();
 */
+
+/*
 		//drawLineOfDodeca(1);
 	}
 	
@@ -558,7 +585,7 @@ function drawWorldScene(frameTime) {
 			drawDodecaFrame();
 		}
 	}
-	
+	*/
 	
 	
 	
@@ -592,7 +619,7 @@ function drawWorldScene(frameTime) {
 		drawObjectFromBuffers(tetraFrameBuffers);
 	}
 	function drawDodecaFrame(){
-		//drawObjectFromBuffers(dodecaFrameBuffers);
+		drawObjectFromBuffers(dodecaFrameBuffers);
 	}
 	
 }
@@ -738,6 +765,7 @@ var guiParams={
 	"draw 8-cell":false,
 	"draw 16-cell":false,
 	"draw 24-cell":false,
+	"draw 120-cell":false,
 	fogColor:'#aaaaaa'
 };
 var vecFogColor = [1.0,0.0,0.0,1.0];
@@ -762,7 +790,8 @@ function init(){
 	gui.add(guiParams,"draw 16-cell");
 	gui.add(guiParams,"8-cell scale",0.2,2.0,0.05);
 	gui.add(guiParams,"draw 24-cell",true);
-	
+	gui.add(guiParams,"draw 120-cell",true);
+
 	window.addEventListener("keydown",function(evt){
 		//console.log("key pressed : " + evt.keyCode);
 		var willPreventDefault=true;

@@ -51,9 +51,9 @@ var cellMatData=(function(){
 	ringMats.push(newMatrix());	
 	ringMats.push(rotate4mat(newMatrix(), 0, 1, halfPI));
 	ringMats.push(rotate4mat(newMatrix(), 0, 2, halfPI));
-	ringMats.push(rotate4mat(newMatrix(), 0, 2, halfPI));
 	ringMats.push(rotate4mat(xmove4mat(newMatrix(), halfPI), 0, 1, halfPI));
 	ringMats.push(rotate4mat(xmove4mat(newMatrix(), halfPI), 0, 2, halfPI));
+	ringMats.push(rotate4mat(ymove4mat(newMatrix(), halfPI), 0, 2, halfPI));
 	
 	var ringColors = [
 		[1.0, 0.4, 0.4, 1.0],	//RED
@@ -91,6 +91,28 @@ var cellMatData=(function(){
 			cellColors.push(ringColor);
 		}
 	}
+	
+	//hopefully 120-cell matrices result from multiplying 24-cell matrices by 5-cell matrices (24*5=120)
+	cellMats=[];
+	var tmpMat;
+	for (var aa=0;aa<5;aa++){
+		var this5CellMat=returnObj.d5[aa];
+		for (var bb=0;bb<24;bb++){
+			var this24CellMat=returnObj.d24.cells[bb];
+			tmpMat = newMatrix();
+			mat4.set(this5CellMat, tmpMat);
+			
+			//rotate4mat(tmpMat, 0, 1, halfPI));	//guess 
+			
+			mat4.multiply(tmpMat, this24CellMat);
+			
+			//mat4.set(this24CellMat, tmpMat);
+			//mat4.multiply(tmpMat, this5CellMat);
+			
+			cellMats.push(tmpMat);
+		}
+	}
+	returnObj.d120 = cellMats;
 	
 	
 	function newMatrix(){
