@@ -291,6 +291,8 @@ function drawScene(frameTime){
 	drawWorldScene(frameTime, 0);
 }
 
+var usePrecalcCells=true;
+
 function drawWorldScene(frameTime) {		
 	//var activeShaderProgram = shaderProgramColored;	//draw spheres
 	var activeShaderProgram = shaderProgramTexmap;	//draw cubes
@@ -363,30 +365,61 @@ function drawWorldScene(frameTime) {
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 	
 	if (guiParams["draw 8-cell"]){
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);	//WHITE
-		mat4.set(invertedPlayerCamera, mvMatrix);
-		drawCubeFrame();
-		xmove4mat(mvMatrix, Math.PI);	//opposite side - can use any x, y, z
-		drawCubeFrame();
-		xmove4mat(mvMatrix, Math.PI);	//and back again.
+		if (usePrecalcCells==true){
+			//calculate rotation matrices for each cell up front.
+			//once works, should do calculation only once and look up
+			//this ends up not exactly the same, but doesn't really matter.
+			
+			var cellMats = [];			
+			cellMats.push(newMatrix());
+			cellMats.push(xmove4mat(newMatrix(), Math.PI));
+			cellMats.push(xmove4mat(newMatrix(), 0.5*Math.PI));
+			cellMats.push(xmove4mat(newMatrix(), -0.5*Math.PI));
+			cellMats.push(ymove4mat(newMatrix(), 0.5*Math.PI));
+			cellMats.push(ymove4mat(newMatrix(), -0.5*Math.PI));
+			cellMats.push(zmove4mat(newMatrix(), 0.5*Math.PI));
+			cellMats.push(zmove4mat(newMatrix(), -0.5*Math.PI));
+			
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);	//WHITE
+			for (cc in cellMats){
+				var thisCell = cellMats[cc];
+				mat4.set(invertedPlayerCamera, mvMatrix);
+				mat4.multiply(mvMatrix,thisCell);
+				drawCubeFrame();
+			}
+			
+			function newMatrix(){
+				var newMat = mat4.create();
+				mat4.identity(newMat);
+				return newMat;
+			}
 		
-		//gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 0.4, 1.0]);	//RED
-		xmove4mat(mvMatrix, Math.PI*0.5);
-		drawCubeFrame();
-		xmove4mat(mvMatrix, Math.PI*1.0);
-		drawCubeFrame();
-		
-		//gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
-		ymove4mat(mvMatrix, Math.PI*0.5);
-		drawCubeFrame();
-		ymove4mat(mvMatrix, Math.PI);
-		drawCubeFrame();
-		
-		//gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 1.0, 1.0]);	//BLUE
-		zmove4mat(mvMatrix, Math.PI*0.5);
-		drawCubeFrame();
-		zmove4mat(mvMatrix, Math.PI);
-		drawCubeFrame();
+		}else{
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);	//WHITE
+			mat4.set(invertedPlayerCamera, mvMatrix);
+			drawCubeFrame();
+			xmove4mat(mvMatrix, Math.PI);	//opposite side - can use any x, y, z
+			drawCubeFrame();
+			xmove4mat(mvMatrix, Math.PI);	//and back again.
+			
+			//gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 0.4, 1.0]);	//RED
+			xmove4mat(mvMatrix, Math.PI*0.5);
+			drawCubeFrame();
+			xmove4mat(mvMatrix, Math.PI*1.0);
+			drawCubeFrame();
+			
+			//gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
+			ymove4mat(mvMatrix, Math.PI*0.5);
+			drawCubeFrame();
+			ymove4mat(mvMatrix, Math.PI);
+			drawCubeFrame();
+			
+			//gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 1.0, 1.0]);	//BLUE
+			zmove4mat(mvMatrix, Math.PI*0.5);
+			drawCubeFrame();
+			zmove4mat(mvMatrix, Math.PI);
+			drawCubeFrame();
+		}
 	}
 	
 	if (guiParams["draw 16-cell"]){
@@ -432,74 +465,213 @@ function drawWorldScene(frameTime) {
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 	
 	if (guiParams["draw 24-cell"]){
-		//draw octohedron frame objects to show cells of 24-cell
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 0.4, 1.0]);	//RED
-		mat4.set(invertedPlayerCamera, mvMatrix);
-		drawOctoFrameRing();
+		if (usePrecalcCells==true){
 		
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
-		mat4.set(invertedPlayerCamera, mvMatrix);
-		rotate4mat(mvMatrix, 0, 1, Math.PI*0.5);
-		drawOctoFrameRing();
+			var ringMats = [];
+			var cellMats = [];
+			var halfPi = Math.PI*0.5;
+			ringMats.push(newMatrix());			
+			ringMats.push(rotate4mat(newMatrix(), 0, 1, halfPi));
+			ringMats.push(rotate4mat(newMatrix(), 0, 2, halfPi));
+			ringMats.push(rotate4mat(newMatrix(), 0, 2, halfPi));
+			ringMats.push(rotate4mat(xmove4mat(newMatrix(), halfPi), 0, 1, halfPi));
+			ringMats.push(rotate4mat(xmove4mat(newMatrix(), halfPi), 0, 2, halfPi));
+			
+			var ringColors = [
+				[1.0, 0.4, 0.4, 1.0],	//RED
+				[0.4, 1.0, 0.4, 1.0],	//GREEN
+				[0.4, 0.4, 1.0, 1.0],	//BLUE
+				[1.0, 1.0, 0.4, 1.0],	//YELLOW
+				[1.0, 0.4, 1.0, 1.0],	//MAGENTA
+				[0.4, 1.0, 1.0, 1.0]	//CYAN
+			];
+			var cellColors=[];
+			
+			for (var rr in ringMats){
+				addOctoFrameRing(ringMats[rr],ringColors[rr]);
+			}
+			
+			function addOctoFrameRing(ringMat,ringColor){
+				rotate4mat(ringMat, 1, 2, Math.PI*0.25);
+			
+				//this is basically a copy of drawRing func. TODO generalise
+				var numInRing = 4;
+				var startAng = Math.PI / numInRing;
+				var angleStep = startAng * 2.0;
+				
+				xmove4mat(ringMat, startAng);
+				for (var ii=0;ii<numInRing;ii++){
+					xmove4mat(ringMat, angleStep);
+					var tmpMat = newMatrix();
+					mat4.set(ringMat, tmpMat);
+					cellMats.push(tmpMat);
+					cellColors.push(ringColor);
+				}
+			}
+			
+			for (cc in cellMats){
+				var thisCell = cellMats[cc];
+				gl.uniform4fv(activeShaderProgram.uniforms.uColor,cellColors[cc]);
+				mat4.set(invertedPlayerCamera, mvMatrix);
+				mat4.multiply(mvMatrix,thisCell);
+				drawOctoFrame();
+			}
+			
+			function newMatrix(){
+				var newMat = mat4.create();
+				mat4.identity(newMat);
+				return newMat;
+			}
+		
+		}else{
+			//draw octohedron frame objects to show cells of 24-cell
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 0.4, 1.0]);	//RED
+			mat4.set(invertedPlayerCamera, mvMatrix);
+			drawOctoFrameRing();
+			
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
+			mat4.set(invertedPlayerCamera, mvMatrix);
+			rotate4mat(mvMatrix, 0, 1, Math.PI*0.5);
+			drawOctoFrameRing();
 
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 1.0, 1.0]);	//BLUE
-		mat4.set(invertedPlayerCamera, mvMatrix);
-		rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
-		drawOctoFrameRing();
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 1.0, 1.0]);	//BLUE
+			mat4.set(invertedPlayerCamera, mvMatrix);
+			rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
+			drawOctoFrameRing();
+			
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.4, 1.0]);	//YELLOW
+			mat4.set(invertedPlayerCamera, mvMatrix);
+			xmove4mat(mvMatrix, Math.PI*0.5);
+			rotate4mat(mvMatrix, 0, 1, Math.PI*0.5);
+			drawOctoFrameRing();
+			
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 1.0, 1.0]);	//MAGENTA
+			mat4.set(invertedPlayerCamera, mvMatrix);
+			xmove4mat(mvMatrix, Math.PI*0.5);
+			rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
+			drawOctoFrameRing();
+			
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 1.0, 1.0]);	//CYAN
+			mat4.set(invertedPlayerCamera, mvMatrix);
+			ymove4mat(mvMatrix, Math.PI*0.5);
+			rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
+			drawOctoFrameRing();
+			
+			function drawOctoFrameRing(){
+				rotate4mat(mvMatrix, 1, 2, Math.PI*0.25);
+			
+				//this is basically a copy of drawRing func. TODO generalise
+				var numInRing = 4;
+				var startAng = Math.PI / numInRing;
+				var angleStep = startAng * 2.0;
+				
+				xmove4mat(mvMatrix, startAng);
+				for (var ii=0;ii<numInRing;ii++){
+					xmove4mat(mvMatrix, angleStep);
+					drawOctoFrame();
+				}
+			}
+		}
 		
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.4, 1.0]);	//YELLOW
-		mat4.set(invertedPlayerCamera, mvMatrix);
-		xmove4mat(mvMatrix, Math.PI*0.5);
-		rotate4mat(mvMatrix, 0, 1, Math.PI*0.5);
-		drawOctoFrameRing();
 		
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 1.0, 1.0]);	//MAGENTA
-		mat4.set(invertedPlayerCamera, mvMatrix);
-		xmove4mat(mvMatrix, Math.PI*0.5);
-		rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
-		drawOctoFrameRing();
 		
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 1.0, 1.0]);	//CYAN
-		mat4.set(invertedPlayerCamera, mvMatrix);
-		ymove4mat(mvMatrix, Math.PI*0.5);
-		rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
-		drawOctoFrameRing();
+		
 	}
 	
 	if (guiParams["draw 5-cell"]){
-		var moveDist = Math.acos(-0.25);
-		modelScale = 2*moveDist;
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+		if (usePrecalcCells==true){
+			//calculate rotation matrices for each cell up front.
+			//once works, should do calculation only once and look up
+			//this ends up not exactly the same, but doesn't really matter.
+			var moveDist = Math.acos(-0.25);
+			modelScale = 2*moveDist;
+			
+			var cellMats = [];			
+			cellMats.push(newMatrix());
+			
+			var tmpMat;
+			var tempRot = Math.atan(1.0/Math.sqrt(2));
+
+			tmpMat = newMatrix();
+			rotate4mat(tmpMat, 0, 1, Math.PI*1.0);	//turn upside down (roll)
+			ymove4mat(tmpMat, -moveDist);
+			cellMats.push(tmpMat);
+			
+			tmpMat = newMatrix();
+			rotate4mat(tmpMat, 1, 2, tempRot*2);
+			ymove4mat(tmpMat, -moveDist);
+			cellMats.push(tmpMat);
+
+			tmpMat = newMatrix();
+			xyzrotate4mat(tmpMat,[ -tempRot, 0, -tempRot*Math.sqrt(3)]);
+			ymove4mat(tmpMat, -moveDist);
+			cellMats.push(tmpMat);
+			
+			tmpMat = newMatrix();
+			xyzrotate4mat(tmpMat,[ -tempRot, 0, tempRot*Math.sqrt(3)]);
+			ymove4mat(tmpMat, -moveDist);
+			cellMats.push(tmpMat);
+			
+			var cellColors = [
+				[1.0, 1.0, 1.0, 1.0],	//WHITE
+				[1.0, 0.4, 1.0, 1.0],	//MAGENTA
+				[1.0, 1.0, 0.4, 1.0],	//YELLOW
+				[0.4, 1.0, 0.4, 1.0],	//GREEN
+				[1.0, 0.4, 0.4, 1.0]	//RED
+			];
+			
+			//==============
+			
+			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+			for (cc in cellMats){
+				gl.uniform4fv(activeShaderProgram.uniforms.uColor, cellColors[cc]);
+				var thisCell = cellMats[cc];
+				mat4.set(invertedPlayerCamera, mvMatrix);
+				mat4.multiply(mvMatrix,thisCell);
+				drawTetraFrame();
+			}
+			
+			function newMatrix(){
+				var newMat = mat4.create();
+				mat4.identity(newMat);
+				return newMat;
+			}
 		
-		//draw a tetrahedron
-		mat4.set(invertedPlayerCamera, mvMatrix);
-		drawTetraFrame();
-		
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 1.0, 1.0]);	//MAGENTA
-		mat4.set(invertedPlayerCamera, mvMatrix);
-		rotate4mat(mvMatrix, 0, 1, Math.PI*1.0);	//turn upside down (roll)
-		ymove4mat(mvMatrix, -moveDist);
-		drawTetraFrame();
-		
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.4, 1.0]);	//YELLOW
-		mat4.set(invertedPlayerCamera, mvMatrix);
-		
-		var tempRot = Math.atan(1.0/Math.sqrt(2));
-		rotate4mat(mvMatrix, 1, 2, tempRot*2);
-		ymove4mat(mvMatrix, -moveDist);
-		drawTetraFrame();
-		
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
-		mat4.set(invertedPlayerCamera, mvMatrix);
-		xyzrotate4mat(mvMatrix,[ -tempRot, 0, -tempRot*Math.sqrt(3)]);
-		ymove4mat(mvMatrix, -moveDist);
-		drawTetraFrame();
-		
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 0.4, 1.0]);	//RED
-		mat4.set(invertedPlayerCamera, mvMatrix);
-		xyzrotate4mat(mvMatrix,[ -tempRot, 0, tempRot*Math.sqrt(3)]);
-		ymove4mat(mvMatrix, -moveDist);
-		drawTetraFrame();
+		}else{
+			var moveDist = Math.acos(-0.25);
+			modelScale = 2*moveDist;
+			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+			
+			//draw a tetrahedron
+			mat4.set(invertedPlayerCamera, mvMatrix);
+			drawTetraFrame();
+			
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 1.0, 1.0]);	//MAGENTA
+			mat4.set(invertedPlayerCamera, mvMatrix);
+			rotate4mat(mvMatrix, 0, 1, Math.PI*1.0);	//turn upside down (roll)
+			ymove4mat(mvMatrix, -moveDist);
+			drawTetraFrame();
+			
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.4, 1.0]);	//YELLOW
+			mat4.set(invertedPlayerCamera, mvMatrix);
+			
+			var tempRot = Math.atan(1.0/Math.sqrt(2));
+			rotate4mat(mvMatrix, 1, 2, tempRot*2);
+			ymove4mat(mvMatrix, -moveDist);
+			drawTetraFrame();
+			
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
+			mat4.set(invertedPlayerCamera, mvMatrix);
+			xyzrotate4mat(mvMatrix,[ -tempRot, 0, -tempRot*Math.sqrt(3)]);
+			ymove4mat(mvMatrix, -moveDist);
+			drawTetraFrame();
+			
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 0.4, 1.0]);	//RED
+			mat4.set(invertedPlayerCamera, mvMatrix);
+			xyzrotate4mat(mvMatrix,[ -tempRot, 0, tempRot*Math.sqrt(3)]);
+			ymove4mat(mvMatrix, -moveDist);
+			drawTetraFrame();
+		}
 	}
 	
 	mat4.set(invertedPlayerCamera, mvMatrix);
@@ -640,22 +812,7 @@ function drawWorldScene(frameTime) {
 		drawObjectFromBuffers(tetraFrameBuffers);
 	}
 	function drawDodecaFrame(){
-		drawObjectFromBuffers(dodecaFrameBuffers);
-	}
-	
-	function drawOctoFrameRing(){
-		rotate4mat(mvMatrix, 1, 2, Math.PI*0.25);
-	
-		//this is basically a copy of drawRing func. TODO generalise
-		var numInRing = 4;
-		var startAng = Math.PI / numInRing;
-		var angleStep = startAng * 2.0;
-		
-		xmove4mat(mvMatrix, startAng);
-		for (var ii=0;ii<numInRing;ii++){
-			xmove4mat(mvMatrix, angleStep);
-			drawOctoFrame();
-		}
+		//drawObjectFromBuffers(dodecaFrameBuffers);
 	}
 	
 }
@@ -1013,12 +1170,15 @@ function xyzmove4mat(mat, movevector){
 
 function xmove4mat(mat, angle){
 	rotate4mat(mat, 0, 3, angle);
+	return mat;
 }
 function ymove4mat(mat, angle){
 	rotate4mat(mat, 1, 3, angle);
+	return mat;
 }
 function zmove4mat(mat, angle){
 	rotate4mat(mat, 2, 3, angle);
+	return mat;
 }
 
 function xyzrotate4mat(mat, rotatevector){
@@ -1032,6 +1192,7 @@ function xyzrotate4mat(mat, rotatevector){
 
 function rotate4mat(mat, col1, col2, angle){
 	rotate4matRows(mat, col1, col2, angle);	//convenient to switch between trying rows and columns
+	return mat;
 }
 
 function rotate4matCols(mat, col1, col2, angle){
