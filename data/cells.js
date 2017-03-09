@@ -91,35 +91,228 @@ var cellMatData=(function(){
 			cellColors.push(ringColor);
 		}
 	}
-	
-	//hopefully 120-cell matrices result from multiplying 24-cell matrices by 5-cell matrices (24*5=120)
-	cellMats=[];
-	var tmpMat;
-	for (var aa=0;aa<5;aa++){
-		var this5CellMat=returnObj.d5[aa];
-		for (var bb=0;bb<24;bb++){
-			var this24CellMat=returnObj.d24.cells[bb];
-			tmpMat = newMatrix();
-			mat4.set(this5CellMat, tmpMat);
-			
-			//rotate4mat(tmpMat, 0, 1, halfPI));	//guess 
-			
-			mat4.multiply(tmpMat, this24CellMat);
-			
-			//mat4.set(this24CellMat, tmpMat);
-			//mat4.multiply(tmpMat, this5CellMat);
-			
-			cellMats.push(tmpMat);
-		}
-	}
-	returnObj.d120 = cellMats;
-	
+
 	
 	function newMatrix(){
 		var newMat = mat4.create();
 		mat4.identity(newMat);
 		return newMat;
 	}
+	
+	
+	
+	
+	
+	
+	
+//other method from rotations-generator project
+//override the above for some 
+
+//TODO:
+//4d rotations : 5, 8, 16, 24, 120, 600-cell
+
+var halfPI = Math.PI*0.5;
+var rotationStack;
+var generatorRotations;
+var rotateMat;
+
+var emergencyExit;
+
+var myMat = mat4.create();
+mat4.identity(myMat);
+
+
+//4D ROTATIONS
+
+//8-cell (tesseract) - should be easiest.
+rotationStack=[];
+generatorRotations = [];
+
+rotateMat = mat4.create();
+mat4.identity(rotateMat);
+xmove4mat(rotateMat, halfPI);
+generatorRotations.push(rotateMat);
+
+rotateMat = mat4.create();
+mat4.identity(rotateMat);
+ymove4mat(rotateMat, halfPI);
+generatorRotations.push(rotateMat);
+
+rotateMat = mat4.create();
+mat4.identity(rotateMat);
+zmove4mat(rotateMat, halfPI);
+generatorRotations.push(rotateMat);
+
+emergencyExit=0;
+
+addMatsFromMat(myMat);
+console.log("8-cell: " + rotationStack.length);
+
+returnObj.d8=rotationStack;	//override. 
+
+//5-cell
+
+rotationStack=[];
+generatorRotations = [];
+
+var moveDist = Math.acos(-0.25);
+var tempRot = Math.atan(1.0/Math.sqrt(2));			
+
+rotateMat = mat4.create();
+mat4.identity(rotateMat);
+rotate4mat(rotateMat, 0, 1, Math.PI);	//turn upside down (roll)
+ymove4mat(rotateMat, -moveDist);
+generatorRotations.push(rotateMat);
+
+rotateMat = mat4.create();
+mat4.identity(rotateMat);
+rotate4mat(rotateMat, 1, 2, tempRot*2);
+ymove4mat(rotateMat, -moveDist);
+generatorRotations.push(rotateMat);
+
+rotateMat = mat4.create();
+mat4.identity(rotateMat);
+xyzrotate4mat(rotateMat,[ -tempRot, 0, -tempRot*Math.sqrt(3)]);
+ymove4mat(rotateMat, -moveDist);
+generatorRotations.push(rotateMat);
+
+
+addMatsFromMat(myMat);
+console.log("5-cell: " + rotationStack.length);
+
+returnObj.d5=rotationStack;	//override. 
+
+
+
+//try 120-cell
+var dodecaMove = Math.PI/5;
+var dodecaMove2 = Math.PI/3;
+var movedir;
+rotationStack=[];
+generatorRotations = [];
+
+rotateMat = mat4.create();
+mat4.identity(rotateMat);
+xyzrotate4mat(rotateMat,[0,Math.PI,0]);	//rotate 180 about touching face
+ymove4mat(rotateMat, dodecaMove);
+generatorRotations.push(rotateMat);
+
+rotateMat = mat4.create();
+mat4.identity(rotateMat);
+movedir=[2/Math.sqrt(5),1/Math.sqrt(5),0];
+xyzmove4mat(rotateMat, [movedir[0]*dodecaMove, movedir[1]*dodecaMove, movedir[2]*dodecaMove]);
+xyzrotate4mat(rotateMat,[movedir[0]*Math.PI, movedir[1]*Math.PI, movedir[2]*Math.PI]);
+generatorRotations.push(rotateMat);
+
+movedir=[2/Math.sqrt(5)*Math.cos(Math.PI*0.4),1/Math.sqrt(5),2/Math.sqrt(5)*Math.sin(Math.PI*0.4)];
+xyzmove4mat(rotateMat, [movedir[0]*dodecaMove, movedir[1]*dodecaMove, movedir[2]*dodecaMove]);
+xyzrotate4mat(rotateMat,[movedir[0]*Math.PI, movedir[1]*Math.PI, movedir[2]*Math.PI]);
+generatorRotations.push(rotateMat);
+
+
+addMatsFromMat(myMat);
+console.log("120-cell: " + rotationStack.length);
+
+returnObj.d120 = rotationStack;
+
+
+
+//600-cell
+rotationStack=[];
+generatorRotations = [];
+
+var moveLength = 2*Math.asin((3-Math.sqrt(5))/(4*Math.sqrt(2)));
+console.log("movelength = " + moveLength);
+
+
+rotateMat = mat4.create();
+mat4.identity(rotateMat);
+xyzrotate4mat(rotateMat, [0, Math.PI*2/3, 0]);	//rotate 3rd from above. this results in a straight line!
+xyzrotate4mat(rotateMat, [-Math.acos(1/3), 0, 0]);
+//costheta = 1/3 -> sintheta = sqrt(8)/3
+xyzmove4mat(rotateMat,[0, moveLength/3, moveLength*Math.sqrt(8)/3 ]);	//not sure if this is right.
+generatorRotations.push(rotateMat);
+
+
+rotateMat = mat4.create();
+mat4.identity(rotateMat);
+xyzrotate4mat(rotateMat, [0, Math.PI*2/3, 0]);	//chuck in extra rotation
+xyzrotate4mat(rotateMat, [Math.acos(1/3), 0, 0]);
+xyzmove4mat(rotateMat,[0, -moveLength, 0]);	
+generatorRotations.push(rotateMat); //with just this 1 generator, if moveLength is correct, should get 5 cells
+
+
+addMatsFromMat(myMat);
+console.log("600-cell: " + rotationStack.length);
+returnObj.d600 = rotationStack;
+
+
+
+
+function addMatsFromMat(thisMat){
+	emergencyExit++;
+	//if (emergencyExit>800){return;}	//setting this makes for interesting partial 600-cell!
+
+	//console.log("trying to add mat");
+
+	//for an input matrix, if something "equivalent" is not already on the rotationStack (same up vector):
+	//add it, and call addMatsFromMat for all matrices that can be rotated to from it.
+	
+	//step 1: identify if is already on stack.
+	var isCovered = false;
+	
+	var thisMatUpVec = [
+			thisMat[12], 	//for 4-cell
+			thisMat[13],
+			thisMat[14],
+			thisMat[15]	
+	];
+
+	
+	for (var ii=0;ii<rotationStack.length;ii++){
+		var thatMat = rotationStack[ii];
+		var thatMatUpVec = [
+			thatMat[12], 	//for 4-cell
+			thatMat[13],
+			thatMat[14],
+			thatMat[15]
+		];	//TODO maybe precalc this, or use matrix library better (update to newer version??)
+		var dotProd = thatMatUpVec[0]*thisMatUpVec[0]+
+					thatMatUpVec[1]*thisMatUpVec[1]+
+					thatMatUpVec[2]*thisMatUpVec[2]+
+					thatMatUpVec[3]*thisMatUpVec[3];
+		if ((dotProd <1.0001) && (dotProd>0.9999)){
+			//console.log("already covered");
+			isCovered=true;
+			break;
+		}else{
+			//console.log("this one doesn't match. dotProd = " + dotProd);
+		}
+	}
+	
+	if (isCovered==false){
+		console.log("not yet covered. will add");
+		rotationStack.push(thisMat);
+		var newMat; 
+
+		for (var gg=0;gg<generatorRotations.length;gg++){
+			var thisG = generatorRotations[gg];
+			newMat = mat4.create();
+			mat4.set(thisMat,newMat);
+			mat4.multiply(newMat, thisG);
+			
+			addMatsFromMat(newMat);
+		}
+		
+	}
+}
+	
+	
+	
+	
+	
+	
+	
 	
 	return returnObj;
 })();
