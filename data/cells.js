@@ -102,9 +102,6 @@ var cellMatData=(function(){
 	
 	
 	
-	
-	
-	
 //other method from rotations-generator project
 //override the above for some 
 
@@ -233,6 +230,11 @@ xyzrotate4mat(rotateMat, [-Math.acos(1/3), 0, 0]);
 xyzmove4mat(rotateMat,[0, moveLength/3, moveLength*Math.sqrt(8)/3 ]);	//not sure if this is right.
 generatorRotations.push(rotateMat);
 
+rotateMat = mat4.create();
+mat4.identity(rotateMat);
+xyzrotate4mat(rotateMat, [Math.acos(1/3), 0, 0]);
+xyzmove4mat(rotateMat,[0, -moveLength, 0]);	
+generatorRotations.push(rotateMat); //with just this 1 generator, if moveLength is correct, should get 5 cells
 
 rotateMat = mat4.create();
 mat4.identity(rotateMat);
@@ -241,12 +243,20 @@ xyzrotate4mat(rotateMat, [Math.acos(1/3), 0, 0]);
 xyzmove4mat(rotateMat,[0, -moveLength, 0]);	
 generatorRotations.push(rotateMat); //with just this 1 generator, if moveLength is correct, should get 5 cells
 
+rotateMat = mat4.create();
+mat4.identity(rotateMat);
+xyzrotate4mat(rotateMat, [0, Math.PI*4/3, 0]);	//chuck in extra rotation
+xyzrotate4mat(rotateMat, [Math.acos(1/3), 0, 0]);
+xyzmove4mat(rotateMat,[0, -moveLength, 0]);	
+generatorRotations.push(rotateMat); //with just this 1 generator, if moveLength is correct, should get 5 cells
+
+//note might be able to do with fewer (3) generators
+
 
 addMatsFromMat(myMat);
 console.log("600-cell: " + rotationStack.length);
+console.log("trials: " + emergencyExit);
 returnObj.d600 = rotationStack;
-
-
 
 
 function addMatsFromMat(thisMat){
