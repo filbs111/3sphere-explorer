@@ -41,6 +41,7 @@
 <script type="text/javascript" src="data/octohedron-nosubdiv-cubeproj.obj.json"></script>
 <script type="text/javascript" src="data/tetra-frame.obj.json"></script>
 <script type="text/javascript" src="data/dodecahedron-frame-cubeproj.obj.json"></script>
+<script type="text/javascript" src="data/wt_teapot-trimmed.obj.json"></script>
 <script type="text/javascript" src="utils/matfuncs.js"></script>
 <script type="text/javascript" src="data/cells.js"></script>
 
@@ -51,9 +52,10 @@
 	precision mediump float;
 	uniform vec4 uColor;
 	varying float fog;
-	
+	uniform vec4 uFogColor;
+
 	void main(void) {
-		gl_FragColor = vec4( fog* uColor.xyz, 1.0);		
+		gl_FragColor = vec4( fog* uColor.xyz, 1.0) + (1.0-fog)*uFogColor;		
 		//gl_FragDepth = depthPassthru;
 	}
 </script>
@@ -69,15 +71,13 @@
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
 	varying float fog;
+	uniform vec3 uModelScale;
 			
 	void main(void) {
-		vec4 transformedCoord = uMVMatrix * vec4(aVertexPosition, 1.0);	//maybe should normalise this
-		gl_Position = uPMatrix * vec4(transformedCoord.xyz, 1.0);	//use the xyz co-rds with standard rendering.
-
-		fog = 1.0+ transformedCoord.z;	//plausibly can just access this from the frag shader via some standard variable anyway
-										//is 1.0 at camera, goes to 0 quarter way around the 3-sphere, gets back to 1 halfway around.
-
-		//gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
+		vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
+		gl_Position = uPMatrix * transformedCoord;
+		fog = 0.5*(1.0 + transformedCoord.w);
 	}
 </script>
 
@@ -153,7 +153,7 @@ var shaderProgramColored,
 function initShaders(){				
 	shaderProgramColored = loadShader( "shader-simple-vs", "shader-simple-fs",{
 					attributes:["aVertexPosition"],
-					uniforms:["uPMatrix","uMVMatrix","uColor"]
+					uniforms:["uPMatrix","uMVMatrix","uColor","uFogColor", "uModelScale"]
 					});
 	shaderProgramTexmap = loadShader( "shader-texmap-vs", "shader-texmap-fs",{
 					attributes:["aVertexPosition", "aTextureCoord"],
@@ -184,6 +184,7 @@ var cubeFrameBuffers={};
 var octoFrameBuffers={};	
 var tetraFrameBuffers={};	
 var dodecaFrameBuffers={};	
+var teapotBuffers={};	
 	
 function initBuffers(){
 	var sphereData = makeSphereData(61,32,0.05);
@@ -230,11 +231,13 @@ function initBuffers(){
 	var octoFrameBlenderObject = loadBlenderExport(octoFrameData.meshes[0]);
 	var tetraFrameBlenderObject = loadBlenderExport(tetraFrameData.meshes[0]);
 	var dodecaFrameBlenderObject = loadBlenderExport(dodecaFrameData.meshes[0]);
-	
+	var teapotObject = loadBlenderExport(teapotData);	//isn't actually a blender export - just a obj json
+		
 	loadBufferData(cubeFrameBuffers, cubeFrameBlenderObject);
 	loadBufferData(octoFrameBuffers, octoFrameBlenderObject);
 	loadBufferData(tetraFrameBuffers, tetraFrameBlenderObject);
 	loadBufferData(dodecaFrameBuffers, dodecaFrameBlenderObject);
+	loadBufferData(teapotBuffers, teapotObject);
 	
 	function bufferArrayData(buffer, arr, size){
 		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -246,8 +249,10 @@ function initBuffers(){
 	function loadBufferData(bufferObj, sourceData){
 		bufferObj.vertexPositionBuffer = gl.createBuffer();
 		bufferArrayData(bufferObj.vertexPositionBuffer, sourceData.vertices, 3);
-		bufferObj.vertexTextureCoordBuffer= gl.createBuffer();
-		bufferArrayData(bufferObj.vertexTextureCoordBuffer, sourceData.uvcoords, 2);
+		if (sourceData.uvcoords){
+			bufferObj.vertexTextureCoordBuffer= gl.createBuffer();
+			bufferArrayData(bufferObj.vertexTextureCoordBuffer, sourceData.uvcoords, 2);
+		}
 		bufferObj.vertexIndexBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
 		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(sourceData.indices), gl.STATIC_DRAW);
@@ -259,7 +264,7 @@ function initBuffers(){
 		return {
 			vertices: meshToLoad.vertices,
 			normals: meshToLoad.normals,
-			uvcoords: meshToLoad.texturecoords[0],
+			uvcoords: meshToLoad.texturecoords?meshToLoad.texturecoords[0]:false,
 			indices: [].concat.apply([],meshToLoad.faces)	//trick from https://www.youtube.com/watch?v=sM9n73-HiNA t~ 28:30
 		}	
 	};
@@ -298,7 +303,8 @@ var usePrecalcCells=true;
 function drawWorldScene(frameTime) {		
 	//var activeShaderProgram = shaderProgramColored;	//draw spheres
 	var activeShaderProgram = shaderProgramTexmap;	//draw cubes
-	
+	gl.enableVertexAttribArray(1);	//do need tex coords
+
 	gl.useProgram(activeShaderProgram);
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.1,0.1,0.1]);
@@ -482,6 +488,18 @@ function drawWorldScene(frameTime) {
 		}
 	}
 	
+	activeShaderProgram = shaderProgramColored;
+	gl.useProgram(activeShaderProgram);
+	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
+	modelScale = guiParams["teapot scale"];
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+	gl.disableVertexAttribArray(1);	//don't need texcoords
+
+	if (guiParams["draw teapot"]){
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		mat4.multiply(mvMatrix,cellMatData.d600[0]);	//TODO explicitly use identity mat
+		drawTeapot();
+	}
 	
 	activeShaderProgram = shaderProgramTexmap4Vec;
 	gl.useProgram(activeShaderProgram);
@@ -503,18 +521,20 @@ function drawWorldScene(frameTime) {
 	}
 	
 	function drawCubeFrame(){
-		drawObjectFromBuffers(cubeFrameBuffers);
+		drawObjectFromBuffers(cubeFrameBuffers, shaderProgramTexmap);
 	}
 	function drawOctoFrame(){
-		drawObjectFromBuffers(octoFrameBuffers);
+		drawObjectFromBuffers(octoFrameBuffers, shaderProgramTexmap);
 	}
 	function drawTetraFrame(){
-		drawObjectFromBuffers(tetraFrameBuffers);
+		drawObjectFromBuffers(tetraFrameBuffers, shaderProgramTexmap);
 	}
 	function drawDodecaFrame(){
-		drawObjectFromBuffers(dodecaFrameBuffers);
+		drawObjectFromBuffers(dodecaFrameBuffers, shaderProgramTexmap);
 	}
-	
+	function drawTeapot(){
+		drawObjectFromBuffers(teapotBuffers, shaderProgramColored);
+	}
 }
 
 
@@ -576,20 +596,22 @@ function drawTennisBall(){
 	gl.drawElements(gl.TRIANGLES, tennisBallVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 }
 
-function drawObjectFromBuffers(bufferObj){
+function drawObjectFromBuffers(bufferObj, shaderProg){
 	gl.enable(gl.CULL_FACE);
 	gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexPositionBuffer);
-    gl.vertexAttribPointer(shaderProgramTexmap.attributes.aVertexPosition, bufferObj.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
-	
-	gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexTextureCoordBuffer);
-	gl.vertexAttribPointer(shaderProgramTexmap.attributes.aTextureCoord, bufferObj.vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribPointer(shaderProg.attributes.aVertexPosition, bufferObj.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
-	setMatrixUniforms(shaderProgramTexmap);
+	setMatrixUniforms(shaderProg);
 	
-	gl.activeTexture(gl.TEXTURE0);
-	gl.bindTexture(gl.TEXTURE_2D, texture);
-	gl.uniform1i(shaderProgramTexmap.uniforms.uSampler, 0);
+	if (bufferObj.vertexTextureCoordBuffer){
+		gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexTextureCoordBuffer);
+		gl.vertexAttribPointer(shaderProg.attributes.aTextureCoord, bufferObj.vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	
+		gl.activeTexture(gl.TEXTURE0);
+		gl.bindTexture(gl.TEXTURE_2D, texture);
+		gl.uniform1i(shaderProg.uniforms.uSampler, 0);
+	}
 	
 	gl.drawElements(gl.TRIANGLES, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 }
@@ -660,6 +682,8 @@ var guiParams={
 	"draw 24-cell":false,
 	"draw 120-cell":false,
 	"draw 600-cell":false,
+	"draw teapot":false,
+	"teapot scale":1.0,
 	fogColor:'#aaaaaa'
 };
 var vecFogColor = [1.0,0.0,0.0,1.0];
@@ -686,6 +710,8 @@ function init(){
 	gui.add(guiParams,"draw 24-cell",true);
 	gui.add(guiParams,"draw 120-cell",true);
 	gui.add(guiParams,"draw 600-cell",true);
+	gui.add(guiParams,"draw teapot",true);
+	gui.add(guiParams,"teapot scale",0.2,2.0,0.05);
 
 	window.addEventListener("keydown",function(evt){
 		//console.log("key pressed : " + evt.keyCode);
