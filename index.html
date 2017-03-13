@@ -42,6 +42,7 @@
 <script type="text/javascript" src="data/tetra-frame.obj.json"></script>
 <script type="text/javascript" src="data/dodecahedron-frame-cubeproj.obj.json"></script>
 <script type="text/javascript" src="data/wt_teapot-trimmed.obj.json"></script>
+<script type="text/javascript" src="data/sship-ypoint.obj.json"></script>
 <script type="text/javascript" src="utils/matfuncs.js"></script>
 <script type="text/javascript" src="data/cells.js"></script>
 
@@ -185,6 +186,7 @@ var octoFrameBuffers={};
 var tetraFrameBuffers={};	
 var dodecaFrameBuffers={};	
 var teapotBuffers={};	
+var sshipBuffers={};
 	
 function initBuffers(){
 	var sphereData = makeSphereData(61,32,0.05);
@@ -232,13 +234,15 @@ function initBuffers(){
 	var tetraFrameBlenderObject = loadBlenderExport(tetraFrameData.meshes[0]);
 	var dodecaFrameBlenderObject = loadBlenderExport(dodecaFrameData.meshes[0]);
 	var teapotObject = loadBlenderExport(teapotData);	//isn't actually a blender export - just a obj json
-		
+	var sshipObject = loadBlenderExport(sshipdata);		//""
+
 	loadBufferData(cubeFrameBuffers, cubeFrameBlenderObject);
 	loadBufferData(octoFrameBuffers, octoFrameBlenderObject);
 	loadBufferData(tetraFrameBuffers, tetraFrameBlenderObject);
 	loadBufferData(dodecaFrameBuffers, dodecaFrameBlenderObject);
 	loadBufferData(teapotBuffers, teapotObject);
-	
+	loadBufferData(sshipBuffers, sshipObject);
+
 	function bufferArrayData(buffer, arr, size){
 		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW);
@@ -253,6 +257,7 @@ function initBuffers(){
 			bufferObj.vertexTextureCoordBuffer= gl.createBuffer();
 			bufferArrayData(bufferObj.vertexTextureCoordBuffer, sourceData.uvcoords, 2);
 		}
+
 		bufferObj.vertexIndexBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
 		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(sourceData.indices), gl.STATIC_DRAW);
@@ -488,19 +493,6 @@ function drawWorldScene(frameTime) {
 		}
 	}
 	
-	activeShaderProgram = shaderProgramColored;
-	gl.useProgram(activeShaderProgram);
-	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
-	modelScale = guiParams["teapot scale"];
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
-	gl.disableVertexAttribArray(1);	//don't need texcoords
-
-	if (guiParams["draw teapot"]){
-		mat4.set(invertedPlayerCamera, mvMatrix);
-		mat4.multiply(mvMatrix,cellMatData.d600[0]);	//TODO explicitly use identity mat
-		drawTeapot();
-	}
-	
 	activeShaderProgram = shaderProgramTexmap4Vec;
 	gl.useProgram(activeShaderProgram);
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
@@ -532,8 +524,29 @@ function drawWorldScene(frameTime) {
 	function drawDodecaFrame(){
 		drawObjectFromBuffers(dodecaFrameBuffers, shaderProgramTexmap);
 	}
-	function drawTeapot(){
+	
+	
+	//draw objects without textures
+	
+	activeShaderProgram = shaderProgramColored;
+	gl.useProgram(activeShaderProgram);
+	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
+	gl.disableVertexAttribArray(1);	//don't need texcoords
+	
+	modelScale = guiParams["teapot scale"];
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+	if (guiParams["draw teapot"]){
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		mat4.multiply(mvMatrix,teapotMatrix);		
 		drawObjectFromBuffers(teapotBuffers, shaderProgramColored);
+	}
+	
+	modelScale=0.002;
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+	if (guiParams["draw spaceship"]){
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		mat4.multiply(mvMatrix,sshipMatrix);		
+		drawObjectFromBuffers(sshipBuffers, shaderProgramColored);
 	}
 }
 
@@ -684,9 +697,13 @@ var guiParams={
 	"draw 600-cell":false,
 	"draw teapot":false,
 	"teapot scale":1.0,
+	"draw spaceship":false,
+	"drop spaceship":function(){dropSpaceship();},
 	fogColor:'#aaaaaa'
 };
 var vecFogColor = [1.0,0.0,0.0,1.0];
+var teapotMatrix=mat4.create();mat4.identity(teapotMatrix);
+var sshipMatrix=mat4.create();mat4.identity(sshipMatrix);
 var canvas;
 function init(){
 
@@ -712,7 +729,9 @@ function init(){
 	gui.add(guiParams,"draw 600-cell",true);
 	gui.add(guiParams,"draw teapot",true);
 	gui.add(guiParams,"teapot scale",0.2,2.0,0.05);
-
+	gui.add(guiParams,"draw spaceship",true);
+	gui.add(guiParams, "drop spaceship");
+	
 	window.addEventListener("keydown",function(evt){
 		//console.log("key pressed : " + evt.keyCode);
 		var willPreventDefault=true;
@@ -963,6 +982,10 @@ function copyTouch(touch) {
 function log(info){		//can to enable/disable logging globally
 	//console.log(info);
 }
+function dropSpaceship(){
+	mat4.set(playerCamera,sshipMatrix);	//copy current player 4-rotation matrix to the spaceship object
+}
+
 
 </script>
 
