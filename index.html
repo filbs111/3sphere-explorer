@@ -54,10 +54,10 @@
 	uniform vec4 uColor;
 	varying float fog;
 	uniform vec4 uFogColor;
-
+	varying float light;
+	
 	void main(void) {
-		gl_FragColor = vec4( fog* uColor.xyz, 1.0) + (1.0-fog)*uFogColor;		
-		//gl_FragDepth = depthPassthru;
+		gl_FragColor = vec4( fog*light*uColor.xyz, 1.0) + (1.0-fog)*uFogColor;
 	}
 </script>
 <!-- vertex shader -->
@@ -69,15 +69,21 @@
 <!-- TODO use textured shader to check that that interpolates in sensible way (ie perspective projection observed for rectangles). -->
 <script id="shader-simple-vs" type="x-shader/x-vertex">
 	attribute vec3 aVertexPosition;
+	attribute vec3 aVertexNormal;
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
 	varying float fog;
 	uniform vec3 uModelScale;
+	varying float light;
 			
 	void main(void) {
 		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
 		vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
 		gl_Position = uPMatrix * transformedCoord;
+
+		vec4 transformedNormal = uMVMatrix * normalize(vec4(aVertexNormal,1.0));
+		light = max(dot(transformedNormal, aVertexPositionNormalized) , 0.0);	//irrelevant if light position = camera position ?
+		
 		fog = 0.5*(1.0 + transformedCoord.w);
 	}
 </script>
@@ -153,9 +159,10 @@ var shaderProgramColored,
 	shaderProgramTexmap4Vec;
 function initShaders(){				
 	shaderProgramColored = loadShader( "shader-simple-vs", "shader-simple-fs",{
-					attributes:["aVertexPosition"],
+					attributes:["aVertexPosition","aVertexNormal"],
 					uniforms:["uPMatrix","uMVMatrix","uColor","uFogColor", "uModelScale"]
 					});
+					console.log("loaded 1st shader");
 	shaderProgramTexmap = loadShader( "shader-texmap-vs", "shader-texmap-fs",{
 					attributes:["aVertexPosition", "aTextureCoord"],
 					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor","uModelScale"]
@@ -240,22 +247,27 @@ function initBuffers(){
 	loadBufferData(octoFrameBuffers, octoFrameBlenderObject);
 	loadBufferData(tetraFrameBuffers, tetraFrameBlenderObject);
 	loadBufferData(dodecaFrameBuffers, dodecaFrameBlenderObject);
-	loadBufferData(teapotBuffers, teapotObject);
-	loadBufferData(sshipBuffers, sshipObject);
+	loadBufferData(teapotBuffers, teapotObject, true);
+	loadBufferData(sshipBuffers, sshipObject, true);
 
 	function bufferArrayData(buffer, arr, size){
 		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW);
 		buffer.itemSize = size;
 		buffer.numItems = arr.length / size;
+		console.log("buffered. numitems: " + buffer.numItems);
 	}
 	
-	function loadBufferData(bufferObj, sourceData){
+	function loadBufferData(bufferObj, sourceData, bufferNormals){
 		bufferObj.vertexPositionBuffer = gl.createBuffer();
 		bufferArrayData(bufferObj.vertexPositionBuffer, sourceData.vertices, 3);
 		if (sourceData.uvcoords){
 			bufferObj.vertexTextureCoordBuffer= gl.createBuffer();
 			bufferArrayData(bufferObj.vertexTextureCoordBuffer, sourceData.uvcoords, 2);
+		}
+		if (bufferNormals){
+			bufferObj.vertexNormalBuffer= gl.createBuffer();
+			bufferArrayData(bufferObj.vertexNormalBuffer, sourceData.normals, 3);
 		}
 
 		bufferObj.vertexIndexBuffer = gl.createBuffer();
@@ -308,7 +320,7 @@ var usePrecalcCells=true;
 function drawWorldScene(frameTime) {		
 	//var activeShaderProgram = shaderProgramColored;	//draw spheres
 	var activeShaderProgram = shaderProgramTexmap;	//draw cubes
-	gl.enableVertexAttribArray(1);	//do need tex coords
+	//gl.enableVertexAttribArray(1);	//do need tex coords
 
 	gl.useProgram(activeShaderProgram);
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
@@ -341,10 +353,8 @@ function drawWorldScene(frameTime) {
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 1.0, 1.0]);	//BLUE
 	mat4.set(invertedPlayerCamera, mvMatrix);
-	
 	rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
 	if (guiParams.drawShapes['boxes x=y=0']){drawRing();}
-	
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.4, 1.0]);	//YELLOW
 	mat4.set(invertedPlayerCamera, mvMatrix);
@@ -531,8 +541,9 @@ function drawWorldScene(frameTime) {
 	activeShaderProgram = shaderProgramColored;
 	gl.useProgram(activeShaderProgram);
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
-	gl.disableVertexAttribArray(1);	//don't need texcoords
+	//gl.disableVertexAttribArray(1);	//don't need texcoords
 	
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 0.8, 1.0]);	//BLUE
 	modelScale = guiParams["teapot scale"];
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 	if (guiParams["draw teapot"]){
@@ -542,6 +553,7 @@ function drawWorldScene(frameTime) {
 	}
 	
 	modelScale=0.002;
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.2, 0.2, 0.2, 1.0]);	//GREY
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 	if (guiParams["draw spaceship"]){
 		mat4.set(invertedPlayerCamera, mvMatrix);
@@ -613,6 +625,11 @@ function drawObjectFromBuffers(bufferObj, shaderProg){
 	gl.enable(gl.CULL_FACE);
 	gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexPositionBuffer);
     gl.vertexAttribPointer(shaderProg.attributes.aVertexPosition, bufferObj.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	
+	if (bufferObj.vertexNormalBuffer){
+		gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexNormalBuffer);
+		gl.vertexAttribPointer(shaderProg.attributes.aVertexNormal, bufferObj.vertexNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	}
 	
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
 	setMatrixUniforms(shaderProg);
