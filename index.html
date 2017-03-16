@@ -43,6 +43,7 @@
 <script type="text/javascript" src="data/dodecahedron-frame-cubeproj.obj.json"></script>
 <script type="text/javascript" src="data/wt_teapot-trimmed.obj.json"></script>
 <script type="text/javascript" src="data/sship-ypoint.obj.json"></script>
+<script type="text/javascript" src="data/guncyl.obj.json"></script>
 <script type="text/javascript" src="utils/matfuncs.js"></script>
 <script type="text/javascript" src="data/cells.js"></script>
 
@@ -194,7 +195,8 @@ var tetraFrameBuffers={};
 var dodecaFrameBuffers={};	
 var teapotBuffers={};	
 var sshipBuffers={};
-	
+var gunBuffers={};
+
 function initBuffers(){
 	var sphereData = makeSphereData(61,32,0.05);
 
@@ -242,14 +244,16 @@ function initBuffers(){
 	var dodecaFrameBlenderObject = loadBlenderExport(dodecaFrameData.meshes[0]);
 	var teapotObject = loadBlenderExport(teapotData);	//isn't actually a blender export - just a obj json
 	var sshipObject = loadBlenderExport(sshipdata);		//""
-
+	var gunObject = loadBlenderExport(guncyldata.meshes[0]);
+	
 	loadBufferData(cubeFrameBuffers, cubeFrameBlenderObject);
 	loadBufferData(octoFrameBuffers, octoFrameBlenderObject);
 	loadBufferData(tetraFrameBuffers, tetraFrameBlenderObject);
 	loadBufferData(dodecaFrameBuffers, dodecaFrameBlenderObject);
 	loadBufferData(teapotBuffers, teapotObject, true);
 	loadBufferData(sshipBuffers, sshipObject, true);
-
+	loadBufferData(gunBuffers, gunObject, true);
+	
 	function bufferArrayData(buffer, arr, size){
 		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW);
@@ -303,7 +307,7 @@ function drawScene(frameTime){
 	pMatrix[0] = (gl.viewportHeight/gl.viewportWidth)/fy ;
 	pMatrix[5] = 1.0/fy;
 	pMatrix[11]	= -1;	//rotate w into z.
-	pMatrix[14] = -0.02;	//smaller = more z range. 1/50 gets ~same near clipping result as stereographic/perspective 0.01 near
+	pMatrix[14] = -0.01;	//smaller = more z range. 1/50 gets ~same near clipping result as stereographic/perspective 0.01 near
 	pMatrix[10]	= 0;
 	pMatrix[15] = 0;
 
@@ -389,7 +393,7 @@ function drawWorldScene(frameTime) {
 	
 	if (guiParams["draw 8-cell"]){
 		var cellMats = cellMatData.d8;	
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);	//WHITE
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.15, 0.15, 0.15, 1.0]);	//DARK GREY
 		for (cc in cellMats){
 			var thisCell = cellMats[cc];
 			mat4.set(invertedPlayerCamera, mvMatrix);
@@ -559,6 +563,27 @@ function drawWorldScene(frameTime) {
 		mat4.set(invertedPlayerCamera, mvMatrix);
 		mat4.multiply(mvMatrix,sshipMatrix);		
 		drawObjectFromBuffers(sshipBuffers, shaderProgramColored);
+		
+		//draw guns
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.1,0.1,0.1]);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.3, 0.3, 0.3, 1.0]);	//GREY
+
+		var gunHoriz = 0.04;
+		var gunVert = 0.02;
+		var gunFront = 0.05;
+
+		drawRelativeToSpacehip([gunHoriz,gunVert,gunFront]); //left, down, forwards
+		drawRelativeToSpacehip([-gunHoriz,gunVert,gunFront]);
+		drawRelativeToSpacehip([gunHoriz,-gunVert,gunFront]);
+		drawRelativeToSpacehip([-gunHoriz,-gunVert,gunFront]);
+		
+		function drawRelativeToSpacehip(vec){
+			mat4.set(invertedPlayerCamera, mvMatrix);
+			mat4.multiply(mvMatrix,sshipMatrix);
+			xyzmove4mat(mvMatrix,vec);
+			drawObjectFromBuffers(gunBuffers, shaderProgramColored);
+		}
+		
 	}
 }
 
@@ -714,7 +739,7 @@ var guiParams={
 	"draw 600-cell":false,
 	"draw teapot":false,
 	"teapot scale":1.0,
-	"draw spaceship":false,
+	"draw spaceship":true,
 	"drop spaceship":function(){dropSpaceship();},
 	fogColor:'#aaaaaa'
 };
