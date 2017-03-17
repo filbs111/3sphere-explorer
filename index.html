@@ -390,10 +390,10 @@ function drawWorldScene(frameTime) {
 	//draw blender object - a csg cube minus sphere. draw 8 cells for tesseract.
 	var modelScale = guiParams["8-cell scale"];
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
-	
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.5, 0.5, 0.5, 1.0]);	//GREY
+
 	if (guiParams["draw 8-cell"]){
 		var cellMats = cellMatData.d8;	
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.15, 0.15, 0.15, 1.0]);	//DARK GREY
 		for (cc in cellMats){
 			var thisCell = cellMats[cc];
 			mat4.set(invertedPlayerCamera, mvMatrix);
@@ -416,10 +416,8 @@ function drawWorldScene(frameTime) {
 		drawHalf16Cells();
 		
 		function drawHalf16Cells(){
-			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);	//WHITE
 			drawTetraFromPair(1,1,1);
 			drawTetraFromPair(-1,-1,5);
-			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.2, 0.2, 0.2, 1.0]);	//DARK
 			drawTetraFromPair(1,-1,-1);
 			drawTetraFromPair(-1,1,-5);
 		}
@@ -480,7 +478,8 @@ function drawWorldScene(frameTime) {
 	
 	mat4.set(invertedPlayerCamera, mvMatrix);
 	
-	
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 0.4, 1.0]);	//DARK
+
 	//new draw dodeca stuff...
 	if (guiParams["draw 120-cell"]){
 		var cellMats = cellMatData.d120;
@@ -498,7 +497,6 @@ function drawWorldScene(frameTime) {
 		var cellMats = cellMatData.d600;
 		var myscale=0.385;	//todo use correct scale
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [myscale,myscale,myscale]);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 0.4, 1.0]);	//DARK
 		for (cc in cellMats){
 			var thisCell = cellMats[cc];
 			mat4.set(invertedPlayerCamera, mvMatrix);
@@ -706,7 +704,8 @@ function initTexture() {
 		gl.generateMipmap(gl.TEXTURE_2D);
 		gl.bindTexture(gl.TEXTURE_2D, null);
 	}
-	texture.image.src = "img/ash_uvgrid01-grey.tiny.png";
+	//texture.image.src = "img/ash_uvgrid01-grey.tiny.png";
+	texture.image.src = "img/0033.jpg";
 	//texture.image.src = "img/cross.png";
 }
 
