@@ -568,7 +568,19 @@ function drawWorldScene(frameTime) {
 
 		var gunHoriz = 0.04;
 		var gunVert = 0.02;
-		var gunFront = 0.05;
+		var gunFront = 0.01;
+
+		var mousP=mouseInfo.currentPointingDir;
+		var gunAngRange = 0.2;
+		//get angle to rotate to this point (similar to mouse drag rotation system)
+		var cappedPointingDir={x:Math.max(Math.min(mousP.x/mousP.z,gunAngRange),-gunAngRange),
+								y:Math.max(Math.min(mousP.y/mousP.z,gunAngRange),-gunAngRange),
+								z:1};
+		cappedPointingDir.w=Math.sqrt(cappedPointingDir.x*cappedPointingDir.x+
+								cappedPointingDir.y*cappedPointingDir.y +1);
+		
+		var crossProd = crossProductHomgenous({x:0,y:0,z:1,w:1}, cappedPointingDir);
+		var rotvec = [crossProd.x / crossProd.w, -crossProd.y / crossProd.w, -crossProd.z / crossProd.w];	
 
 		drawRelativeToSpacehip([gunHoriz,gunVert,gunFront]); //left, down, forwards
 		drawRelativeToSpacehip([-gunHoriz,gunVert,gunFront]);
@@ -579,6 +591,11 @@ function drawWorldScene(frameTime) {
 			mat4.set(invertedPlayerCamera, mvMatrix);
 			mat4.multiply(mvMatrix,sshipMatrix);
 			xyzmove4mat(mvMatrix,vec);
+			
+			//rotate guns to follow mouse
+			xyzrotate4mat(mvMatrix, rotvec);			
+			xyzmove4mat(mvMatrix,[0,0,0.05]);	//move forwards
+		
 			drawObjectFromBuffers(gunBuffers, shaderProgramColored);
 		}
 		
@@ -843,14 +860,9 @@ function init(){
 		mouseInfo.dragging = false;
 	});
 	canvas.addEventListener("mousemove", function(evt){
+		mouseInfo.currentPointingDir = getPointingDirectionFromScreenCoordinate({x:evt.offsetX, y: evt.offsetY});
 		if (mouseInfo.dragging){
-			//console.log("evt offsetX = " + evt.offsetX + ", offsetY = " + evt.offsetY);
-			//console.log("moved : " + evt.movementX + ", movementY = " + evt.movementY);	//this is very nearly the same as the calculated version
-			//console.log("calculated moved : " + (evt.offsetX - mouseInfo.x) + ", movementY = " + (evt.offsetY - mouseInfo.y) );
-			mouseInfo.x = evt.offsetX;
-			mouseInfo.y = evt.offsetY;
-			
-			var pointingDir = getPointingDirectionFromScreenCoordinate({x:mouseInfo.x, y: mouseInfo.y});
+			var pointingDir = mouseInfo.currentPointingDir;
 			//console.log("pointingDir = " + pointingDir);
 			
 			//get the direction of current and previous mouse position.
@@ -912,8 +924,8 @@ function pitchPlayer(amount){
 }
 
 function printPlayerPosition(){
-	console.log('position: x = ' + playerCamera[12].toFixed(2) + ', y = ' + playerCamera[13].toFixed(2) + 
-						', z = ' + playerCamera[14].toFixed(2) + ', w = ' + playerCamera[15].toFixed(2) );
+	//console.log('position: x = ' + playerCamera[12].toFixed(2) + ', y = ' + playerCamera[13].toFixed(2) + 
+	//					', z = ' + playerCamera[14].toFixed(2) + ', w = ' + playerCamera[15].toFixed(2) );
 }
 
 

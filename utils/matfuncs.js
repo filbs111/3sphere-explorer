@@ -40,18 +40,18 @@ function xyzmove4mat(mat, movevector){
 																				reducedNormFactor];
 
 	//calculate lengths - should be 1
-	console.log("length squared newX : " + ( newX[0]*newX[0] + newX[1]*newX[1] + newX[2]*newX[2] + newX[3]*newX[3]));
-	console.log("length squared newY : " + ( newY[0]*newY[0] + newY[1]*newY[1] + newY[2]*newY[2] + newY[3]*newY[3]));
-	console.log("length squared newZ : " + ( newZ[0]*newZ[0] + newZ[1]*newZ[1] + newZ[2]*newZ[2] + newZ[3]*newZ[3]));
-	console.log("length squared newW : " + ( newW[0]*newW[0] + newW[1]*newW[1] + newW[2]*newW[2] + newW[3]*newW[3]));
-	console.log(newW);
-	console.log(newX);
+	//console.log("length squared newX : " + ( newX[0]*newX[0] + newX[1]*newX[1] + newX[2]*newX[2] + newX[3]*newX[3]));
+	//console.log("length squared newY : " + ( newY[0]*newY[0] + newY[1]*newY[1] + newY[2]*newY[2] + newY[3]*newY[3]));
+	//console.log("length squared newZ : " + ( newZ[0]*newZ[0] + newZ[1]*newZ[1] + newZ[2]*newZ[2] + newZ[3]*newZ[3]));
+	//console.log("length squared newW : " + ( newW[0]*newW[0] + newW[1]*newW[1] + newW[2]*newW[2] + newW[3]*newW[3]));
+	//console.log(newW);
+	//console.log(newX);
 	
 	//lengths of columns should also be 1
-	console.log("length squared col0 : " + ( newX[0]*newX[0] + newY[0]*newY[0] + newZ[0]*newZ[0] + newW[0]*newW[0]));
-	console.log("length squared col1 : " + ( newX[1]*newX[1] + newY[1]*newY[1] + newZ[1]*newZ[1] + newW[1]*newW[1]));
-	console.log("length squared col2 : " + ( newX[2]*newX[2] + newY[2]*newY[2] + newZ[2]*newZ[2] + newW[2]*newW[2]));
-	console.log("length squared col3 : " + ( newX[3]*newX[3] + newY[3]*newY[3] + newZ[3]*newZ[3] + newW[3]*newW[3]));
+	//console.log("length squared col0 : " + ( newX[0]*newX[0] + newY[0]*newY[0] + newZ[0]*newZ[0] + newW[0]*newW[0]));
+	//console.log("length squared col1 : " + ( newX[1]*newX[1] + newY[1]*newY[1] + newZ[1]*newZ[1] + newW[1]*newW[1]));
+	//console.log("length squared col2 : " + ( newX[2]*newX[2] + newY[2]*newY[2] + newZ[2]*newZ[2] + newW[2]*newW[2]));
+	//console.log("length squared col3 : " + ( newX[3]*newX[3] + newY[3]*newY[3] + newZ[3]*newZ[3] + newW[3]*newW[3]));
 
 	
 	//set matrix components (not sure if rows or columns better)
