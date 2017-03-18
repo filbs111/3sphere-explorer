@@ -557,6 +557,11 @@ function drawWorldScene(frameTime) {
 	modelScale=0.002;
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.2, 0.2, 0.2, 1.0]);	//GREY
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+	
+	if (!guiParams["drop spaceship"]){
+		dropSpaceship();	//counter intuitive - is spaceship is not dropped, it is attached to camera, so follow its position.
+							//this maybe inefficient though - if not "dropped", shouldn't 
+	}
 	if (guiParams["draw spaceship"]){
 		mat4.set(invertedPlayerCamera, mvMatrix);
 		mat4.multiply(mvMatrix,sshipMatrix);		
@@ -756,7 +761,7 @@ var guiParams={
 	"draw teapot":false,
 	"teapot scale":1.0,
 	"draw spaceship":true,
-	"drop spaceship":function(){dropSpaceship();},
+	"drop spaceship":false,
 	fogColor:'#aaaaaa'
 };
 var vecFogColor = [1.0,0.0,0.0,1.0];
@@ -788,7 +793,7 @@ function init(){
 	gui.add(guiParams,"draw teapot",true);
 	gui.add(guiParams,"teapot scale",0.2,2.0,0.05);
 	gui.add(guiParams,"draw spaceship",true);
-	gui.add(guiParams, "drop spaceship");
+	gui.add(guiParams, "drop spaceship",false);
 	
 	window.addEventListener("keydown",function(evt){
 		//console.log("key pressed : " + evt.keyCode);
