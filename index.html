@@ -609,6 +609,10 @@ function drawTennisBall(){
 }
 
 function drawObjectFromBuffers(bufferObj, shaderProg){
+	prepBuffersForDrawing(bufferObj, shaderProg);
+	drawObjectFromPreppedBuffers(bufferObj, shaderProg);
+}
+function prepBuffersForDrawing(bufferObj, shaderProg){
 	gl.enable(gl.CULL_FACE);
 	gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexPositionBuffer);
     gl.vertexAttribPointer(shaderProg.attributes.aVertexPosition, bufferObj.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
@@ -619,7 +623,6 @@ function drawObjectFromBuffers(bufferObj, shaderProg){
 	}
 	
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
-	setMatrixUniforms(shaderProg);
 	
 	if (bufferObj.vertexTextureCoordBuffer){
 		gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexTextureCoordBuffer);
@@ -629,7 +632,9 @@ function drawObjectFromBuffers(bufferObj, shaderProg){
 		gl.bindTexture(gl.TEXTURE_2D, texture);
 		gl.uniform1i(shaderProg.uniforms.uSampler, 0);
 	}
-	
+}
+function drawObjectFromPreppedBuffers(bufferObj, shaderProg){
+	setMatrixUniforms(shaderProg);
 	gl.drawElements(gl.TRIANGLES, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 }
 
