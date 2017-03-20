@@ -174,13 +174,6 @@ function initShaders(){
 					});
 }
 
-
-
-
-
-var vertexPositionBuffer;
-var vertexIndexBuffer;
-
 var cubeVertexPositionBuffer;
 var cubeVertexTextureCoordBuffer;
 var cubeVertexIndexBuffer;
@@ -189,6 +182,7 @@ var tennisBallVertexPositionBuffer,
     tennisBallVertexTextureCoordBuffer,
 	tennisBallVertexIndexBuffer;
 
+var sphereBuffers={};
 var cubeFrameBuffers={};
 var octoFrameBuffers={};	
 var tetraFrameBuffers={};	
@@ -198,18 +192,6 @@ var sshipBuffers={};
 var gunBuffers={};
 
 function initBuffers(){
-	var sphereData = makeSphereData(61,32,0.05);
-
-	vertexPositionBuffer = gl.createBuffer();
-	bufferArrayData(vertexPositionBuffer, sphereData.vertices, 3);
-
-	var indexData = sphereData.indices;
-	vertexIndexBuffer = gl.createBuffer();
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer);
-	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indexData), gl.STATIC_DRAW);
-	vertexIndexBuffer.itemSize = 3;
-	vertexIndexBuffer.numItems = indexData.length;
-	
 	//cube. data is in data/levelCubeData.js
 	cubeVertexPositionBuffer= gl.createBuffer();
 	bufferArrayData(cubeVertexPositionBuffer, levelCubeData.vertices, 3);
@@ -246,6 +228,7 @@ function initBuffers(){
 	var sshipObject = loadBlenderExport(sshipdata);		//""
 	var gunObject = loadBlenderExport(guncyldata.meshes[0]);
 	
+	loadBufferData(sphereBuffers, makeSphereData(61,32,1), true);
 	loadBufferData(cubeFrameBuffers, cubeFrameBlenderObject);
 	loadBufferData(octoFrameBuffers, octoFrameBlenderObject);
 	loadBufferData(tetraFrameBuffers, tetraFrameBlenderObject);
@@ -559,8 +542,8 @@ function drawWorldScene(frameTime) {
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 	
 	if (!guiParams["drop spaceship"]){
-		dropSpaceship();	//counter intuitive - is spaceship is not dropped, it is attached to camera, so follow its position.
-							//this maybe inefficient though - if not "dropped", shouldn't 
+		dropSpaceship();	//note this is a bit poorly named and inefficient - when spaceship attached to camera,
+							//in drawspaceship, are just doing invertedPlayerCamera*playerCamera = identity
 	}
 	if (guiParams["draw spaceship"]){
 		mat4.set(invertedPlayerCamera, mvMatrix);
@@ -605,24 +588,21 @@ function drawWorldScene(frameTime) {
 		}
 		
 	}
+	
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.3, 0.3, 1.0]);	//RED
+	//draw sphere. to be targeted by guns
+	if (guiParams["draw target"]){
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		mat4.multiply(mvMatrix,targetMatrix);
+		drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
+		//drawObjectFromBuffers(gunBuffers, shaderProgramColored);
+	}
 }
 
 
 function drawItem(){
 	gl.enable(gl.CULL_FACE);
-	//drawSphere();
 	drawCube();
-}
-
-function drawSphere(){
-	gl.bindBuffer(gl.ARRAY_BUFFER, vertexPositionBuffer);
-    gl.vertexAttribPointer(shaderProgramColored.attributes.aVertexPosition, vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
-
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer);
-		
-    setMatrixUniforms(shaderProgramColored);
-				
-    gl.drawElements(gl.TRIANGLES, vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 }
 
 function drawCube(){
@@ -762,11 +742,13 @@ var guiParams={
 	"teapot scale":1.0,
 	"draw spaceship":true,
 	"drop spaceship":false,
+	"draw target":true,
 	fogColor:'#aaaaaa'
 };
 var vecFogColor = [1.0,0.0,0.0,1.0];
 var teapotMatrix=mat4.create();mat4.identity(teapotMatrix);
 var sshipMatrix=mat4.create();mat4.identity(sshipMatrix);
+var targetMatrix=mat4.create();mat4.identity(targetMatrix);
 var canvas;
 function init(){
 
@@ -794,6 +776,7 @@ function init(){
 	gui.add(guiParams,"teapot scale",0.2,2.0,0.05);
 	gui.add(guiParams,"draw spaceship",true);
 	gui.add(guiParams, "drop spaceship",false);
+	gui.add(guiParams, "draw target",false);
 	
 	window.addEventListener("keydown",function(evt){
 		//console.log("key pressed : " + evt.keyCode);

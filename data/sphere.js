@@ -45,18 +45,18 @@ function makeSphereData(latitudeBands,longitudeBands, radius){
 		 var first = (latNumber * (longitudeBands + 1)) + longNumber;
 		 var second = first + longitudeBands + 1;
 		 indexData.push(first);
-		 indexData.push(second);
 		 indexData.push(first + 1);
 		 indexData.push(second);
+		 indexData.push(second);
+		 indexData.push(first + 1);
 		 indexData.push(second + 1);
-		 indexData.push(first + 1);
 	   }
 	}
 	
 	return {
 			vertices: vertexPositionData,
 			normals: normalData,
-			uvcoords: textureCoordData,
+			//uvcoords: textureCoordData,
 			indices:indexData
 	}
 }
