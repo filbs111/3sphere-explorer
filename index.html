@@ -174,15 +174,12 @@ function initShaders(){
 					});
 }
 
-var cubeVertexPositionBuffer;
-var cubeVertexTextureCoordBuffer;
-var cubeVertexIndexBuffer;
-
 var tennisBallVertexPositionBuffer,
     tennisBallVertexTextureCoordBuffer,
 	tennisBallVertexIndexBuffer;
 
 var sphereBuffers={};
+var cubeBuffers={};
 var cubeFrameBuffers={};
 var octoFrameBuffers={};	
 var tetraFrameBuffers={};	
@@ -192,18 +189,6 @@ var sshipBuffers={};
 var gunBuffers={};
 
 function initBuffers(){
-	//cube. data is in data/levelCubeData.js
-	cubeVertexPositionBuffer= gl.createBuffer();
-	bufferArrayData(cubeVertexPositionBuffer, levelCubeData.vertices, 3);
-	
-	cubeVertexTextureCoordBuffer= gl.createBuffer();
-	bufferArrayData(cubeVertexTextureCoordBuffer, levelCubeData.uvcoords, 2);
-	
-	cubeVertexIndexBuffer = gl.createBuffer();
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
-	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(levelCubeData.indices), gl.STATIC_DRAW);
-	cubeVertexIndexBuffer.itemSize = 3;
-	cubeVertexIndexBuffer.numItems = levelCubeData.indices.length;
 	
 	//"tennis ball". data in data/tennisBall.js
 	tennisBallVertexPositionBuffer = gl.createBuffer();
@@ -229,6 +214,7 @@ function initBuffers(){
 	var gunObject = loadBlenderExport(guncyldata.meshes[0]);
 	
 	loadBufferData(sphereBuffers, makeSphereData(61,32,1), true);
+	loadBufferData(cubeBuffers, levelCubeData);
 	loadBufferData(cubeFrameBuffers, cubeFrameBlenderObject);
 	loadBufferData(octoFrameBuffers, octoFrameBlenderObject);
 	loadBufferData(tetraFrameBuffers, tetraFrameBlenderObject);
@@ -595,37 +581,13 @@ function drawWorldScene(frameTime) {
 		mat4.set(invertedPlayerCamera, mvMatrix);
 		mat4.multiply(mvMatrix,targetMatrix);
 		drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
-		//drawObjectFromBuffers(gunBuffers, shaderProgramColored);
 	}
 }
 
 
 function drawItem(){
 	gl.enable(gl.CULL_FACE);
-	drawCube();
-}
-
-function drawCube(){
-	//gl.useProgram(shaderProgramTexmap);
-	//gl.enableVertexAttribArray(1);
-	
-	//a lot of this stuff likely doesn't need to be done every time when draing a load of cubes sequentially
-	
-	gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
-	gl.vertexAttribPointer(shaderProgramTexmap.attributes.aVertexPosition, cubeVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
-	gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexTextureCoordBuffer);
-	gl.vertexAttribPointer(shaderProgramTexmap.attributes.aTextureCoord, cubeVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
-	
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeVertexIndexBuffer);
-	setMatrixUniforms(shaderProgramTexmap);
-	
-	//gl.uniform4fv(shaderProgramTexmap.uniforms.uTintColor, [1.0,0.5,0.5,1.0]);	//set tint colour
-	
-	gl.activeTexture(gl.TEXTURE0);
-	gl.bindTexture(gl.TEXTURE_2D, texture);
-	gl.uniform1i(shaderProgramTexmap.uniforms.uSampler, 0);
-	
-	gl.drawElements(gl.TRIANGLES, cubeVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+	drawObjectFromBuffers(cubeBuffers, shaderProgramTexmap);
 }
 
 function drawTennisBall(){
