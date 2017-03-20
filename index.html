@@ -463,6 +463,7 @@ function drawWorldScene(frameTime) {
 	}
 	
 	if (guiParams["draw 600-cell"]){
+		prepBuffersForDrawing(tetraFrameBuffers, shaderProgramTexmap);
 		var cellMats = cellMatData.d600;
 		var myscale=0.385;	//todo use correct scale
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [myscale,myscale,myscale]);
@@ -470,7 +471,8 @@ function drawWorldScene(frameTime) {
 			var thisCell = cellMats[cc];
 			mat4.set(invertedPlayerCamera, mvMatrix);
 			mat4.multiply(mvMatrix,thisCell);
-			drawTetraFrame();
+			//drawTetraFrame();
+			drawObjectFromPreppedBuffers(tetraFrameBuffers, shaderProgramTexmap);
 		}
 	}
 	
@@ -586,7 +588,6 @@ function drawWorldScene(frameTime) {
 
 
 function drawItem(){
-	gl.enable(gl.CULL_FACE);
 	drawObjectFromBuffers(cubeBuffers, shaderProgramTexmap);
 }
 
@@ -632,9 +633,10 @@ function prepBuffersForDrawing(bufferObj, shaderProg){
 		gl.bindTexture(gl.TEXTURE_2D, texture);
 		gl.uniform1i(shaderProg.uniforms.uSampler, 0);
 	}
+	gl.uniformMatrix4fv(shaderProg.uniforms.uPMatrix, false, pMatrix);
 }
 function drawObjectFromPreppedBuffers(bufferObj, shaderProg){
-	setMatrixUniforms(shaderProg);
+	gl.uniformMatrix4fv(shaderProg.uniforms.uMVMatrix, false, mvMatrix);
 	gl.drawElements(gl.TRIANGLES, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 }
 
