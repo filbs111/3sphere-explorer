@@ -462,7 +462,9 @@ function drawWorldScene(frameTime) {
 		}
 	}
 	
-	if (guiParams["draw 600-cell"]){
+	
+	if (guiParams["draw 600-cell"]){		
+		//var numDrawn=0;
 		prepBuffersForDrawing(tetraFrameBuffers, shaderProgramTexmap);
 		var cellMats = cellMatData.d600;
 		var myscale=0.385;	//todo use correct scale
@@ -472,9 +474,19 @@ function drawWorldScene(frameTime) {
 			mat4.set(invertedPlayerCamera, mvMatrix);
 			mat4.multiply(mvMatrix,thisCell);
 			//drawTetraFrame();
-			drawObjectFromPreppedBuffers(tetraFrameBuffers, shaderProgramTexmap);
+				
+			//super coarse culling - check whether centre in front of camera
+			//if (mvMatrix[12]>0){	//draws on right hand side
+			//if (mvMatrix[13]>0){	//draws on top of screen
+			//if (mvMatrix[14]<0){	//draws in front of camera
+			if (mvMatrix[14]<0.2){	//guess some leeway (relates to radius of object's bounding sphere)
+				drawObjectFromPreppedBuffers(tetraFrameBuffers, shaderProgramTexmap);
+				//numDrawn++;
+			}
 		}
+		//console.log("numdrawn=" + numDrawn);	//=300
 	}
+	
 	
 	activeShaderProgram = shaderProgramTexmap4Vec;
 	gl.useProgram(activeShaderProgram);
@@ -706,12 +718,12 @@ var guiParams={
 	"draw 16-cell":false,
 	"draw 24-cell":false,
 	"draw 120-cell":false,
-	"draw 600-cell":false,
+	"draw 600-cell":true,
 	"draw teapot":false,
 	"teapot scale":1.0,
-	"draw spaceship":true,
+	"draw spaceship":false,
 	"drop spaceship":false,
-	"draw target":true,
+	"draw target":false,
 	fogColor:'#aaaaaa'
 };
 var vecFogColor = [1.0,0.0,0.0,1.0];
