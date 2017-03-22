@@ -479,14 +479,19 @@ function drawWorldScene(frameTime) {
 			//if (mvMatrix[12]>0){	//draws on right hand side
 			//if (mvMatrix[13]>0){	//draws on top of screen
 			//if (mvMatrix[14]<0){	//draws in front of camera
+			/*
 			if (mvMatrix[14]<0.2){	//guess some leeway (relates to radius of object's bounding sphere)
 				drawObjectFromPreppedBuffers(tetraFrameBuffers, shaderProgramTexmap);
 				//numDrawn++;
 			}
+			*/
+			if (frustrumCull(mvMatrix, 0.355)){	//found by binary search. TODO find correct value.
+			//if (mvMatrix[13]>0.5*mvMatrix[14]){
+				drawObjectFromPreppedBuffers(tetraFrameBuffers, shaderProgramTexmap);
+			}
 		}
 		//console.log("numdrawn=" + numDrawn);	//=300
 	}
-	
 	
 	activeShaderProgram = shaderProgramTexmap4Vec;
 	gl.useProgram(activeShaderProgram);
@@ -589,13 +594,49 @@ function drawWorldScene(frameTime) {
 		
 	}
 	
+	var targetRad=0.1;
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,targetRad]);
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.3, 0.3, 1.0]);	//RED
 	//draw sphere. to be targeted by guns
 	if (guiParams["draw target"]){
 		mat4.set(invertedPlayerCamera, mvMatrix);
 		mat4.multiply(mvMatrix,targetMatrix);
-		drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
+		if (frustrumCull(mvMatrix,-targetRad)){	//normally use +ve radius
+									//-ve to make disappear when not entirely inside view frustrum (for testing)
+			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
+		}
 	}
+	
+	//TODO button to toggle bulling (so can check that doesn't impact what's drawn)
+	function frustrumCull(mat, rad){
+		//return whether an sphere of radius rad, at a position determined by the 4matrix mat (ie with position [mat[12],mat[13],mat[14],mat[15]]) overlaps the view frustrum.
+		var rad2 = rad*1.414;
+		if (mat[14]>rad){return false;}
+		
+		/*
+		if (mat[14]-mat[13]>rad2){return false;}	//dot product of position with normal to view frustrum face. vFov=90
+		if (mat[14]+mat[13]>rad2){return false;}	//vertical culling
+		if (mat[14]-mat[12]>rad2){return false;}	//horiz culling . this culls to much normally (hFov>vFov)
+		if (mat[14]+mat[12]>rad2){return false;}	// TODO use pMatrix values 
+		*/
+		
+		var rad3 = rad*Math.sqrt(1+pMatrix[5]*pMatrix[5]);
+		var rad4 = rad*Math.sqrt(1+pMatrix[0]*pMatrix[0]);
+		
+		if (mat[14]-pMatrix[5]*mat[13]>rad3){return false;}	//dot product of position with normal to view frustrum face. vFov=90
+		if (mat[14]+pMatrix[5]*mat[13]>rad3){return false;}	//vertical culling
+		if (mat[14]-pMatrix[0]*mat[12]>rad4){return false;}	//horiz culling . this culls to much normally (hFov>vFov)
+		if (mat[14]+pMatrix[0]*mat[12]>rad4){return false;}	// TODO use pMatrix values 
+		
+		//from earlier:
+		/*
+		pMatrix[0] = (gl.viewportHeight/gl.viewportWidth)/fy ;
+		pMatrix[5] = 1.0/fy;
+		*/
+		return true;
+	}
+	
+	
 }
 
 
