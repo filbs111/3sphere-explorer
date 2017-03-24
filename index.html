@@ -368,7 +368,7 @@ function drawWorldScene(frameTime) {
 	if (guiParams["draw 8-cell"]){
 		drawArrayOfModels(
 			cellMatData.d8,
-			false,	//seems that 8-cell cells never meets culling condition so don't bother
+			(guiParams["culling"] ? Math.sqrt(3): false), //seems that 8-cell cells never meets culling condition so don't bother
 			drawCubeFrame
 		);	
 	}
@@ -450,7 +450,7 @@ function drawWorldScene(frameTime) {
 
 	//new draw dodeca stuff...
 	if (guiParams["draw 120-cell"]){
-		var dodecaScale=0.5;	//guess
+		var dodecaScale=0.515;	//guess TODO use right value (0.5 is too small)
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [dodecaScale,dodecaScale,dodecaScale]);
 		drawArrayOfModels(
 			cellMatData.d120,
@@ -623,8 +623,6 @@ function drawWorldScene(frameTime) {
 		if (frustrumCull(mvMatrix,targetRad)){	//normally use +ve radius
 									//-ve to make disappear when not entirely inside view frustrum (for testing)
 			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
-		}else{
-			console.log("culled!");
 		}
 	}
 }
@@ -637,9 +635,10 @@ function generateCullFunc(pMat){
 	var const3 = Math.sqrt(1+pMat[5]*pMat[5]);
 	var const4 = Math.sqrt(1+pMat[0]*pMat[0]); 
 	return function(mat, rad){	//return whether an sphere of radius rad, at a position determined by mat (ie with position [mat[12],mat[13],mat[14],mat[15]]) overlaps the view frustrum.
-		var const5=const3*rad;	//TODO only do this once when drawing a sequence of same objects.
-		var const6=const4*rad;
-		if (mat[14]>rad){return false;}
+		var adjustedRad=rad/Math.sqrt(1+rad*rad);
+		var const5=const3*adjustedRad;	//TODO only do this once when drawing a sequence of same objects.
+		var const6=const4*adjustedRad;
+		if (mat[14]>adjustedRad){return false;}
 		if (mat[14]-const1*mat[13]>const5){return false;}	//vertical culling
 		if (mat[14]+const1*mat[13]>const5){return false;}	
 		if (mat[14]-const2*mat[12]>const6){return false;}	//horiz culling
