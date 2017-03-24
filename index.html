@@ -85,7 +85,7 @@
 		vec4 transformedNormal = uMVMatrix * normalize(vec4(aVertexNormal,1.0));
 		light = max(dot(transformedNormal, aVertexPositionNormalized) , 0.0);	//irrelevant if light position = camera position ?
 		
-		fog = 0.5*(1.0 + transformedCoord.w);
+		fog = 1.0;	//0.5*(1.0 + transformedCoord.w);
 	}
 </script>
 
@@ -213,7 +213,8 @@ function initBuffers(){
 	var sshipObject = loadBlenderExport(sshipdata);		//""
 	var gunObject = loadBlenderExport(guncyldata.meshes[0]);
 	
-	loadBufferData(sphereBuffers, makeSphereData(61,32,1), true);
+	//loadBufferData(sphereBuffers, makeSphereData(61,32,1), true);
+	loadBufferData(sphereBuffers, makeSphereData(300,150,1), true);
 	loadBufferData(cubeBuffers, levelCubeData);
 	loadBufferData(cubeFrameBuffers, cubeFrameBlenderObject);
 	loadBufferData(octoFrameBuffers, octoFrameBlenderObject);
@@ -365,13 +366,11 @@ function drawWorldScene(frameTime) {
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.5, 0.5, 0.5, 1.0]);	//GREY
 
 	if (guiParams["draw 8-cell"]){
-		var cellMats = cellMatData.d8;	
-		for (cc in cellMats){
-			var thisCell = cellMats[cc];
-			mat4.set(invertedPlayerCamera, mvMatrix);
-			mat4.multiply(mvMatrix,thisCell);
-			drawCubeFrame();
-		}
+		drawArrayOfModels(
+			cellMatData.d8,
+			false,	//seems that 8-cell cells never meets culling condition so don't bother
+			drawCubeFrame
+		);	
 	}
 	
 	if (guiParams["draw 16-cell"]){
@@ -415,14 +414,11 @@ function drawWorldScene(frameTime) {
 	
 	if (guiParams["draw 24-cell"]){
 		var cellMats=cellMatData.d24.cells;
-		var cellColors=cellMatData.d24.colors;
-		for (cc in cellMats){
-			var thisCell = cellMats[cc];
-			gl.uniform4fv(activeShaderProgram.uniforms.uColor,cellColors[cc]);
-			mat4.set(invertedPlayerCamera, mvMatrix);
-			mat4.multiply(mvMatrix,thisCell);
-			drawOctoFrame();
-		}
+		drawArrayOfModels(
+			cellMatData.d24.cells,
+			(guiParams["culling"] ? 1: false),	//seems like never get culled. is function ok?
+			drawOctoFrame
+		);	
 	}
 	
 	if (guiParams["draw 5-cell"]){
@@ -454,46 +450,55 @@ function drawWorldScene(frameTime) {
 
 	//new draw dodeca stuff...
 	if (guiParams["draw 120-cell"]){
-		var cellMats = cellMatData.d120;
 		var dodecaScale=0.5;	//guess
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [dodecaScale,dodecaScale,dodecaScale]);
-		for (cc in cellMats){
-			var thisCell = cellMats[cc];
-			mat4.set(invertedPlayerCamera, mvMatrix);
-			mat4.multiply(mvMatrix,thisCell);
-			drawDodecaFrame();
-		}
+		drawArrayOfModels(
+			cellMatData.d120,
+			(guiParams["culling"] ? 0.4: false),
+			drawDodecaFrame
+		);
 	}
 	
-	
 	if (guiParams["draw 600-cell"]){		
-		//var numDrawn=0;
 		prepBuffersForDrawing(tetraFrameBuffers, shaderProgramTexmap);
-		var cellMats = cellMatData.d600;
 		var myscale=0.385;	//todo use correct scale
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [myscale,myscale,myscale]);
-		for (cc in cellMats){
-			var thisCell = cellMats[cc];
-			mat4.set(invertedPlayerCamera, mvMatrix);
-			mat4.multiply(mvMatrix,thisCell);
-			//drawTetraFrame();
-				
-			//super coarse culling - check whether centre in front of camera
-			//if (mvMatrix[12]>0){	//draws on right hand side
-			//if (mvMatrix[13]>0){	//draws on top of screen
-			//if (mvMatrix[14]<0){	//draws in front of camera
-			/*
-			if (mvMatrix[14]<0.2){	//guess some leeway (relates to radius of object's bounding sphere)
+		
+		drawArrayOfModels(
+			cellMatData.d600,
+			(guiParams["culling"] ? 0.355: false),
+			function(){
 				drawObjectFromPreppedBuffers(tetraFrameBuffers, shaderProgramTexmap);
-				//numDrawn++;
 			}
-			*/
-			if (frustrumCull(mvMatrix, 0.355)){	//found by binary search. TODO find correct value.
-			//if (mvMatrix[13]>0.5*mvMatrix[14]){
-				drawObjectFromPreppedBuffers(tetraFrameBuffers, shaderProgramTexmap);
+		);
+	}
+	
+	function drawArrayOfModels(cellMats, cullRad, drawFunc){
+		numDrawn = 0;
+		if (!cullRad){
+			drawArrayForFunc(function(){
+				drawFunc();
+				numDrawn++;
+				});
+		}else{
+			drawArrayForFunc(function(){
+				if (frustrumCull(mvMatrix,cullRad)){
+					drawFunc();
+					numDrawn++;
+				}
+			});
+		}
+	
+		function drawArrayForFunc(drawFunc2){
+			for (cc in cellMats){
+				var thisCell = cellMats[cc];
+				mat4.set(invertedPlayerCamera, mvMatrix);
+				mat4.multiply(mvMatrix,thisCell);
+				drawFunc2();
 			}
 		}
-		//console.log("numdrawn=" + numDrawn);	//=300
+		
+		console.log("num drawn: " + numDrawn);
 	}
 	
 	activeShaderProgram = shaderProgramTexmap4Vec;
@@ -598,15 +603,28 @@ function drawWorldScene(frameTime) {
 	}
 	
 	var targetRad=0.1;
+	//change radii to test that have right bounding spheres for various cells.
+	//targetRad=Math.sqrt(3);		//8-cell
+	//targetRad=100;	//see that the sphere drawing only fills a half of the 3-sphere as "radius" goes to infinity, so can't bound the 
+						//5-cell cells unless centre about opposite point. Maybe spheres that cover more than half volume of 3-sphere are
+						//not cullable at all.
+	//targetRad=0.4;	//empirically found for 120-cell
+	//targetRad=0.41;	//for 600-cell
+	targetRad=1;		//24-cell
+	//TODO 16-cell, find exact values and process to calculate, then use for culling, make culling a toggle option
+
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,targetRad]);
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.3, 0.3, 1.0]);	//RED
 	//draw sphere. to be targeted by guns
 	if (guiParams["draw target"]){
 		mat4.set(invertedPlayerCamera, mvMatrix);
 		mat4.multiply(mvMatrix,targetMatrix);
-		if (frustrumCull(mvMatrix,-targetRad)){	//normally use +ve radius
+		//mat4.multiply(mvMatrix,	cellMatData.d24.cells[0]);
+		if (frustrumCull(mvMatrix,targetRad)){	//normally use +ve radius
 									//-ve to make disappear when not entirely inside view frustrum (for testing)
 			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
+		}else{
+			console.log("culled!");
 		}
 	}
 }
@@ -748,14 +766,15 @@ var guiParams={
 	"8-cell scale":1.0,
 	"draw 8-cell":false,
 	"draw 16-cell":false,
-	"draw 24-cell":false,
+	"draw 24-cell":true,
 	"draw 120-cell":false,
-	"draw 600-cell":true,
+	"draw 600-cell":false,
 	"draw teapot":false,
 	"teapot scale":1.0,
 	"draw spaceship":false,
 	"drop spaceship":false,
-	"draw target":false,
+	"draw target":true,
+	"culling":false,
 	fogColor:'#aaaaaa'
 };
 var vecFogColor = [1.0,0.0,0.0,1.0];
@@ -782,7 +801,7 @@ function init(){
 	gui.add(guiParams,"draw 8-cell",false);
 	gui.add(guiParams,"draw 16-cell");
 	gui.add(guiParams,"8-cell scale",0.2,2.0,0.05);
-	gui.add(guiParams,"draw 24-cell",true);
+	gui.add(guiParams,"draw 24-cell",false);
 	gui.add(guiParams,"draw 120-cell",true);
 	gui.add(guiParams,"draw 600-cell",true);
 	gui.add(guiParams,"draw teapot",true);
@@ -790,6 +809,7 @@ function init(){
 	gui.add(guiParams,"draw spaceship",true);
 	gui.add(guiParams, "drop spaceship",false);
 	gui.add(guiParams, "draw target",false);
+	gui.add(guiParams, "culling",false);
 	
 	window.addEventListener("keydown",function(evt){
 		//console.log("key pressed : " + evt.keyCode);
