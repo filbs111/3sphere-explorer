@@ -58,7 +58,7 @@
 	varying float light;
 	
 	void main(void) {
-		gl_FragColor = vec4( fog*light*uColor.xyz, 1.0) + (1.0-fog)*uFogColor;
+		gl_FragColor = vec4( fog*( vec3(light) + uFogColor.xyz )*uColor.xyz, 1.0) + (1.0-fog)*uFogColor;
 	}
 </script>
 <!-- vertex shader -->
@@ -82,8 +82,8 @@
 		vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
 		gl_Position = uPMatrix * transformedCoord;
 
-		vec4 transformedNormal = uMVMatrix * normalize(vec4(aVertexNormal,1.0));
-		light = max(dot(transformedNormal, aVertexPositionNormalized) , 0.0);	//irrelevant if light position = camera position ?
+		vec4 transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
+		light = -dot( normalize(transformedCoord + vec4(0.0,0.0,0.0,-1.0)), transformedNormal);
 		
 		fog = 0.5*(1.0 + transformedCoord.w);
 	}
@@ -529,7 +529,7 @@ function drawWorldScene(frameTime) {
 	}
 	
 	modelScale=0.002;
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.2, 0.2, 0.2, 1.0]);	//GREY
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.1, 0.1, 0.1, 1.0]);	//DARK
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 	
 	if (!guiParams["drop spaceship"]){
@@ -543,7 +543,7 @@ function drawWorldScene(frameTime) {
 		
 		//draw guns
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.1,0.1,0.1]);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.3, 0.3, 0.3, 1.0]);	//GREY
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.2, 0.2, 0.2, 1.0]);	//GREY
 
 		var gunHoriz = 0.04;
 		var gunVert = 0.02;
@@ -583,13 +583,11 @@ function drawWorldScene(frameTime) {
 	var targetRad=0.1;
 	//change radii to test that have right bounding spheres for various cells.
 	//targetRad=Math.sqrt(3);		//8-cell
-	//targetRad=100;	//see that the sphere drawing only fills a half of the 3-sphere as "radius" goes to infinity, so can't bound the 
-						//5-cell cells unless centre about opposite point. Maybe spheres that cover more than half volume of 3-sphere are
-						//not cullable at all.
+	//targetRad=100;
 	//targetRad=0.4;	//empirically found for 120-cell
 	//targetRad=0.41;	//for 600-cell
 	//targetRad=1;		//24-cell
-	targetRad=1.73;			//16-cell
+	//targetRad=1.73;			//16-cell
 	//TODO find exact values and process to calculate ( either largest distance points from origin in model, or calculate)
 	
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,targetRad]);
@@ -602,8 +600,6 @@ function drawWorldScene(frameTime) {
 		if (frustrumCull(mvMatrix,targetRad)){	//normally use +ve radius
 									//-ve to make disappear when not entirely inside view frustrum (for testing)
 			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
-		}else{
-			console.log("culled");
 		}
 	}
 }
