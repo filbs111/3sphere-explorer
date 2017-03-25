@@ -46,6 +46,48 @@ var cellMatData=(function(){
 	
 	returnObj.d8=cellMats;
 	
+	
+	//16-cell
+	cellMats = [];			
+	var moveAmount = Math.PI/3;	
+	var ang = -0.5*Math.sqrt(2)*Math.atan(Math.sqrt(2));
+			
+	var tmpMatrix = mat4.create();
+	var mvMatrix = mat4.create();
+	mat4.identity(tmpMatrix);
+	drawHalf16Cells();
+	xyzrotate4mat(tmpMatrix,[ Math.PI, 0, 0]);
+	drawHalf16Cells();
+			
+	function drawHalf16Cells(){
+		drawTetraFromPair(1,1,1);
+		drawTetraFromPair(-1,-1,5);
+		drawTetraFromPair(1,-1,-1);
+		drawTetraFromPair(-1,1,-5);
+	}
+			
+	function drawTetraFromPair(xsign,ysign,rotatesign){
+		mat4.set(tmpMatrix, mvMatrix);
+		
+		xyzrotate4mat(mvMatrix,[ -ang*xsign, 0, -ang*ysign]);
+		
+		xyzrotate4mat(mvMatrix,[0,rotatesign*Math.PI/12,0]);
+		ymove4mat(mvMatrix, moveAmount);
+		pushMat();
+		ymove4mat(mvMatrix, Math.PI);
+		xyzrotate4mat(mvMatrix,[0,Math.PI,0]);	
+		pushMat();
+		
+		function pushMat(){
+			var tmpMat = newMatrix();
+			mat4.set(mvMatrix, tmpMat);
+			cellMats.push(tmpMat);
+		}
+	}
+	
+	returnObj.d16=cellMats;
+	
+	
 	//24-cell
 	var ringMats = [];
 	ringMats.push(newMatrix());	
@@ -178,7 +220,6 @@ addMatsFromMat(myMat);
 console.log("5-cell: " + rotationStack.length);
 
 returnObj.d5=rotationStack;	//override. 
-
 
 
 //try 120-cell

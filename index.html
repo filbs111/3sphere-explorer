@@ -85,7 +85,7 @@
 		vec4 transformedNormal = uMVMatrix * normalize(vec4(aVertexNormal,1.0));
 		light = max(dot(transformedNormal, aVertexPositionNormalized) , 0.0);	//irrelevant if light position = camera position ?
 		
-		fog = 1.0;	//0.5*(1.0 + transformedCoord.w);
+		fog = 0.5*(1.0 + transformedCoord.w);
 	}
 </script>
 
@@ -368,52 +368,30 @@ function drawWorldScene(frameTime) {
 	if (guiParams["draw 8-cell"]){
 		drawArrayOfModels(
 			cellMatData.d8,
-			(guiParams["culling"] ? Math.sqrt(3): false), //seems that 8-cell cells never meets culling condition so don't bother
+			(guiParams["culling"] ? Math.sqrt(3): false),
 			drawCubeFrame
 		);	
 	}
 	
+	
 	if (guiParams["draw 16-cell"]){
 		var cellScale = 4/Math.sqrt(6);		//in the model, vertices are 0.75*sqrt(2) from the centre, and want to scale to tan(PI/3)=sqrt(3)
-		var moveAmount = Math.PI/3;	
+		//var moveAmount = Math.PI/3;	
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [cellScale,cellScale,cellScale]);
-
-		var ang = -0.5*Math.sqrt(2)*Math.atan(Math.sqrt(2));
 		
-		var tmpMatrix = mat4.create();
-		mat4.set(invertedPlayerCamera, tmpMatrix);	//copy matrix so can reuse
-		drawHalf16Cells();
-		xyzrotate4mat(tmpMatrix,[ Math.PI, 0, 0]);
-		drawHalf16Cells();
+		drawArrayOfModels(
+			//[cellMatData.d16[0]],
+			cellMatData.d16,
+			(guiParams["culling"] ? 1.73: false),
+			drawTetraFrame
+		);	
 		
-		function drawHalf16Cells(){
-			drawTetraFromPair(1,1,1);
-			drawTetraFromPair(-1,-1,5);
-			drawTetraFromPair(1,-1,-1);
-			drawTetraFromPair(-1,1,-5);
-		}
-		
-		function drawTetraFromPair(xsign,ysign,rotatesign){
-			mat4.set(tmpMatrix, mvMatrix);
-			
-			xyzrotate4mat(mvMatrix,[ -ang*xsign, 0, -ang*ysign]);
-			
-			xyzrotate4mat(mvMatrix,[0,rotatesign*Math.PI/12,0]);
-			ymove4mat(mvMatrix, moveAmount);
-
-			drawTetraFrame();
-			
-			ymove4mat(mvMatrix, Math.PI);
-			xyzrotate4mat(mvMatrix,[0,Math.PI,0]);
-			drawTetraFrame();
-		}
 	}
 	
 	modelScale = 1.0;
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 	
 	if (guiParams["draw 24-cell"]){
-		var cellMats=cellMatData.d24.cells;
 		drawArrayOfModels(
 			cellMatData.d24.cells,
 			(guiParams["culling"] ? 1: false),	//seems like never get culled. is function ok?
@@ -610,19 +588,22 @@ function drawWorldScene(frameTime) {
 						//not cullable at all.
 	//targetRad=0.4;	//empirically found for 120-cell
 	//targetRad=0.41;	//for 600-cell
-	targetRad=1;		//24-cell
-	//TODO 16-cell, find exact values and process to calculate, then use for culling, make culling a toggle option
-
+	//targetRad=1;		//24-cell
+	targetRad=1.73;			//16-cell
+	//TODO find exact values and process to calculate ( either largest distance points from origin in model, or calculate)
+	
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,targetRad]);
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.3, 0.3, 1.0]);	//RED
 	//draw sphere. to be targeted by guns
 	if (guiParams["draw target"]){
 		mat4.set(invertedPlayerCamera, mvMatrix);
-		mat4.multiply(mvMatrix,targetMatrix);
-		//mat4.multiply(mvMatrix,	cellMatData.d24.cells[0]);
+		//mat4.multiply(mvMatrix,targetMatrix);
+		mat4.multiply(mvMatrix,	cellMatData.d16[0]);
 		if (frustrumCull(mvMatrix,targetRad)){	//normally use +ve radius
 									//-ve to make disappear when not entirely inside view frustrum (for testing)
 			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
+		}else{
+			console.log("culled");
 		}
 	}
 }
@@ -764,8 +745,8 @@ var guiParams={
 	"draw 5-cell":false,
 	"8-cell scale":1.0,
 	"draw 8-cell":false,
-	"draw 16-cell":false,
-	"draw 24-cell":true,
+	"draw 16-cell":true,
+	"draw 24-cell":false,
 	"draw 120-cell":false,
 	"draw 600-cell":false,
 	"draw teapot":false,
@@ -773,7 +754,7 @@ var guiParams={
 	"draw spaceship":false,
 	"drop spaceship":false,
 	"draw target":true,
-	"culling":false,
+	"culling":true,
 	fogColor:'#aaaaaa'
 };
 var vecFogColor = [1.0,0.0,0.0,1.0];
@@ -808,7 +789,7 @@ function init(){
 	gui.add(guiParams,"draw spaceship",true);
 	gui.add(guiParams, "drop spaceship",false);
 	gui.add(guiParams, "draw target",false);
-	gui.add(guiParams, "culling",false);
+	gui.add(guiParams, "culling");
 	
 	window.addEventListener("keydown",function(evt){
 		//console.log("key pressed : " + evt.keyCode);
