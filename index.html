@@ -605,17 +605,20 @@ function drawWorldScene(frameTime) {
 		}
 	}
 	
-	//move bullet (todo decouple mechanics from drawing, or at least use deltaT)
-	xyzmove4mat(bulletMatrix,[0,0,0.05]);
-	//draw bullet
-	targetRad=0.0025;
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,20*targetRad]);	//long streaks
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.3, 1.0]);	//YELLOW
-	mat4.set(invertedPlayerCamera, mvMatrix);
-	mat4.multiply(mvMatrix,bulletMatrix);
-	//mat4.set(bulletMatrix, mvMatrix);
-	if (frustrumCull(mvMatrix,targetRad)){	
-		drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
+	
+	for (var b in bullets){
+		var bulletMatrix=bullets[b];
+		//move bullet (todo decouple mechanics from drawing, or at least use deltaT)
+		xyzmove4mat(bulletMatrix,[0,0,0.05]);
+		//draw bullet
+		targetRad=0.0025;
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,20*targetRad]);	//long streaks
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.3, 1.0]);	//YELLOW
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		mat4.multiply(mvMatrix,bulletMatrix);
+		if (frustrumCull(mvMatrix,targetRad)){	
+			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
+		}
 	}
 	
 }
@@ -774,7 +777,7 @@ var teapotMatrix=mat4.create();mat4.identity(teapotMatrix);
 var sshipMatrix=mat4.create();mat4.identity(sshipMatrix);
 var targetMatrix=mat4.create();mat4.identity(targetMatrix);
 var gunMatrix=mat4.create();mat4.identity(gunMatrix);
-var bulletMatrix=mat4.create();mat4.identity(bulletMatrix);
+var bullets=[];
 var canvas;
 function init(){
 
@@ -1057,7 +1060,13 @@ function dropSpaceship(){
 	mat4.set(playerCamera,sshipMatrix);	//copy current player 4-rotation matrix to the spaceship object
 }
 function fireGun(){
-	mat4.set(gunMatrix,bulletMatrix);
+	var newBullet = mat4.create();
+	mat4.set(gunMatrix,newBullet);
+	bullets.push(newBullet);
+	//limit number of bullets
+	if (bullets.length>100){
+		bullets.shift();
+	}
 }
 
 
