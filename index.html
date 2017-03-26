@@ -567,18 +567,15 @@ function drawWorldScene(frameTime) {
 		drawRelativeToSpacehip([-gunHoriz,-gunVert,gunFront]);
 		
 		function drawRelativeToSpacehip(vec){
-			mat4.set(invertedPlayerCamera, mvMatrix);
-			mat4.multiply(mvMatrix,sshipMatrix);
-			xyzmove4mat(mvMatrix,vec);
+			mat4.set(sshipMatrix, gunMatrix);
+			xyzmove4mat(gunMatrix,vec);
 			
 			//rotate guns to follow mouse
-			xyzrotate4mat(mvMatrix, rotvec);			
-			xyzmove4mat(mvMatrix,[0,0,0.05]);	//move forwards
+			xyzrotate4mat(gunMatrix, rotvec);			
+			xyzmove4mat(gunMatrix,[0,0,0.05]);	//move forwards
 		
-			//set gun matrix to current. this is wasted 3/4 times...
-			//mat4.set(playerCamera,gunMatrix);
-			//mat4.multiply(gunMatrix, playerCamera); //guess
-			mat4.set(mvMatrix,gunMatrix);
+			mat4.set(invertedPlayerCamera, mvMatrix);
+			mat4.multiply(mvMatrix,gunMatrix);
 			
 			drawObjectFromBuffers(gunBuffers, shaderProgramColored);
 		}
@@ -614,7 +611,9 @@ function drawWorldScene(frameTime) {
 	targetRad=0.0025;
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,20*targetRad]);	//long streaks
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.3, 1.0]);	//YELLOW
-	mat4.set(bulletMatrix, mvMatrix);
+	mat4.set(invertedPlayerCamera, mvMatrix);
+	mat4.multiply(mvMatrix,bulletMatrix);
+	//mat4.set(bulletMatrix, mvMatrix);
 	if (frustrumCull(mvMatrix,targetRad)){	
 		drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
 	}
