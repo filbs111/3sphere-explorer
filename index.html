@@ -560,19 +560,22 @@ function drawWorldScene(frameTime) {
 		
 		var crossProd = crossProductHomgenous({x:0,y:0,z:1,w:1}, cappedPointingDir);
 		var rotvec = [crossProd.x / crossProd.w, -crossProd.y / crossProd.w, -crossProd.z / crossProd.w];	
-
+		
+		gunMatrices=[];
 		drawRelativeToSpacehip([gunHoriz,gunVert,gunFront]); //left, down, forwards
 		drawRelativeToSpacehip([-gunHoriz,gunVert,gunFront]);
 		drawRelativeToSpacehip([gunHoriz,-gunVert,gunFront]);
 		drawRelativeToSpacehip([-gunHoriz,-gunVert,gunFront]);
 		
 		function drawRelativeToSpacehip(vec){
+			var gunMatrix = mat4.create();
 			mat4.set(sshipMatrix, gunMatrix);
 			xyzmove4mat(gunMatrix,vec);
 			
 			//rotate guns to follow mouse
 			xyzrotate4mat(gunMatrix, rotvec);			
 			xyzmove4mat(gunMatrix,[0,0,0.05]);	//move forwards
+			gunMatrices.push(gunMatrix);
 		
 			mat4.set(invertedPlayerCamera, mvMatrix);
 			mat4.multiply(mvMatrix,gunMatrix);
@@ -776,8 +779,8 @@ var vecFogColor = [1.0,0.0,0.0,1.0];
 var teapotMatrix=mat4.create();mat4.identity(teapotMatrix);
 var sshipMatrix=mat4.create();mat4.identity(sshipMatrix);
 var targetMatrix=mat4.create();mat4.identity(targetMatrix);
-var gunMatrix=mat4.create();mat4.identity(gunMatrix);
 var bullets=[];
+var gunMatrices=[];
 var canvas;
 function init(){
 
@@ -1060,12 +1063,15 @@ function dropSpaceship(){
 	mat4.set(playerCamera,sshipMatrix);	//copy current player 4-rotation matrix to the spaceship object
 }
 function fireGun(){
-	var newBullet = mat4.create();
-	mat4.set(gunMatrix,newBullet);
-	bullets.push(newBullet);
-	//limit number of bullets
-	if (bullets.length>100){
-		bullets.shift();
+	for (var g in gunMatrices){
+		var gunMatrix = gunMatrices[g];
+		var newBullet = mat4.create();
+		mat4.set(gunMatrix,newBullet);
+		bullets.push(newBullet);
+		//limit number of bullets
+		if (bullets.length>100){
+			bullets.shift();
+		}
 	}
 }
 
