@@ -589,6 +589,15 @@ function drawWorldScene(frameTime) {
 				//seems this is not actually correct for large angles!
 				//i guess because cross prod goes as sin(angle), and xyzrotate4mat uses angle/axis vector.
 				//TODO xyzrotate function with this compensated. rodriguez?
+				
+				//hack fix:
+				var rotMag = Math.sqrt(rotvec[0]*rotvec[0] + rotvec[1]*rotvec[1] + rotvec[2]*rotvec[2]);
+				if (rotMag>0){
+					var rotHack = Math.asin(rotMag)/rotMag;
+					rotvec[0]*=rotHack;
+					rotvec[1]*=rotHack;
+					rotvec[2]*=rotHack;
+				}
 		}
 		
 		
