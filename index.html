@@ -561,6 +561,38 @@ function drawWorldScene(frameTime) {
 		var crossProd = crossProductHomgenous({x:0,y:0,z:1,w:1}, cappedPointingDir);
 		var rotvec = [crossProd.x / crossProd.w, -crossProd.y / crossProd.w, -crossProd.z / crossProd.w];	
 		
+		
+		if (guiParams["draw target"]){
+				//autofollow the target.
+				//want to do something like : get the target's position in frame of the gun's pivot point,
+				//then do some cross product with pointing direction (similar to mouse follow code.)
+				
+				//1. get matrix for target relative to gun
+				// initially just use relative to camera. then spaceship (ie different when dropped), then guns
+				
+				var tmpMat = mat4.create();
+				mat4.set(invertedPlayerCamera, tmpMat);
+				mat4.multiply(tmpMat, cellMatData.d16[0]);	//target in frame of camera.
+				
+				//[mat[12],mat[13],mat[14],mat[15] is 4vec co-ords
+				
+				var targetPointing={x:tmpMat[12], y:tmpMat[13], z:tmpMat[14]
+				};
+				//might get w to use in pointingvector from sqrt(1-tmpMat[15]^2) ???
+				targetPointing.w = Math.sqrt(1 - tmpMat[15]*tmpMat[15] );	//should be equivalent to below
+				targetPointing.w = Math.sqrt(tmpMat[12]*tmpMat[12]+tmpMat[13]*tmpMat[13]+tmpMat[14]*tmpMat[14] );	
+				
+				crossProd = crossProductHomgenous({x:0,y:0,z:1,w:1}, targetPointing);
+				rotvec = [-crossProd.x / crossProd.w, -crossProd.y / crossProd.w, -crossProd.z / crossProd.w];	
+		
+				//note the 4vec passed in here has w*w = x*x+y*y+z*z ie different to point on 4vec.
+				//seems this is not actually correct for large angles!
+				//i guess because cross prod goes as sin(angle), and xyzrotate4mat uses angle/axis vector.
+				//TODO xyzrotate function with this compensated. rodriguez?
+		}
+		
+		
+		
 		gunMatrices=[];
 		drawRelativeToSpacehip([gunHoriz,gunVert,gunFront]); //left, down, forwards
 		drawRelativeToSpacehip([-gunHoriz,gunVert,gunFront]);
@@ -573,7 +605,8 @@ function drawWorldScene(frameTime) {
 			xyzmove4mat(gunMatrix,vec);
 			
 			//rotate guns to follow mouse
-			xyzrotate4mat(gunMatrix, rotvec);			
+			xyzrotate4mat(gunMatrix, rotvec);		
+				
 			xyzmove4mat(gunMatrix,[0,0,0.05]);	//move forwards
 			gunMatrices.push(gunMatrix);
 		
@@ -585,7 +618,7 @@ function drawWorldScene(frameTime) {
 		
 	}
 	
-	var targetRad=0.1;
+	var targetRad=0.01;
 	//change radii to test that have right bounding spheres for various cells.
 	//targetRad=Math.sqrt(3);		//8-cell
 	//targetRad=100;
@@ -1069,7 +1102,7 @@ function fireGun(){
 		mat4.set(gunMatrix,newBullet);
 		bullets.push(newBullet);
 		//limit number of bullets
-		if (bullets.length>100){
+		if (bullets.length>10){
 			bullets.shift();
 		}
 	}
