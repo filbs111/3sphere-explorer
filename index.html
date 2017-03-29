@@ -550,56 +550,56 @@ function drawWorldScene(frameTime) {
 		var gunFront = 0.01;
 
 		var mousP=mouseInfo.currentPointingDir;
-		var gunAngRange = 0.2;
+		var gunAngRange = 0.3;
 		//get angle to rotate to this point (similar to mouse drag rotation system)
 		var cappedPointingDir={x:Math.max(Math.min(mousP.x/mousP.z,gunAngRange),-gunAngRange),
-								y:Math.max(Math.min(mousP.y/mousP.z,gunAngRange),-gunAngRange),
+								y:Math.max(Math.min(-mousP.y/mousP.z,gunAngRange),-gunAngRange),
 								z:1};
 		cappedPointingDir.w=Math.sqrt(cappedPointingDir.x*cappedPointingDir.x+
 								cappedPointingDir.y*cappedPointingDir.y +1);
 		
-		var crossProd = crossProductHomgenous({x:0,y:0,z:1,w:1}, cappedPointingDir);
-		var rotvec = [crossProd.x / crossProd.w, -crossProd.y / crossProd.w, -crossProd.z / crossProd.w];	
-		
 		
 		if (guiParams["draw target"]){
-				//autofollow the target.
-				//want to do something like : get the target's position in frame of the gun's pivot point,
-				//then do some cross product with pointing direction (similar to mouse follow code.)
+			//autofollow the target.
+			//want to do something like : get the target's position in frame of the gun's pivot point,
+			//then do some cross product with pointing direction (similar to mouse follow code.)
+			
+			//1. get matrix for target relative to gun
+			// initially just use relative to camera. then spaceship (ie different when dropped), then guns
 				
-				//1. get matrix for target relative to gun
-				// initially just use relative to camera. then spaceship (ie different when dropped), then guns
+			var tmpMat = mat4.create();
+			mat4.set(invertedPlayerCamera, tmpMat);
+			mat4.multiply(tmpMat, cellMatData.d16[0]);	//target in frame of camera.
 				
-				var tmpMat = mat4.create();
-				mat4.set(invertedPlayerCamera, tmpMat);
-				mat4.multiply(tmpMat, cellMatData.d16[0]);	//target in frame of camera.
+			//[mat[12],mat[13],mat[14],mat[15] is 4vec co-ords
 				
-				//[mat[12],mat[13],mat[14],mat[15] is 4vec co-ords
+			var targetPointing={x:tmpMat[12], y:tmpMat[13], z:tmpMat[14]};
+			
+			//might get w to use in pointingvector from sqrt(1-tmpMat[15]^2) ???
+			targetPointing.w = Math.sqrt(1 - tmpMat[15]*tmpMat[15] );	//should be equivalent to below
+			//targetPointing.w = Math.sqrt(tmpMat[12]*tmpMat[12]+tmpMat[13]*tmpMat[13]+tmpMat[14]*tmpMat[14] );	
 				
-				var targetPointing={x:tmpMat[12], y:tmpMat[13], z:tmpMat[14]
-				};
-				//might get w to use in pointingvector from sqrt(1-tmpMat[15]^2) ???
-				targetPointing.w = Math.sqrt(1 - tmpMat[15]*tmpMat[15] );	//should be equivalent to below
-				targetPointing.w = Math.sqrt(tmpMat[12]*tmpMat[12]+tmpMat[13]*tmpMat[13]+tmpMat[14]*tmpMat[14] );	
-				
-				crossProd = crossProductHomgenous({x:0,y:0,z:1,w:1}, targetPointing);
-				rotvec = [-crossProd.x / crossProd.w, -crossProd.y / crossProd.w, -crossProd.z / crossProd.w];	
+			//scale such that z=1 - then can cap angle, ensures guns point forward. (TODO handle case that z=0)
+			targetPointing={x:targetPointing.x/targetPointing.z, 
+				y:targetPointing.y/targetPointing.z, z:1, w:-Math.abs(targetPointing.w/targetPointing.z)	//-abs is guess
+			}	
+			
+			cappedPointingDir = targetPointing;	//TODO cap
+		}	
 		
-				//note the 4vec passed in here has w*w = x*x+y*y+z*z ie different to point on 4vec.
-				//seems this is not actually correct for large angles!
-				//i guess because cross prod goes as sin(angle), and xyzrotate4mat uses angle/axis vector.
-				//TODO xyzrotate function with this compensated. rodriguez?
-				
-				//hack fix:
-				var rotMag = Math.sqrt(rotvec[0]*rotvec[0] + rotvec[1]*rotvec[1] + rotvec[2]*rotvec[2]);
-				if (rotMag>0){
-					var rotHack = Math.asin(rotMag)/rotMag;
-					rotvec[0]*=rotHack;
-					rotvec[1]*=rotHack;
-					rotvec[2]*=rotHack;
-				}
+		var crossProd = crossProductHomgenous({x:0,y:0,z:1,w:1}, cappedPointingDir);
+			//note the 4vec passed in here has w*w = x*x+y*y+z*z ie different to point on 4vec.	
+		
+		var rotvec = [-crossProd.x / crossProd.w, -crossProd.y / crossProd.w, -crossProd.z / crossProd.w];	
+			
+		//note that rotation code likely generates sin(ang) anyway, so this likely inefficient!
+		var rotMag = Math.sqrt(rotvec[0]*rotvec[0] + rotvec[1]*rotvec[1] + rotvec[2]*rotvec[2]);
+		if (rotMag>0){
+			var rotHack = Math.asin(rotMag)/rotMag;
+			rotvec[0]*=rotHack;
+			rotvec[1]*=rotHack;
+			rotvec[2]*=rotHack;
 		}
-		
 		
 		
 		gunMatrices=[];
@@ -654,9 +654,9 @@ function drawWorldScene(frameTime) {
 	for (var b in bullets){
 		var bulletMatrix=bullets[b];
 		//move bullet (todo decouple mechanics from drawing, or at least use deltaT)
-		xyzmove4mat(bulletMatrix,[0,0,0.05]);
+		xyzmove4mat(bulletMatrix,[0,0,0.025]);
 		//draw bullet
-		targetRad=0.0025;
+		targetRad=0.005;
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,20*targetRad]);	//long streaks
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.3, 1.0]);	//YELLOW
 		mat4.set(invertedPlayerCamera, mvMatrix);
