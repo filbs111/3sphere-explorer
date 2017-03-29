@@ -552,12 +552,7 @@ function drawWorldScene(frameTime) {
 		var mousP=mouseInfo.currentPointingDir;
 		var gunAngRange = 0.3;
 		//get angle to rotate to this point (similar to mouse drag rotation system)
-		var cappedPointingDir={x:Math.max(Math.min(mousP.x/mousP.z,gunAngRange),-gunAngRange),
-								y:Math.max(Math.min(-mousP.y/mousP.z,gunAngRange),-gunAngRange),
-								z:1};
-		cappedPointingDir.w=Math.sqrt(cappedPointingDir.x*cappedPointingDir.x+
-								cappedPointingDir.y*cappedPointingDir.y +1);
-		
+		var pointingDir = {x:-mousP.x, y:mousP.y, z:mousP.z};
 		
 		if (guiParams["draw target"]){
 			//autofollow the target.
@@ -572,22 +567,24 @@ function drawWorldScene(frameTime) {
 			mat4.multiply(tmpMat, cellMatData.d16[0]);	//target in frame of camera.
 				
 			//[mat[12],mat[13],mat[14],mat[15] is 4vec co-ords
-				
-			var targetPointing={x:tmpMat[12], y:tmpMat[13], z:tmpMat[14]};
+			pointingDir={x:tmpMat[12], y:tmpMat[13], z:tmpMat[14]};
 			
-			//might get w to use in pointingvector from sqrt(1-tmpMat[15]^2) ???
-			targetPointing.w = Math.sqrt(1 - tmpMat[15]*tmpMat[15] );	//should be equivalent to below
-			//targetPointing.w = Math.sqrt(tmpMat[12]*tmpMat[12]+tmpMat[13]*tmpMat[13]+tmpMat[14]*tmpMat[14] );	
-				
-			//scale such that z=1 - then can cap angle, ensures guns point forward. (TODO handle case that z=0)
-			targetPointing={x:targetPointing.x/targetPointing.z, 
-				y:targetPointing.y/targetPointing.z, z:1, w:-Math.abs(targetPointing.w/targetPointing.z)	//-abs is guess
-			}	
-			
-			cappedPointingDir = targetPointing;	//TODO cap
 		}	
 		
-		var crossProd = crossProductHomgenous({x:0,y:0,z:1,w:1}, cappedPointingDir);
+		//scale such that z=1 - then can cap angle, ensures guns point forward. (TODO handle case that z=0)
+		pointingDir={x:-pointingDir.x/pointingDir.z, 
+				y:-pointingDir.y/pointingDir.z, z:1
+			}
+		
+		//cap
+		pointingDir.x=Math.max(Math.min(pointingDir.x,gunAngRange),-gunAngRange),
+		pointingDir.y=Math.max(Math.min(pointingDir.y,gunAngRange),-gunAngRange),
+		
+		pointingDir.w=Math.sqrt(pointingDir.x*pointingDir.x+
+								pointingDir.y*pointingDir.y +1);
+		
+		
+		var crossProd = crossProductHomgenous({x:0,y:0,z:1,w:1}, pointingDir);
 			//note the 4vec passed in here has w*w = x*x+y*y+z*z ie different to point on 4vec.	
 		
 		var rotvec = [-crossProd.x / crossProd.w, -crossProd.y / crossProd.w, -crossProd.z / crossProd.w];	
