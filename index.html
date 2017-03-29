@@ -561,11 +561,13 @@ function drawWorldScene(frameTime) {
 			
 			//1. get matrix for target relative to gun
 			// initially just use relative to camera. then spaceship (ie different when dropped), then guns
-				
+
 			var tmpMat = mat4.create();
-			mat4.set(invertedPlayerCamera, tmpMat);
-			mat4.multiply(tmpMat, cellMatData.d16[0]);	//target in frame of camera.
-				
+			mat4.set(sshipMatrix, tmpMat);
+			mat4.transpose(tmpMat);			
+			
+			mat4.multiply(tmpMat, cellMatData.d16[0]);	//target in frame of spaceship.
+			
 			//[mat[12],mat[13],mat[14],mat[15] is 4vec co-ords
 			pointingDir={x:tmpMat[12], y:tmpMat[13], z:tmpMat[14]};
 			
