@@ -394,7 +394,7 @@ function drawWorldScene(frameTime) {
 	if (guiParams["draw 24-cell"]){
 		drawArrayOfModels(
 			cellMatData.d24.cells,
-			(guiParams["culling"] ? 1: false),	//seems like never get culled. is function ok?
+			(guiParams["culling"] ? 1: false),
 			drawOctoFrame
 		);	
 	}
@@ -559,9 +559,6 @@ function drawWorldScene(frameTime) {
 			//want to do something like : get the target's position in frame of the gun's pivot point,
 			//then do some cross product with pointing direction (similar to mouse follow code.)
 			
-			//1. get matrix for target relative to gun
-			// initially just use relative to camera. then spaceship (ie different when dropped), then guns
-
 			var tmpMat = mat4.create();
 			mat4.set(sshipMatrix, tmpMat);
 			mat4.transpose(tmpMat);			
@@ -611,6 +608,48 @@ function drawWorldScene(frameTime) {
 			var gunMatrix = mat4.create();
 			mat4.set(sshipMatrix, gunMatrix);
 			xyzmove4mat(gunMatrix,vec);
+			
+			
+			if (guiParams["indiv targeting"]){
+				var tmpMat = mat4.create();
+				mat4.set(gunMatrix, tmpMat);
+				mat4.transpose(tmpMat);			
+				
+				mat4.multiply(tmpMat, cellMatData.d16[0]);	//target in frame of gun.
+				
+				//[mat[12],mat[13],mat[14],mat[15] is 4vec co-ords
+				pointingDir={x:tmpMat[12], y:tmpMat[13], z:tmpMat[14]};
+			
+			///all this stuff again! TODO put into func?
+			
+					//scale such that z=1 - then can cap angle, ensures guns point forward. (TODO handle case that z=0)
+				pointingDir={x:-pointingDir.x/pointingDir.z, 
+						y:-pointingDir.y/pointingDir.z, z:1
+					}
+				
+				//cap
+				pointingDir.x=Math.max(Math.min(pointingDir.x,gunAngRange),-gunAngRange),
+				pointingDir.y=Math.max(Math.min(pointingDir.y,gunAngRange),-gunAngRange),
+				
+				pointingDir.w=Math.sqrt(pointingDir.x*pointingDir.x+
+										pointingDir.y*pointingDir.y +1);
+				
+				
+				crossProd = crossProductHomgenous({x:0,y:0,z:1,w:1}, pointingDir);
+					//note the 4vec passed in here has w*w = x*x+y*y+z*z ie different to point on 4vec.	
+				
+				rotvec = [-crossProd.x / crossProd.w, -crossProd.y / crossProd.w, -crossProd.z / crossProd.w];	
+					
+				//note that rotation code likely generates sin(ang) anyway, so this likely inefficient!
+				rotMag = Math.sqrt(rotvec[0]*rotvec[0] + rotvec[1]*rotvec[1] + rotvec[2]*rotvec[2]);
+				if (rotMag>0){
+					rotHack = Math.asin(rotMag)/rotMag;
+					rotvec[0]*=rotHack;
+					rotvec[1]*=rotHack;
+					rotvec[2]*=rotHack;
+				}
+			}
+			
 			
 			//rotate guns to follow mouse
 			xyzrotate4mat(gunMatrix, rotvec);		
@@ -813,6 +852,7 @@ var guiParams={
 	"draw spaceship":false,
 	"drop spaceship":false,
 	"draw target":true,
+	"indiv targeting":true,
 	"culling":true,
 	fogColor:'#aaaaaa'
 };
@@ -850,6 +890,7 @@ function init(){
 	gui.add(guiParams,"draw spaceship",true);
 	gui.add(guiParams, "drop spaceship",false);
 	gui.add(guiParams, "draw target",false);
+	gui.add(guiParams, "indiv targeting");
 	gui.add(guiParams, "culling");
 	
 	window.addEventListener("keydown",function(evt){
