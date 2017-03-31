@@ -8,7 +8,7 @@ function initShaders(){
 					});
 					console.log("loaded 1st shader");
 	shaderProgramTexmap = loadShader( "shader-texmap-vs", "shader-texmap-fs",{
-					attributes:["aVertexPosition", "aTextureCoord"],
+					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
 					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor","uModelScale"]
 					});
 	shaderProgramTexmap4Vec = loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs",{
@@ -56,16 +56,16 @@ function initBuffers(){
 	var sshipObject = loadBlenderExport(sshipdata);		//""
 	var gunObject = loadBlenderExport(guncyldata.meshes[0]);
 	
-	//loadBufferData(sphereBuffers, makeSphereData(61,32,1), true);
-	loadBufferData(sphereBuffers, makeSphereData(300,150,1), true);
+	//loadBufferData(sphereBuffers, makeSphereData(61,32,1));
+	loadBufferData(sphereBuffers, makeSphereData(300,150,1));
 	loadBufferData(cubeBuffers, levelCubeData);
 	loadBufferData(cubeFrameBuffers, cubeFrameBlenderObject);
 	loadBufferData(octoFrameBuffers, octoFrameBlenderObject);
 	loadBufferData(tetraFrameBuffers, tetraFrameBlenderObject);
 	loadBufferData(dodecaFrameBuffers, dodecaFrameBlenderObject);
-	loadBufferData(teapotBuffers, teapotObject, true);
-	loadBufferData(sshipBuffers, sshipObject, true);
-	loadBufferData(gunBuffers, gunObject, true);
+	loadBufferData(teapotBuffers, teapotObject);
+	loadBufferData(sshipBuffers, sshipObject);
+	loadBufferData(gunBuffers, gunObject);
 	
 	function bufferArrayData(buffer, arr, size){
 		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -75,17 +75,16 @@ function initBuffers(){
 		console.log("buffered. numitems: " + buffer.numItems);
 	}
 	
-	function loadBufferData(bufferObj, sourceData, bufferNormals){
+	function loadBufferData(bufferObj, sourceData){
 		bufferObj.vertexPositionBuffer = gl.createBuffer();
 		bufferArrayData(bufferObj.vertexPositionBuffer, sourceData.vertices, 3);
 		if (sourceData.uvcoords){
 			bufferObj.vertexTextureCoordBuffer= gl.createBuffer();
 			bufferArrayData(bufferObj.vertexTextureCoordBuffer, sourceData.uvcoords, 2);
 		}
-		if (bufferNormals){
-			bufferObj.vertexNormalBuffer= gl.createBuffer();
-			bufferArrayData(bufferObj.vertexNormalBuffer, sourceData.normals, 3);
-		}
+		
+		bufferObj.vertexNormalBuffer= gl.createBuffer();
+		bufferArrayData(bufferObj.vertexNormalBuffer, sourceData.normals, 3);
 
 		bufferObj.vertexIndexBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);

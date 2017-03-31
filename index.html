@@ -98,11 +98,14 @@
 	uniform vec4 uColor;
 	varying float fog;
 	uniform vec4 uFogColor;
+	varying float light;
 	
 	void main(void) {
 		//gl_FragColor = uColor*texture2D(uSampler, vTextureCoord);
 		
-		gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
+		gl_FragColor = vec4( fog*( vec3(light) + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
+		
+		//gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		//gl_FragColor = (1.0-fog)*uFogColor;
 		gl_FragColor.a =1.0;
 	}
@@ -110,12 +113,14 @@
 <!-- vertex shader with tex coords -->
 <script id="shader-texmap-vs" type="x-shader/x-vertex">
 	attribute vec3 aVertexPosition;
+	attribute vec3 aVertexNormal;
 	attribute vec2 aTextureCoord;
 	varying vec3 vTextureCoord;
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
 	varying float fog;
 	uniform vec3 uModelScale;
+	varying float light;
 	
 	void main(void) {
 		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
@@ -123,6 +128,9 @@
 		
 		gl_Position = uPMatrix * transformedCoord;
 
+		vec4 transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
+		light = -dot( normalize(transformedCoord + vec4(0.0,0.0,0.0,-1.0)), transformedNormal);
+		
 		fog = 0.5*(1.0 + transformedCoord.w);
 		
 		float myZ = aVertexPositionNormalized.w;
@@ -139,7 +147,8 @@
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
 	varying float fog;
-	
+	varying float light;
+
 	void main(void) {
 		vec4 transformedCoord = uMVMatrix * aVertexPosition;
 		
