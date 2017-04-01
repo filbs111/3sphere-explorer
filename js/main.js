@@ -30,6 +30,7 @@ var dodecaFrameBuffers={};
 var teapotBuffers={};	
 var sshipBuffers={};
 var gunBuffers={};
+var icoballBuffers={};
 
 function initBuffers(){
 	
@@ -55,7 +56,8 @@ function initBuffers(){
 	var teapotObject = loadBlenderExport(teapotData);	//isn't actually a blender export - just a obj json
 	var sshipObject = loadBlenderExport(sshipdata);		//""
 	var gunObject = loadBlenderExport(guncyldata.meshes[0]);
-	
+	var icoballObj = loadBlenderExport(icoballdata);
+
 	//loadBufferData(sphereBuffers, makeSphereData(61,32,1));
 	loadBufferData(sphereBuffers, makeSphereData(300,150,1));
 	loadBufferData(cubeBuffers, levelCubeData);
@@ -66,7 +68,8 @@ function initBuffers(){
 	loadBufferData(teapotBuffers, teapotObject);
 	loadBufferData(sshipBuffers, sshipObject);
 	loadBufferData(gunBuffers, gunObject);
-	
+	loadBufferData(icoballBuffers, icoballObj);
+
 	function bufferArrayData(buffer, arr, size){
 		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW);
@@ -482,7 +485,7 @@ function drawWorldScene(frameTime) {
 		
 	}
 	
-	var targetRad=0.01;
+	var targetRad=0.02;
 	//change radii to test that have right bounding spheres for various cells.
 	//targetRad=Math.sqrt(3);		//8-cell
 	//targetRad=100;
@@ -501,7 +504,8 @@ function drawWorldScene(frameTime) {
 		mat4.multiply(mvMatrix,	cellMatData.d16[0]);
 		if (frustrumCull(mvMatrix,targetRad)){	//normally use +ve radius
 									//-ve to make disappear when not entirely inside view frustrum (for testing)
-			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
+			//drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
+			drawObjectFromBuffers(icoballBuffers, shaderProgramColored);
 		}
 	}
 	
