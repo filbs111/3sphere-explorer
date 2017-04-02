@@ -84,7 +84,11 @@
 		gl_Position = uPMatrix * transformedCoord;
 
 		vec4 transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
-		light = -dot( normalize(transformedCoord + vec4(0.0,0.0,0.0,-1.0)), transformedNormal);
+		vec4 adjustedPos = transformedCoord + vec4(0.0,0.0,0.0,-1.0);
+		light = -dot( normalize(adjustedPos), transformedNormal);
+		//falloff
+		light/=0.7 + 3.0*dot(adjustedPos,adjustedPos);	//1st num some const to ensure light doesn't go inf at short dist
+													//guess maybe similar to some gaussian light source
 		
 		fog = 0.5*(1.0 + transformedCoord.w);
 	}
@@ -130,7 +134,11 @@
 		gl_Position = uPMatrix * transformedCoord;
 
 		vec4 transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
-		light = -dot( normalize(transformedCoord + vec4(0.0,0.0,0.0,-1.0)), transformedNormal);
+		vec4 adjustedPos = transformedCoord + vec4(0.0,0.0,0.0,-1.0);
+		light = -dot( normalize(adjustedPos), transformedNormal);
+		//falloff
+		light/=0.7 + 3.0*dot(adjustedPos,adjustedPos);	//1st num some const to ensure light doesn't go inf at short dist
+													//guess maybe similar to some gaussian light source
 		
 		fog = 0.5*(1.0 + transformedCoord.w);
 		
