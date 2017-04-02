@@ -495,7 +495,9 @@ function drawWorldScene(frameTime) {
 		
 	}
 	
-	var targetRad=0.02;
+	var targetRad=guiParams["target scale"];
+	
+	//var targetRad=0.02;
 	//change radii to test that have right bounding spheres for various cells.
 	//targetRad=Math.sqrt(3);		//8-cell
 	//targetRad=100;
@@ -514,8 +516,8 @@ function drawWorldScene(frameTime) {
 		mat4.multiply(mvMatrix,	cellMatData.d16[0]);
 		if (frustrumCull(mvMatrix,targetRad)){	//normally use +ve radius
 									//-ve to make disappear when not entirely inside view frustrum (for testing)
-			//drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
-			drawObjectFromBuffers(icoballBuffers, shaderProgramColored);
+			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
+			//drawObjectFromBuffers(icoballBuffers, shaderProgramColored);
 		}
 	}
 	
@@ -687,6 +689,7 @@ var guiParams={
 	"draw spaceship":false,
 	"drop spaceship":false,
 	"draw target":true,
+	"target scale":0.02,
 	"indiv targeting":true,
 	"culling":true,
 	fogColor:'#aaaaaa'
@@ -726,6 +729,7 @@ function init(){
 	gui.add(guiParams,"draw spaceship",true);
 	gui.add(guiParams, "drop spaceship",false);
 	gui.add(guiParams, "draw target",false);
+	gui.add(guiParams,"target scale",0.02,20.0,0.05);
 	gui.add(guiParams, "indiv targeting");
 	gui.add(guiParams, "culling");
 	
