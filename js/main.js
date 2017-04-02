@@ -12,12 +12,13 @@ function initShaders(){
 					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor","uModelScale"]
 					});
 	shaderProgramTexmap4Vec = loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs",{
-					attributes:["aVertexPosition", "aTextureCoord"],
+					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
 					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor"]
 					});
 }
 
 var tennisBallVertexPositionBuffer,
+	tennisBallNormalBuffer,
     tennisBallVertexTextureCoordBuffer,
 	tennisBallVertexIndexBuffer;
 
@@ -38,6 +39,8 @@ function initBuffers(){
 	//"tennis ball". data in data/tennisBall.js
 	tennisBallVertexPositionBuffer = gl.createBuffer();
 	bufferArrayData(tennisBallVertexPositionBuffer, tennisBallData.vertices, 4);
+	tennisBallNormalBuffer = gl.createBuffer();
+	bufferArrayData(tennisBallNormalBuffer, tennisBallData.normals, 4);
 	tennisBallVertexTextureCoordBuffer= gl.createBuffer();
 	bufferArrayData(tennisBallVertexTextureCoordBuffer, tennisBallData.uvcoords, 2);
 	tennisBallVertexIndexBuffer = gl.createBuffer();
@@ -211,7 +214,7 @@ function drawWorldScene(frameTime) {
 	//draw blender object - a csg cube minus sphere. draw 8 cells for tesseract.
 	var modelScale = guiParams["8-cell scale"];
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.5, 0.5, 0.5, 1.0]);	//GREY
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
 
 	if (guiParams["draw 8-cell"]){
 		drawArrayOfModels(
@@ -564,6 +567,9 @@ function drawTennisBall(){
 	gl.bindBuffer(gl.ARRAY_BUFFER, tennisBallVertexPositionBuffer);
     gl.vertexAttribPointer(shaderProgramTexmap4Vec.attributes.aVertexPosition, tennisBallVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	
+	gl.bindBuffer(gl.ARRAY_BUFFER, tennisBallNormalBuffer);
+    gl.vertexAttribPointer(shaderProgramTexmap4Vec.attributes.aVertexNormal, tennisBallNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	
 	gl.bindBuffer(gl.ARRAY_BUFFER, tennisBallVertexTextureCoordBuffer);
 	gl.vertexAttribPointer(shaderProgramTexmap4Vec.attributes.aTextureCoord, tennisBallVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	
@@ -658,7 +664,7 @@ var stats;
 
 var guiParams={
 	drawShapes:{
-		'x*x+y*y=z*z+w*w':false,
+		'x*x+y*y=z*z+w*w':true,
 		'x*x+z*z=y*y+w*w':false,
 		'x*x+w*w=y*y+z*z':false,
 		'boxes y=z=0':false,	//x*x+w*w=1
@@ -670,9 +676,9 @@ var guiParams={
 	},
 	"draw 5-cell":false,
 	"8-cell scale":1.0,
-	"subdiv cubeframe":false,
-	"draw 8-cell":false,
-	"draw 16-cell":true,
+	"subdiv cubeframe":true,
+	"draw 8-cell":true,
+	"draw 16-cell":false,
 	"draw 24-cell":false,
 	"draw 120-cell":false,
 	"draw 600-cell":false,

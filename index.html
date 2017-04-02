@@ -152,6 +152,7 @@
 <!-- vertex shader with tex coords and 4vector input positions (instead of projected 3vectors.)-->
 <script id="shader-texmap-vs-4vec" type="x-shader/x-vertex">
 	attribute vec4 aVertexPosition;
+	attribute vec4 aVertexNormal;
 	attribute vec2 aTextureCoord;
 	varying vec3 vTextureCoord;
 	uniform mat4 uMVMatrix;
@@ -165,6 +166,12 @@
 		gl_Position = uPMatrix * transformedCoord;
 		
 		fog = 0.5*(1.0 + transformedCoord.w);
+		
+		vec4 transformedNormal = uMVMatrix * aVertexNormal;
+		vec4 adjustedPos = transformedCoord + vec4(0.0,0.0,0.0,-1.0);
+		light = -dot( normalize(adjustedPos), transformedNormal-transformedCoord);
+		light/=1.0 + 4.2*dot(adjustedPos,adjustedPos);		//terms higher than other shaders by sqrt(2) because length
+															//of 1,0,0,0 -> 0,1,0,0 (90 deg around world)
 		
 		vTextureCoord = vec3( aTextureCoord.st, 1.0 );
 	}
