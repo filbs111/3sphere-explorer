@@ -63,12 +63,12 @@ var tennisBallData = (function(){
 			vertexPositionData.push(wvalues[jj]);
 			
 			//assuming divides space in 2, 90 deg around world is opposite point on cylinder
-			//define this as the normal.
+			//define difference between this and vertex as the normal.
 			
-			normalData.push(-x);
-			normalData.push(-y);
-			normalData.push(zvalues[jj]);
-			normalData.push(wvalues[jj]);
+			normalData.push(-2*x);
+			normalData.push(-2*y);
+			normalData.push(0);
+			normalData.push(0);
 			
 			textureCoordData.push(4*ii/abands);	//these can be precalculated to avoid division every time. 4* is so repeat texture 4 times
 			textureCoordData.push(4*jj/bbands);

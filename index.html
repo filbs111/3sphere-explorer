@@ -169,7 +169,7 @@
 		
 		vec4 transformedNormal = uMVMatrix * aVertexNormal;
 		vec4 adjustedPos = transformedCoord + vec4(0.0,0.0,0.0,-1.0);
-		light = -dot( normalize(adjustedPos), transformedNormal-transformedCoord);
+		light = -dot( normalize(adjustedPos), transformedNormal);
 		light/=1.0 + 4.2*dot(adjustedPos,adjustedPos);		//terms higher than other shaders by sqrt(2) because length
 															//of 1,0,0,0 -> 0,1,0,0 (90 deg around world)
 		
