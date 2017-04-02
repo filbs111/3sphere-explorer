@@ -24,6 +24,7 @@ var tennisBallVertexPositionBuffer,
 var sphereBuffers={};
 var cubeBuffers={};
 var cubeFrameBuffers={};
+var cubeFrameSubdivBuffers={};
 var octoFrameBuffers={};	
 var tetraFrameBuffers={};	
 var dodecaFrameBuffers={};	
@@ -50,6 +51,7 @@ function initBuffers(){
 	//for now have put "var myBlenderObjOrWhatever = " in front of contents of untitled.obj.json, and are referencing this directly as a script (similar to how are doing with shaders)
 	//this part will eventually want to make part of build process (so can load object just containing what need)
 	var cubeFrameBlenderObject = loadBlenderExport(cubeFrameData.meshes[0]);
+	var cubeFrameSubdivObject = loadBlenderExport(cubeFrameSubdivData);
 	var octoFrameBlenderObject = loadBlenderExport(octoFrameData.meshes[0]);
 	var tetraFrameBlenderObject = loadBlenderExport(tetraFrameData.meshes[0]);
 	var dodecaFrameBlenderObject = loadBlenderExport(dodecaFrameData.meshes[0]);
@@ -62,6 +64,7 @@ function initBuffers(){
 	loadBufferData(sphereBuffers, makeSphereData(300,150,1));
 	loadBufferData(cubeBuffers, levelCubeData);
 	loadBufferData(cubeFrameBuffers, cubeFrameBlenderObject);
+	loadBufferData(cubeFrameSubdivBuffers, cubeFrameSubdivObject);
 	loadBufferData(octoFrameBuffers, octoFrameBlenderObject);
 	loadBufferData(tetraFrameBuffers, tetraFrameBlenderObject);
 	loadBufferData(dodecaFrameBuffers, dodecaFrameBlenderObject);
@@ -344,7 +347,11 @@ function drawWorldScene(frameTime) {
 	}
 	
 	function drawCubeFrame(){
-		drawObjectFromBuffers(cubeFrameBuffers, shaderProgramTexmap);
+		if (guiParams["subdiv cubeframe"]){
+			drawObjectFromBuffers(cubeFrameSubdivBuffers, shaderProgramTexmap);
+		}else{
+			drawObjectFromBuffers(cubeFrameBuffers, shaderProgramTexmap);
+		}
 	}
 	function drawOctoFrame(){
 		drawObjectFromBuffers(octoFrameBuffers, shaderProgramTexmap);
@@ -663,6 +670,7 @@ var guiParams={
 	},
 	"draw 5-cell":false,
 	"8-cell scale":1.0,
+	"subdiv cubeframe":false,
 	"draw 8-cell":false,
 	"draw 16-cell":true,
 	"draw 24-cell":false,
@@ -703,6 +711,7 @@ function init(){
 	gui.add(guiParams,"draw 8-cell",false);
 	gui.add(guiParams,"draw 16-cell");
 	gui.add(guiParams,"8-cell scale",0.2,2.0,0.05);
+	gui.add(guiParams,"subdiv cubeframe");
 	gui.add(guiParams,"draw 24-cell",false);
 	gui.add(guiParams,"draw 120-cell",true);
 	gui.add(guiParams,"draw 600-cell",true);
