@@ -26,7 +26,8 @@ var sphereBuffers={};
 var cubeBuffers={};
 var cubeFrameBuffers={};
 var cubeFrameSubdivBuffers={};
-var octoFrameBuffers={};	
+var octoFrameBuffers={};
+var octoFrameSubdivBuffers={};		
 var tetraFrameBuffers={};	
 var dodecaFrameBuffers={};	
 var teapotBuffers={};	
@@ -56,6 +57,7 @@ function initBuffers(){
 	var cubeFrameBlenderObject = loadBlenderExport(cubeFrameData.meshes[0]);
 	var cubeFrameSubdivObject = loadBlenderExport(cubeFrameSubdivData);
 	var octoFrameBlenderObject = loadBlenderExport(octoFrameData.meshes[0]);
+	var octoFrameSubdivObject = loadBlenderExport(octoFrameSubdivData);
 	var tetraFrameBlenderObject = loadBlenderExport(tetraFrameData.meshes[0]);
 	var dodecaFrameBlenderObject = loadBlenderExport(dodecaFrameData.meshes[0]);
 	var teapotObject = loadBlenderExport(teapotData);	//isn't actually a blender export - just a obj json
@@ -68,6 +70,7 @@ function initBuffers(){
 	loadBufferData(cubeFrameBuffers, cubeFrameBlenderObject);
 	loadBufferData(cubeFrameSubdivBuffers, cubeFrameSubdivObject);
 	loadBufferData(octoFrameBuffers, octoFrameBlenderObject);
+	loadBufferData(octoFrameSubdivBuffers, octoFrameSubdivObject);
 	loadBufferData(tetraFrameBuffers, tetraFrameBlenderObject);
 	loadBufferData(dodecaFrameBuffers, dodecaFrameBlenderObject);
 	loadBufferData(teapotBuffers, teapotObject);
@@ -364,14 +367,18 @@ function drawWorldScene(frameTime) {
 	}
 	
 	function drawCubeFrame(){
-		if (guiParams["subdiv cubeframe"]){
+		if (guiParams["subdiv frames"]){
 			drawObjectFromBuffers(cubeFrameSubdivBuffers, shaderProgramTexmap);
 		}else{
 			drawObjectFromBuffers(cubeFrameBuffers, shaderProgramTexmap);
 		}
 	}
 	function drawOctoFrame(){
-		drawObjectFromBuffers(octoFrameBuffers, shaderProgramTexmap);
+		if (guiParams["subdiv frames"]){
+			drawObjectFromBuffers(octoFrameSubdivBuffers, shaderProgramTexmap);
+		}else{
+			drawObjectFromBuffers(octoFrameBuffers, shaderProgramTexmap);
+		}
 	}
 	function drawTetraFrame(){
 		drawObjectFromBuffers(tetraFrameBuffers, shaderProgramTexmap);
@@ -409,7 +416,7 @@ function drawWorldScene(frameTime) {
 		
 		//draw guns
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.1,0.1,0.1]);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.2, 0.2, 0.2, 1.0]);	//GREY
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.3, 0.3, 0.3, 1.0]);	//GREY
 
 		var gunHoriz = 0.04;
 		var gunVert = 0.02;
@@ -697,7 +704,7 @@ var guiParams={
 	},
 	"draw 5-cell":false,
 	"8-cell scale":1.0,
-	"subdiv cubeframe":true,
+	"subdiv frames":true,
 	"draw 8-cell":true,
 	"draw 16-cell":false,
 	"draw 24-cell":false,
@@ -739,7 +746,7 @@ function init(){
 	gui.add(guiParams,"draw 8-cell",false);
 	gui.add(guiParams,"draw 16-cell");
 	gui.add(guiParams,"8-cell scale",0.2,2.0,0.05);
-	gui.add(guiParams,"subdiv cubeframe");
+	gui.add(guiParams,"subdiv frames");
 	gui.add(guiParams,"draw 24-cell",false);
 	gui.add(guiParams,"draw 120-cell",true);
 	gui.add(guiParams,"draw 600-cell",true);
