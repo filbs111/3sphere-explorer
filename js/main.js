@@ -63,8 +63,7 @@ function initBuffers(){
 	var gunObject = loadBlenderExport(guncyldata.meshes[0]);
 	var icoballObj = loadBlenderExport(icoballdata);
 
-	//loadBufferData(sphereBuffers, makeSphereData(61,32,1));
-	loadBufferData(sphereBuffers, makeSphereData(300,150,1));
+	loadBufferData(sphereBuffers, makeSphereData(61,32,1));
 	loadBufferData(cubeBuffers, levelCubeData);
 	loadBufferData(cubeFrameBuffers, cubeFrameBlenderObject);
 	loadBufferData(cubeFrameSubdivBuffers, cubeFrameSubdivObject);
@@ -781,11 +780,8 @@ function init(){
 			case 69:				//E
 				rollPlayer(0.02);	
 				break;
-			
+				
 			case 84:	//T
-				//xyzmove4mat(playerCamera,[0.01,0.0,0.0]);	//left
-				//xyzmove4mat(playerCamera,[0.0,0.01,0.0]);	//down
-				//xyzmove4mat(playerCamera,[0.0,0.0,0.01]);	//forwards
 				xyzmove4mat(playerCamera,[0.01,0.0,0.01]);	//diagonally forwards/left
 				break;
 				
@@ -809,7 +805,6 @@ function init(){
 				break;
 		}
 		if (willPreventDefault){evt.preventDefault()};
-		printPlayerPosition();
 	})
 
 	canvas = document.getElementById("mycanvas");
@@ -888,12 +883,6 @@ function turnPlayer(amount){
 function pitchPlayer(amount){
 	rotate4mat(playerCamera, 1, 2, -amount);
 }
-
-function printPlayerPosition(){
-	//console.log('position: x = ' + playerCamera[12].toFixed(2) + ', y = ' + playerCamera[13].toFixed(2) + 
-	//					', z = ' + playerCamera[14].toFixed(2) + ', w = ' + playerCamera[15].toFixed(2) );
-}
-
 
 
 function getPointingDirectionFromScreenCoordinate(coords){
