@@ -139,6 +139,7 @@
 		vec4 transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
 		vec4 adjustedPos = transformedCoord - uDropLightPos;
 		light = -dot( normalize(adjustedPos), transformedNormal);
+		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		//falloff
 		light/=0.7 + 3.0*dot(adjustedPos,adjustedPos);	//1st num some const to ensure light doesn't go inf at short dist
 													//guess maybe similar to some gaussian light source
@@ -173,6 +174,7 @@
 		vec4 transformedNormal = uMVMatrix * aVertexNormal;
 		vec4 adjustedPos = transformedCoord - uDropLightPos;
 		light = -dot( normalize(adjustedPos), transformedNormal);
+		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		light/=1.0 + 4.2*dot(adjustedPos,adjustedPos);		//terms higher than other shaders by sqrt(2) because length
 															//of 1,0,0,0 -> 0,1,0,0 (90 deg around world)
 				
