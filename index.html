@@ -75,6 +75,7 @@
 	attribute vec3 aVertexNormal;
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
+	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 	varying float fog;
 	uniform vec3 uModelScale;
 	varying float light;
@@ -85,12 +86,12 @@
 		gl_Position = uPMatrix * transformedCoord;
 
 		vec4 transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
-		vec4 adjustedPos = transformedCoord + vec4(0.0,0.0,0.0,-1.0);
+		vec4 adjustedPos = transformedCoord - uDropLightPos;
 		light = -dot( normalize(adjustedPos), transformedNormal);
+		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		//falloff
 		light/=0.7 + 3.0*dot(adjustedPos,adjustedPos);	//1st num some const to ensure light doesn't go inf at short dist
 													//guess maybe similar to some gaussian light source
-		
 		fog = 0.5*(1.0 + transformedCoord.w);
 	}
 </script>
@@ -124,6 +125,7 @@
 	varying vec3 vTextureCoord;
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
+	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 	varying float fog;
 	uniform vec3 uModelScale;
 	varying float light;
@@ -135,7 +137,7 @@
 		gl_Position = uPMatrix * transformedCoord;
 
 		vec4 transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
-		vec4 adjustedPos = transformedCoord + vec4(0.0,0.0,0.0,-1.0);
+		vec4 adjustedPos = transformedCoord - uDropLightPos;
 		light = -dot( normalize(adjustedPos), transformedNormal);
 		//falloff
 		light/=0.7 + 3.0*dot(adjustedPos,adjustedPos);	//1st num some const to ensure light doesn't go inf at short dist
@@ -157,6 +159,7 @@
 	varying vec3 vTextureCoord;
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
+	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 	varying float fog;
 	varying float light;
 
@@ -168,11 +171,11 @@
 		fog = 0.5*(1.0 + transformedCoord.w);
 		
 		vec4 transformedNormal = uMVMatrix * aVertexNormal;
-		vec4 adjustedPos = transformedCoord + vec4(0.0,0.0,0.0,-1.0);
+		vec4 adjustedPos = transformedCoord - uDropLightPos;
 		light = -dot( normalize(adjustedPos), transformedNormal);
 		light/=1.0 + 4.2*dot(adjustedPos,adjustedPos);		//terms higher than other shaders by sqrt(2) because length
 															//of 1,0,0,0 -> 0,1,0,0 (90 deg around world)
-		
+				
 		vTextureCoord = vec3( aTextureCoord.st, 1.0 );
 	}
 </script>

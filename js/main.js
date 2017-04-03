@@ -4,16 +4,16 @@ var shaderProgramColored,
 function initShaders(){				
 	shaderProgramColored = loadShader( "shader-simple-vs", "shader-simple-fs",{
 					attributes:["aVertexPosition","aVertexNormal"],
-					uniforms:["uPMatrix","uMVMatrix","uColor","uFogColor", "uModelScale"]
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uColor","uFogColor", "uModelScale"]
 					});
 					console.log("loaded 1st shader");
 	shaderProgramTexmap = loadShader( "shader-texmap-vs", "shader-texmap-fs",{
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
-					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor","uModelScale"]
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uModelScale"]
 					});
 	shaderProgramTexmap4Vec = loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs",{
 					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
-					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor"]
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor"]
 					});
 }
 
@@ -145,7 +145,22 @@ function drawScene(frameTime){
 
 var usePrecalcCells=true;
 
-function drawWorldScene(frameTime) {		
+function drawWorldScene(frameTime) {
+	
+	var invertedPlayerCamera = mat4.create();
+	mat4.set(playerCamera, invertedPlayerCamera);
+	mat4.transpose(invertedPlayerCamera);
+	
+	var dropLightPos;
+	if (!guiParams["drop spaceship"]){
+		dropSpaceship();	//note this is a bit poorly named and inefficient - when spaceship attached to camera,
+	}						//in drawspaceship, are just doing invertedPlayerCamera*playerCamera = identity
+	//get light pos in frame of camera. light is at spaceship
+	var lightMat = mat4.create();	//TODO mat*mat is unnecessary - only need to do dropLightPos = sshipMatrix*lightPosInWorld 
+	mat4.set(invertedPlayerCamera, lightMat);
+	mat4.multiply(lightMat, sshipMatrix);
+	dropLightPos = [lightMat[12], lightMat[13], lightMat[14], lightMat[15]];
+	
 	//var activeShaderProgram = shaderProgramColored;	//draw spheres
 	var activeShaderProgram = shaderProgramTexmap;	//draw cubes
 	//gl.enableVertexAttribArray(1);	//do need tex coords
@@ -153,12 +168,9 @@ function drawWorldScene(frameTime) {
 	gl.useProgram(activeShaderProgram);
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.1,0.1,0.1]);
+	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 	//create lines of spheres.
 	//unsure which order to apply transformations, so keep simple initially - lines of spheres crossing through default point
-
-	var invertedPlayerCamera = mat4.create();
-	mat4.set(playerCamera, invertedPlayerCamera);
-	mat4.transpose(invertedPlayerCamera);
 	
 	var numBallsInRing = 20;
 	var startAng = Math.PI / numBallsInRing;
@@ -333,6 +345,7 @@ function drawWorldScene(frameTime) {
 	activeShaderProgram = shaderProgramTexmap4Vec;
 	gl.useProgram(activeShaderProgram);
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
+	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
 	if (guiParams.drawShapes['x*x+y*y=z*z+w*w']){
 		mat4.set(invertedPlayerCamera, mvMatrix);
@@ -372,6 +385,7 @@ function drawWorldScene(frameTime) {
 	activeShaderProgram = shaderProgramColored;
 	gl.useProgram(activeShaderProgram);
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
+	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 	//gl.disableVertexAttribArray(1);	//don't need texcoords
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 0.8, 1.0]);	//BLUE
@@ -387,10 +401,6 @@ function drawWorldScene(frameTime) {
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.1, 0.1, 0.1, 1.0]);	//DARK
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 	
-	if (!guiParams["drop spaceship"]){
-		dropSpaceship();	//note this is a bit poorly named and inefficient - when spaceship attached to camera,
-							//in drawspaceship, are just doing invertedPlayerCamera*playerCamera = identity
-	}
 	if (guiParams["draw spaceship"]){
 		mat4.set(invertedPlayerCamera, mvMatrix);
 		mat4.multiply(mvMatrix,sshipMatrix);		
@@ -492,7 +502,16 @@ function drawWorldScene(frameTime) {
 			}
 			return rotvec;
 		}
-		
+	}else{
+		//draw "light" object
+		var sphereRad = 0.04;
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [sphereRad,sphereRad,sphereRad]);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [2.0, 2.0, 2.0, 2.0]);
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		mat4.multiply(mvMatrix,	sshipMatrix);
+		if (frustrumCull(mvMatrix,sphereRad)){
+			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
+		}
 	}
 	
 	var targetRad=guiParams["target scale"];
@@ -520,7 +539,6 @@ function drawWorldScene(frameTime) {
 			//drawObjectFromBuffers(icoballBuffers, shaderProgramColored);
 		}
 	}
-	
 	
 	for (var b in bullets){
 		var bulletMatrix=bullets[b];
