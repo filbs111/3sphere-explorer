@@ -28,7 +28,8 @@ var cubeFrameBuffers={};
 var cubeFrameSubdivBuffers={};
 var octoFrameBuffers={};
 var octoFrameSubdivBuffers={};		
-var tetraFrameBuffers={};	
+var tetraFrameBuffers={};
+var tetraFrameSubdivBuffers={};		
 var dodecaFrameBuffers={};	
 var teapotBuffers={};	
 var sshipBuffers={};
@@ -59,6 +60,7 @@ function initBuffers(){
 	var octoFrameBlenderObject = loadBlenderExport(octoFrameData.meshes[0]);
 	var octoFrameSubdivObject = loadBlenderExport(octoFrameSubdivData);
 	var tetraFrameBlenderObject = loadBlenderExport(tetraFrameData.meshes[0]);
+	var tetraFrameSubdivObject = loadBlenderExport(tetraFrameSubdivData);
 	var dodecaFrameBlenderObject = loadBlenderExport(dodecaFrameData.meshes[0]);
 	var teapotObject = loadBlenderExport(teapotData);	//isn't actually a blender export - just a obj json
 	var sshipObject = loadBlenderExport(sshipdata);		//""
@@ -72,6 +74,7 @@ function initBuffers(){
 	loadBufferData(octoFrameBuffers, octoFrameBlenderObject);
 	loadBufferData(octoFrameSubdivBuffers, octoFrameSubdivObject);
 	loadBufferData(tetraFrameBuffers, tetraFrameBlenderObject);
+	loadBufferData(tetraFrameSubdivBuffers, tetraFrameSubdivObject);
 	loadBufferData(dodecaFrameBuffers, dodecaFrameBlenderObject);
 	loadBufferData(teapotBuffers, teapotObject);
 	loadBufferData(sshipBuffers, sshipObject);
@@ -381,7 +384,11 @@ function drawWorldScene(frameTime) {
 		}
 	}
 	function drawTetraFrame(){
-		drawObjectFromBuffers(tetraFrameBuffers, shaderProgramTexmap);
+		if (guiParams["subdiv frames"]){
+			drawObjectFromBuffers(tetraFrameSubdivBuffers, shaderProgramTexmap);
+		}else{
+			drawObjectFromBuffers(tetraFrameBuffers, shaderProgramTexmap);
+		}
 	}
 	function drawDodecaFrame(){
 		drawObjectFromBuffers(dodecaFrameBuffers, shaderProgramTexmap);
