@@ -167,10 +167,10 @@ function drawWorldScene(frameTime) {
 
 	gl.useProgram(activeShaderProgram);
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.1,0.1,0.1]);
+	var boxSize = 0.1;
+	var boxRad = boxSize*Math.sqrt(3);
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
-	//create lines of spheres.
-	//unsure which order to apply transformations, so keep simple initially - lines of spheres crossing through default point
 	
 	var numBallsInRing = 20;
 	var startAng = Math.PI / numBallsInRing;
@@ -219,7 +219,9 @@ function drawWorldScene(frameTime) {
 		xmove4mat(mvMatrix, startAng);
 		for (var ii=0;ii<numBallsInRing;ii++){
 			xmove4mat(mvMatrix, angleStep);
-			drawItem();
+			if (frustrumCull(mvMatrix,boxRad)){
+				drawItem();
+			}
 		}
 	}
 	
