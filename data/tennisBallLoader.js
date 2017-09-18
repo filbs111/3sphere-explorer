@@ -37,6 +37,11 @@ cosCylRadius, sinCylRadius are determined by zo . cylRadius of PI/4 divides in 2
 		var zo = verts[vv+1];	//note switched y,z. TODO sort out sensible export process, check handedness...
 		var yo = verts[vv+2];
 		
+		//scale things down so can use 4x4 grid of these
+		xo*=0.25;
+		yo*=0.25;
+		zo*=0.25;
+		
 		var ang1 = 2*Math.PI * xo;
 		var ang2 = 2*Math.PI * yo;
 		var cylr = Math.PI * (0.25+ zo);

@@ -629,13 +629,25 @@ function drawTennisBall(){
 	gl.vertexAttribPointer(shaderProgramTexmap4Vec.attributes.aTextureCoord, tennisBallVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, tennisBallVertexIndexBuffer);
-	setMatrixUniforms(shaderProgramTexmap4Vec);
 	
 	gl.activeTexture(gl.TEXTURE0);
 	gl.bindTexture(gl.TEXTURE_2D, texture);
 	gl.uniform1i(shaderProgramTexmap4Vec.uniforms.uSampler, 0);
 	
-	gl.drawElements(gl.TRIANGLES, tennisBallVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+	
+	for (var side=0;side<2;side++){	//TODO should only draw 1 side - work out which side player is on...
+		for (var xg=0;xg<4;xg++){		//
+			for (var yg=0;yg<4;yg++){	//TODO precalc cells array better than grids here.
+				setMatrixUniforms(shaderProgramTexmap4Vec);
+				gl.drawElements(gl.TRIANGLES, tennisBallVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+				rotate4mat(mvMatrix, 0, 1, Math.PI*0.5);
+			}
+			rotate4mat(mvMatrix, 2, 3, Math.PI*0.5);
+		}
+		xmove4mat(mvMatrix, 0.5*Math.PI);			//switch to 
+		rotate4mat(mvMatrix, 1, 2, Math.PI*0.5);	//other side..
+	}
+	
 }
 
 function drawObjectFromBuffers(bufferObj, shaderProg){
