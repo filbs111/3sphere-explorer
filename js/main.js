@@ -38,6 +38,7 @@ var icoballBuffers={};
 
 function initBuffers(){
 	
+	/*
 	//"tennis ball". data in data/tennisBall.js
 	tennisBallVertexPositionBuffer = gl.createBuffer();
 	bufferArrayData(tennisBallVertexPositionBuffer, tennisBallData.vertices, 4);
@@ -50,6 +51,21 @@ function initBuffers(){
 	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(tennisBallData.indices), gl.STATIC_DRAW);
 	tennisBallVertexIndexBuffer.itemSize = 3;
 	tennisBallVertexIndexBuffer.numItems = tennisBallData.indices.length;
+	*/
+	
+	tennisBallVertexPositionBuffer = gl.createBuffer();
+	bufferArrayData(tennisBallVertexPositionBuffer, tballGridData.vertices, 4);
+	tennisBallNormalBuffer = gl.createBuffer();
+	bufferArrayData(tennisBallNormalBuffer, tballGridData.normals, 4);
+	tennisBallVertexTextureCoordBuffer= gl.createBuffer();
+	bufferArrayData(tennisBallVertexTextureCoordBuffer, tballGridData.texturecoords[0], 2);
+	tennisBallVertexIndexBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, tennisBallVertexIndexBuffer);
+	tballGridData.indices = [].concat.apply([],tballGridData.faces);
+	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(tballGridData.indices), gl.STATIC_DRAW);
+	tennisBallVertexIndexBuffer.itemSize = 3;
+	tennisBallVertexIndexBuffer.numItems = tballGridData.indices.length;
+	
 	
 	//load blender object
 	//TODO use XMLHTTPRequest or something
@@ -63,7 +79,7 @@ function initBuffers(){
 	var tetraFrameSubdivObject = loadBlenderExport(tetraFrameSubdivData);
 	var dodecaFrameBlenderObject = loadBlenderExport(dodecaFrameData.meshes[0]);
 	var teapotObject = loadBlenderExport(teapotData);	//isn't actually a blender export - just a obj json
-	var sshipObject = loadBlenderExport(sshipdata);		//""
+	var sshipObject = loadBlenderExport(sshipdata.meshes[0]);		//""
 	var gunObject = loadBlenderExport(guncyldata.meshes[0]);
 	var icoballObj = loadBlenderExport(icoballdata);
 
@@ -77,6 +93,7 @@ function initBuffers(){
 	loadBufferData(tetraFrameSubdivBuffers, tetraFrameSubdivObject);
 	loadBufferData(dodecaFrameBuffers, dodecaFrameBlenderObject);
 	loadBufferData(teapotBuffers, teapotObject);
+	console.log("will load spaceship...");
 	loadBufferData(sshipBuffers, sshipObject);
 	loadBufferData(gunBuffers, gunObject);
 	loadBufferData(icoballBuffers, icoballObj);
@@ -405,11 +422,14 @@ function drawWorldScene(frameTime) {
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 0.8, 1.0]);	//BLUE
 	modelScale = guiParams["teapot scale"];
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+	//gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.01,0.01,0.01]);
+
 	if (guiParams["draw teapot"]){
 		mat4.set(invertedPlayerCamera, mvMatrix);
 		mat4.multiply(mvMatrix,teapotMatrix);		
-		drawObjectFromBuffers(teapotBuffers, shaderProgramColored);
+		//drawObjectFromBuffers(teapotBuffers, shaderProgramColored);
+		drawObjectFromBuffers(sshipBuffers, shaderProgramColored);
 	}
 	
 	modelScale=0.002;
@@ -685,7 +705,8 @@ function initTexture() {
 		gl.bindTexture(gl.TEXTURE_2D, null);
 	}
 	//texture.image.src = "img/ash_uvgrid01-grey.tiny.png";
-	texture.image.src = "img/0033.jpg";
+	//texture.image.src = "img/0033.jpg";
+	texture.image.src = "img/grid-omni.png";
 	//texture.image.src = "img/cross.png";
 }
 
@@ -712,7 +733,7 @@ var guiParams={
 	"draw 5-cell":false,
 	"8-cell scale":1.0,
 	"subdiv frames":true,
-	"draw 8-cell":true,
+	"draw 8-cell":false,
 	"draw 16-cell":false,
 	"draw 24-cell":false,
 	"draw 120-cell":false,
