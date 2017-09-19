@@ -32,45 +32,59 @@ cosCylRadius, sinCylRadius are determined by zo . cylRadius of PI/4 divides in 2
 	var gridVertdataLen = verts.length;
 	console.log("tball vertexdata length = " +  gridVertdataLen);
 
+	var norms = tballGridData.normals;
+	var newnorms = [];
+	var gridNormdataLen = norms.length;
+	console.log("tball normals length = " +  gridNormdataLen);
+	
 	for (var vv=0;vv<gridVertdataLen;vv+=3){
 		var xo = verts[vv];
 		var zo = verts[vv+1];	//note switched y,z. TODO sort out sensible export process, check handedness...
 		var yo = verts[vv+2];
 		
-		//scale things down so can use 4x4 grid of these
-		xo*=0.25;
-		yo*=0.25;
-		zo*=0.25;
+		var outverts = get4vecfrom3vec(0.25*xo,0.25*yo,0.25*zo);	//scale things down so can use 4x4 grid of these
 		
-		var ang1 = 2*Math.PI * xo;
-		var ang2 = 2*Math.PI * yo;
-		var cylr = Math.PI * (0.25+ zo);
-		var sr = Math.sin(cylr);
-		var cr = Math.cos(cylr);
+		for (var cc=0;cc<4;cc++){
+			newverts.push(outverts[cc]);
+		}
 		
-		newverts.push(cr * Math.sin(ang1));
-		newverts.push(cr * Math.cos(ang1));
-		newverts.push(sr * Math.sin(ang2));
-		newverts.push(sr * Math.cos(ang2));
+		var nx = norms[vv];
+		var nz = norms[vv+1];
+		var ny = norms[vv+2];
+		
+		//simple way to calc norms - move a little along normal, subtract this from original value, normalise the result.
+		//probably can express as a derivative wrt normal movment, then normalise result, but this way is easier.
+		
+		var vertsalong = get4vecfrom3vec(
+			0.25*xo + 0.001*nx,
+			0.25*yo + 0.001*ny,
+			0.25*zo + 0.001*nz
+			);
+			
+		//take difference and normalise
+		var difference = [];
+		var sumsq=0;
+		for (var cc=0;cc<4;cc++){
+			var diff = vertsalong[cc] - outverts[cc];
+			sumsq += diff*diff;
+			difference[cc]=diff;
+		}
+		var divisor=Math.sqrt(sumsq);
+		for (var cc=0;cc<4;cc++){
+			newnorms.push(difference[cc]/divisor);
+		}
+		
+		function get4vecfrom3vec(x,y,z){
+			var ang1 = 2*Math.PI * x;
+			var ang2 = 2*Math.PI * y;
+			var cylr = Math.PI * (0.25+ z);
+			var sr = Math.sin(cylr);
+			var cr = Math.cos(cylr);
+			return [ cr * Math.sin(ang1), cr * Math.cos(ang1), sr * Math.sin(ang2), sr * Math.cos(ang2) ];
+		}
+		
 	}
 	tballGridData.vertices = newverts;
-	
-	//temporary hack for normals - just overwrite with 0,0,0,0
-	var norms = tballGridData.normals;
-	var newnorms = [];
-	var gridNormdataLen = norms.length;
-	console.log("tball normals length = " +  gridNormdataLen);
-
-	for (var vv=0;vv<gridNormdataLen;vv+=3){
-		//var xo = norms[vv];
-		//var yo = norms[vv+1];
-		//var zo = norms[vv+2];
-		
-		newnorms.push(0);
-		newnorms.push(0);
-		newnorms.push(0);
-		newnorms.push(0);
-	}
 	tballGridData.normals = newnorms;
 
 })();
