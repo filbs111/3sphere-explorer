@@ -422,14 +422,12 @@ function drawWorldScene(frameTime) {
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 0.8, 1.0]);	//BLUE
 	modelScale = guiParams["teapot scale"];
-	//gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.01,0.01,0.01]);
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 
 	if (guiParams["draw teapot"]){
 		mat4.set(invertedPlayerCamera, mvMatrix);
 		mat4.multiply(mvMatrix,teapotMatrix);		
-		//drawObjectFromBuffers(teapotBuffers, shaderProgramColored);
-		drawObjectFromBuffers(sshipBuffers, shaderProgramColored);
+		drawObjectFromBuffers(teapotBuffers, shaderProgramColored);
 	}
 	
 	modelScale=0.002;
@@ -751,7 +749,7 @@ var guiParams={
 	"draw 120-cell":false,
 	"draw 600-cell":false,
 	"draw teapot":false,
-	"teapot scale":1.0,
+	"teapot scale":0.7,
 	"draw spaceship":false,
 	"drop spaceship":false,
 	"draw target":true,
