@@ -634,13 +634,13 @@ function drawTennisBall(){
 	
 	
 	for (var side=0;side<2;side++){	//TODO should only draw 1 side - work out which side player is on...
-		for (var xg=0;xg<4;xg++){		//
-			for (var yg=0;yg<4;yg++){	//TODO precalc cells array better than grids here.
+		for (var xg=0;xg<4;xg+=2){		//
+			for (var yg=0;yg<4;yg+=2){	//TODO precalc cells array better than grids here.
 				setMatrixUniforms(shaderProgramTexmap4Vec);
 				gl.drawElements(gl.TRIANGLES, tennisBallVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-				rotate4mat(mvMatrix, 0, 1, Math.PI*0.5);
+				rotate4mat(mvMatrix, 0, 1, Math.PI*1.0);
 			}
-			rotate4mat(mvMatrix, 2, 3, Math.PI*0.5);
+			rotate4mat(mvMatrix, 2, 3, Math.PI*1.0);
 		}
 		xmove4mat(mvMatrix, 0.5*Math.PI);			//switch to 
 		rotate4mat(mvMatrix, 1, 2, Math.PI*0.5);	//other side..
@@ -706,7 +706,7 @@ function initTexture() {
 	texture.image = new Image();
 	texture.image.onload = function() {
 		gl.bindTexture(gl.TEXTURE_2D, texture);
-		//gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
@@ -716,7 +716,8 @@ function initTexture() {
 	}
 	//texture.image.src = "img/ash_uvgrid01-grey.tiny.png";
 	//texture.image.src = "img/0033.jpg";
-	texture.image.src = "img/grid-omni.png";
+	//texture.image.src = "img/grid-omni.png";
+	texture.image.src = "data/terrain/turbulent-seamless.png";
 	//texture.image.src = "img/cross.png";
 }
 
