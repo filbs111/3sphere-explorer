@@ -717,7 +717,7 @@ function initTexture() {
 	//texture.image.src = "img/ash_uvgrid01-grey.tiny.png";
 	//texture.image.src = "img/0033.jpg";
 	//texture.image.src = "img/grid-omni.png";
-	texture.image.src = "data/terrain/turbulent-seamless.png";
+	texture.image.src = "data/terrain/turbulent-seamless-color-fromcam.png";
 	//texture.image.src = "img/cross.png";
 }
 
