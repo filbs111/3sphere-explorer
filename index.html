@@ -167,6 +167,29 @@
 	}
 </script>
 
+<script id="shader-texmap-perpixel-fs" type="x-shader/x-fragment">
+	precision mediump float;
+	varying vec3 vTextureCoord;
+	uniform sampler2D uSampler;
+	uniform vec4 uColor;
+	varying float fog;
+	uniform vec4 uFogColor;
+	varying vec4 adjustedPos;
+	varying vec4 transformedNormal;	
+	
+	void main(void) {
+		float light = -dot( normalize(adjustedPos), transformedNormal);
+		light = max(light,0.0);	//unnecessary if camera pos = light pos
+		//falloff
+		light/=0.7 + 3.0*dot(adjustedPos,adjustedPos);
+		
+		gl_FragColor = vec4( fog*( vec3(light) + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
+		
+		//gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
+		//gl_FragColor = (1.0-fog)*uFogColor;
+		gl_FragColor.a =1.0;
+	}
+</script>
 
 
 <!-- vertex shader with tex coords -->
@@ -198,6 +221,37 @@
 		
 		fog = 0.5*(1.0 + transformedCoord.w);
 		
+		float myZ = aVertexPositionNormalized.w;
+		vTextureCoord = vec3( aTextureCoord.st*myZ, myZ );
+	}
+</script>
+
+
+<!-- vertex shader with tex coords, per pixel -->
+<script id="shader-texmap-perpixel-vs" type="x-shader/x-vertex">
+	attribute vec3 aVertexPosition;
+	attribute vec3 aVertexNormal;
+	attribute vec2 aTextureCoord;
+	varying vec3 vTextureCoord;
+	uniform mat4 uMVMatrix;
+	uniform mat4 uPMatrix;
+	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
+	varying float fog;
+	uniform vec3 uModelScale;
+	varying vec4 adjustedPos;
+	varying vec4 transformedNormal;	
+	
+	void main(void) {
+		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
+		vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
+		
+		gl_Position = uPMatrix * transformedCoord;
+
+		transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
+		adjustedPos = transformedCoord - uDropLightPos;
+		
+		fog = 0.5*(1.0 + transformedCoord.w);
+
 		float myZ = aVertexPositionNormalized.w;
 		vTextureCoord = vec3( aTextureCoord.st*myZ, myZ );
 	}

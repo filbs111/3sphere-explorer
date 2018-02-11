@@ -2,6 +2,8 @@ var shaderProgramColored,
 	shaderProgramColoredPerVertex,
 	shaderProgramColoredPerPixel,
 	shaderProgramTexmap,
+	shaderProgramTexmapPerVertex,
+	shaderProgramTexmapPerPixel,
 	shaderProgramTexmap4Vec;
 function initShaders(){				
 	shaderProgramColoredPerVertex = loadShader( "shader-simple-vs", "shader-simple-fs",{
@@ -12,7 +14,11 @@ function initShaders(){
 					attributes:["aVertexPosition","aVertexNormal"],
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uColor","uFogColor", "uModelScale"]
 					});
-	shaderProgramTexmap = loadShader( "shader-texmap-vs", "shader-texmap-fs",{
+	shaderProgramTexmapPerVertex = loadShader( "shader-texmap-vs", "shader-texmap-fs",{
+					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uModelScale"]
+					});
+	shaderProgramTexmapPerPixel = loadShader( "shader-texmap-perpixel-vs", "shader-texmap-perpixel-fs",{
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uModelScale"]
 					});
@@ -179,6 +185,7 @@ function drawWorldScene(frameTime) {
 	mat4.transpose(invertedPlayerCamera);
 	
 	shaderProgramColored = guiParams["perPixelLighting"]?shaderProgramColoredPerPixel:shaderProgramColoredPerVertex;
+	shaderProgramTexmap = guiParams["perPixelLighting"]?shaderProgramTexmapPerPixel:shaderProgramTexmapPerVertex;
 	
 	var dropLightPos;
 	if (!guiParams["drop spaceship"]){
