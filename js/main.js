@@ -629,7 +629,7 @@ function drawTennisBall(){
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, tennisBallVertexIndexBuffer);
 	
 	gl.activeTexture(gl.TEXTURE0);
-	gl.bindTexture(gl.TEXTURE_2D, texture);
+	gl.bindTexture(gl.TEXTURE_2D, terrainTexture);
 	gl.uniform1i(shaderProgramTexmap4Vec.uniforms.uSampler, 0);
 	
 	
@@ -701,10 +701,19 @@ function setupScene() {
 }
 
 var texture;
-function initTexture() {
-	texture = gl.createTexture();
+var terrainTexture;
+
+function initTexture(){
+	texture = makeTexture("img/0033.jpg");
+	//texture = makeTexture("img/grid-omni.png");
+	//texture = makeTexture("img/ash_uvgrid01-grey.tiny.png");	//numbered grid
+	terrainTexture = makeTexture("data/terrain/turbulent-seamless.png");
+}
+
+function makeTexture(src) {	//to do OO
+	var texture = gl.createTexture();
 	texture.image = new Image();
-	texture.image.onload = function() {
+	texture.image.onload = function(){
 		gl.bindTexture(gl.TEXTURE_2D, texture);
 		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
@@ -713,12 +722,9 @@ function initTexture() {
 		//gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 		gl.generateMipmap(gl.TEXTURE_2D);
 		gl.bindTexture(gl.TEXTURE_2D, null);
-	}
-	//texture.image.src = "img/ash_uvgrid01-grey.tiny.png";
-	//texture.image.src = "img/0033.jpg";
-	//texture.image.src = "img/grid-omni.png";
-	texture.image.src = "data/terrain/turbulent-seamless-color-fromcam.png";
-	//texture.image.src = "img/cross.png";
+	};	
+	texture.image.src = src;
+	return texture;
 }
 
 var mouseInfo = {
