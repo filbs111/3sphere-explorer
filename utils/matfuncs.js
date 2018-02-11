@@ -12,6 +12,7 @@ function xyzmove4mat(mat, movevector){
 
 	//basically the matrix rows / columns (which way around )should be a vector for each of the 4 points x=1, y=1, z=1, w=1, rotated.
 	//work these out, then insert into a matrix (try row, column), rotate
+	if (moveLength == 0){return;}	//avoid division by zero
 	var normFactor = sAng/moveLength;
 	var newW= [ -normFactor*movevector[0], -normFactor*movevector[1], -normFactor*movevector[2], cAng];
 	//x starts as [1,0,0,0]. if movevector is along x, becomes [cAng,0,0,sAng]. if movevector perpendicular to x, stays as [1,0,0,0]

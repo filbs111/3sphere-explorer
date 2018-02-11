@@ -148,6 +148,8 @@ function initBuffers(){
 function drawScene(frameTime){
 	resizecanvas();
 
+	if (guiParams.smoothMovement){iterateMechanics();}	//TODO make movement speed independent of framerate
+
 	requestAnimationFrame(drawScene);
 	stats.end();
 	stats.begin();
@@ -776,8 +778,9 @@ var guiParams={
 	"draw target":true,
 	"target scale":0.02,
 	"indiv targeting":true,
+	smoothMovement: true,
 	"culling":true,
-	"perPixelLighting":false,
+	"perPixelLighting":true,
 	fogColor:'#aaaaaa'
 };
 var vecFogColor = [1.0,0.0,0.0,1.0];
@@ -818,35 +821,37 @@ function init(){
 	gui.add(guiParams,"target scale",0.02,20.0,0.05);
 	gui.add(guiParams, "indiv targeting");
 	gui.add(guiParams, "perPixelLighting");
+	gui.add(guiParams, "smoothMovement");
 	gui.add(guiParams, "culling");
 	
 	window.addEventListener("keydown",function(evt){
 		//console.log("key pressed : " + evt.keyCode);
 		var willPreventDefault=true;
+		var controlSpeed = guiParams.smoothMovement ? 0:0.02;
 		switch (evt.keyCode){
 			case 87:				//W
-				movePlayer(0.01);
+				movePlayerFwd(controlSpeed);
 				break;
 			case 83:				//S
-				movePlayer(-0.01);
+				movePlayerFwd(-controlSpeed);
 				break;
 			case 65:				//A
-				movePlayerLeft(0.01);
+				movePlayerLeft(controlSpeed);
 				break;
 			case 68:				//D
-				movePlayerLeft(-0.01);
+				movePlayerLeft(-controlSpeed);
 				break;
 			case 39:
-				turnPlayer(0.02);
+				turnPlayer(controlSpeed);
 				break;
 			case 37:
-				turnPlayer(-0.02);
+				turnPlayer(-controlSpeed);
 				break;
 			case 81:				//Q
-				rollPlayer(-0.02);	
+				rollPlayer(-controlSpeed);	
 				break;
 			case 69:				//E
-				rollPlayer(0.02);	
+				rollPlayer(controlSpeed);	
 				break;
 				
 			case 84:	//T
@@ -854,16 +859,16 @@ function init(){
 				break;
 				
 			case 32:				//spacebar
-				movePlayerUp(-0.01);
+				movePlayerUp(-controlSpeed);
 				break;
 			case 17:				//ctrl
-				movePlayerUp(0.01);
+				movePlayerUp(controlSpeed);
 				break;
 			case 38:
-				pitchPlayer(-0.02);		//up arrow
+				pitchPlayer(-controlSpeed);		//up arrow
 				break;
 			case 40:
-				pitchPlayer(0.02);
+				pitchPlayer(controlSpeed);
 				break;
 			case 71:	//G
 				fireGun();
@@ -932,8 +937,42 @@ function init(){
 
 }
 
+var iterateMechanics = (function iterateMechanics(){
+	var lastTime=(new Date()).getTime();
+	var moveSpeed=0.01;
+	var rotateSpeed=-0.01;
 
-function movePlayer(amount){
+	return function(){
+		var nowTime = (new Date()).getTime();
+		var timeElapsed = Math.min(nowTime - lastTime, 50);	//ms. 50ms -> slowdown if drop below 20fps 
+		//console.log("time elapsed: " + timeElapsed);
+		lastTime=nowTime;
+		
+		movePlayer([
+			moveSpeed*(keyThing.keystate(65)-keyThing.keystate(68)),	//lateral
+			moveSpeed*(keyThing.keystate(17)-keyThing.keystate(32)),	//vertical
+			moveSpeed*(keyThing.keystate(87)-keyThing.keystate(83)),	//fwd/back
+		]);
+
+		rotatePlayer([
+			rotateSpeed*(keyThing.keystate(40)-keyThing.keystate(38)), //pitch
+			rotateSpeed*(keyThing.keystate(39)-keyThing.keystate(37)), //turn
+			rotateSpeed*(keyThing.keystate(69)-keyThing.keystate(81)), //roll
+		]);
+	
+		/*
+		for (var bb in bullets){
+			bullets[bb].iterate();
+		}
+		*/
+	}
+})();
+
+function movePlayer(vec){
+	xyzmove4mat(playerCamera, vec);
+}
+
+function movePlayerFwd(amount){
 	zmove4mat(playerCamera, amount);
 }
 function movePlayerLeft(amount){
@@ -942,6 +981,11 @@ function movePlayerLeft(amount){
 function movePlayerUp(amount){
 	ymove4mat(playerCamera, amount);
 }
+
+function rotatePlayer(vec){
+	xyzrotate4mat(playerCamera,vec);
+}
+
 function rollPlayer(amount){
 	rotate4mat(playerCamera, 0, 1, -amount);
 }
