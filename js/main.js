@@ -1,12 +1,17 @@
 var shaderProgramColored,
+	shaderProgramColoredPerVertex,
+	shaderProgramColoredPerPixel,
 	shaderProgramTexmap,
 	shaderProgramTexmap4Vec;
 function initShaders(){				
-	shaderProgramColored = loadShader( "shader-simple-vs", "shader-simple-fs",{
+	shaderProgramColoredPerVertex = loadShader( "shader-simple-vs", "shader-simple-fs",{
 					attributes:["aVertexPosition","aVertexNormal"],
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uColor","uFogColor", "uModelScale"]
 					});
-					console.log("loaded 1st shader");
+	shaderProgramColoredPerPixel = loadShader( "shader-perpixel-vs", "shader-perpixel-fs",{
+					attributes:["aVertexPosition","aVertexNormal"],
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uColor","uFogColor", "uModelScale"]
+					});
 	shaderProgramTexmap = loadShader( "shader-texmap-vs", "shader-texmap-fs",{
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uModelScale"]
@@ -172,6 +177,8 @@ function drawWorldScene(frameTime) {
 	var invertedPlayerCamera = mat4.create();
 	mat4.set(playerCamera, invertedPlayerCamera);
 	mat4.transpose(invertedPlayerCamera);
+	
+	shaderProgramColored = guiParams["perPixelLighting"]?shaderProgramColoredPerPixel:shaderProgramColoredPerVertex;
 	
 	var dropLightPos;
 	if (!guiParams["drop spaceship"]){
@@ -763,6 +770,7 @@ var guiParams={
 	"target scale":0.02,
 	"indiv targeting":true,
 	"culling":true,
+	"perPixelLighting":false,
 	fogColor:'#aaaaaa'
 };
 var vecFogColor = [1.0,0.0,0.0,1.0];
@@ -802,6 +810,7 @@ function init(){
 	gui.add(guiParams, "draw target",false);
 	gui.add(guiParams,"target scale",0.02,20.0,0.05);
 	gui.add(guiParams, "indiv targeting");
+	gui.add(guiParams, "perPixelLighting");
 	gui.add(guiParams, "culling");
 	
 	window.addEventListener("keydown",function(evt){
