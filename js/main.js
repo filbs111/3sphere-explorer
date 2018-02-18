@@ -165,25 +165,39 @@ function drawScene(frameTime){
 	
 	//TODO move pMatrix etc to only recalc on screen resize
 	//make a pmatrix for hemiphere perspective projection method.
-	frustrumCull = squareFrustrumCull;
 	
-	//if (guiParams.renderCubemap && frustumCullFinal(playerMatrix,1)){
+	frustrumCull = squareFrustrumCull;
 	if (guiParams["draw reflector"]){		
 		mat4.set(cmapPMatrix, pMatrix);
-		for (var ii=5;ii<6;ii++){
+		for (var ii=0;ii<6;ii++){
 			var framebuffer = cubemapFramebuffer[ii];
 			gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
 			gl.viewport(0, 0, framebuffer.width, framebuffer.height);
 			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 			
 			mat4.identity(worldCamera);
-			//TODO use relevant matrices for camera in each 6 directions.
+			switch(ii){
+				case 0:
+					xyzrotate4mat(worldCamera, [0,-Math.PI/2,0]);	//right from default view
+					break;
+				case 1:
+					xyzrotate4mat(worldCamera, [0,Math.PI/2,0]);	//left from default view
+					break;
+				case 2:
+					xyzrotate4mat(worldCamera, [Math.PI/2,0,0]);	//top from default
+					xyzrotate4mat(worldCamera, [0,0,Math.PI]);
+					break;
+				case 3:
+					xyzrotate4mat(worldCamera, [-Math.PI/2,0,0]);
+					xyzrotate4mat(worldCamera, [0,0,Math.PI]);
+					break;
+				case 4:
+					xyzrotate4mat(worldCamera, [0,Math.PI,0]);
+					break;
+				case 5:
+					break;
+			}
 			
-			//default camera appears to have things at default position at centre distance. (ie teapot/reflector)
-			//and rotation seems to be about here.
-			//xyzrotate4mat(worldCamera, [Math.PI/2,0,0]);	//looks down on teapot 
-			//xyzrotate4mat(worldCamera, [0,0,Math.PI]);
-			//xyzrotate4mat(worldCamera, [0,Math.PI/2,0]);
 			//xyzrotate4mat(worldCamera, [Math.PI,0,0]);
 			
 			//xyzmove4mat(worldCamera, [0,0,Math.PI/2]);
@@ -206,7 +220,9 @@ function drawScene(frameTime){
 	drawWorldScene(frameTime, 0);
 }
 
-function setProjectionMatrix(pMatrix, vFov, ratio){
+function setProjectionMatrix(pMatrix, vFov, ratio, polarity){
+	mat4.identity(pMatrix);
+	
 	var fy = Math.tan((Math.PI/180.0)*vFov/2);
 	
 	pMatrix[0] = ratio/fy ;
@@ -646,6 +662,7 @@ function drawWorldScene(frameTime) {
 		}
 		
 		activeShaderProgram = savedActiveProg;
+		gl.useProgram(activeShaderProgram);
 	}
 	
 	for (var b in bullets){
