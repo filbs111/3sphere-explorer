@@ -165,13 +165,12 @@ function drawScene(frameTime){
 	
 	//TODO move pMatrix etc to only recalc on screen resize
 	//make a pmatrix for hemiphere perspective projection method.
-	mat4.identity(pMatrix);	//quickest way i know to set most terms to zero...
 	frustrumCull = squareFrustrumCull;
 	
 	//if (guiParams.renderCubemap && frustumCullFinal(playerMatrix,1)){
 	if (guiParams["draw reflector"]){		
-		pMatrix = cmapPMatrix;
-		for (var ii=0;ii<6;ii++){
+		mat4.set(cmapPMatrix, pMatrix);
+		for (var ii=5;ii<6;ii++){
 			var framebuffer = cubemapFramebuffer[ii];
 			gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
 			gl.viewport(0, 0, framebuffer.width, framebuffer.height);
@@ -179,6 +178,15 @@ function drawScene(frameTime){
 			
 			mat4.identity(worldCamera);
 			//TODO use relevant matrices for camera in each 6 directions.
+			
+			//default camera appears to have things at default position at centre distance. (ie teapot/reflector)
+			//and rotation seems to be about here.
+			//xyzrotate4mat(worldCamera, [Math.PI/2,0,0]);	//looks down on teapot 
+			//xyzrotate4mat(worldCamera, [0,0,Math.PI]);
+			//xyzrotate4mat(worldCamera, [0,Math.PI/2,0]);
+			//xyzrotate4mat(worldCamera, [Math.PI,0,0]);
+			
+			//xyzmove4mat(worldCamera, [0,0,Math.PI/2]);
 			
 			drawWorldScene(frameTime, 0);	//TODO skip reflector draw
 		}
@@ -188,26 +196,25 @@ function drawScene(frameTime){
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 	
-	var vFov = 90.0;
-	var fy = Math.tan((Math.PI/180.0)*vFov/2);
-	
-	pMatrix[0] = (gl.viewportHeight/gl.viewportWidth)/fy ;
-	pMatrix[5] = 1.0/fy;
-	pMatrix[11]	= -1;	//rotate w into z.
-	pMatrix[14] = -0.01;	//smaller = more z range. 1/50 gets ~same near clipping result as stereographic/perspective 0.01 near
-	pMatrix[10]	= 0;
-	pMatrix[15] = 0;
-
+	setProjectionMatrix(pMatrix, 90.0, gl.viewportHeight/gl.viewportWidth);
 	frustrumCull = generateCullFunc(pMatrix);
-	
-	//mat4.set(playerMatrix, playerCamera);
-	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 	
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	
 	mat4.set(playerCamera, worldCamera);	//set worldCamera to playerCamera
 
 	drawWorldScene(frameTime, 0);
+}
+
+function setProjectionMatrix(pMatrix, vFov, ratio){
+	var fy = Math.tan((Math.PI/180.0)*vFov/2);
+	
+	pMatrix[0] = ratio/fy ;
+	pMatrix[5] = 1.0/fy;
+	pMatrix[11]	= -1;	//rotate w into z.
+	pMatrix[14] = -0.01;	//smaller = more z range. 1/50 gets ~same near clipping result as stereographic/perspective 0.01 near
+	pMatrix[10]	= 0;
+	pMatrix[15] = 0;
 }
 
 var usePrecalcCells=true;
@@ -411,7 +418,7 @@ function drawWorldScene(frameTime) {
 			}
 		}
 		
-		console.log("num drawn: " + numDrawn);
+		//console.log("num drawn: " + numDrawn);
 	}
 	
 	activeShaderProgram = shaderProgramTexmap4Vec;
@@ -761,7 +768,7 @@ var playerCamera = mat4.create();
 var worldCamera = mat4.create();
 
 var cmapPMatrix = mat4.create();
-mat4.perspective( 90.0, 1.0, 0.00025, 100, cmapPMatrix);
+setProjectionMatrix(cmapPMatrix, -90.0, 1.0);	//-90 gets reflection to look right. (different for portal?)
 var squareFrustrumCull = generateCullFunc(cmapPMatrix);
 
 
@@ -887,7 +894,7 @@ var guiParams={
 	"draw 24-cell":false,
 	"draw 120-cell":false,
 	"draw 600-cell":false,
-	"draw teapot":false,
+	"draw teapot":true,
 	"teapot scale":0.7,
 	"draw spaceship":false,
 	"drop spaceship":false,
@@ -930,7 +937,7 @@ function init(){
 	gui.add(guiParams,"draw 24-cell",false);
 	gui.add(guiParams,"draw 120-cell",true);
 	gui.add(guiParams,"draw 600-cell",true);
-	gui.add(guiParams,"draw teapot",true);
+	gui.add(guiParams,"draw teapot");
 	gui.add(guiParams,"teapot scale",0.2,2.0,0.05);
 	gui.add(guiParams,"draw spaceship",true);
 	gui.add(guiParams, "drop spaceship",false);
