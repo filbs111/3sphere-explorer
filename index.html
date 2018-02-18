@@ -289,6 +289,50 @@
 	}
 </script>
 
+
+<!-- simple cubemap pix shader -->
+<script id="shader-cubemap-fs" type="x-shader/x-fragment">
+	precision mediump float;
+	uniform samplerCube uSampler;
+	varying vec3 vPos;
+	varying float fog;
+	uniform vec4 uColor;	//TODO remove? (should be white, but useful to tint for debug/ coloured reflector)
+	uniform vec4 uFogColor;
+	
+	void main(void) {
+		//gl_FragColor = uColor*textureCube(uSampler, vPos);	//TODO use this (get rid of fog)
+		gl_FragColor = vec4( fog*uFogColor.xyz, 1.0)*uColor*textureCube(uSampler, vPos) + (1.0-fog)*uFogColor;
+	}
+</script>
+<!-- vertex shader -->
+<script id="shader-cubemap-vs" type="x-shader/x-vertex">
+	attribute vec3 aVertexPosition;
+	uniform mat4 uMVMatrix;
+	uniform mat4 uPMatrix;
+	varying vec3 vPos;
+	varying float fog;	//TODO remove (fog should be applied at cubemap generation (unless fog is exponential decay)
+	uniform vec3 uModelScale;
+	
+	void main(void) {
+		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));	//project 3d object onto 3sphere
+																//can avoid this by inputting 4vector positions *...
+		vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
+		fog = 0.5*(1.0 + transformedCoord.w);
+	
+		//gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0); // *... or can just use 1.0 without normalising? TODO try.
+		gl_Position = uPMatrix * transformedCoord;
+		vPos = aVertexPosition.xyz;
+	}
+</script>
+
+
+
+
+
+
+
+
+
 <script type="text/javascript" src="js/main.js"></script>
 
 

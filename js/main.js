@@ -4,7 +4,8 @@ var shaderProgramColored,
 	shaderProgramTexmap,
 	shaderProgramTexmapPerVertex,
 	shaderProgramTexmapPerPixel,
-	shaderProgramTexmap4Vec;
+	shaderProgramTexmap4Vec,
+	shaderProgramCubemap;
 function initShaders(){				
 	shaderProgramColoredPerVertex = loadShader( "shader-simple-vs", "shader-simple-fs",{
 					attributes:["aVertexPosition","aVertexNormal"],
@@ -25,6 +26,11 @@ function initShaders(){
 	shaderProgramTexmap4Vec = loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs",{
 					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor"]
+					});
+					
+	shaderProgramCubemap = loadShader( "shader-cubemap-vs", "shader-cubemap-fs",{
+					attributes:["aVertexPosition"],
+					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor","uModelScale"]
 					});
 }
 
@@ -154,9 +160,33 @@ function drawScene(frameTime){
 	stats.end();
 	stats.begin();
 	
+	//draw cubemap views
+	mat4.identity(worldCamera);	//TODO use correct matrices
+	
 	//TODO move pMatrix etc to only recalc on screen resize
 	//make a pmatrix for hemiphere perspective projection method.
 	mat4.identity(pMatrix);	//quickest way i know to set most terms to zero...
+	frustrumCull = squareFrustrumCull;
+	
+	//if (guiParams.renderCubemap && frustumCullFinal(playerMatrix,1)){
+	if (guiParams["draw reflector"]){		
+		pMatrix = cmapPMatrix;
+		for (var ii=0;ii<6;ii++){
+			var framebuffer = cubemapFramebuffer[ii];
+			gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+			gl.viewport(0, 0, framebuffer.width, framebuffer.height);
+			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+			
+			mat4.identity(worldCamera);
+			//TODO use relevant matrices for camera in each 6 directions.
+			
+			drawWorldScene(frameTime, 0);	//TODO skip reflector draw
+		}
+	}
+	
+	//setup for drawing to screen
+	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 	
 	var vFov = 90.0;
 	var fy = Math.tan((Math.PI/180.0)*vFov/2);
@@ -175,6 +205,8 @@ function drawScene(frameTime){
 	
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 	
+	mat4.set(playerCamera, worldCamera);	//set worldCamera to playerCamera
+
 	drawWorldScene(frameTime, 0);
 }
 
@@ -182,9 +214,9 @@ var usePrecalcCells=true;
 
 function drawWorldScene(frameTime) {
 	
-	var invertedPlayerCamera = mat4.create();
-	mat4.set(playerCamera, invertedPlayerCamera);
-	mat4.transpose(invertedPlayerCamera);
+	var invertedWorldCamera = mat4.create();
+	mat4.set(worldCamera, invertedWorldCamera);
+	mat4.transpose(invertedWorldCamera);
 	
 	shaderProgramColored = guiParams["perPixelLighting"]?shaderProgramColoredPerPixel:shaderProgramColoredPerVertex;
 	shaderProgramTexmap = guiParams["perPixelLighting"]?shaderProgramTexmapPerPixel:shaderProgramTexmapPerVertex;
@@ -192,10 +224,10 @@ function drawWorldScene(frameTime) {
 	var dropLightPos;
 	if (!guiParams["drop spaceship"]){
 		dropSpaceship();	//note this is a bit poorly named and inefficient - when spaceship attached to camera,
-	}						//in drawspaceship, are just doing invertedPlayerCamera*playerCamera = identity
+	}						//in drawspaceship, are just doing invertedWorldCamera*worldCamera = identity
 	//get light pos in frame of camera. light is at spaceship
 	var lightMat = mat4.create();	//TODO mat*mat is unnecessary - only need to do dropLightPos = sshipMatrix*lightPosInWorld 
-	mat4.set(invertedPlayerCamera, lightMat);
+	mat4.set(invertedWorldCamera, lightMat);
 	mat4.multiply(lightMat, sshipMatrix);
 	dropLightPos = [lightMat[12], lightMat[13], lightMat[14], lightMat[15]];
 	
@@ -215,14 +247,14 @@ function drawWorldScene(frameTime) {
 	var angleStep = startAng * 2.0;
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 0.4, 1.0]);	//RED
-	mat4.set(invertedPlayerCamera, mvMatrix);
+	mat4.set(invertedWorldCamera, mvMatrix);
 	//try moving in z first so can see...
 	//zmove4matCols(mvMatrix, -0.5);
 	
 	if (guiParams.drawShapes['boxes y=z=0']){drawRing();}
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
-	mat4.set(invertedPlayerCamera, mvMatrix);
+	mat4.set(invertedWorldCamera, mvMatrix);
 	//try moving in z first so can see...
 	//zmove4matCols(mvMatrix, -0.5);
 	
@@ -230,24 +262,24 @@ function drawWorldScene(frameTime) {
 	if (guiParams.drawShapes['boxes x=z=0']){drawRing();}
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 1.0, 1.0]);	//BLUE
-	mat4.set(invertedPlayerCamera, mvMatrix);
+	mat4.set(invertedWorldCamera, mvMatrix);
 	rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
 	if (guiParams.drawShapes['boxes x=y=0']){drawRing();}
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.4, 1.0]);	//YELLOW
-	mat4.set(invertedPlayerCamera, mvMatrix);
+	mat4.set(invertedWorldCamera, mvMatrix);
 	xmove4mat(mvMatrix, Math.PI*0.5);
 	rotate4mat(mvMatrix, 0, 1, Math.PI*0.5);
 	if (guiParams.drawShapes['boxes z=w=0']){drawRing();}
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 1.0, 1.0]);	//MAGENTA
-	mat4.set(invertedPlayerCamera, mvMatrix);
+	mat4.set(invertedWorldCamera, mvMatrix);
 	xmove4mat(mvMatrix, Math.PI*0.5);
 	rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
 	if (guiParams.drawShapes['boxes y=w=0']){drawRing();}
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 1.0, 1.0]);	//CYAN
-	mat4.set(invertedPlayerCamera, mvMatrix);
+	mat4.set(invertedWorldCamera, mvMatrix);
 	ymove4mat(mvMatrix, Math.PI*0.5);
 	rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
 	if (guiParams.drawShapes['boxes x=w=0']){drawRing();}
@@ -319,13 +351,13 @@ function drawWorldScene(frameTime) {
 		for (cc in cellMats){
 			gl.uniform4fv(activeShaderProgram.uniforms.uColor, cellColors[cc]);
 			var thisCell = cellMats[cc];
-			mat4.set(invertedPlayerCamera, mvMatrix);
+			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix,thisCell);
 			drawTetraFrame();
 		}
 	}
 	
-	mat4.set(invertedPlayerCamera, mvMatrix);
+	mat4.set(invertedWorldCamera, mvMatrix);
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 0.4, 1.0]);	//DARK
 
@@ -373,7 +405,7 @@ function drawWorldScene(frameTime) {
 		function drawArrayForFunc(drawFunc2){
 			for (cc in cellMats){
 				var thisCell = cellMats[cc];
-				mat4.set(invertedPlayerCamera, mvMatrix);
+				mat4.set(invertedWorldCamera, mvMatrix);
 				mat4.multiply(mvMatrix,thisCell);
 				drawFunc2();
 			}
@@ -388,16 +420,16 @@ function drawWorldScene(frameTime) {
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
 	if (guiParams.drawShapes['x*x+y*y=z*z+w*w']){
-		mat4.set(invertedPlayerCamera, mvMatrix);
+		mat4.set(invertedWorldCamera, mvMatrix);
 		drawTennisBall();
 	}
 	if (guiParams.drawShapes['x*x+w*w=y*y+z*z']){
-		mat4.set(invertedPlayerCamera, mvMatrix);
+		mat4.set(invertedWorldCamera, mvMatrix);
 		rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
 		drawTennisBall();
 	}
 	if (guiParams.drawShapes['x*x+z*z=y*y+w*w']){
-		mat4.set(invertedPlayerCamera, mvMatrix);
+		mat4.set(invertedWorldCamera, mvMatrix);
 		rotate4mat(mvMatrix, 0, 3, Math.PI*0.5);
 		drawTennisBall();
 	}
@@ -441,7 +473,7 @@ function drawWorldScene(frameTime) {
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 
 	if (guiParams["draw teapot"]){
-		mat4.set(invertedPlayerCamera, mvMatrix);
+		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,teapotMatrix);		
 		drawObjectFromBuffers(teapotBuffers, shaderProgramColored);
 	}
@@ -451,7 +483,7 @@ function drawWorldScene(frameTime) {
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 	
 	if (guiParams["draw spaceship"]){
-		mat4.set(invertedPlayerCamera, mvMatrix);
+		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,sshipMatrix);		
 		drawObjectFromBuffers(sshipBuffers, shaderProgramColored);
 		
@@ -498,7 +530,7 @@ function drawWorldScene(frameTime) {
 			xyzmove4mat(gunMatrix,[0,0,0.05]);	//move forwards
 			gunMatrices.push(gunMatrix);
 		
-			mat4.set(invertedPlayerCamera, mvMatrix);
+			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix,gunMatrix);
 			
 			drawObjectFromBuffers(gunBuffers, shaderProgramColored);
@@ -556,7 +588,7 @@ function drawWorldScene(frameTime) {
 		var sphereRad = 0.04;
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [sphereRad,sphereRad,sphereRad]);
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [2.0, 2.0, 2.0, 2.0]);
-		mat4.set(invertedPlayerCamera, mvMatrix);
+		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,	sshipMatrix);
 		if (frustrumCull(mvMatrix,sphereRad)){
 			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
@@ -579,7 +611,7 @@ function drawWorldScene(frameTime) {
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.3, 0.3, 1.0]);	//RED
 	//draw sphere. to be targeted by guns
 	if (guiParams["draw target"]){
-		mat4.set(invertedPlayerCamera, mvMatrix);
+		mat4.set(invertedWorldCamera, mvMatrix);
 		//mat4.multiply(mvMatrix,targetMatrix);
 		mat4.multiply(mvMatrix,	cellMatData.d16[0]);
 		if (frustrumCull(mvMatrix,targetRad)){	//normally use +ve radius
@@ -590,12 +622,23 @@ function drawWorldScene(frameTime) {
 	}
 	
 	if (guiParams["draw reflector"]){
+		var savedActiveProg = activeShaderProgram;
+		
+		activeShaderProgram = shaderProgramCubemap;
+		gl.useProgram(activeShaderProgram);
+		
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.9, 0.9, 0.9, 1.0]);	//grey
+		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
+
 		var reflectorRad = 1.0;	//TODO variable radius.
+
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [reflectorRad,reflectorRad,reflectorRad]);
-		mat4.set(invertedPlayerCamera, mvMatrix);
+		mat4.set(invertedWorldCamera, mvMatrix);
 		if (frustrumCull(mvMatrix,reflectorRad)){	
-			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
+			drawObjectFromBuffers(sphereBuffers, shaderProgramCubemap, true);
 		}
+		
+		activeShaderProgram = savedActiveProg;
 	}
 	
 	for (var b in bullets){
@@ -606,7 +649,7 @@ function drawWorldScene(frameTime) {
 		targetRad=0.0025;
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,20*targetRad]);	//long streaks
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.3, 1.0]);	//YELLOW
-		mat4.set(invertedPlayerCamera, mvMatrix);
+		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,bulletMatrix);
 		if (frustrumCull(mvMatrix,targetRad)){	
 			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
@@ -673,16 +716,16 @@ function drawTennisBall(){
 	
 }
 
-function drawObjectFromBuffers(bufferObj, shaderProg){
-	prepBuffersForDrawing(bufferObj, shaderProg);
+function drawObjectFromBuffers(bufferObj, shaderProg, usesCubeMap){
+	prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap);
 	drawObjectFromPreppedBuffers(bufferObj, shaderProg);
 }
-function prepBuffersForDrawing(bufferObj, shaderProg){
+function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 	gl.enable(gl.CULL_FACE);
 	gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexPositionBuffer);
     gl.vertexAttribPointer(shaderProg.attributes.aVertexPosition, bufferObj.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	
-	if (bufferObj.vertexNormalBuffer){
+	if (bufferObj.vertexNormalBuffer && shaderProg.attributes.aVertexNormal){
 		gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexNormalBuffer);
 		gl.vertexAttribPointer(shaderProg.attributes.aVertexNormal, bufferObj.vertexNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	}
@@ -692,11 +735,17 @@ function prepBuffersForDrawing(bufferObj, shaderProg){
 	if (bufferObj.vertexTextureCoordBuffer){
 		gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexTextureCoordBuffer);
 		gl.vertexAttribPointer(shaderProg.attributes.aTextureCoord, bufferObj.vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
-	
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_2D, texture);
 		gl.uniform1i(shaderProg.uniforms.uSampler, 0);
 	}
+	
+	if (usesCubeMap){
+		gl.activeTexture(gl.TEXTURE0);
+		gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubemapTexture);
+		gl.uniform1i(shaderProg.uniforms.uSampler, 0);
+	}
+	
 	gl.uniformMatrix4fv(shaderProg.uniforms.uPMatrix, false, pMatrix);
 }
 function drawObjectFromPreppedBuffers(bufferObj, shaderProg){
@@ -709,10 +758,68 @@ var mvMatrix = mat4.create();
 var pMatrix = mat4.create();
 var playerMatrix = mat4.create();
 var playerCamera = mat4.create();
+var worldCamera = mat4.create();
+
+var cmapPMatrix = mat4.create();
+mat4.perspective( 90.0, 1.0, 0.00025, 100, cmapPMatrix);
+var squareFrustrumCull = generateCullFunc(cmapPMatrix);
+
 
 function setMatrixUniforms(shaderProgram) {
     gl.uniformMatrix4fv(shaderProgram.uniforms.uPMatrix, false, pMatrix);
     gl.uniformMatrix4fv(shaderProgram.uniforms.uMVMatrix, false, mvMatrix);
+}
+
+var cubemapFramebuffer;
+var cubemapTexture;
+var cubemapSize = 1024;
+//cube map code from http://www.humus.name/cubemapviewer.js (slightly modified)
+var cubemapFacelist;
+
+function initCubemapFramebuffer(){
+	cubemapFramebuffer = [];
+	
+	cubemapTexture = gl.createTexture();
+	gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubemapTexture);
+	gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+	gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+	var faces = [gl.TEXTURE_CUBE_MAP_POSITIVE_X,
+				 gl.TEXTURE_CUBE_MAP_NEGATIVE_X,
+				 gl.TEXTURE_CUBE_MAP_POSITIVE_Y,
+				 gl.TEXTURE_CUBE_MAP_NEGATIVE_Y,
+				 gl.TEXTURE_CUBE_MAP_POSITIVE_Z,
+				 gl.TEXTURE_CUBE_MAP_NEGATIVE_Z];
+	cubemapFacelist = faces;
+	
+	for (var i = 0; i < faces.length; i++)
+	{
+		var face = faces[i];
+		
+		var framebuffer = gl.createFramebuffer();
+		gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+		framebuffer.width = cubemapSize;
+		framebuffer.height = cubemapSize;
+		cubemapFramebuffer[i]=framebuffer;
+		
+		gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubemapTexture);	//already bound so can lose probably
+		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+		//gl.texImage2D(face, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+		gl.texImage2D(face, 0, gl.RGBA, cubemapSize, cubemapSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+		gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+		
+		var renderbuffer = gl.createRenderbuffer();
+		gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
+		gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, cubemapSize, cubemapSize);
+		
+		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, face, cubemapTexture, 0);
+		gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, renderbuffer);
+	}
+	gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);	//this gets rid of errors being logged to console. 
+	gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
 function setupScene() {
@@ -931,6 +1038,7 @@ function init(){
 	initGL();
 	initShaders();
 	initTexture();
+	initCubemapFramebuffer();
 	initBuffers();
 	setFog(guiParams.fogColor);
     gl.enable(gl.DEPTH_TEST);
