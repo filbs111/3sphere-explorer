@@ -474,7 +474,7 @@ function drawWorldScene(frameTime) {
 		
 		if (guiParams["draw target"]){
 			rotvec = getRotBetweenMats(sshipMatrix, cellMatData.d16[0]);	//target in frame of spaceship.
-		}	
+		}
 		
 		gunMatrices=[];
 		drawRelativeToSpacehip([gunHoriz,gunVert,gunFront]); //left, down, forwards
@@ -586,6 +586,15 @@ function drawWorldScene(frameTime) {
 									//-ve to make disappear when not entirely inside view frustrum (for testing)
 			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
 			//drawObjectFromBuffers(icoballBuffers, shaderProgramColored);
+		}
+	}
+	
+	if (guiParams["draw reflector"]){
+		var reflectorRad = 1.0;	//TODO variable radius.
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [reflectorRad,reflectorRad,reflectorRad]);
+		mat4.set(invertedPlayerCamera, mvMatrix);
+		if (frustrumCull(mvMatrix,reflectorRad)){	
+			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
 		}
 	}
 	
@@ -753,7 +762,7 @@ var stats;
 
 var guiParams={
 	drawShapes:{
-		'x*x+y*y=z*z+w*w':true,
+		'x*x+y*y=z*z+w*w':false,
 		'x*x+z*z=y*y+w*w':false,
 		'x*x+w*w=y*y+z*z':false,
 		'boxes y=z=0':false,	//x*x+w*w=1
@@ -766,7 +775,7 @@ var guiParams={
 	"draw 5-cell":false,
 	"8-cell scale":1.0,
 	"subdiv frames":true,
-	"draw 8-cell":false,
+	"draw 8-cell":true,
 	"draw 16-cell":false,
 	"draw 24-cell":false,
 	"draw 120-cell":false,
@@ -781,7 +790,8 @@ var guiParams={
 	smoothMovement: true,
 	"culling":true,
 	"perPixelLighting":true,
-	fogColor:'#aaaaaa'
+	fogColor:'#aaaaaa',
+	"draw reflector":true
 };
 var vecFogColor = [1.0,0.0,0.0,1.0];
 var teapotMatrix=mat4.create();mat4.identity(teapotMatrix);
@@ -823,6 +833,7 @@ function init(){
 	gui.add(guiParams, "perPixelLighting");
 	gui.add(guiParams, "smoothMovement");
 	gui.add(guiParams, "culling");
+	gui.add(guiParams, "draw reflector");
 	
 	window.addEventListener("keydown",function(evt){
 		//console.log("key pressed : " + evt.keyCode);
