@@ -30,7 +30,7 @@ function initShaders(){
 					
 	shaderProgramCubemap = loadShader( "shader-cubemap-vs", "shader-cubemap-fs",{
 					attributes:["aVertexPosition"],
-					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor","uModelScale"]
+					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor","uModelScale", "uPosShiftMat"]
 					});
 }
 
@@ -160,6 +160,16 @@ function drawScene(frameTime){
 	stats.end();
 	stats.begin();
 	
+	
+	var shiftVal = -0.8;
+	var cubeViewShift = [0,0,shiftVal];	//TODO dynamically set relevant to camera position.
+	var cubeViewShiftAdjusted = [0,0,Math.atan(shiftVal)];	//guess
+	var cubeViewShiftAdjustedMinus = [0,0,-Math.atan(shiftVal)];	//guess
+	
+	var reflectShaderMatrix = mat4.create();
+	mat4.identity(reflectShaderMatrix);
+	xyzmove4mat(reflectShaderMatrix, cubeViewShiftAdjustedMinus);	
+	
 	//draw cubemap views
 	mat4.identity(worldCamera);	//TODO use correct matrices
 	
@@ -176,6 +186,14 @@ function drawScene(frameTime){
 			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 			
 			mat4.identity(worldCamera);
+			
+			//shift centre?
+			//xyzmove4mat(worldCamera, [0.4,0,0]);	//moves camera to left
+			//xyzmove4mat(worldCamera, [0,0.4,0]);	//moves camera downward
+			//xyzmove4mat(worldCamera, [0,0,0.4]);	//moves camera forward
+													// (from perspective of initial player position)
+			xyzmove4mat(worldCamera, cubeViewShiftAdjusted);	
+			
 			switch(ii){
 				case 0:
 					xyzrotate4mat(worldCamera, [0,-Math.PI/2,0]);	//right from default view
@@ -201,6 +219,11 @@ function drawScene(frameTime){
 			//xyzrotate4mat(worldCamera, [Math.PI,0,0]);
 			
 			//xyzmove4mat(worldCamera, [0,0,Math.PI/2]);
+	
+			//need to "use" program to set uniforms?
+			gl.useProgram(shaderProgramCubemap); 
+			//gl.uniform3fv(shaderProgramCubemap.uniforms.uPosShift, cubeViewShift);
+			gl.uniformMatrix4fv(shaderProgramCubemap.uniforms.uPosShiftMat, false, reflectShaderMatrix);
 			
 			drawWorldScene(frameTime, 0);	//TODO skip reflector draw
 		}

@@ -312,6 +312,7 @@
 	varying vec3 vPos;
 	varying float fog;	//TODO remove (fog should be applied at cubemap generation (unless fog is exponential decay)
 	uniform vec3 uModelScale;
+	uniform mat4 uPosShiftMat;
 	
 	void main(void) {
 		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));	//project 3d object onto 3sphere
@@ -321,7 +322,8 @@
 	
 		//gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0); // *... or can just use 1.0 without normalising? TODO try.
 		gl_Position = uPMatrix * transformedCoord;
-		vPos = aVertexPosition.xyz;
+		
+		vPos = (uPosShiftMat*aVertexPositionNormalized).xyz;
 	}
 </script>
 
