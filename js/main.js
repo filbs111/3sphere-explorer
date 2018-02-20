@@ -160,11 +160,25 @@ function drawScene(frameTime){
 	stats.end();
 	stats.begin();
 	
+
+	//use player position directly. expect to behave like transparent
+	var cubeViewShift = [worldCamera[12],worldCamera[13],worldCamera[14]];	
+	var magsq = 1- worldCamera[15]*worldCamera[15];
+		//note can just fo 1-w*w, or just use w!
 	
-	var shiftVal = -0.8;
-	var cubeViewShift = [0,0,shiftVal];	//TODO dynamically set relevant to camera position.
-	var cubeViewShiftAdjusted = [0,0,Math.atan(shiftVal)];	//guess
-	var cubeViewShiftAdjustedMinus = [0,0,-Math.atan(shiftVal)];	//guess
+	//console.log("w: " + worldCamera[15]);
+	var angle = Math.acos(worldCamera[15]);	//from centre of portal to player
+	
+	var mag = Math.sqrt(magsq);
+	var correctionFactor = -angle/mag;
+	
+	var cubeViewShiftAdjusted = [cubeViewShift[0]*correctionFactor,
+								cubeViewShift[1]*correctionFactor,
+								cubeViewShift[2]*correctionFactor];
+	var cubeViewShiftAdjustedMinus = [-cubeViewShift[0]*correctionFactor,
+								-cubeViewShift[1]*correctionFactor,
+								-cubeViewShift[2]*correctionFactor];
+
 	
 	var reflectShaderMatrix = mat4.create();
 	mat4.identity(reflectShaderMatrix);
