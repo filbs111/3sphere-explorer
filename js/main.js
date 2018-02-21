@@ -168,9 +168,12 @@ function drawScene(frameTime){
 	
 	//console.log("w: " + worldCamera[15]);
 	var angle = Math.acos(worldCamera[15]);	//from centre of portal to player
+	var reflectionCentreTanAngle = 	1/ ( 2 - ( 1/Math.tan(angle) ) );
+		//note could do tan(angle) directly from worldCamera[15] bypassing calculating angle		
 	
 	var mag = Math.sqrt(magsq);
-	var correctionFactor = -angle/mag;
+	//var correctionFactor = -angle/mag;
+	var correctionFactor = -Math.atan(reflectionCentreTanAngle)/mag;
 	
 	var cubeViewShiftAdjusted = [cubeViewShift[0]*correctionFactor,
 								cubeViewShift[1]*correctionFactor,
@@ -179,6 +182,8 @@ function drawScene(frameTime){
 								-cubeViewShift[1]*correctionFactor,
 								-cubeViewShift[2]*correctionFactor];
 
+			
+	
 	
 	var reflectShaderMatrix = mat4.create();
 	mat4.identity(reflectShaderMatrix);
