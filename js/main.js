@@ -100,7 +100,8 @@ function initBuffers(){
 	var gunObject = loadBlenderExport(guncyldata.meshes[0]);
 	var icoballObj = loadBlenderExport(icoballdata);
 
-	loadBufferData(sphereBuffers, makeSphereData(61,32,1));
+	//loadBufferData(sphereBuffers, makeSphereData(61,32,1));
+	loadBufferData(sphereBuffers, makeSphereData(201,100,1));
 	loadBufferData(cubeBuffers, levelCubeData);
 	loadBufferData(cubeFrameBuffers, cubeFrameBlenderObject);
 	loadBufferData(cubeFrameSubdivBuffers, cubeFrameSubdivObject);
@@ -160,16 +161,16 @@ function drawScene(frameTime){
 	stats.end();
 	stats.begin();
 	
-
+	
 	//use player position directly. expect to behave like transparent
-	var cubeViewShift = [worldCamera[12],worldCamera[13],worldCamera[14]];	
-	var magsq = 1- worldCamera[15]*worldCamera[15];
+	var cubeViewShift = [playerCamera[12],playerCamera[13],playerCamera[14]];	
+	var magsq = 1- playerCamera[15]*playerCamera[15];
 		//note can just fo 1-w*w, or just use w!
 	
-	//console.log("w: " + worldCamera[15]);
-	var angle = Math.acos(worldCamera[15]);	//from centre of portal to player
+	//console.log("w: " + playerCamera[15]);
+	var angle = Math.acos(playerCamera[15]);	//from centre of portal to player
 	var reflectionCentreTanAngle = 	1/ ( 2 - ( 1/Math.tan(angle) ) );
-		//note could do tan(angle) directly from worldCamera[15] bypassing calculating angle		
+		//note could do tan(angle) directly from playerCamera[15] bypassing calculating angle		
 	
 	var mag = Math.sqrt(magsq);
 	//var correctionFactor = -angle/mag;
