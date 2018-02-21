@@ -244,7 +244,7 @@ function drawScene(frameTime){
 			//gl.uniform3fv(shaderProgramCubemap.uniforms.uPosShift, cubeViewShift);
 			gl.uniformMatrix4fv(shaderProgramCubemap.uniforms.uPosShiftMat, false, reflectShaderMatrix);
 			
-			drawWorldScene(frameTime, 0);	//TODO skip reflector draw
+			drawWorldScene(frameTime, true);	//TODO skip reflector draw
 		}
 	}
 	
@@ -259,7 +259,7 @@ function drawScene(frameTime){
 	
 	mat4.set(playerCamera, worldCamera);	//set worldCamera to playerCamera
 
-	drawWorldScene(frameTime, 0);
+	drawWorldScene(frameTime, false);
 }
 
 function setProjectionMatrix(pMatrix, vFov, ratio, polarity){
@@ -277,7 +277,7 @@ function setProjectionMatrix(pMatrix, vFov, ratio, polarity){
 
 var usePrecalcCells=true;
 
-function drawWorldScene(frameTime) {
+function drawWorldScene(frameTime, isCubemapView) {
 	
 	var invertedWorldCamera = mat4.create();
 	mat4.set(worldCamera, invertedWorldCamera);
@@ -686,7 +686,7 @@ function drawWorldScene(frameTime) {
 		}
 	}
 	
-	if (guiParams["draw reflector"]){
+	if (guiParams["draw reflector"] && !isCubemapView){
 		var savedActiveProg = activeShaderProgram;
 		
 		activeShaderProgram = shaderProgramCubemap;
