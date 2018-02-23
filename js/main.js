@@ -5,7 +5,8 @@ var shaderProgramColored,
 	shaderProgramTexmapPerVertex,
 	shaderProgramTexmapPerPixel,
 	shaderProgramTexmap4Vec,
-	shaderProgramCubemap;
+	shaderProgramCubemap,
+	shaderProgramVertprojCubemap;
 function initShaders(){				
 	shaderProgramColoredPerVertex = loadShader( "shader-simple-vs", "shader-simple-fs",{
 					attributes:["aVertexPosition","aVertexNormal"],
@@ -31,6 +32,11 @@ function initShaders(){
 	shaderProgramCubemap = loadShader( "shader-cubemap-vs", "shader-cubemap-fs",{
 					attributes:["aVertexPosition"],
 					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor","uModelScale", "uPosShiftMat"]
+					});
+					
+	shaderProgramVertprojCubemap = loadShader( "shader-cubemap-vertproj-vs", "shader-cubemap-fs",{
+					attributes:["aVertexPosition"],
+					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor","uModelScale", "uPosShiftMat","uCentrePos"]
 					});
 }
 
@@ -100,8 +106,7 @@ function initBuffers(){
 	var gunObject = loadBlenderExport(guncyldata.meshes[0]);
 	var icoballObj = loadBlenderExport(icoballdata);
 
-	//loadBufferData(sphereBuffers, makeSphereData(61,32,1));
-	loadBufferData(sphereBuffers, makeSphereData(201,100,1));
+	loadBufferData(sphereBuffers, makeSphereData(61,32,1));
 	loadBufferData(cubeBuffers, levelCubeData);
 	loadBufferData(cubeFrameBuffers, cubeFrameBlenderObject);
 	loadBufferData(cubeFrameSubdivBuffers, cubeFrameSubdivObject);
@@ -152,6 +157,11 @@ function initBuffers(){
 	};
 }
 
+var reflectorInfo={
+	centreTanAngleVector:[0,0,0],
+	otherThing:[0,0,0]
+};
+
 function drawScene(frameTime){
 	resizecanvas();
 
@@ -183,12 +193,17 @@ function drawScene(frameTime){
 								-cubeViewShift[1]*correctionFactor,
 								-cubeViewShift[2]*correctionFactor];
 
-			
+	//position within spherical reflector BEFORE projection
+	var correctionFactorB = reflectionCentreTanAngle/mag;
+	reflectorInfo.centreTanAngleVector = [-cubeViewShift[0]*correctionFactorB,
+								-cubeViewShift[1]*correctionFactorB,
+								-cubeViewShift[2]*correctionFactorB];
 	
 	
 	var reflectShaderMatrix = mat4.create();
 	mat4.identity(reflectShaderMatrix);
 	xyzmove4mat(reflectShaderMatrix, cubeViewShiftAdjustedMinus);	
+	reflectorInfo.shaderMatrix=reflectShaderMatrix;
 	
 	//draw cubemap views
 	mat4.identity(worldCamera);	//TODO use correct matrices
@@ -197,7 +212,7 @@ function drawScene(frameTime){
 	//make a pmatrix for hemiphere perspective projection method.
 	
 	frustrumCull = squareFrustrumCull;
-	if (guiParams["draw reflector"]){		
+	if (guiParams.reflector.draw){		
 		mat4.set(cmapPMatrix, pMatrix);
 		for (var ii=0;ii<6;ii++){
 			var framebuffer = cubemapFramebuffer[ii];
@@ -239,11 +254,6 @@ function drawScene(frameTime){
 			//xyzrotate4mat(worldCamera, [Math.PI,0,0]);
 			
 			//xyzmove4mat(worldCamera, [0,0,Math.PI/2]);
-	
-			//need to "use" program to set uniforms?
-			gl.useProgram(shaderProgramCubemap); 
-			//gl.uniform3fv(shaderProgramCubemap.uniforms.uPosShift, cubeViewShift);
-			gl.uniformMatrix4fv(shaderProgramCubemap.uniforms.uPosShiftMat, false, reflectShaderMatrix);
 			
 			drawWorldScene(frameTime, true);	//TODO skip reflector draw
 		}
@@ -687,11 +697,20 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}
 	}
 	
-	if (guiParams["draw reflector"] && !isCubemapView){
+	if (guiParams.reflector.draw && !isCubemapView){
 		var savedActiveProg = activeShaderProgram;
 		
-		activeShaderProgram = shaderProgramCubemap;
+		//TODO have some variable for activeReflectorShader, avoid switch.
+		switch(guiParams.reflector.mappingType){
+			case 'projection':
+			activeShaderProgram = shaderProgramCubemap;
+			break;
+			case 'vertex projection':
+			activeShaderProgram = shaderProgramVertprojCubemap;
+			break;
+		}
 		gl.useProgram(activeShaderProgram);
+		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uPosShiftMat, false, reflectorInfo.shaderMatrix);
 		
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.9, 0.9, 0.9, 1.0]);	//grey
 		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
@@ -700,8 +719,11 @@ function drawWorldScene(frameTime, isCubemapView) {
 
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [reflectorRad,reflectorRad,reflectorRad]);
 		mat4.set(invertedWorldCamera, mvMatrix);
-		if (frustrumCull(mvMatrix,reflectorRad)){	
-			drawObjectFromBuffers(sphereBuffers, shaderProgramCubemap, true);
+		if (frustrumCull(mvMatrix,reflectorRad)){
+			if(guiParams.reflector.mappingType == 'vertex projection'){
+				gl.uniform3fv(activeShaderProgram.uniforms.uCentrePos, reflectorInfo.centreTanAngleVector);
+			}
+			drawObjectFromBuffers(sphereBuffers, activeShaderProgram, true);
 		}
 		
 		activeShaderProgram = savedActiveProg;
@@ -965,7 +987,10 @@ var guiParams={
 	"culling":true,
 	"perPixelLighting":true,
 	fogColor:'#aaaaaa',
-	"draw reflector":true
+	reflector:{
+		"draw":true,
+		"mappingType":'vertex projection'
+	}
 };
 var vecFogColor = [1.0,0.0,0.0,1.0];
 var teapotMatrix=mat4.create();mat4.identity(teapotMatrix);
@@ -1007,7 +1032,9 @@ function init(){
 	gui.add(guiParams, "perPixelLighting");
 	gui.add(guiParams, "smoothMovement");
 	gui.add(guiParams, "culling");
-	gui.add(guiParams, "draw reflector");
+	var reflectorFolder = gui.addFolder('reflector');
+	reflectorFolder.add(guiParams.reflector, "draw");
+	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection']);
 	
 	window.addEventListener("keydown",function(evt){
 		//console.log("key pressed : " + evt.keyCode);

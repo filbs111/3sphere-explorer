@@ -328,9 +328,32 @@
 </script>
 
 
-
-
-
+<script id="shader-cubemap-vertproj-vs" type="x-shader/x-vertex">
+	attribute vec3 aVertexPosition;
+	uniform mat4 uMVMatrix;
+	uniform mat4 uPMatrix;
+	varying vec3 vPos;
+	varying float fog;	//TODO remove (fog should be applied at cubemap generation (unless fog is exponential decay)
+	uniform vec3 uModelScale;
+	uniform mat4 uPosShiftMat;
+	uniform vec3 uCentrePos;	//this is position of cubemap centre point in unprojected model space
+	
+	void main(void) {
+		float csq = dot(uCentrePos,uCentrePos);
+		float cdotp = dot(uCentrePos, -aVertexPosition);
+		float a = pow((1.0-csq)+cdotp*cdotp, 0.5) - cdotp;
+		vec3 scaledVertexPosition = aVertexPosition*a;
+	
+		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*scaledVertexPosition-uCentrePos, 1.0));	
+																//can avoid this by inputting 4vector positions *...
+		vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
+		fog = 0.5*(1.0 + transformedCoord.w);
+	
+		gl_Position = uPMatrix * transformedCoord;
+		
+		vPos = (uPosShiftMat*aVertexPositionNormalized).xyz;
+	}
+</script>
 
 
 
