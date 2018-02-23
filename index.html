@@ -301,7 +301,7 @@
 	
 	void main(void) {
 		//gl_FragColor = uColor*textureCube(uSampler, vPos);	//TODO use this (get rid of fog)
-		gl_FragColor = vec4( fog*uFogColor.xyz, 1.0)*uColor*textureCube(uSampler, vPos) + (1.0-fog)*uFogColor;
+		gl_FragColor = vec4( vec3(fog), 1.0)*uColor*textureCube(uSampler, vPos) + (1.0-fog)*uFogColor;
 	}
 </script>
 <!-- vertex shader -->
