@@ -336,16 +336,15 @@
 	varying float fog;	//TODO remove (fog should be applied at cubemap generation (unless fog is exponential decay)
 	uniform vec3 uModelScale;
 	uniform mat4 uPosShiftMat;
-	uniform vec3 uCentrePos;	//this is position of cubemap centre point in unprojected model space
+	uniform vec3 uCentrePosScaled;	//this is position of cubemap centre point in unprojected model space
 	
 	void main(void) {
-		vec3 centrePosScaled = uCentrePos/uModelScale;
-		float csq = dot(centrePosScaled,centrePosScaled);
-		float cdotp = dot(centrePosScaled, -aVertexPosition);
+		float csq = dot(uCentrePosScaled,uCentrePosScaled);
+		float cdotp = dot(uCentrePosScaled, -aVertexPosition);
 		float a = pow((1.0-csq)+cdotp*cdotp, 0.5) - cdotp;
 		vec3 scaledVertexPosition = aVertexPosition*a;
 	
-		vec4 aVertexPositionNormalized = normalize(vec4( (uModelScale*scaledVertexPosition)-uCentrePos, 1.0));	
+		vec4 aVertexPositionNormalized = normalize(vec4( uModelScale*(scaledVertexPosition-uCentrePosScaled), 1.0));	
 		
 		vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
 		fog = 0.5*(1.0 + transformedCoord.w);

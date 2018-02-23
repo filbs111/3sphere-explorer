@@ -36,7 +36,7 @@ function initShaders(){
 					
 	shaderProgramVertprojCubemap = loadShader( "shader-cubemap-vertproj-vs", "shader-cubemap-fs",{
 					attributes:["aVertexPosition"],
-					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor","uModelScale", "uPosShiftMat","uCentrePos"]
+					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor","uModelScale", "uPosShiftMat","uCentrePosScaled"]
 					});
 }
 
@@ -158,8 +158,9 @@ function initBuffers(){
 }
 
 var reflectorInfo={
-	centreTanAngleVector:[0,0,0],
-	otherThing:[0,0,0]
+	centreTanAngleVectorScaled:[0,0,0],
+	otherThing:[0,0,0],
+	rad:1
 };
 
 function drawScene(frameTime){
@@ -172,7 +173,7 @@ function drawScene(frameTime){
 	stats.begin();
 	
 	
-	var reflectorRad = guiParams.reflector.scale;	//also do this elsewhere. TODO use common object
+	reflectorInfo.rad = guiParams.reflector.scale;
 	
 	//use player position directly. expect to behave like transparent
 	var cubeViewShift = [playerCamera[12],playerCamera[13],playerCamera[14]];	
@@ -181,7 +182,7 @@ function drawScene(frameTime){
 	
 	//console.log("w: " + playerCamera[15]);
 	var angle = Math.acos(playerCamera[15]);	//from centre of portal to player
-	var reflectionCentreTanAngle = 	reflectorRad/ ( 2 - ( reflectorRad/Math.tan(angle) ) );
+	var reflectionCentreTanAngle = 	reflectorInfo.rad/ ( 2 - ( reflectorInfo.rad/Math.tan(angle) ) );
 		//note could do tan(angle) directly from playerCamera[15] bypassing calculating angle		
 	
 	var mag = Math.sqrt(magsq);
@@ -197,7 +198,8 @@ function drawScene(frameTime){
 
 	//position within spherical reflector BEFORE projection
 	var correctionFactorB = reflectionCentreTanAngle/mag;
-	reflectorInfo.centreTanAngleVector = [-cubeViewShift[0]*correctionFactorB,
+	correctionFactorB/=reflectorInfo.rad;
+	reflectorInfo.centreTanAngleVectorScaled = [-cubeViewShift[0]*correctionFactorB,
 								-cubeViewShift[1]*correctionFactorB,
 								-cubeViewShift[2]*correctionFactorB];
 	
@@ -717,13 +719,11 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.9, 0.9, 0.9, 1.0]);	//grey
 		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
 
-		var reflectorRad = guiParams.reflector.scale;
-
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [reflectorRad,reflectorRad,reflectorRad]);
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [reflectorInfo.rad,reflectorInfo.rad, reflectorInfo.rad]);
 		mat4.set(invertedWorldCamera, mvMatrix);
-		if (frustrumCull(mvMatrix,reflectorRad)){
+		if (frustrumCull(mvMatrix,reflectorInfo.rad)){
 			if(guiParams.reflector.mappingType == 'vertex projection'){
-				gl.uniform3fv(activeShaderProgram.uniforms.uCentrePos, reflectorInfo.centreTanAngleVector);
+				gl.uniform3fv(activeShaderProgram.uniforms.uCentrePosScaled, reflectorInfo.centreTanAngleVectorScaled	);
 			}
 			drawObjectFromBuffers(sphereBuffers, activeShaderProgram, true);
 		}
