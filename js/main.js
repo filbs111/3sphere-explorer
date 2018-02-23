@@ -172,6 +172,8 @@ function drawScene(frameTime){
 	stats.begin();
 	
 	
+	var reflectorRad = guiParams.reflector.scale;	//also do this elsewhere. TODO use common object
+	
 	//use player position directly. expect to behave like transparent
 	var cubeViewShift = [playerCamera[12],playerCamera[13],playerCamera[14]];	
 	var magsq = 1- playerCamera[15]*playerCamera[15];
@@ -179,7 +181,7 @@ function drawScene(frameTime){
 	
 	//console.log("w: " + playerCamera[15]);
 	var angle = Math.acos(playerCamera[15]);	//from centre of portal to player
-	var reflectionCentreTanAngle = 	1/ ( 2 - ( 1/Math.tan(angle) ) );
+	var reflectionCentreTanAngle = 	reflectorRad/ ( 2 - ( reflectorRad/Math.tan(angle) ) );
 		//note could do tan(angle) directly from playerCamera[15] bypassing calculating angle		
 	
 	var mag = Math.sqrt(magsq);
@@ -715,7 +717,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.9, 0.9, 0.9, 1.0]);	//grey
 		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
 
-		var reflectorRad = 1.0;	//TODO variable radius.
+		var reflectorRad = guiParams.reflector.scale;
 
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [reflectorRad,reflectorRad,reflectorRad]);
 		mat4.set(invertedWorldCamera, mvMatrix);
@@ -989,7 +991,8 @@ var guiParams={
 	fogColor:'#aaaaaa',
 	reflector:{
 		"draw":true,
-		"mappingType":'vertex projection'
+		"mappingType":'vertex projection',
+		"scale":1.0
 	}
 };
 var vecFogColor = [1.0,0.0,0.0,1.0];
@@ -1035,6 +1038,7 @@ function init(){
 	var reflectorFolder = gui.addFolder('reflector');
 	reflectorFolder.add(guiParams.reflector, "draw");
 	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection']);
+	reflectorFolder.add(guiParams.reflector, "scale", 0.2,4,0.2);
 	
 	window.addEventListener("keydown",function(evt){
 		//console.log("key pressed : " + evt.keyCode);
