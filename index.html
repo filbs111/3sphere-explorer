@@ -168,6 +168,61 @@
 	}
 </script>
 
+<!-- discard fragments inside reflector (when rendering cubemap view from inside reflector -->
+<script id="shader-perpixel-discard-fs" type="x-shader/x-fragment">
+	precision mediump float;
+	uniform vec4 uColor;
+	uniform vec4 uFogColor;
+	varying float fog;
+	varying vec4 adjustedPos;
+	varying vec4 transformedNormal;
+	varying vec4 toReflector;
+	
+	void main(void) {
+		if (dot(toReflector,toReflector)<1.0){
+			discard;
+		}
+	
+		float light = -dot( normalize(adjustedPos), transformedNormal);
+		light = max(light,0.0);	//unnecessary if camera pos = light pos
+		//falloff
+		light/=0.7 + 3.0*dot(adjustedPos,adjustedPos);	//1st num some const to ensure light doesn't go inf at short dist
+													//guess maybe similar to some gaussian light source
+		gl_FragColor = vec4( fog*( vec3(light) + uFogColor.xyz )*uColor.xyz, 1.0) + (1.0-fog)*uFogColor;
+	}
+</script>
+<script id="shader-perpixel-discard-vs" type="x-shader/x-vertex">
+	attribute vec3 aVertexPosition;
+	attribute vec3 aVertexNormal;
+	uniform mat4 uMVMatrix;
+	uniform mat4 uPMatrix;
+	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
+	uniform vec3 uModelScale;
+	uniform vec4 uReflectorPos;
+	uniform float uReflectorRad;
+	varying float fog;
+	varying vec4 adjustedPos;
+	varying vec4 transformedNormal;
+	varying vec4 toReflector;
+	
+	void main(void) {	
+		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
+		vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
+		gl_Position = uPMatrix * transformedCoord;
+
+		transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
+		adjustedPos = transformedCoord - uDropLightPos;
+		
+		fog = 0.5*(1.0 + transformedCoord.w);
+		
+		toReflector = (transformedCoord - uReflectorPos)/uReflectorRad;
+	
+	}
+</script>
+
+
+
+
 <script id="shader-texmap-perpixel-fs" type="x-shader/x-fragment">
 	precision mediump float;
 	varying vec3 vTextureCoord;
