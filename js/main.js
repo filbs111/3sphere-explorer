@@ -1216,19 +1216,24 @@ var iterateMechanics = (function iterateMechanics(){
 			bullets[bb].iterate();
 		}
 		*/
+		
+		portalTest();
 	}
 })();
 
 function portalTest(){
-	var magsq = 1- playerCamera[15]*playerCamera[15];	
-	var mag = Math.sqrt(magsq);
-	var multiplier = Math.PI/mag;
-	var rotate = [playerCamera[3],playerCamera[7],playerCamera[11]].map(function(val){return multiplier*val});	
-	xyzrotate4mat(playerCamera, rotate);	//180 degree rotate about direction to reflector
+	if (playerCamera[15] > 1/Math.sqrt(1+reflectorInfo.rad*reflectorInfo.rad)){	//could keep things squared for speed
+		var magsq = 1- playerCamera[15]*playerCamera[15];	
+		var mag = Math.sqrt(magsq);
 	
-	multiplier = -2*Math.atan(reflectorInfo.rad)/mag;
-	var move = [playerCamera[3],playerCamera[7],playerCamera[11]].map(function(val){return multiplier*val});	
-	xyzmove4mat(playerCamera, move);
+		var multiplier = Math.PI/mag;
+		var rotate = [playerCamera[3],playerCamera[7],playerCamera[11]].map(function(val){return multiplier*val});	
+		xyzrotate4mat(playerCamera, rotate);	//180 degree rotate about direction to reflector
+		
+		multiplier = -2*Math.atan(reflectorInfo.rad)/mag;
+		var move = [playerCamera[3],playerCamera[7],playerCamera[11]].map(function(val){return multiplier*val});	
+		xyzmove4mat(playerCamera, move);
+	}
 }
 
 function movePlayer(vec){
