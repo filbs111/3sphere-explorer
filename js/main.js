@@ -315,14 +315,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//position of reflector in frame of camera (after MVMatrix transformation)
 	var reflectorPosTransformed = [worldCamera[3],worldCamera[7],worldCamera[11],worldCamera[15]];
 	
-	//this "radius" is distance between centre and edge of reflector in 4-space
-	//centre is like (0,1)
-	//edge is like normalize(radius,1)
-	var rsq = reflectorInfo.rad*reflectorInfo.rad;
-	var length = Math.sqrt(rsq + 1);
-	var dsq = 2 - 2/length;
-	var reflectorD = Math.sqrt(dsq);
-	
 	shaderProgramColored = guiParams["perPixelLighting"]?shaderProgramColoredPerPixelDiscard:shaderProgramColoredPerVertex;
 	shaderProgramTexmap = guiParams["perPixelLighting"]?shaderProgramTexmapPerPixelDiscard:shaderProgramTexmapPerVertex;
 	
@@ -345,7 +337,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
-	gl.uniform1f(activeShaderProgram.uniforms.uReflectorRad, reflectorD);	
+	gl.uniform1f(activeShaderProgram.uniforms.uReflectorRad, reflectorInfo.rad);	
 	
 	var boxSize = 0.1;
 	var boxRad = boxSize*Math.sqrt(3);
@@ -586,7 +578,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//TODO this only 
 	//if (activeShaderProgram.uniforms.uReflectorPos){
 		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
-		gl.uniform1f(activeShaderProgram.uniforms.uReflectorRad, reflectorD);	
+		gl.uniform1f(activeShaderProgram.uniforms.uReflectorRad, reflectorInfo.rad);	
 	//}
 	
 	if (guiParams["draw teapot"]){

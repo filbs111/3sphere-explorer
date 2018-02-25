@@ -215,7 +215,8 @@
 		
 		fog = 0.5*(1.0 + transformedCoord.w);
 		
-		toReflector = (transformedCoord - uReflectorPos)/uReflectorRad;
+		vec4 transformedCoordProj = transformedCoord / dot(transformedCoord,uReflectorPos);
+		toReflector = (transformedCoordProj - uReflectorPos)/uReflectorRad;
 	}
 </script>
 
@@ -371,7 +372,10 @@
 		float myZ = aVertexPositionNormalized.w;
 		vTextureCoord = vec3( aTextureCoord.st*myZ, myZ );
 		
-		toReflector = (transformedCoord - uReflectorPos)/uReflectorRad;
+		float dotIt = dot(transformedCoord,uReflectorPos);
+		vec4 transformedCoordProj = transformedCoord/ dotIt;
+		if (dotIt<0.0){transformedCoordProj -= 10.0*uReflectorPos;}	//fudge to prevent opposite portal effect
+		toReflector = (transformedCoordProj - uReflectorPos)/uReflectorRad;
 	}
 </script>
 
