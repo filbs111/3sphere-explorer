@@ -20,7 +20,7 @@ function initShaders(){
 					});
 	shaderProgramColoredPerPixelDiscard = loadShader( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs",{
 					attributes:["aVertexPosition","aVertexNormal"],
-					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uColor","uFogColor", "uModelScale","uReflectorPos","uReflectorRad"]
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uColor","uFogColor", "uModelScale","uReflectorPos","uReflectorCos"]
 					});				
 	
 	shaderProgramTexmapPerVertex = loadShader( "shader-texmap-vs", "shader-texmap-fs",{
@@ -33,7 +33,7 @@ function initShaders(){
 					});
 	shaderProgramTexmapPerPixelDiscard = loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs",{
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
-					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uModelScale","uReflectorPos","uReflectorRad"]
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uModelScale","uReflectorPos","uReflectorCos"]
 					});
 					
 	shaderProgramTexmap4Vec = loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs",{
@@ -314,6 +314,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//calculate stuff for discard shaders
 	//position of reflector in frame of camera (after MVMatrix transformation)
 	var reflectorPosTransformed = [worldCamera[3],worldCamera[7],worldCamera[11],worldCamera[15]];
+	var cosReflector = 1.0/Math.sqrt(1+reflectorInfo.rad*reflectorInfo.rad);
 	
 	shaderProgramColored = guiParams["perPixelLighting"]?shaderProgramColoredPerPixelDiscard:shaderProgramColoredPerVertex;
 	shaderProgramTexmap = guiParams["perPixelLighting"]?shaderProgramTexmapPerPixelDiscard:shaderProgramTexmapPerVertex;
@@ -337,7 +338,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
-	gl.uniform1f(activeShaderProgram.uniforms.uReflectorRad, reflectorInfo.rad);	
+	gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 	
 	var boxSize = 0.1;
 	var boxRad = boxSize*Math.sqrt(3);
@@ -578,7 +579,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//TODO this only 
 	//if (activeShaderProgram.uniforms.uReflectorPos){
 		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
-		gl.uniform1f(activeShaderProgram.uniforms.uReflectorRad, reflectorInfo.rad);	
+		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 	//}
 	
 	if (guiParams["draw teapot"]){
@@ -1013,14 +1014,14 @@ var guiParams={
 	"draw spaceship":false,
 	"drop spaceship":false,
 	"draw target":true,
-	"target scale":0.02,
+	"target scale":0.25,
 	"indiv targeting":true,
 	smoothMovement: true,
 	"culling":true,
 	"perPixelLighting":true,
 	fogColor:'#aaaaaa',
 	reflector:{
-		"draw":false,
+		"draw":true,
 		"mappingType":'vertex projection',
 		"scale":1.0
 	}
