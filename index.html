@@ -427,7 +427,8 @@
 	varying float fog;	//TODO remove (fog should be applied at cubemap generation (unless fog is exponential decay)
 	uniform vec3 uModelScale;
 	uniform mat4 uPosShiftMat;
-	
+	uniform float uPolarity;
+
 	void main(void) {
 		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));	//project 3d object onto 3sphere
 																//can avoid this by inputting 4vector positions *...
@@ -437,7 +438,7 @@
 		//gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0); // *... or can just use 1.0 without normalising? TODO try.
 		gl_Position = uPMatrix * transformedCoord;
 		
-		vPos = (uPosShiftMat*aVertexPositionNormalized).xyz;
+		vPos = uPolarity * (uPosShiftMat*aVertexPositionNormalized).xyz;
 	}
 </script>
 
@@ -451,6 +452,7 @@
 	uniform vec3 uModelScale;
 	uniform mat4 uPosShiftMat;
 	uniform vec3 uCentrePosScaled;	//this is position of cubemap centre point in unprojected model space
+	uniform float uPolarity;
 	
 	void main(void) {
 		float csq = dot(uCentrePosScaled,uCentrePosScaled);
@@ -465,7 +467,7 @@
 	
 		gl_Position = uPMatrix * transformedCoord;
 		
-		vPos = (uPosShiftMat*aVertexPositionNormalized).xyz;
+		vPos = uPolarity * (uPosShiftMat*aVertexPositionNormalized).xyz;
 	}
 </script>
 

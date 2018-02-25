@@ -43,12 +43,12 @@ function initShaders(){
 					
 	shaderProgramCubemap = loadShader( "shader-cubemap-vs", "shader-cubemap-fs",{
 					attributes:["aVertexPosition"],
-					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor","uModelScale", "uPosShiftMat"]
+					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor","uModelScale", "uPosShiftMat","uPolarity"]
 					});
 					
 	shaderProgramVertprojCubemap = loadShader( "shader-cubemap-vertproj-vs", "shader-cubemap-fs",{
 					attributes:["aVertexPosition"],
-					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor","uModelScale", "uPosShiftMat","uCentrePosScaled"]
+					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor","uModelScale", "uPosShiftMat","uCentrePosScaled","uPolarity"]
 					});
 }
 
@@ -199,10 +199,13 @@ function drawScene(frameTime){
 	
 	var mag = Math.sqrt(magsq);
 	//var correctionFactor = -angle/mag;
-	var correctionFactor = -Math.atan(reflectionCentreTanAngle)/mag;
-	var cubeViewShiftAdjusted = cubeViewShift.map(function(val){return val*correctionFactor});					
-	var cubeViewShiftAdjustedMinus = cubeViewShiftAdjusted.map(function(val){return -val});
-								
+	
+	var polarity = guiParams.reflector.isPortal? -1:1;
+	var correctionFactor = -polarity * Math.atan(reflectionCentreTanAngle)/mag;
+	var cubeViewShiftAdjusted = cubeViewShift.map(function(val){return val*correctionFactor});
+	var cubeViewShiftAdjustedMinus = cubeViewShiftAdjusted.map(function(val){return -polarity*val});
+	reflectorInfo.polarity=polarity;	
+	
 	//position within spherical reflector BEFORE projection
 	var correctionFactorB = reflectionCentreTanAngle/mag;
 	correctionFactorB/=reflectorInfo.rad;
@@ -745,6 +748,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [reflectorInfo.rad,reflectorInfo.rad, reflectorInfo.rad]);
+	
+		gl.uniform1f(activeShaderProgram.uniforms.uPolarity, reflectorInfo.polarity);
+		
 		mat4.set(invertedWorldCamera, mvMatrix);
 		if (frustrumCull(mvMatrix,reflectorInfo.rad)){
 			if(guiParams.reflector.mappingType == 'vertex projection'){
