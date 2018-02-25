@@ -234,7 +234,6 @@ function drawScene(frameTime){
 			var framebuffer = cubemapFramebuffer[ii];
 			gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
 			gl.viewport(0, 0, framebuffer.width, framebuffer.height);
-			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 			
 			mat4.identity(worldCamera);
 			
@@ -281,9 +280,7 @@ function drawScene(frameTime){
 	
 	setProjectionMatrix(pMatrix, 90.0, gl.viewportHeight/gl.viewportWidth);
 	frustrumCull = generateCullFunc(pMatrix);
-	
-	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-	
+		
 	mat4.set(playerCamera, worldCamera);	//set worldCamera to playerCamera
 
 	drawWorldScene(frameTime, false);
@@ -306,6 +303,11 @@ var usePrecalcCells=true;
 
 function drawWorldScene(frameTime, isCubemapView) {
 	
+	var localVecFogColor = isCubemapView ? [0.2,1.0,0.8,1] : vecFogColor;
+	
+	gl.clearColor.apply(gl,localVecFogColor);
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+			
 	var invertedWorldCamera = mat4.create();
 	mat4.set(worldCamera, invertedWorldCamera);
 	mat4.transpose(invertedWorldCamera);
@@ -335,7 +337,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//gl.enableVertexAttribArray(1);	//do need tex coords
 
 	gl.useProgram(activeShaderProgram);
-	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
+	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
 	gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
@@ -519,7 +521,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	activeShaderProgram = shaderProgramTexmap4Vec;
 	gl.useProgram(activeShaderProgram);
-	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
+	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
 	if (guiParams.drawShapes['x*x+y*y=z*z+w*w']){
@@ -567,7 +569,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	activeShaderProgram = shaderProgramColored;
 	gl.useProgram(activeShaderProgram);
-	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
+	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 	//gl.disableVertexAttribArray(1);	//don't need texcoords
 	
@@ -748,7 +750,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.9, 0.9, 0.9, 1.0]);	//grey
 		//gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
-		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, vecFogColor);
+		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [reflectorInfo.rad,reflectorInfo.rad, reflectorInfo.rad]);
 		mat4.set(invertedWorldCamera, mvMatrix);
@@ -1019,7 +1021,7 @@ var guiParams={
 	smoothMovement: true,
 	"culling":true,
 	"perPixelLighting":true,
-	fogColor:'#aaaaaa',
+	fogColor:'#222222',
 	reflector:{
 		"draw":true,
 		"mappingType":'vertex projection',
