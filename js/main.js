@@ -1024,7 +1024,7 @@ var guiParams={
 		draw:true,
 		mappingType:'vertex projection',
 		scale:1.0,
-		isPortal:false
+		isPortal:true
 	}
 };
 var vecFogColor = [1.0,0.0,0.0,1.0];
@@ -1218,6 +1218,18 @@ var iterateMechanics = (function iterateMechanics(){
 		*/
 	}
 })();
+
+function portalTest(){
+	var magsq = 1- playerCamera[15]*playerCamera[15];	
+	var mag = Math.sqrt(magsq);
+	var multiplier = Math.PI/mag;
+	var rotate = [playerCamera[3],playerCamera[7],playerCamera[11]].map(function(val){return multiplier*val});	
+	xyzrotate4mat(playerCamera, rotate);	//180 degree rotate about direction to reflector
+	
+	multiplier = -2*Math.atan(reflectorInfo.rad)/mag;
+	var move = [playerCamera[3],playerCamera[7],playerCamera[11]].map(function(val){return multiplier*val});	
+	xyzmove4mat(playerCamera, move);
+}
 
 function movePlayer(vec){
 	xyzmove4mat(playerCamera, vec);
