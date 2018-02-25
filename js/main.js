@@ -896,7 +896,7 @@ function setMatrixUniforms(shaderProgram) {
 
 var cubemapFramebuffer;
 var cubemapTexture;
-var cubemapSize = 1024;
+var cubemapSize = 512;
 //cube map code from http://www.humus.name/cubemapviewer.js (slightly modified)
 var cubemapFacelist;
 
