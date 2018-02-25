@@ -200,21 +200,13 @@ function drawScene(frameTime){
 	var mag = Math.sqrt(magsq);
 	//var correctionFactor = -angle/mag;
 	var correctionFactor = -Math.atan(reflectionCentreTanAngle)/mag;
-	
-	var cubeViewShiftAdjusted = [cubeViewShift[0]*correctionFactor,
-								cubeViewShift[1]*correctionFactor,
-								cubeViewShift[2]*correctionFactor];
-	var cubeViewShiftAdjustedMinus = [-cubeViewShift[0]*correctionFactor,
-								-cubeViewShift[1]*correctionFactor,
-								-cubeViewShift[2]*correctionFactor];
-
+	var cubeViewShiftAdjusted = cubeViewShift.map(function(val){return val*correctionFactor});					
+	var cubeViewShiftAdjustedMinus = cubeViewShiftAdjusted.map(function(val){return -val});
+								
 	//position within spherical reflector BEFORE projection
 	var correctionFactorB = reflectionCentreTanAngle/mag;
 	correctionFactorB/=reflectorInfo.rad;
-	reflectorInfo.centreTanAngleVectorScaled = [-cubeViewShift[0]*correctionFactorB,
-								-cubeViewShift[1]*correctionFactorB,
-								-cubeViewShift[2]*correctionFactorB];
-	
+	reflectorInfo.centreTanAngleVectorScaled = cubeViewShift.map(function(val){return -val*correctionFactorB});
 	
 	var reflectShaderMatrix = mat4.create();
 	mat4.identity(reflectShaderMatrix);
@@ -1023,13 +1015,15 @@ var guiParams={
 	"perPixelLighting":true,
 	fogColor:'#222222',
 	reflector:{
-		"draw":true,
-		"mappingType":'vertex projection',
-		"scale":1.0
+		draw:true,
+		mappingType:'vertex projection',
+		scale:1.0,
+		isPortal:false
 	}
 };
 var vecFogColor = [1.0,0.0,0.0,1.0];
 var teapotMatrix=mat4.create();mat4.identity(teapotMatrix);
+xyzmove4mat(teapotMatrix,[0,1.5,0]);
 var sshipMatrix=mat4.create();mat4.identity(sshipMatrix);
 var targetMatrix=mat4.create();mat4.identity(targetMatrix);
 var bullets=[];
@@ -1072,6 +1066,7 @@ function init(){
 	reflectorFolder.add(guiParams.reflector, "draw");
 	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection']);
 	reflectorFolder.add(guiParams.reflector, "scale", 0.2,4,0.2);
+	reflectorFolder.add(guiParams.reflector, "isPortal");
 	
 	window.addEventListener("keydown",function(evt){
 		//console.log("key pressed : " + evt.keyCode);
