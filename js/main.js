@@ -589,9 +589,13 @@ function drawWorldScene(frameTime, isCubemapView) {
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.1, 0.1, 0.1, 1.0]);	//DARK
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 	
-	if (guiParams["draw spaceship"]){
+	var drawFunc = guiParams["draw spaceship"]? drawSpaceship : drawBall;
+	
+	drawFunc(sshipMatrix);
+	
+	function drawSpaceship(matrix){
 		mat4.set(invertedWorldCamera, mvMatrix);
-		mat4.multiply(mvMatrix,sshipMatrix);		
+		mat4.multiply(mvMatrix,matrix);		
 		drawObjectFromBuffers(sshipBuffers, shaderProgramColored);
 		
 		//draw guns
@@ -612,7 +616,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		var rotvec = getRotFromPointing(pointingDir);
 		
 		if (guiParams["draw target"]){
-			rotvec = getRotBetweenMats(sshipMatrix, cellMatData.d16[0]);	//target in frame of spaceship.
+			rotvec = getRotBetweenMats(matrix, cellMatData.d16[0]);	//target in frame of spaceship.
 		}
 		
 		gunMatrices=[];
@@ -623,7 +627,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		function drawRelativeToSpacehip(vec){
 			var gunMatrix = mat4.create();
-			mat4.set(sshipMatrix, gunMatrix);
+			mat4.set(matrix, gunMatrix);
 			xyzmove4mat(gunMatrix,vec);
 			
 			
@@ -690,13 +694,16 @@ function drawWorldScene(frameTime, isCubemapView) {
 			}
 			return rotvec;
 		}
-	}else{
+		
+	}
+		
+	function drawBall(matrix){
 		//draw "light" object
 		var sphereRad = 0.04;
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [sphereRad,sphereRad,sphereRad]);
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [2.0, 2.0, 2.0, 2.0]);
 		mat4.set(invertedWorldCamera, mvMatrix);
-		mat4.multiply(mvMatrix,	sshipMatrix);
+		mat4.multiply(mvMatrix,	matrix);
 		if (frustrumCull(mvMatrix,sphereRad)){
 			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
 		}
