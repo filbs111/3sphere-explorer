@@ -590,7 +590,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	drawFunc(sshipMatrix);
 	
-	if (checkWithinReflectorRange(sshipMatrix, reflectorInfo.rad +0.1)){
+	if (checkWithinReflectorRange(sshipMatrix, Math.tan(Math.atan(reflectorInfo.rad) +0.1))){
 		var portaledMatrix = mat4.create();
 		mat4.set(sshipMatrix, portaledMatrix);
 		moveMatrixThruPortal(portaledMatrix, reflectorInfo.rad, 1);
