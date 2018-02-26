@@ -585,15 +585,24 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawObjectFromBuffers(teapotBuffers, shaderProgramColored);
 	}
 	
-	modelScale=0.002;
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.1, 0.1, 0.1, 1.0]);	//DARK
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 	
 	var drawFunc = guiParams["draw spaceship"]? drawSpaceship : drawBall;
 	
 	drawFunc(sshipMatrix);
 	
-	function drawSpaceship(matrix){
+	//var adjustedRad = reflectorInfo.rad +0.1;	//TODO add on radius of object that might be going through portal and test
+	
+	var portaledMatrix = mat4.create();
+	mat4.set(sshipMatrix, portaledMatrix);
+	moveMatrixThruPortal(portaledMatrix, reflectorInfo.rad, 1);
+	
+	drawFunc(portaledMatrix, sshipMatrix);
+	
+	function drawSpaceship(matrix, matrixForTargeting){
+		modelScale=0.002;
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.1, 0.1, 0.1, 1.0]);	//DARK
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+		
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,matrix);		
 		drawObjectFromBuffers(sshipBuffers, shaderProgramColored);
@@ -615,8 +624,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		var rotvec = getRotFromPointing(pointingDir);
 		
+		matrixForTargeting = matrixForTargeting || matrix;
+		
 		if (guiParams["draw target"]){
-			rotvec = getRotBetweenMats(matrix, cellMatData.d16[0]);	//target in frame of spaceship.
+			rotvec = getRotBetweenMats(matrixForTargeting, cellMatData.d16[0]);	//target in frame of spaceship.
 		}
 		
 		gunMatrices=[];
@@ -626,23 +637,27 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawRelativeToSpacehip([-gunHoriz,-gunVert,gunFront]);
 		
 		function drawRelativeToSpacehip(vec){
+			var gunMatrixCosmetic = mat4.create();
+			mat4.set(matrix, gunMatrixCosmetic);
+			xyzmove4mat(gunMatrixCosmetic,vec);
+			
 			var gunMatrix = mat4.create();
-			mat4.set(matrix, gunMatrix);
+			mat4.set(matrixForTargeting, gunMatrix);
 			xyzmove4mat(gunMatrix,vec);
 			
 			
 			if (guiParams["draw target"] && guiParams["indiv targeting"]){
-				rotvec = getRotBetweenMats(gunMatrix, cellMatData.d16[0]);
+				rotvec = getRotBetweenMats(matrixForTargeting, cellMatData.d16[0]);
 			}
 			
 			//rotate guns to follow mouse
-			xyzrotate4mat(gunMatrix, rotvec);		
+			xyzrotate4mat(gunMatrixCosmetic, rotvec);		
 				
-			xyzmove4mat(gunMatrix,[0,0,0.05]);	//move forwards
-			gunMatrices.push(gunMatrix);
+			xyzmove4mat(gunMatrixCosmetic,[0,0,0.05]);	//move forwards
+			gunMatrices.push(gunMatrixCosmetic);
 		
 			mat4.set(invertedWorldCamera, mvMatrix);
-			mat4.multiply(mvMatrix,gunMatrix);
+			mat4.multiply(mvMatrix,gunMatrixCosmetic);
 			
 			drawObjectFromBuffers(gunBuffers, shaderProgramColored);
 		}
@@ -1230,19 +1245,22 @@ var iterateMechanics = (function iterateMechanics(){
 
 function portalTest(){
 	var adjustedRad = reflectorInfo.rad +0.002;	//avoid issues with rendering very close to surface
-	
 	if (playerCamera[15] > 1/Math.sqrt(1+adjustedRad*adjustedRad)){	//could keep things squared for speed
-		var magsq = 1- playerCamera[15]*playerCamera[15];	
-		var mag = Math.sqrt(magsq);
-	
-		var multiplier = Math.PI/mag;
-		var rotate = [playerCamera[3],playerCamera[7],playerCamera[11]].map(function(val){return multiplier*val});	
-		xyzrotate4mat(playerCamera, rotate);	//180 degree rotate about direction to reflector
-		
-		multiplier = -2.001*Math.atan(adjustedRad)/mag;
-		var move = [playerCamera[3],playerCamera[7],playerCamera[11]].map(function(val){return multiplier*val});	
-		xyzmove4mat(playerCamera, move);
+		moveMatrixThruPortal(playerCamera, adjustedRad, 1.0005);
 	}
+}
+
+function moveMatrixThruPortal(matrix, rad, hackMultiplier){
+	var magsq = 1- matrix[15]*matrix[15];	
+	var mag = Math.sqrt(magsq);
+
+	var multiplier = Math.PI/mag;
+	var rotate = [matrix[3],matrix[7],matrix[11]].map(function(val){return multiplier*val});	
+	xyzrotate4mat(matrix, rotate);	//180 degree rotate about direction to reflector
+
+	multiplier = -2*hackMultiplier*Math.atan(rad)/mag;
+	var move = [matrix[3],matrix[7],matrix[11]].map(function(val){return multiplier*val});	
+	xyzmove4mat(matrix, move);
 }
 
 function movePlayer(vec){
