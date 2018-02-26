@@ -1222,7 +1222,7 @@ var iterateMechanics = (function iterateMechanics(){
 })();
 
 function portalTest(){
-	var adjustedRad = reflectorInfo.rad +0.001;	//avoid issues with rendering very close to surface
+	var adjustedRad = reflectorInfo.rad +0.002;	//avoid issues with rendering very close to surface
 	
 	if (playerCamera[15] > 1/Math.sqrt(1+adjustedRad*adjustedRad)){	//could keep things squared for speed
 		var magsq = 1- playerCamera[15]*playerCamera[15];	
@@ -1232,7 +1232,7 @@ function portalTest(){
 		var rotate = [playerCamera[3],playerCamera[7],playerCamera[11]].map(function(val){return multiplier*val});	
 		xyzrotate4mat(playerCamera, rotate);	//180 degree rotate about direction to reflector
 		
-		multiplier = -2*Math.atan(adjustedRad)/mag;
+		multiplier = -2.001*Math.atan(adjustedRad)/mag;
 		var move = [playerCamera[3],playerCamera[7],playerCamera[11]].map(function(val){return multiplier*val});	
 		xyzmove4mat(playerCamera, move);
 	}
