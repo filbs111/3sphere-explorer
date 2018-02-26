@@ -608,7 +608,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawObjectFromBuffers(sshipBuffers, shaderProgramColored);
 		
 		//draw guns
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.1,0.1,0.1]);
+		var gunScale = 50*modelScale;
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [gunScale,gunScale,gunScale]);
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.3, 0.3, 0.3, 1.0]);	//GREY
 
 		var gunHoriz = 0.04;
@@ -1244,7 +1245,7 @@ var iterateMechanics = (function iterateMechanics(){
 })();
 
 function portalTest(){
-	var adjustedRad = reflectorInfo.rad +0.002;	//avoid issues with rendering very close to surface
+	var adjustedRad = reflectorInfo.rad +0.003;	//avoid issues with rendering very close to surface
 	if (playerCamera[15] > 1/Math.sqrt(1+adjustedRad*adjustedRad)){	//could keep things squared for speed
 		moveMatrixThruPortal(playerCamera, adjustedRad, 1.0005);
 	}
