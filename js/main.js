@@ -590,16 +590,16 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	drawFunc(sshipMatrix);
 	
-	//var adjustedRad = reflectorInfo.rad +0.1;	//TODO add on radius of object that might be going through portal and test
+	if (checkWithinReflectorRange(sshipMatrix, reflectorInfo.rad +0.1)){
+		var portaledMatrix = mat4.create();
+		mat4.set(sshipMatrix, portaledMatrix);
+		moveMatrixThruPortal(portaledMatrix, reflectorInfo.rad, 1);
 	
-	var portaledMatrix = mat4.create();
-	mat4.set(sshipMatrix, portaledMatrix);
-	moveMatrixThruPortal(portaledMatrix, reflectorInfo.rad, 1);
-	
-	drawFunc(portaledMatrix, sshipMatrix);
+		drawFunc(portaledMatrix, sshipMatrix);
+	}	
 	
 	function drawSpaceship(matrix, matrixForTargeting){
-		modelScale=0.002;
+		modelScale=0.001;
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.1, 0.1, 0.1, 1.0]);	//DARK
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 		
@@ -612,9 +612,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [gunScale,gunScale,gunScale]);
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.3, 0.3, 0.3, 1.0]);	//GREY
 
-		var gunHoriz = 0.04;
-		var gunVert = 0.02;
-		var gunFront = 0.01;
+		var gunHoriz = 20*modelScale;
+		var gunVert = 10*modelScale;
+		var gunFront = 5*modelScale;
 
 		var mousP=mouseInfo.currentPointingDir;
 		var gunAngRangeVert = 0.16;	//quite small else individual gun targeting can make guns clash TODO avoid this.
@@ -654,7 +654,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			//rotate guns to follow mouse
 			xyzrotate4mat(gunMatrixCosmetic, rotvec);		
 				
-			xyzmove4mat(gunMatrixCosmetic,[0,0,0.05]);	//move forwards
+			xyzmove4mat(gunMatrixCosmetic,[0,0,25*modelScale]);	//move forwards
 			gunMatrices.push(gunMatrixCosmetic);
 		
 			mat4.set(invertedWorldCamera, mvMatrix);
@@ -1246,9 +1246,13 @@ var iterateMechanics = (function iterateMechanics(){
 
 function portalTest(){
 	var adjustedRad = reflectorInfo.rad +0.003;	//avoid issues with rendering very close to surface
-	if (playerCamera[15] > 1/Math.sqrt(1+adjustedRad*adjustedRad)){	//could keep things squared for speed
+	if (checkWithinReflectorRange(playerCamera, adjustedRad)){	
 		moveMatrixThruPortal(playerCamera, adjustedRad, 1.0005);
 	}
+}
+
+function checkWithinReflectorRange(matrix, rad){
+	return matrix[15]>1/Math.sqrt(1+rad*rad);
 }
 
 function moveMatrixThruPortal(matrix, rad, hackMultiplier){
