@@ -289,7 +289,7 @@ function setProjectionMatrix(pMatrix, vFov, ratio, polarity){
 	pMatrix[0] = ratio/fy ;
 	pMatrix[5] = 1.0/fy;
 	pMatrix[11]	= -1;	//rotate w into z.
-	pMatrix[14] = -0.01;	//smaller = more z range. 1/50 gets ~same near clipping result as stereographic/perspective 0.01 near
+	pMatrix[14] = -0.0001;	//smaller = more z range. 1/50 gets ~same near clipping result as stereographic/perspective 0.01 near
 	pMatrix[10]	= 0;
 	pMatrix[15] = 0;
 }
@@ -1190,7 +1190,7 @@ function init(){
 
 var iterateMechanics = (function iterateMechanics(){
 	var lastTime=(new Date()).getTime();
-	var moveSpeed=0.01;
+	var moveSpeed=0.002;
 	var rotateSpeed=-0.01;
 
 	return function(){
