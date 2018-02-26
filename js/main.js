@@ -118,7 +118,7 @@ function initBuffers(){
 	var gunObject = loadBlenderExport(guncyldata.meshes[0]);
 	var icoballObj = loadBlenderExport(icoballdata);
 
-	loadBufferData(sphereBuffers, makeSphereData(61,32,1));
+	loadBufferData(sphereBuffers, makeSphereData(99,200,1)); //todo use normalized box or icosohedron
 	loadBufferData(cubeBuffers, levelCubeData);
 	loadBufferData(cubeFrameBuffers, cubeFrameBlenderObject);
 	loadBufferData(cubeFrameSubdivBuffers, cubeFrameSubdivObject);
@@ -1222,7 +1222,9 @@ var iterateMechanics = (function iterateMechanics(){
 })();
 
 function portalTest(){
-	if (playerCamera[15] > 1/Math.sqrt(1+reflectorInfo.rad*reflectorInfo.rad)){	//could keep things squared for speed
+	var adjustedRad = reflectorInfo.rad +0.001;	//avoid issues with rendering very close to surface
+	
+	if (playerCamera[15] > 1/Math.sqrt(1+adjustedRad*adjustedRad)){	//could keep things squared for speed
 		var magsq = 1- playerCamera[15]*playerCamera[15];	
 		var mag = Math.sqrt(magsq);
 	
@@ -1230,7 +1232,7 @@ function portalTest(){
 		var rotate = [playerCamera[3],playerCamera[7],playerCamera[11]].map(function(val){return multiplier*val});	
 		xyzrotate4mat(playerCamera, rotate);	//180 degree rotate about direction to reflector
 		
-		multiplier = -2*Math.atan(reflectorInfo.rad)/mag;
+		multiplier = -2*Math.atan(adjustedRad)/mag;
 		var move = [playerCamera[3],playerCamera[7],playerCamera[11]].map(function(val){return multiplier*val});	
 		xyzmove4mat(playerCamera, move);
 	}
