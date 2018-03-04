@@ -1,0 +1,2740 @@
+`9 september. double objects.
+`idea to use 2 objects - one for shader rendering for when ray goes more than halfway around the world.
+`any pixel on object is only rendered in one direction (because fov<180), but for one object, may need both of these objects.
+
+`objects that are crossing player's "in front" and "behind" division may appear partially as one and partially as the other.
+
+
+Rem Project: hypersphere thing
+Rem Created: 24/03/2009 00:25:15
+
+Rem ***** Main Source File *****
+
+#constant blendmode 25
+
+`prelim stuff
+sync on:sync rate 100:autocam off
+`sync rate 0
+
+
+
+`from IanM .....
+hdc as dword
+load dll "user32.dll",1
+load dll "gdi32.dll", 2
+w=call dll(1,"GetSystemMetrics",0)
+y=call dll(1,"GetSystemMetrics",1)
+hdc=call dll(1, "GetDC", 0)               ` Get the device context for the entire display
+d=call dll(2, "GetDeviceCaps", hdc, 12)   ` Get the 'bits per pixel' setting
+call dll 1, "ReleaseDC", 0, hdc           ` Release the device context
+`print x:print y:print d
+`delete dll 1  `still want this to do get active window
+delete dll 2
+
+set display mode w,y,d,0       `seems slow with full resolution (framerate)
+set camera aspect 1.777
+
+`set display mode 640,480,32,0 `for YT vid capture
+`sync rate 25
+
+`set display mode 1280,720,32
+`set camera aspect 1.6666   `now got a 16:9 monitor..
+
+`let's just use lower res so can cap a yt vid.
+````set display mode 640,480,32
+````set camera aspect 1.3333
+
+`set display mode 640,360,32
+`set camera aspect 1.6666
+sync rate 0
+
+position camera 0,0,0:set camera range 0.1,10000.0:point camera 1,0,0
+`set camera fov 60
+set camera fov 75
+`set camera fov 140
+
+`TEST HS SHADER
+set camera range 0.01,10000.0
+
+
+
+`set ambient light 50:point light 0,1,0,0:color light 0,rgb(128,128,128)
+set normalization on
+
+
+
+`try usng light instead of fog
+`set ambient light 0
+`color ambient light rgb(0,255,255)
+
+
+`switch off light 0  `-apparently light 0 is rubbish!
+color light 0,0
+make light 1
+set point light 1,0,0,0
+set light range 1,250
+`set light range 1,1000   `make bigger for easier debugging
+
+`a light so can see distant objects
+make light 7
+point light 7,0,0,0
+set light range 7,2000
+color light 7,rgb(100,0,0)
+
+color backdrop 0  `not sure how to make "light fogging" any colour other than black
+
+`decrease standard light range so can have an extra light
+color light 1,rgb(90,140,140)
+
+`add in a light that I can drop at some postion. use a decal for it.
+make light 2
+color light 2,0
+`add in another light for explosion
+make light 3
+color light 3,0:set point light 3,0,0,0   `defaults not really required if am going to set them before 1st sync.
+
+
+`color ambient light rgb(255,255,255)  `<- not sure how to use light as fog. think untextured objects (coloured) have an
+                                 `effect like this.
+fog off
+set ambient light 0   `?!!
+
+
+`using 4x4 to describe position and orientation.
+
+`1st column - position on hypersphere
+`next 3 columns - rotation.
+
+`to get on 4 matrix relative to another, do M1T M2 - matrix 1 transposed x matrix 2
+`um - i think!!
+
+global numboxes
+`numboxes=200
+numboxes=150   `decrease # for testing.
+
+`dim mat4#(numboxes,3,3)   `whole rotation and position.
+                     `for points, only position (1st column) is required..
+
+dim posw#(numboxes+100,3)  `position in world - relative to camera..
+
+dim mat4w#(numboxes,3,3)  `relative to camera..
+
+dim mat4t#(1,3,3)  `temporary 4matrices for generating random rotations
+dim mat4r#(3,3)   `cold use an entry in above, but this makes code more readable.
+                  `r stands for reflection
+dim vector4#(3)   `could use temp#(3) for this too, but this makes code more readable
+
+dim temp#(3)
+
+dim Euler#(3)  `because can't pass DBP rotation matrix- have to use hellishly complicated
+         `formula to get euler angles, which DBP then internally converts back to your
+         `rotation matrix - extemely irritating!
+
+dim quats(1200,3) as float `quaternions   `was 450 then added in extra - 2 for each asteroid!! (l,r)
+dim matrices(702,3,3) as float   `matrices as used in functions from "quaternions test" project.
+                                 `was 400. changed to 700 so can have 200 (501 to 700) "velocity" matrices
+                                 `maybe later will just want to use velocity quaternions - smaller and can normalise.
+                                 `for the mo, just use matrix multiplication to apply speed...
+
+
+dim ObjectScale(1000) as float   `can't find a DB command to get object scale. This seems pretty intuitive and useful,
+                        `I could make more efficient workaround, but use this for now.
+
+   `pretty redundant, since have mat4 array, but just get it working first. make it efficient
+   `if can do that!
+
+`build camera matrix
+`think this unnecessary now
+REMSTART
+matrices(0, 0, 0) = 1 : matrices(0, 1, 0) = 0 : matrices(0, 2, 0) = 0 : matrices(0, 3, 0) = 0
+matrices(0, 0, 1) = 0 : matrices(0, 1, 1) = 1 : matrices(0, 2, 1) = 0 : matrices(0, 3, 1) = 0
+matrices(0, 0, 2) = 0 : matrices(0, 1, 2) = 0 : matrices(0, 2, 2) = 1 : matrices(0, 3, 2) = 0
+matrices(0, 0, 3) = 0 : matrices(0, 1, 3) = 0 : matrices(0, 2, 3) = 0 : matrices(0, 3, 3) = 1
+REMEND
+`make matrices for other points. will represent these points by spheres- since haven't
+`got code to get world rotations yet..
+
+
+
+`LOAD MODEL
+mymesh=500
+mymesh2=501
+mymesh3=502
+
+mymeshd1=503   `for decals
+mymeshd2=504
+mymeshd3=505
+mymeshd4=506
+
+mymesht=1
+mymesht2=11
+`mymesht3=12
+
+`load object "tessa_5pc.x",mymesh
+`load object "Rock01.x",mymesh
+`load object "sphr_ast2s.x",mymesh
+
+`load object "50poly_ast.x",mymesh
+`make object cube mymesh,10
+`load object "teap1.x",mymesh
+`load object "crosss.x",mymesh
+load object "test2.x",mymesh
+`
+`load image "Marble_107_seamless_sample.jpg",mymesht
+`load image "RockyL.JPG",mymesht2
+load image "3334.jpg",mymesht
+
+`load image "RockyLdesat.JPG",mymesht
+set object radius mymesh,-1
+
+texture object mymesh,mymesht
+`set blend mapping on mymesh,1,mymesht,3,blendmode `try modes 5,6..
+set blend mapping on mymesh,1,mymesht,3,25
+
+
+
+`load object "Rock01.x",mymesh2
+`load object "sphr_ast2s.x",mymesh2
+
+`load object "50poly_ast.x",mymesh2
+
+make object cube mymesh2,10
+scale object mymesh2,60,650,60
+make mesh from object mymesh2,mymesh2
+delete object mymesh2
+make object mymesh2,mymesh2,0
+delete mesh mymesh2
+
+``load image "RockyL.JPG",mymesht2
+set object radius mymesh2,-1
+
+``texture object mymesh2,mymesht2
+texture object mymesh2,mymesht
+``set blend mapping on mymesh2,1,mymesht2,3,25
+set blend mapping on mymesh2,1,mymesht,3,25
+
+`load object "Rock01.x",mymesh3
+``load object "sphr_ast2s.x",mymesh3
+make object cube mymesh3,10
+
+
+`load image "sand_2.jpg",mymesht3
+``load image "RockyL.JPG",mymesht3
+REMSTART
+load object "sub_rad1600.x",mymesh3
+scale object mymesh3,1,1,1
+make mesh from object mymesh3,mymesh3
+delete object mymesh3
+make object mymesh3,mymesh3,0
+delete mesh mymesh3
+REMEND
+
+set object radius mymesh3,-1
+`texture object mymesh3,mymesht3
+texture object mymesh3,mymesht
+``set blend mapping on mymesh3,1,mymesht3,3,25
+set blend mapping on mymesh3,1,mymesht,3,25
+
+`if spacekey()
+`set blend mapping on
+
+
+`load object "tessa1.x",mymesh
+`scale object mymesh,1,1,1
+`make mesh from object mymesh,mymesh
+`delete object mymesh
+`make object mymesh,mymesh,0
+`delete mesh mymesh
+
+`load object "sub_rad1600.x",mymesh  `why obj not loading??
+`load mesh "sub_rad1600.x",mymesh   `BECAUSE HAD EXCLUDED .x conv in ini file!!!!
+hide object mymesh
+hide object mymesh2
+hide object mymesh3
+exclude object on mymesh
+exclude object on mymesh2
+exclude object on mymesh3
+
+`TEST
+`ghost object on mymesh
+`ghost object on mymesh2
+`ghost object on mymesh3
+
+
+`now we have our points!!`
+`now want some spheres to represent them in the world
+
+
+
+`centre of island?
+qislandpos=1
+rand_quat_b(qislandpos)
+qrotationL=2
+qrotationR=3
+totalqL=4
+totalqR=5
+qsmallmove=6
+qtotalmoveL=7
+qtotalmoveR=8
+
+REMSTART
+for n=1 to 30  `make an island??
+   instance object n,mymesh
+   `how to have random orientation, but clustered position???
+   `can i extract position, rotation parts from the L,R quaternions??
+
+
+   `first I want a pure random ROTATION quaternion pair!
+   `I think that's one where the 1,2,3 components are mirrored and the 0 component not..
+
+   `then apply movement quaternion (standard) plus random SMALL movement quaternion.
+   `can get total either by adding and normalising, or applying quats in sequence.
+
+   rand_quat_b(qrotationL)
+   quats(qrotationR,0)=quats(qrotationL,0)      `MAKE CONJUGATE. COULD USE FUN FOR THIS.
+   quats(qrotationR,1)=-quats(qrotationL,1)
+   quats(qrotationR,2)=-quats(qrotationL,2)
+   quats(qrotationR,3)=-quats(qrotationL,3)
+
+
+`now want to make a bigger ball!
+`better to have code for random 3-vector, but this will make a cubey thing..
+tot#=0.0
+for c=1 to 3
+   quats(qsmallmove,c)=0.001*(rnd(200)-100)
+   inc tot#,quats(qsmallmove,c)*quats(qsmallmove,c)
+next c
+quats(qsmallmove,0)=sqrt(1.0-tot#*tot#)
+
+_multiply_quaternions(qtotalmoveL,qsmallmove,qislandpos)  `SMALL MOVE THEN BIG   `nb rand rotation before, so doesn't really matter
+_multiply_quaternions(qtotalmoveR,qislandpos,qsmallmove)   `about having different L,R parts. (i think) - can just take as a pure movement.
+
+`qtotalmoveL=qislandpos   `no small move
+`qtotalmoveR=qislandpos
+_multiply_quaternions(totalqL,qrotationL,qtotalmoveL)  `ROTATE THEN MOVE
+_multiply_quaternions(totalqR,qtotalmoveR,qrotationR)
+`^^ above works fine - makes a ball of randomly oriented thingys.
+
+
+`maybe i have messed up and my quaternions are no longer unit length.
+`are getting wierd stuff with conversion to euler
+normalise_quat(totalqL)
+normalise_quat(totalqR)
+
+_convert_quats_to_4matrix(totalqL,totalqR,n)
+   `now are using different arrays, so copy across.
+   for a=0 to 3
+   for b=0 to 3
+      matrices(n, a, b ) = matrices(n,a,b)
+   next b
+   next a
+
+   `velocity matrix?
+   `use temporary movequat
+   movequat=3  `just a random number
+   _make_random_quaternion(movequat)   `better to have code for random 3-vector, but don't have this to hand
+   quats(movequat,0)=10000.0
+   normalise_quat(movequat)
+_copy_quaternion(movequat,1001+n) `guess at a useable range `THIS MIGHT BE USEFUL NOW!
+
+   `remember it so can give explosions momentum?
+  ` _copy_quaternion(movequat,800+n) `guess at a useable range
+`actually, need a different quat. want one that transforms the co-ordinates
+`if we get matrix before and matrix after, and divide POSITION row (or col?) quaternions..
+`basically, initial is diagonal - so what we need is row/column 0 of velocity MATRIX..
+
+`   _init_quaternion(movequat,1.0,0.0,0.0,0.0) `test making velocities 0?
+   _convert_quats_to_4matrix(movequat,movequat,n+500) `"velocity" matrix
+
+
+
+next n
+REMEND
+
+`make a line of boxes..
+for n=1 to 30
+   instance object n,mymesh2
+
+   moveup#=360.0*( (n+0.5) / 20.0)
+   c#=cos(moveup#)
+   s#=sin(moveup#)
+
+ `  quats(n,0)=c#
+ ` quats(n,1)=0.0
+ ` quats(n,2)=s#
+ ` quats(n,3)=0.0
+_init_quaternion(1,c#,0.0,s#,0.0)
+`_init_quaternion(2,c#,0.0,s#,0.0)
+_convert_quats_to_4matrix(1,1,n)
+
+  `not sure if need this stuff- am copying bits from "generate ball of asteroids" code.
+  movequat=3   `just a random number
+  _init_quaternion(movequat,1.0,0.0,0.0,0.0) `test making velocities 0?
+_copy_quaternion(movequat,1001+n) `guess at a useable range `THIS MIGHT BE USEFUL NOW!
+  _convert_quats_to_4matrix(movequat,movequat,n+500) `"velocity" matrix
+
+
+next n
+
+
+
+
+for n=31 to numboxes-60
+   select rnd(1)
+   case 0
+      `make object sphere n,20,10,20
+      instance object n,mymesh
+   endcase
+   case 1
+      `make object box n,20,4,4
+      instance object n,mymesh
+   endcase
+   case 2
+      `make object cube n,10
+      instance object n,mymesh3
+   endcase
+   endselect
+
+   REMSTART
+ `      color object n,rgb(100+rnd(155),100+rnd(155),100+rnd(155))
+   w=rnd(359)
+`   color object n,rgb(128+127*cos(w),128+127*cos(w+120),128+127*cos(w-120))
+single_pixel_image(n,int(128+127*cos(w)),int(128+127*cos(w+120)),int(128+127*cos(w-120)),255)
+texture object n,n
+REMEND
+
+   `make_random_rotation_matrix(n)  `this superceded by below. old func was fine, but new is more elegant and uses
+                                       `quaternions
+   rand_quat_b(1)
+   rand_quat_b(2)
+   _convert_quats_to_4matrix(1,2,n)
+   `now are using different arrays, so copy across.
+`   for a=0 to 3
+`   for b=0 to 3
+`      matrices(n, a, b ) = matrices(n,a,b)
+`   next b
+`   next a
+
+
+   `velocity matrix?
+   `use temporary movequat
+   movequat=3  `just a random number
+   _make_random_quaternion(movequat)   `better to have code for random 3-vector, but don't have this to hand
+   quats(movequat,0)=1000.0
+   normalise_quat(movequat)
+
+   _init_quaternion(movequat,1.0,0.0,0.0,0.0) `TEST make velocities 0
+
+   `remember it so can give explosions momentum?
+   _copy_quaternion(movequat,1001+n) `guess at a useable range `THIS MIGHT BE USEFUL NOW!
+
+   _convert_quats_to_4matrix(movequat,movequat,n+500) `"velocity" matrix
+
+
+
+next n
+
+
+
+
+REMSTART
+
+`replace object 1 with one with different texture
+delete object 1
+make object cube 1,10
+load image "3334.jpg",100  `load up test image so can use for a single object
+texture object 1,100
+`set blend mapping on 1,1,1000,3,25
+
+REMEND
+load image "3334b.jpg",1000
+`special hypersphere shader!!
+`load effect "FX/world object test 4c.fx",1,0
+`load effect "FX/24aug.fx",1,0
+`load effect "FX/24augzd.fx",1,0
+`load effect "FX/24augzdw.fx",1,0
+load effect "FX/8sept.fx",1,0
+load effect "FX/8septreverse2.fx",2,0   `-ve position output to screen
+                                       `going to change it to take input of reverse position (put in -ve
+                                       `position in DBP because think there is annoying auto culling happening
+for n=1 to numboxes-60
+    o2=2000+n
+    o3=3000+n  `opposite version.
+    clone object o2,n    `maybe i can instance. not sure how instancing workds with shader yet
+    clone object o3,o2
+    `make object cube o3,0.01
+    set object effect o2,1
+    set object effect o3,2
+    scale object o2,1,1,1
+    scale object o3,1,1,1
+    `disable object zdepth 2000 `because uses different depth system to what currently using.
+                               `hopefully will still allow it to render correctly on it's own!!
+
+   `if rnd(3)=0 then
+   if n=40 then texture object o3,0,1000 `make blue?
+   if n=40 then texture object o2,0,1000 `make blue?
+next n
+`IDEA! use set object effect to switch between different effects - one for objects less than a quarter the way around,
+`and the other for more. This way perhaps can avoid jittery motion of objects on opposite side of world.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+remstart
+for n=1 to numboxes-60
+
+`R`EMSTART
+for c=0 to 3
+   quats(q,c)=matrices(n+500,0,c)  `doesn't work yet!!
+next c
+`conjugate?
+`for c=1 to 3
+`   quats(q,c)=-quats(q,c)
+`next c
+`R`EMEND
+
+`probably an elegant, short way to calculate this!
+`but for now, just hack it out easy and sloppy way!
+
+_calculate_decal_speedquat_for_target(n)
+
+next n
+remend
+
+
+`load image "3334.jpg",1
+`for n=1 to numboxes-60
+`texture object n,1   `OVERRIDE!
+`next n
+
+
+
+`make some decal objects!!
+`hopefully euler rotation will work out nicely.
+`cam direction is x.
+`so could work! rotate about z, then about y(up), then about x.
+
+`with decals, rotation - ie full 4x4 rotation matrix, has no sense
+`single quaternion sufficient to tell position.
+
+`how to implement? could adapt full random 4matrix position/rotation
+`then just keep track of rolling to stop decals spinning.
+`may be more efficient way - like just keeping move quaternion.
+
+`load image "a2.jpg",numboxes+1
+`white_light_tex=2:load image "ls1-256.jpg",white_light_tex
+
+red_light_tex=3
+green_light_tex=4
+blue_light_tex=5
+
+load image "red_star.jpg",red_light_tex   `numboxes-1
+load image "green_star.jpg",green_light_tex  `numboxes-2
+load image "blue_star.jpg",blue_light_tex `numboxes
+
+
+n=mymeshd4
+make object plain n,5,5:yrotate object n,180:fix object pivot n
+``texture object n,white_light_tex
+``ghost object on n
+``disable object zwrite n
+``hide object n
+``exclude object on n
+``set object light n,0 `make fully lit
+
+`now using vertexdata stuff. (for distance fade / fog)
+`can't instance objects.
+
+make mesh from object n,n
+delete object n
+m=n
+
+for n=numboxes+1 to numboxes+16
+   rand_quat_b(n) `movement quaternion
+   `make object cube n,10
+
+   `make object plain n,20,20:yrotate object n,180:fix object pivot n
+   `texture object n,white_light_tex
+   `ghost object on n
+   `disable object zwrite n
+
+ ```  instance object n,mymeshd4
+   ` make object n,m,white_light_tex
+    make object n,m,blue_light_tex
+   ghost object on n
+   disable object zwrite n
+
+next n
+
+dim remember_spin#(numboxes+100) `for decals
+
+
+
+`inefficient but don't know which ones are using!
+for n=0 to 400
+_init_quaternion(n,1.0,0.0,0.0,0.0)
+next n
+
+for n=401 to 600
+`_init_quaternion(n,1.0,0.0,0.0,0.0) `test making velocities 0?
+next n
+
+`initialisation of quats messed up our decals!!
+for n=numboxes+1 to numboxes+16
+   rand_quat_b(n) `movement quaternion
+next n
+
+
+`make a line of boxes..
+`use decals inastead.
+
+
+remstart
+n=mymeshd1
+make object plain n,10,10:yrotate object n,180:fix object pivot n
+texture object n,blue_light_tex
+ghost object on n
+disable object zwrite n
+hide object n
+exclude object on n
+set object light n,0 `make fully lit
+
+n=mymeshd2
+make object plain n,10,10:yrotate object n,180:fix object pivot n
+texture object n,red_light_tex
+ghost object on n
+disable object zwrite n
+hide object n
+exclude object on n
+set object light n,0 `make fully lit
+
+n=mymeshd3
+make object plain n,10,10:yrotate object n,180:fix object pivot n
+texture object n,green_light_tex
+ghost object on n
+disable object zwrite n
+hide object n
+exclude object on n
+set object light n,0 `make fully lit
+remend
+
+REMSTART
+`make a line of boxes..
+for n=numboxes-59 to numboxes-40
+
+instance object n,mymeshd3
+
+   moveup#=360.0*( (n+0.5) / 20.0)
+   c#=cos(moveup#)
+   s#=sin(moveup#)
+
+   quats(n,0)=c#
+  quats(n,1)=0.0
+  quats(n,2)=s#
+  quats(n,3)=0.0
+
+next n
+
+
+for n=numboxes-39 to numboxes-20
+
+   instance object n,mymeshd2
+
+   movefwd#=360.0*( (n+0.5) / 20.0)
+   c#=cos(movefwd#)
+   s#=sin(movefwd#)
+
+  quats(n,0)=c#
+  quats(n,1)=s#
+  quats(n,2)=0.0
+  quats(n,3)=0.0
+
+next n
+
+
+for n=numboxes-19 to numboxes
+
+
+instance object n,mymeshd1
+
+ `  make object box n,5,5,20
+`   make object sphere n,5,5,7
+`   single_pixel_image(n,100,100,255,255)
+ `  texture object n,n
+
+`   for a=0 to 3:for b=0 to 3
+`      matrices(n, a, b)=matrices(0, a, b)
+`   next b:next a
+
+   moveleft#=360.0*( (n+0.5) / 20.0)
+   c#=cos(moveleft#)
+   s#=sin(moveleft#)
+`   for t=0 to 3
+`      temp#(t)=matrices(n, 0, t)
+`      matrices(n, 0, t) = matrices(n, 0, t) * c# + matrices(n, 3, t) * s#
+`      matrices(n, 3, t)= matrices(n, 3, t) * c# - temp#(t) * s#
+`   next t
+   quats(n,0)=c#
+   quats(n,1)=0.0
+   quats(n,2)=0.0
+   quats(n,3)=s#
+
+next n
+REMEND
+
+remstart
+`make a line of boxes..
+for n=numboxes-59 to numboxes-40
+   instance object n,mymeshd3
+next n
+for n=numboxes-39 to numboxes-20
+   instance object n,mymeshd2
+next n
+for n=numboxes-19 to numboxes
+   instance object n,mymeshd1
+next n
+remend
+`make a line of boxes..
+for n=numboxes-59 to numboxes-40
+   make object n,m,blue_light_tex
+next n
+for n=numboxes-39 to numboxes-20
+   make object n,m,red_light_tex
+next n
+for n=numboxes-19 to numboxes
+   make object n,m,green_light_tex
+next n
+for n=numboxes-59 to numboxes
+   ghost object on n
+   disable object zwrite n
+next n
+delete mesh m
+
+`enable switching thru different axes
+DIM axispoints(59,3) as float  `1st is point #, 2nd is the coord (w,x,y,z)
+for n=0 to 19
+   moveup#=360.0*( (n+0.5) / 20.0)
+   c#=cos(moveup#)
+   s#=sin(moveup#)
+   axispoints(n,0)=c#
+  axispoints(n,1)=0.0
+  axispoints(n,2)=s#
+  axispoints(n,3)=0.0
+next n
+for n=20 to 39
+   movefwd#=360.0*( (n+0.5) / 20.0)
+   c#=cos(movefwd#)
+   s#=sin(movefwd#)
+  axispoints(n,0)=c#
+  axispoints(n,1)=s#
+  axispoints(n,2)=0.0
+  axispoints(n,3)=0.0
+next n
+for n=40 to 59
+   moveleft#=360.0*( (n+0.5) / 20.0)
+   c#=cos(moveleft#)
+   s#=sin(moveleft#)
+   axispoints(n,0)=c#
+   axispoints(n,1)=0.0
+   axispoints(n,2)=0.0
+   axispoints(n,3)=s#
+next n
+`now cycle to get
+`^^^ unnecessary! can cycle axes anyway!
+_set_axispoints(0)
+
+
+
+
+
+
+global player_qL
+global player_qR
+player_qL=100   `player's quaternion!
+player_qR=101
+_init_quaternion(player_qL,1.0,0.0,0.0,0.0)
+_init_quaternion(player_qR,1.0,0.0,0.0,0.0)
+
+
+
+expl_im=6
+load image "explosion12.png",expl_im
+expl_test_obj=700
+make object plain expl_test_obj,20,20
+
+REMSTART
+yrotate object expl_test_obj,180:fix object pivot expl_test_obj
+`move closer to cam?
+offset limb expl_test_obj,0,0,0,5
+
+`position object expl_test_obj,0,0,50
+`lock object on expl_test_obj
+texture object expl_test_obj,expl_im
+`set alpha mapping on expl_test_obj,100
+ghost object on expl_test_obj:disable object zwrite expl_test_obj:set object light expl_test_obj,0
+REMEND
+`^^ not required when making mesh etc.
+`should figure out how to rotate, offset before meshing!
+
+offset limb expl_test_obj,0,0,0,-5
+scale object texture expl_test_obj,0.125,0.125  `1/8th
+
+`make numerous explosion objects
+make mesh from object expl_test_obj,expl_test_obj
+delete object expl_test_obj
+
+expl_test_obj_o=expl_test_obj
+
+`===================
+next_shot=0
+dim shot_active(7)
+velquat0=420
+velquat_e0=428 `for explosions
+num_shots_m1=7
+shot_obj0=numboxes+1
+for n=0 to num_shots_m1
+   o=shot_obj0+n
+``   delete object o       `<< make do with white ball for the moment!
+``   instance object o,mymeshd1 `blue ball
+next n
+`===================
+
+expl_test_obj=shot_obj0+num_shots_m1+1   `now fitting into array of decals..
+
+num_expl_m1=7   `49
+`expl_x=0
+`expl_y=0
+`expl_texnum=0  `8x8=64 textures
+dim expl_x(num_expl_m1)
+dim expl_y(num_expl_m1)
+dim expl_texnum(num_expl_m1)
+next_exp=0
+for n=0 to num_expl_m1
+   o=expl_test_obj+n
+   if object exist(o) then delete object o   `because stuffing into decals.
+   make object o,expl_test_obj_o,expl_im
+   yrotate object o,180:fix object pivot o   `not kept when do the mesh thing?
+   `offset limb o,0,0,0,5
+   `scale object texture expl_test_obj+n,0.125,0.125  `1/8th
+   ghost object on o:disable object zwrite o:set object light o,0
+   expl_texnum(n)=63 `stop explosions upon game start
+next n
+
+
+delete mesh expl_test_obj_o
+
+
+
+xhairs_objnum=999 `should decrease this
+o=xhairs_objnum
+make object plain o,15,10
+position object o,0,0,80
+lock object on o
+set object light o,0
+ghost object on o
+disable object zwrite o
+disable object zread o
+`disable object zdepth??
+load image "xhairs.jpg",7
+texture object o,7
+
+
+
+`so can fade explosions, other particles.
+`code from SBSX used for thrusters and shields
+`maybe gives a kind of HDR effect. can't remember!
+gradient_imagenum=8
+`BRIGHTNESS GRADIENT IMAGE - SHOULD EVENTUALLY USE MEMBLOCKS FOR SPEED..
+create bitmap 1,1,16
+`base_r#=0.08
+`base_g#=0.08
+`base_b#=0.2
+base_r#=0.1
+base_g#=0.1
+base_b#=0.1
+for a=0 to 15
+   a#=a  `*a
+   cr=255.0*(1.0-(1.0-base_r#)^a#)
+   cg=255.0*(1.0-(1.0-base_g#)^a#)
+   cb=255.0*(1.0-(1.0-base_b#)^a#)
+   ink rgb(cr,cg,cb),0
+   dot 0,a
+   dot 1,a  `just incase of rubbishness
+next a
+get image gradient_imagenum,0,0,1,16
+`save image "test111.jpg",gradient_imagenum
+delete bitmap 1
+set current bitmap 0
+
+REMSTART
+`put it on for explosions!
+for n=0 to num_expl_m1
+   o=expl_test_obj+n
+   set object o,1,0,0,1,0,0,0 `not sure if need. copied from sbsx
+   set blend mapping on o,1,gradient_imagenum,0,5
+   convert object fvf o, 0x202
+next n
+REMEND
+`actually want it for all star and axis objects!
+for o=numboxes-59 to numboxes+16
+   set object o,1,0,0,1,0,0,0 `not sure if need. copied from sbsx
+   `set blend mapping on o,1,gradient_imagenum,0,5  `what mode is this?
+   set blend mapping on o,1,gradient_imagenum,0,5
+   set alpha mapping on o,100 `maybe need this before will work?
+   convert object fvf o, 0x202
+next n
+
+
+
+`add some test objects to show direction to colliding asteroids in frame of asteroid,
+`as well as velocity.
+`once have this correct, will be able to calculate relative velocity along collision line (between centres, or
+`equivalently for billiard balls - through collision point. then simple case of swapping the velocity along this axis (i think)
+`and keeping other components the same. or just subtracting twice (or 1+c.o.r.) the velocity along "collsion" direction.
+`or something like that...
+
+col_test_obj0=1000
+make object cube col_test_obj0,1
+make mesh from object col_test_obj0,col_test_obj0
+delete object col_test_obj0
+make object col_test_obj0,col_test_obj0,0
+add limb col_test_obj0,1,col_test_obj0
+add limb col_test_obj0,2,col_test_obj0
+color limb col_test_obj0,0,rgb(0,0,0)
+color limb col_test_obj0,1,rgb(255,0,0)
+color limb col_test_obj0,2,rgb(0,255,0)
+
+`scale object col_test_obj0,1000,1000,1000
+
+for n=1 to numboxes-60
+   clone object col_test_obj0+n,col_test_obj0
+   `ghost object on col_test_obj0+n
+   HIDE OBJECT col_test_obj0+n
+   EXCLUDE OBJECT ON col_test_obj0+n
+next n
+
+
+
+
+GLOBAL DISPLAYINFO   `press 2/1 to switch on/off
+do
+
+
+`expl_texnum= (expl_texnum+keystate(49)-keystate(48)) &&63      `n,b keys
+for e=0 to num_expl_m1
+  expl_x_last=expl_x(e)
+  expl_y_last=expl_y(e)
+  expl_x(e)=expl_texnum(e)&&7
+  expl_y(e)=expl_texnum(e)/8
+  scroll object texture expl_test_obj+e,0.125*(expl_x(e)-expl_x_last),0.125*(expl_y(e)-expl_y_last)
+next e
+
+if keystate(2):displayinfo=1:endif
+if keystate(3):displayinfo=0:endif
+
+IF DISPLAYINFO
+text 400,0,str$(expl_texnum(0))
+text 400,10,str$(expl_x(0))
+text 400,20,str$(expl_y(0))
+ENDIF
+
+`text 0,0,str$(screen fps())
+`370 fps
+
+`rotate camera and move it! - "rotation" about 4x3 / 2 = 6 possible axes- movement along 3 axes,
+`and rotation about 3. rotation of one column into another..
+
+camera_movement()
+
+
+
+
+
+`should put this elsewhere.
+`allow dropping of a decal to player position
+`put light 2 here.
+`make size of light 2 proportional to scale of stuff at it's location.
+`also scale it's brightness in some way (drop off with distance)
+`velquat=401
+`velquat=velquat0+shot
+
+`copy old player position to something, so can divide to get velocity.
+`don't think using quat 6 yet
+player_q_old=6
+_copy_quaternion(0,player_q_old)
+`conjugate quat?
+`quats(player_q_old,0)=-quats(player_q_old,0)
+
+`get player position quaternion. should be getting this anyway. expect useful.
+_init_quaternion(0,matrices(0,0,0),matrices(0,0,1),matrices(0,0,2),matrices(0,0,3))
+
+
+
+REMSTART
+if keystate(16)   `q `DROP LIGHT!
+ _copy_quaternion(0,m)
+ `quats(m,c)=quats(0,c) `equiv to above (c=0 to 3)
+
+ `take difference in player positions in consecutive frames, to set velocity of dropped light.
+ `may need some conjugate / inverse quats here.
+`   quats(player_q_old,0)=-quats(player_q_old,0) `conjugate quat?
+for c=1 to 3
+   quats(player_q_old,c)=-quats(player_q_old,c) `conjugate quat?  `seems complicated!
+next c                                       `maybe want a "divide quat" function..
+ _multiply_quaternions(velquat,0,player_q_old)  `get shooting velocity quat.
+
+endif
+REMEND
+
+
+`diagnostic - display this "velocity" to screen.
+`want to see if is an easier way to get it from player "velocity" movequat.
+`want also to be able to add front velocity or whatever for shooing instead of dropping.
+`DO THE ABOVE ALWAYS (for diagnostic.)
+for c=1 to 3
+   quats(player_q_old,c)=-quats(player_q_old,c) `conjugate quat?  `seems complicated!
+next c
+_multiply_quaternions(402,0,player_q_old)  `get shooting velocity quat.
+if keystate(16) and gundelay=0   `q `DROP LIGHT!
+ m=shot_obj0+next_shot  `obj num is same as quat num
+ _copy_quaternion(0,m)
+ _multiply_quaternions(velquat0+next_shot,0,player_q_old)  `get shooting velocity quat.
+ shot_active(next_shot)=1
+ gundelay=15
+ shot_light=next_shot
+ rotate object m,0,0,0  `get a bug sometimes with decals. this might be a cheap (and incomplete)fix
+ next_shot=(next_shot+1)&&7
+endif
+
+
+
+`V. simple code to hide axes.
+`skip positioning of these when off
+for k=0 to 3
+if keystate(k+5)
+displayaxes=1
+for n=numboxes-59 to numboxes
+   show object n
+   exclude object off n
+next n
+_set_axispoints(k)
+endif
+next k
+
+
+
+if keystate(4)
+displayaxes=0
+for n=numboxes-59 to numboxes
+   hide object n
+   exclude object on n
+next n
+endif
+
+
+
+
+IF DISPLAYINFO
+`display quat 402
+for c=0 to 3
+   text 100,10*c,str$(quats(402,c),7)
+   ink rgb(250,0,0),0
+   text 100+400*quats(402,c),205+20*c,"|"  `test bars
+   ink rgb(255,255,255),0
+next c
+ENDIF
+
+`difference between quat 402 and testquat
+testquat=410
+IF DISPLAYINFO
+for c=0 to 3
+   text 200,300+10*c,str$(quats(testquat,c)-quats(402,c),7)
+next c
+ENDIF
+
+if gundelay>0
+   dec gundelay
+else
+   if keystate(17)   `w- drop light using velocity quaternion calculated elsewhere- where will be simpler to add front velocity.
+      m=shot_obj0+next_shot
+      _copy_quaternion(0,m)
+      shootquatw=407
+      _copy_quaternion(shootquatw,velquat0+next_shot)  `from,to
+      gundelay=15 `30
+      shot_active(next_shot)=1
+      shot_light=next_shot
+      rotate object m,0,0,0  `get a bug sometimes with decals. this might be a cheap (and incomplete)fix
+      next_shot=(next_shot+1)&&7
+   endif
+endif
+
+
+
+
+
+
+
+
+tm=701   ` "to" matrix . NB currently coarse check is OLD matrix, NEW shotpos, which isn't quite right, but unimportant
+tmkeep=702  `remember if colllision happens
+temp1=750
+temp2=751
+coarse_dist#=0.16
+coarse_distsq#=0.0256
+
+for shot=0 to 7
+m=shot_obj0+shot
+velquat=velquat0+shot
+
+shot_oldq=405
+_copy_quaternion(m,shot_oldq) `keep old pos before applying velocity. so can do collision routine.
+_multiply_quaternions(m,velquat,m)  `apply velocity
+
+
+`shotconjquat=405        `simple conjugation. maybe want a conjugate function, or divide_quat()
+relativequat=406     `point position in ast frame
+`astquat=404
+`transquat=404
+`_copy_quaternion(m,shotconjquat)
+`for c=1 to 3
+`quats(shotconjquat,c)=-quats(shotconjquat,c)
+`next c
+
+`now do a collision check with asteroids.
+`simple point in sphere.
+
+
+collide=0
+if shot_active(shot)
+for n=1 to numboxes-60
+
+`matrices(n,a,c)  `0th row or column is position i think
+
+sum#=0.0
+for c=0 to 3
+d#=matrices(n,0,c)-quats(m,c) `m is the shot
+inc sum#,d#*d#
+next c
+
+
+
+REMSTART
+
+if sum#<coarse_distsq#  `0.02 is about right "size" bit bigger makes sure whole ast within sphere.
+  ` collide=1
+
+  `now do a better collision check.
+  `run a line from the "outside" sphere (coarse col check) towards the centre, through the point where shot is
+  `(in asteroid object frame). This will tell whether point is in object or not.
+  `later do line collision between points in sucessive iterations (in ast frame) to get exact point for hit.
+
+  `now get point in ast frame.
+
+  `quats(m,c)  `=shot position
+  `matrices(n,0,c) `=ast position quaternion.
+
+  `want to divide them or something.
+
+
+   `do matrix rotation of shot coords
+
+   for c=0 to 3
+      sum#=0.0
+      for k=0 to 3
+         `inc sum#,matrices(n,k,c)*quats(shotconjquat,k)
+         inc sum#,matrices(n,c,k)*quats(m,k)
+      next k
+      quats(relativequat,c)=sum#
+   next c
+
+
+   `im part could probably junk. waste of performance. actually maybe it's good to tell length instantly.
+   `simplest flat space - just use 1,2,3 as "real space" position.
+   r1#=sqrt(1.0-quats(relativequat,0)*quats(relativequat,0)) `think dist=100.0/a# where a#=2.0 near centre.
+   inv#=100.0*coarse_dist#/r1#   `wtf? 100 instead of 50 and works fine!??
+   `temp:
+   `inv#=inv#*10.0
+   outx#=inv#*quats(relativequat,1)
+   outy#=inv#*quats(relativequat,2)
+   outz#=inv#*quats(relativequat,3)
+
+   mytest#=outx#*outx# +outy#*outy# +outz#*outz#
+
+   d#=intersect object(mymesh,outx#,outy#,outz#,100.0*quats(relativequat,1),100.0*quats(relativequat,2),100.0*quats(relativequat,3))
+   `d#=intersect object(mymesh,outx#,outy#,outz#,0.0,0.0,0.0)   `should always be true
+   `d#=intersect object(mymesh,10.0,10.0,10.0,0.0,0.0,0.0)   `should always be true
+   if d# then collide=1
+
+   `^^ kind of works, but realise now - position of ast is not sufficient info!!
+
+endif
+`alternate code could be q(ast).q(shot)*, then check whether less than 1-radsq, or something.
+`quat mult = 16 mults, adding 16 #s together
+`summing squares of differences is taking 4 differences, doing 4 squares, and addin 4 numbers together.
+`-> better i guess!
+
+REMEND
+
+`new- path shot collision.
+if sum#<coarse_distsq#  `0.02 is about right "size" bit bigger makes sure whole ast within sphere.
+
+   _multiply_4matrices(tm,n+500,n)   `  pos= vel*pos  `calculate "to" matrix
+
+   `do matrix rotation of shot coords
+   for c=0 to 3
+      sum#=0.0
+      sum1#=0.0
+      for k=0 to 3
+         inc sum#,matrices(tm,c,k)*quats(m,k)         `tm= "to" matrix (moving asts)
+         inc sum1#,matrices(n,c,k)*quats(shot_oldq,k)
+      next k
+      quats(relativequat,c)=100.0*sum#
+      quats(oldrelativequat,c)=100.0*sum1#
+   next c
+
+   d#=intersect object(mymesh,quats(oldrelativequat,1),quats(oldrelativequat,2),quats(oldrelativequat,3),quats(relativequat,1),quats(relativequat,2),quats(relativequat,3))
+
+   if d#
+      collide=1
+      _copy_quaternion(relativequat,temp2)
+      a=n
+      `at=tm `to matrix. should copy it..
+      `_copy_4matrix(tm,tmkeep)   `not required yet!
+      di#=d#   `d intersect. could also check for 1st intersection, but very unlikely to hit 2 asts at once.
+   endif
+   `next: get exact position of collision and use that.
+   `hard- can get interpolated pos in ast frame fairly simply
+   `but then have to interpolate ast matrix (/2xquaternions), so can convert back to work coords correctly. not really nesc.
+   `also could use line/sphere closest approach type test to see whether want to do poly collision, instead of just using the
+   `end in sphere thing have at the mo. could then make coarse collision spheres smaller and reduce number of poly collision calls.
+   `not really necessary!
+
+endif
+
+next n
+
+
+REMSTART
+`TEST DISPLAY  (old point in poly collsion)
+text 0,10,str$(quats(relativequat,1))
+text 0,20,str$(quats(relativequat,2))
+text 0,30,str$(quats(relativequat,3))
+
+text 0,50,str$(quats(relativequat,0))
+
+text 0,70,str$(r1#)
+text 0,80,str$(mytest#)
+REMEND
+
+`if keystate(19)   `r=reset
+`collide=0
+`endif
+`text 500,0,str$(collide)
+
+`e=numboxes+2
+`put explosion to position
+if collide  ` and shot_active `now only check for collisions if shot is active.
+   e=expl_test_obj+next_exp
+
+   _copy_quaternion(m,e)   `copy shot position to explosion position.
+
+   REMSTART
+   `new 26 mar. get "exact" position for explosion (in ast frame -> world frame.
+   `THIS ISN'T EXACT POSITION YET. IT JUST DEMONSTRATES FRAME CONVERSION.
+   for c=0 to 3
+      quats(temp1,c)=0.0
+      for k=0 to 3                                       `ACTUALLY TO GET EXACT SAME BACK, NEED TMKEEP, NOT A
+         inc quats(temp1,c),matrices(a,k,c)*0.01*quats(temp2,k)  `something like this. trial and error order of stuff.
+      next k                                                   `nb the 0.01 because *100.0 before! better not mult 100 1st.
+   next c
+   _copy_quaternion(temp1,e)
+   REMEND
+
+`   collide=0  `take care of this earlier now- here resulted (with shot active if) in explosion upon firing
+   `stop shot (should deactivate it, but this will work too)
+   ```_init_quaternion(velquat,1.0,0.0,0.0,0.0)
+
+   REMSTART
+_copy_quaternion(800+a,velquat)              `copying from precalc for asteroid.
+_copy_quaternion(800+a,velquat_e0+next_exp)  `bit wonky
+   REMEND
+
+`actually want to calculate special for this shot.
+`calc "old" position in world.
+   `actually, above calculation just gets back to quat(m)
+
+
+   `v simple way to get vel away from ast. scale temp2. actually velocity with this will depend on distance of shot
+   `from ast centre, but asts fairly round so this will be kind of OK.
+   for c=1 to 3                                                               `|
+      quats(temp2,c)=0.99*0.01*quats(temp2,c)                                 `| ######
+   next c                                                                     `|
+   quats(temp2,0)=1.0-0.9801*(1.0-0.01*quats(temp2,0)) `small angle approx.   `|
+   `quats(temp2,0)=0.09-0.81*quats(temp2,0)   `equiv to above
+
+   for c=0 to 3
+      quats(temp1,c)=0.0
+      for k=0 to 3
+         `inc quats(temp1,c),matrices(a,k,c)*0.01*quats(temp2,k)  `something like this. trial and error order of stuff.
+                                                                   `nb the 0.01 because *100.0 before! better not mult 100 1st.
+         inc quats(temp1,c),matrices(a,k,c)*quats(temp2,k)     `REMOVED 0.01 SINCE DOING ABOVE SEE #####
+      next k
+   next c
+
+   `cheat fix:
+   `normalise_quat(temp1)   `could just normalise result. this here may be totally unnecessary. see below ****
+   `normalise_quat(m)
+
+
+   `now have previous one as quat m , new as quat temp1..
+   for c=1 to 3
+      quats(temp1,c)=-quats(temp1,c)   `not sure which one should be conjugating.
+   next c
+   _multiply_quaternions(velquat,m,temp1)   `new, old conj
+
+   normalise_quat(velquat) `cheat fix. not sure where problem arises. ****
+
+   _copy_quaternion(velquat,velquat_e0+next_exp)   `think maybe not length 1?! particles looking hella wierd
+
+   REMSTART
+   `get length of this "velocity" quat. is it 1?
+   len_q#=0.0
+   for c=0 to 3
+      inc len_q#,quats(velquat,c)^2.0
+   next c
+
+   len_q1#=0.0
+   for c=0 to 3
+      inc len_q1#,quats(temp1,c)^2.0
+   next c
+
+   len_q2#=0.0
+   for c=0 to 3
+      inc len_q2#,quats(m,c)^2.0
+   next c
+   REMEND
+
+`_copy_quaternion(800+a,velquat)              `copying from precalc for asteroid.
+`_copy_quaternion(800+a,velquat_e0+next_exp)  `bit wonky
+`do bugs stop if i use old stuff? - um - somehow yes they do!
+
+
+   expl_texnum(next_exp)=0
+   next_exp=(next_exp+1)&&7
+   shot_active(shot)=0
+endif
+endif `shot active
+
+next shot
+
+REMSTART
+text 100,40,str$(len_q#) `SHOULD BE 1
+text 100,50,str$(len_q1#) `SHOULD BE 1
+text 100,60,str$(len_q2#) `SHOULD BE 1
+REMEND
+
+`FOR WHATEVER REASON, SEEMS temp1 more different from 1 than m. Probably for some reason. cheat solution-
+`put in a normalisation for temp1 somewhere.
+
+`reference- how got decal speed quat before..
+REMSTART
+`function _calculate_decal_speedquat_for_target(n)
+q=800+n
+temp1=750
+temp2=751
+tempm=702
+`get positions, old and new
+_multiply_4matrices(tempm, n+500,n) `apply speed      `***see above****
+for c=0 to 3
+quats(temp1,c)=matrices(n,0,c)   `is position row or column?
+quats(temp2,c)=matrices(tempm,0,c)
+next c
+`divide them. need get conjugate (not sure of which)
+for c=1 to 3
+   quats(temp1,c)=-quats(temp1,c)
+next c
+_multiply_quaternions(q,temp2,temp1)   `new, old conj
+`^^ works! doesn't seem perfect. assume because shots not exactly at ast pos.
+`not sure what discrepancy will be - systematic? not sure.
+endfunction
+REMEND
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  `moving explosions?
+for e=0 to 7
+   v=velquat_e0+e
+   m=expl_test_obj+e
+   _multiply_quaternions(m,v,m)
+next e
+
+
+
+
+REMSTART
+
+`ast-ast collisions
+`initially just see how fast goes, just coarse distance check..
+
+coarse_dist#=0.16
+coarse_distsq#=0.0256
+`about 20000 col checks (140*139=19460)
+endn=numboxes-60:for n=2 to endn
+endm=n-1:for m=1 to endm
+   sum#=0.0
+   for c=0 to 3
+      d#=matrices(m,0,c)-matrices(n,0,c)
+      inc sum#,d#*d#
+   next c
+   `new- path shot collision.
+   if sum#<coarse_distsq#:endif
+next m
+next n
+REMEND
+
+
+
+
+`make asteroids move.
+`later need to remember matrices before and after, so can do collsion routine correctly.
+tm=701   `temp 4matrix!! - because mult code wont work right otherwise!
+for n=1 to numboxes-60
+   _multiply_4matrices(tm,n+500,n)   `  pos= vel*pos
+   _copy_4matrix(tm,n)                `better then to have 2x num matrices?
+next n
+`========================================== thoughts 25 march
+`maybe better to get these matrices BEFORE do shot collisions.
+`that way don't need to keep recalculating.
+`also can use a flag and alternate between 2 slots - keep 2 matrices per ast at all times, replace 1 then the other.
+
+`currently no coarse line col
+`so no calculation of "finish" matrix unless pass coarse test.
+`==========================================
+
+
+
+
+
+
+`============================
+`STUFF FOR DISPLAYING THINGS- NOT DOING PHYSICS ETC
+
+
+
+`display the "points"
+`think i want to do column 0 of camera matrix, "dotted" with the point position 4vector.
+
+`NB awesome thing about rotation matrices (orthogonal, determinant 1..)
+`- inverse is the same as transpose.. SWEET!
+
+
+for n=1 to numboxes-60  `now using decals for some of axes
+
+for a=0 to 3:for b=0 to 3
+   sum#=0.0
+   for c=0 to 3
+      inc sum#,matrices(n,a,c)*matrices(0,b,c)
+   next c
+   mat4w#(n,a,b)=sum#
+next b:next a
+
+`position it - using matrix row or column 0 (not sure which) for position..
+for c=0 to 3   `cam matrix column = 0 to 3
+    posw#(n, c) = mat4w#(n, 0 ,c)      `COULD JUST USE MAT IN BELOW CODE-
+next c                                  `NO ACTUAL NEED FOR POSW ARRAY
+
+
+next n
+
+
+
+
+`now position sphere in the world..
+`DIRECTION is given by x,y,z (1,2,3) of posw. distance related to w (0)
+
+`hope we have right formula for distance. seems a little complicated..
+for n=1 to numboxes-60  `now some axis objects are decals
+   a#=1.0 + posw#(n, 0)
+
+   `distance "culling" - to stop stuff on opposite "side" getting all huge and visible!
+  ` if a#<0.8 then hide object n else show object n
+
+ `  if a#<0.15 then hide object n else show object n     `up to 12 may was using this
+   if a#<0.02 then hide object n else show object n   `for debugging.
+
+   dist#=100.0/a#
+
+   position object n, dist#*posw#(n, 1) , dist#*posw#(n, 2) , dist#*posw#(n, 3)
+
+   scale object n, dist#,dist#,dist#
+   `scale object n, 0.4*dist#,0.4*dist#,0.4*dist#   `TEST! to make sure point at camera test objects are right!
+   ObjectScale(n)=dist# `useful thing to have- did this so can easily put explosion to same scale as shot object.
+                        `might have been easier to just use one of the stars as explosion (am currently doing this anyway!)
+
+
+
+
+
+
+`next n
+`for n=1 to numboxes `a separate loop over n
+
+
+ct#=posw#(n, 0)
+st#=sqrt(1.0-ct#*ct#)
+ctm#=ct#-1.0
+
+p#=posw#(n, 1)/st#
+q#=posw#(n, 2)/st#
+r#=posw#(n, 3)/st#
+
+`==========================
+`stuff that want to pass to shader - still need this compilicated extraction of euler angles.
+`because can't explicitly pass shader rotation matrices per object.
+`want to change distance of object from cam to give shader, so encodes as length of this displacement either
+`(cos(theta) +1) or theta. pass whichever results in fastest calculation. shader has to repeat exact same calculations
+`for all vertices.
+
+`let's say we want to pass it normalised x,y,z, (direction from cam) multiplied by cos(theta)
+`p,q,r is I think a unit vector.
+`multiply it up by cos(theta)+1
+
+`then shader will, for each vertex:
+` get length of vector to find cos(theta)
+` divide vector by length to get direction
+` apply scaling by cos(theta) along direction
+` position at sin(theta)*direction for rendering
+` virtually position at theta for depth rendering
+
+`idea: maybe can pass extra info to shader via scaling- perhaps this changes 4matrix values. not sure which ones
+
+`so something like
+`position object testobj, ctm#*posw#(n, 1) , ctm#*posw#(n, 2) , ctm#*posw#(n, 3)
+
+
+`==========================
+
+
+
+`now build matrix - first row and column should be the same as already calculated -
+`do not require calculation, but do so anyway for now just to check this works..
+
+
+s=0 `use a spare matrix - number doesn't matter - maybe could just use mat4t#()
+REMSTART
+mat4t#(s,0,0)=ct#    :mat4t#(s,1,0)=0.0-p#*st#     :mat4t#(s,2,0)=0.0-q#*st#     :mat4t#(s,3,0)=0.0-r#*st#
+mat4t#(s,0,1)=p#*st# :mat4t#(s,1,1)=1.0+p#*p#*ctm# :mat4t#(s,2,1)=p#*q#*ctm#     :mat4t#(s,3,1)=p#*r#*ctm#
+mat4t#(s,0,2)=q#*st# :mat4t#(s,1,2)=p#*q#*ctm#     :mat4t#(s,2,2)=1.0+q#*q#*ctm# :mat4t#(s,3,2)=q#*r#*ctm#
+mat4t#(s,0,3)=r#*st# :mat4t#(s,1,3)=p#*r#*ctm#     :mat4t#(s,2,3)=q#*r#*ctm#     :mat4t#(s,3,3)=1.0+r#*r#*ctm#
+REMEND
+`OPTIMISED VERSION:
+`pst#=p#*st#:qst#=q#*st#:rst#=r#*st#
+pctm#=p#*ctm#:qctm#=q#*ctm#:rctm#=r#*ctm#
+mat4t#(s,0,0)=ct#        :mat4t#(s,1,0)=0.0-posw#(n, 1)  :mat4t#(s,2,0)=0.0-posw#(n,2) :mat4t#(s,3,0)=0.0-posw#(n, 3)
+mat4t#(s,0,1)=posw#(n,1) :mat4t#(s,1,1)=1.0+p#*pctm#     :mat4t#(s,2,1)=p#*qctm#       :mat4t#(s,3,1)=p#*rctm#
+mat4t#(s,0,2)=posw#(n,2) :mat4t#(s,1,2)=p#*qctm#         :mat4t#(s,2,2)=1.0+q#*qctm#   :mat4t#(s,3,2)=q#*rctm#
+mat4t#(s,0,3)=posw#(n,3) :mat4t#(s,1,3)=p#*rctm#         :mat4t#(s,2,3)=q#*rctm#       :mat4t#(s,3,3)=1.0+r#*rctm#
+
+`guess at rows/columns to use..
+t=1 `use another spare matrix - number doesn't matter - maybe could just use mat4t#()
+for a=0 to 3
+for b=0 to 3
+   sum#=0.0
+   for u=0 to 3
+      inc sum#, mat4t#(s,a,u) * mat4w#(n,b,u)  `<< this gets something that looks kind of right..
+   next u
+   mat4t#(t,a,b)=sum#
+next b
+next a
+
+   `convert matrix (lower right 3x3 matrix inside this 4x4 matrix)
+   `to euler angles. the following code by Diggsey i might be able to gonvert to something that works..
+
+   REMSTART
+   done=0
+   `SUBBED IN fw=2:ri=3:up=1:x=3:y=1:z=2
+   if mat4t#(t, 3, 1) > 0.99999
+      text 0,0,"******"
+      text object screen x(n),object screen y(n),"HERE B"
+      Euler#(2) = atanfull(0.0-mat4t#(t, 2, 3),mat4t#(t, 2, 2))
+      Euler#(3) = -90.0
+      Euler#(1) = 0.0
+      done=1
+   endif
+   if mat4t#(t, 3, 1) < -0.99999
+      text 0,0,"#######"
+      text object screen x(n),object screen y(n),"HERE A editing"
+      Euler#(2) = atanfull(0.0-mat4t#(t, 2, 3),mat4t#(t, 2, 2))
+      `Euler#(2) = atanfull(mat4t#(t, 2, 2),0.0-mat4t#(t, 2, 3))
+      Euler#(3) = 90.0
+      Euler#(1) = 0.0
+      done=1
+   endif
+   if done=0
+   REMEND
+      Euler#(1) = atanfull(mat4t#(t, 2, 1),mat4t#(t, 1, 1))
+      Euler#(2) = atanfull(mat4t#(t, 3, 2),mat4t#(t, 3, 3))
+
+      ```if controlkey()
+      `Euler#(3) = asin(0.0-mat4t#(t, 3, 1))
+      ```else
+      `^^ above seems numerically unstable near poles. better solution - try below..
+      `NB WITH NEW CODE, OTHER THINGS (if>0.99, if<-0.99) ABOVE MAY BE REDUNDANT!
+      temp#=sqrt(mat4t#(t, 3, 2)*mat4t#(t, 3, 2) + mat4t#(t, 3, 3)*mat4t#(t, 3, 3) )
+      Euler#(3) = atanfull(-mat4t#(t, 3, 1),temp#)
+      ```endif
+
+`   endif
+
+   rotate object n, Euler#(2),Euler#(3),Euler#(1)
+
+
+`HS SHADER! - how should we be positioning it?!!
+`if n=1
+   o2=2000+n
+   o3=3000+n
+   theta#=acos(posw#(n, 0))
+
+ `  text 0,10*n,str$(theta#)
+
+   lengthxyz#=sin(theta#)
+   theta#=theta#*3.14/180.0  `convert to radians
+
+   REMSTART
+   `things behind player move so see on opposite side of world
+   if posw#(n,1)<0.0 and shiftkey()=0
+      theta#=6.2832-theta#   `currently rotation of objects more than halfway around world is wrong I think
+
+     ` scale object o2,-1,-1,-1   `?!1 guess
+      `else
+      `scale object o2,1,1,1
+
+   endif
+   REMEND
+
+   `now using double objects. almost half of each set will be behind camera.
+`theta2#=6.2832-theta#
+
+`text 150,10*n,str$(theta#)
+
+
+   overallscaler#=theta#/lengthxyz#
+`   overallscaler2#=theta2#/lengthxyz#
+   position object o2,overallscaler#*posw#(n, 1),overallscaler#*posw#(n, 2),overallscaler#*posw#(n, 3)
+   position object o3,-overallscaler#*posw#(n, 1),-overallscaler#*posw#(n, 2),-overallscaler#*posw#(n, 3)
+   rotate object o2, Euler#(2),Euler#(3),Euler#(1)
+   rotate object o3, Euler#(2),Euler#(3),Euler#(1)
+   if spacekey()
+      hide object o2
+      hide object o3
+      show object n
+   else
+      show object o2
+      show object o3
+      hide object n
+   endif
+
+   if keystate(19)
+      hide object o2
+      show object o3
+      hide object n
+   endif
+   if keystate(20)
+      show object o2
+      hide object o3
+      hide object n
+   endif
+`endif
+
+next n
+
+if keystate(19)
+   text 0,100,"pressing K19"
+endif
+
+`length of rotation quaternion parts 1,2,3
+rqlen#=sqrt (1.0-quats(rotquatL,0)*quats(rotquatL,0))
+
+`SIMILAR THING FOR DECALS
+`NB haven't looked at skipping conversion to 4matrix. Can i go straight from L,R quats to 3matrix?
+`for n=numboxes+1 to numboxes+20
+
+if displayaxes:startfrom=numboxes-59:else:startfrom=numboxes+1:endif
+
+for n=startfrom to numboxes+16 `now decals for some axis
+`   movequat=3  `L,R the same  `PLAYER MOVEMENT QUATERNION.
+                              `may want to use conjugate.
+for b=0 to 3
+   sum#=0.0
+   for c=0 to 3
+      `inc sum#,matrices(n,0,c)*matrices(0,b,c)
+      inc sum#,quats(n,c)*matrices(0,b,c)
+   next c
+   posw#(n, b)=sum#
+next b
+
+`next n
+`for n=1 to numboxes
+
+   a#=1.0 + posw#(n, 0)
+
+   `distance "culling" - to stop stuff on opposite "side" getting all huge and visible!
+  ` if a#<0.8 then hide object n else show object n
+   if a#<0.15 then hide object n else show object n
+
+   dist#=100.0/a#
+
+
+   ObjectScale(n)=dist# `useful thing to have- did this so can easily put explosion to same scale as shot object.
+                        `might have been easier to just use one of the stars as explosion (am currently doing this anyway!)
+
+
+   shown=1
+   if n>shot_obj0-1  `else an axis object
+   if n<shot_obj0+8  `otherwise an explosion
+      if shot_active(n-shot_obj0)=0
+         shown=0
+      endif
+   else
+      `explosion object
+   endif
+   endif
+
+   if shown
+      position object n, dist#*posw#(n, 1) , dist#*posw#(n, 2) , dist#*posw#(n, 3)
+
+      scale object n, dist#,dist#,dist#
+   `fade with distance =============
+      stage=1
+      limb=0
+      lock vertexdata for limb n,limb,1
+         last=get vertexdata vertex count() - 1 `think probably 6 for dbp plain
+         `bright#=thruster_bright#(limb)
+         bright#=0.5*a#   `50.0/dist#   `ObjectScale(n)  `just something to make get weaker in BG. better funcs later
+         for v=0 to last
+            set vertexdata uv v, stage, 0.0,bright#
+         next n
+      unlock vertexdata
+   `================================
+      show object n
+
+
+
+
+   `one of them is a point light source
+   `if n=numboxes+1
+   if n=shot_obj0+shot_light  `most recently dropped or shot
+      position light 2,object position x(n),object position y(n),object position z(n)
+      set light range 2,dist# `want some scale factor!
+      `lightcolor=int(255000.0/dist#)            `guess a function- should think about what it should be later.
+      if posw#(n, 0)>0.0
+         lightcolor=int(posw#(n, 0) *255.0)
+      else
+         lightcolor=0
+      endif
+      color light 2,rgb(0,0,lightcolor) `should make dimmer as gets more distant too.
+   endif
+
+
+
+   `orientation? want to be pointed at camera.
+   `this is a bit fudgey! works for looking around (at least for central decals)
+   `doesn't work when roll camera!
+   `NEED TO SORT THIS OUT
+   set object rotation zyx n
+   rs#=atanfull(posw#(n,2),-posw#(n,3))
+   `z#=wrapvalue(object angle z(n) + (remember_spin#(n)-rs#) )
+`   z#=wrapvalue( (object angle z(n) -rs#)*(posw#(n,1)/sqrt(1.0-posw#(n,0)*posw#(n,0)))+remember_spin#(n) )
+   `try override: -works the same at the mo.
+   `z#=-rs#
+`   remember_spin#(n)=rs#
+
+`should add effect of camera rotation..
+`guess
+dista#=sqrt(1.0-posw#(n,0)*posw#(n,0))
+sum#=0.0
+rotquatL=1
+
+remstart
+for c=1 to 3
+   inc sum#,quats(rotquatL,c)*posw#(n,c)
+`WANT IN CAMERA FRAME,
+next c
+ANG#=2.0*ASIN(sum#/dista#)
+remend
+
+````*****************
+REMSTART
+
+
+`1st get angle of cam rotation
+ANG1#=2.0*Acos(quats(rotquatL,0))   `ONLY WORKS IN 1 DIRECTION :(
+
+`now need to have something to do with angle between rotation axis (rot quat real part, normalised)
+`and world position (normalised)
+normfactor#=sqrt(  ( 1.0-quats(rotquatL,0)*quats(rotquatL,0) ) * ( 1.0- posw#(n,0)*posw#(n,0) )   )
+for c=1 to 3
+   inc sum#,quats(rotquatL,c)*posw#(n,c)
+next c
+sum#=sum#/normfactor#
+`need something that keeps sum at +/- 1, but increases it for smaller values. try..
+`sum#=(1.0/45.0)*atan(sum#)
+`sum#=sin(sum#*90.0)
+`sum#=sum#-sin(sum#*360.0)
+`sum#=sum#*sin(sum#*90.0)*sin(sum#*90.0)
+`ang#=ang1#*(1.0-sqrt(1.0-sum#*sum#))*(sum#/abs(sum#))
+
+
+`ANG#=2.0*Acos(quats(rotquatL,0)*sum#)   `ONLY WORKS IN 1 DIRECTION :(
+
+
+
+if shiftkey()=0
+`inc remember_spin#(n),ang1#   `*sum#
+endif
+`^^ doesn't work.
+
+ang1#=2.0*Acos(quats(rotquatL,0))   `sort directionality later
+`dotb#=(quats(rotquatL,1))/sqrt( 1.0- quats(rotquatL,0)*quats(rotquatL,0) ) `guess   - works for pure roll.
+dotb#=(quats(rotquatL,1))/sqrt( 1.0- quats(rotquatL,0)*quats(rotquatL,0) ) `guess   - works for pure roll.
+ang2#=ang1#*dotb#
+angt#=ang2#
+`inc angt#,ang1#* ( quats(rotquatL,2)*posw#(n,2) + quats(rotquatL,3)*posw#(n,3) ) / sqrt( 1.0- quats(rotquatL,0)*quats(rotquatL,0)) `guess
+
+`inc angt#,ang1#*((quats(rotquatL,2)*posw#(n,2) +quats(rotquatL,3)*posw#(n,3)) / sqrt( 1.0- quats(rotquatL,0)*quats(rotquatL,0))) * (1.0-dotb#*dotb#) `guess
+
+ang3#=1.0+Acos(posw#(n,1)/dotb#)
+`if shiftkey()=0 then inc angt#,ang1#*(ang3#/180.0) * ((quats(rotquatL,2)*posw#(n,2) +quats(rotquatL,3)*posw#(n,3)) / sqrt( 1.0- quats(rotquatL,0)*quats(rotquatL,0)))
+
+`if shiftkey()=0 then inc angt#,ang1#* ((quats(rotquatL,2)*posw#(n,2) +quats(rotquatL,3)*posw#(n,3)) / sqrt( (1.0- quats(rotquatL,0)*quats(rotquatL,0)) * (1.0- posw#(n,0)*posw#(n,0)) ))
+`if shiftkey()=0 then inc angt#,ang1#*(acos(dotb#)/180.0)
+
+dotc#=((quats(rotquatL,2)*posw#(n,2) +quats(rotquatL,3)*posw#(n,3)) / sqrt( 1.0- quats(rotquatL,0)*quats(rotquatL,0)))
+
+
+inc remember_spin#(n),angt#
+
+
+   rotate object n,rs#,90.0+acos(posw#(n,1)/dista#),-rs# ` +remember_spin#(n)
+`rotate object n,remember_spin#(n),90.0+acos(posw#(n,1)/sqrt(1.0-posw#(n,0)*posw#(n,0))),0.0
+
+REMEND
+
+
+`this works (sort of) for keeping things from rolling in camera frame
+if dista#>0.0000001   `prevent 0 distance problems!! - maybe should just cull stuff by z dist.
+   frontness#=posw#(n,1)/dista#
+   show object n
+else
+   frontness#=0.0
+   text 50,50,"testA"   `should hide the decal.. - and can skip rotation shenanigans
+   hide object n
+endif
+
+`inc remember_spin#(n), (rs#-object angle x(n)) * frontness#
+ta#=wrapvalue(rs#-object angle x(n)+180.0)-180.0   `change from 0-360 to -180 to +180
+
+
+rs2#=wrapvalue( -object angle z(n) + (ta#) * frontness#)
+`rs2#=-remember_spin#(n)+ (ta#) * frontness#
+
+ac#=0.0:if frontness#<1.0 then ac#=acos(frontness#)              `to cure bug with looking straight at stuff
+rotate object n,rs#,90.0+ac#,-rs2#
+remember_spin#(n)=object angle z(n)
+
+`remember_spin#(n)=object angle z(n)
+
+`add in roll we want.
+sum#=0.0
+for c=1 to 3
+   inc sum#,quats(rotquatL,c)*posw#(n,c)
+next c
+
+denom#=rqlen#*dista#
+
+if denom#>0.000001   `same 0 lenght dista thingy
+   sum#=sum#/denom#
+
+else
+ ```  text 50,60,"testB"
+`   sum#=0.0 `not sure what sense this has, but should stop z angle going undefined.
+endif
+
+ANG1#=2.0*Acos(quats(rotquatL,0))   `ONLY WORKS IN 1 DIRECTION :(
+`if spacekey() then
+zrotate object n,object angle z(n)+ang1#*sum#
+`^^WORKS!!!!!
+`zrotate object n,0   `debug  `problem persists with this.
+`xrotate object n,0   `debug  `problem persists
+`yrotate object n,90 `fixes problem
+
+`if n=numboxes+1   `see that problem can be that angle z is undefined
+`   text 20,20,str$(object angle x(n))
+`   text 20,30,str$(object angle y(n))
+`   text 20,40,str$(object angle z(n))
+`endif
+
+else
+      hide object n  `should exclude too?    `NOT "SHOWN"
+endif
+
+
+next n
+
+if shot_active(shot_light)=0 `shoddy- because there may be other shots left.
+     color light 2,rgb(0,0,0)
+endif
+
+
+
+
+`allow view movement
+viewturn#=0.9*viewturn#+0.1*(keystate(30)-keystate(32) +keystate(31)*2) `last is look back
+point camera cos(90.0*viewturn#),0,sin(90.0*viewturn#)
+`turn camera right viewturn#
+
+
+
+
+`quick and messy x-hairs
+hide mouse
+ink rgb(255,255,255),0
+`dot    screen width()/2,screen height()/2   `NOW USING
+`circle screen width()/2,screen height()/2,7 `OBJECT CROSSHAIRS
+
+text 0,0,str$(screen fps())
+
+
+
+REMSTART
+
+`test objects
+for n=1 to numboxes-60
+   o=col_test_obj0+n
+   position object o,object position x(n),object position y(n),object position z(n)
+   rotate object o,object angle x(n),object angle y(n),object angle z(n)
+   scale object o,ObjectScale(n),ObjectScale(n),ObjectScale(n)
+   `one limb should give the position of the player relative to that asteroid
+
+   `took this from thing to display asts in player's frame.
+   `using test quaternion. added 1 to end of array instead of finding one amongst others!
+   `only need position part. maybe need to switch order, signs etc.
+   for a=0 to 3
+   `for b=0 to 3
+      b=0
+      sum#=0.0
+      for c=0 to 3
+         inc sum#,matrices(n,a,c)*matrices(0,b,c)
+      next c
+      `mat4w#(n,a,b)=sum#
+      quats(1001,a)=sum#
+   `next b
+   next a
+   quats(1001,0)=0.0 `it will be default, but let's be sure
+   normalise_quat(1001)
+   sf#=15.0
+   offset limb o,1,sf#*quats(1001,1),sf#*quats(1001,2),sf#*quats(1001,3)
+
+
+   `another limb should give the velocity of the asteroid (in frame with it's position and oriention
+   `maybe can get from "speed" quat? q=800+n
+   `don't think this the same as "movequat" but let's see...
+   _copy_quaternion(1001+n,1001)
+   quats(1001,0)=0.0 `it will be default, but let's be sure
+   normalise_quat(1001)
+   sf#=7.0
+   offset limb o,2,sf#*quats(1001,1),sf#*quats(1001,2),sf#*quats(1001,3)   `yes! this trails behind!!
+
+next n
+
+REMEND
+
+`ast-ast collisions
+`initially just see how fast goes, just coarse distance check..
+
+coarse_dist#=0.18
+coarse_distsq#=0.0324
+`about 20000 col checks (140*139=19460)
+endn=numboxes-60:for n=2 to endn
+endm=n-1:for m=1 to endm
+   sum#=0.0
+   for c=0 to 3
+      d#=matrices(m,0,c)-matrices(n,0,c)
+      inc sum#,d#*d#
+   next c
+   if sum#<coarse_distsq#
+      `do` the collision!
+      `first test: find closing velocity - need velocities eachother.
+
+      `in n frame, towards m.
+      for a=0 to 3
+         sum#=0.0
+         for c=0 to 3
+            inc sum#,matrices(n,a,c)*matrices(m,0,c)
+         next c
+         quats(1001,a)=sum#
+      next a
+      quats(1001,0)=0.0 `it will be default, but let's be sure
+      normalise_quat(1001) `NORMALISATION MAYBE NOT REQUIRED - since other quat ( calculated for n in m frame)
+                                                               `may be the same length (hunch) - i mean same w length
+
+      `now get velocity- dot product v.towards * -speed will get velocity away.
+      o=1001+n
+      v1#=quats(1001,1)*quats(o,1)+quats(1001,2)*quats(o,2)+quats(1001,3)*quats(o,3)
+
+      `think want to rember this quat for later
+      _copy_quaternion(1001,1000)   `hope 1000 not used!
+
+      `now do for the other one.
+      `in n frame, towards m.
+      for a=0 to 3
+         sum#=0.0
+         for c=0 to 3
+            inc sum#,matrices(m,a,c)*matrices(n,0,c)
+         next c
+         quats(1001,a)=sum#
+      next a
+      quats(1001,0)=0.0 `it will be default, but let's be sure
+      normalise_quat(1001)
+      o=1001+m
+      v2#=quats(1001,1)*quats(o,1)+quats(1001,2)*quats(o,2)+quats(1001,3)*quats(o,3)
+
+      vtot#=v2#+v1#
+      if vtot#<0.0   `closing
+         `"do the collsion".
+         `simplest thing - just switch velocity. how to do?
+
+         `want to transpose velocity matrices
+         `and probably conjugate velocity quats (for decals and for movequats)
+
+      `_copy_quaternion(movequat,1001+n) `guess at a useable range `THIS MIGHT BE USEFUL NOW!
+      `_convert_quats_to_4matrix(movequat,movequat,n+500) `"velocity" matrix
+
+
+      REMSTART
+         for c=1 to 3
+            quats(1001+n,c)=-quats(1001+n,c)
+            quats(1001+m,c)=-quats(1001+m,c)
+         next c
+         REMEND
+
+         `better - billiard ball style?
+         qn=1001+n
+         qm=1001+m
+         for c=1 to 3
+            quats(qn,c)=quats(qn,c)-vtot#*quats(1000,c)
+            quats(qm,c)=quats(qm,c)-vtot#*quats(1001,c)
+         next c
+         `will need to normalise. should i be doing something better with w component?
+         normalise_quat(qn)
+         normalise_quat(qm)
+
+         `just recalculate velocity matrix.
+         _convert_quats_to_4matrix(qn,qn,500+n) `"velocity" matrix
+         _convert_quats_to_4matrix(qm,qm,500+m) `"velocity" matrix
+
+
+         `also need new decal speed quat, but unimportant for testing!
+`         _calculate_decal_speedquat_for_target(n)  `this is quite inefficient. also, don't actually need it until
+ `        _calculate_decal_speedquat_for_target(m)  `shoot ast.
+
+      endif
+
+   endif
+next m
+next n
+
+REMSTART
+energysum#=0.0
+for n=1 to numboxes-60
+qn=1001+n
+for c=1 to 3
+   inc energysum#,quats(qn,c)*quats(qn,c)
+next c
+next n
+text 0,10,str$(energysum#)
+REMEND
+
+
+
+
+
+
+
+
+
+
+
+brightest_ex_num=0
+brightest_val=0
+for ex=0 to num_expl_m1
+`e=numboxes+2+ex
+`o=expl_test_obj+ex
+
+REMSTART
+set object rotation zyx o
+`set object to object orientation expl_test_obj,e
+position object expl_test_obj, object position x(e),object position y(e),object position z(e)
+rotate object expl_test_obj, object angle x(e),object angle y(e),object angle z(e)  `-180.0
+`sc#=1000.0*limb scale x(e,0) `doesn't work
+`scale object expl_test_obj,sc#,sc#,sc#
+
+scale object expl_test_obj,ObjectScale(e),ObjectScale(e),ObjectScale(e)
+REMEND
+`^^ using 2 objects before - now should use just the one.
+
+`rotate object expl_test_obj, object angle x(e),object angle y(e)-180.0,object angle z(e) `need this if don't rotate by 180 y and fix object pivot
+`set object cull expl_test_obj,0
+
+if expl_texnum(ex)<62 `means never use tex 0. also, explosion gets played at start of game.
+   inc expl_texnum(ex)
+endif
+
+`0.0622 = 255/4096 ~1/16
+`expbright=(1024-(expl_texnum(ex)-31.5)^2.0)/4
+expbright=int((992.25-(expl_texnum(ex)-31.5)^2.0)/3.89)
+
+`simple temp dist brightness-
+`assume is same place as light 2 (won't be if fire again when explosion on)
+`also rounding error bigger than required.
+`expbright=expbright*(lightcolor/256.0)
+expbright=expbright*((expbright+20)/276.0) `just a fudge to get more range
+if expbright>brightest_val
+   brightest_val=expbright
+   brightest_ex_num=ex
+endif
+
+REMSTART
+  `new! blendmapping thing
+   stage=1
+   limb=0
+   lock vertexdata for limb expl_test_obj+ex,limb,1
+      last=get vertexdata vertex count() - 1 `think probably 6 for dbp plain
+      `bright#=thruster_bright#(limb)
+      bright#=50.0/ObjectScale(expl_test_obj+ex)  `just something to make get weaker in BG. better funcs later
+      for n=0 to last
+         set vertexdata uv n, stage, 0.0,bright#
+      next n
+   unlock vertexdata
+   REMEND
+   `^^ move to code where position and rotate particles.
+
+
+next ex
+
+`should have lights for the brightest explosions
+e=expl_test_obj+brightest_ex_num
+position light 3,object position x(e),object position y(e),object position z(e)
+color light 3,rgb(brightest_val,0,0)
+set light range 3,3.0*ObjectScale(e)   `<<should factor into "brightest" decision. also want more than 1 light
+
+
+`test brightness thing
+`DOESN'T WORK!
+REMSTART
+if controlkey()
+for n=0 to num_expl_m1
+   o=expl_test_obj+n
+   set alpha mapping on o,50
+next n
+endif
+REMEND
+
+
+
+
+``````player_q_old=6
+``````_copy_quaternion(0,player_q_old)
+
+REMSTART
+`TEST - see if we can find a way to get player frame and world frame
+`velocities that are constant!! - is there a way? should stay constant
+`if both player frame vel, and player not rotating.
+movequat=3  `think elsewhere in a function
+_copy_quaternion(movequat,velquat)
+
+`guess at making into a world velocity??
+`if spacekey()<10
+
+_multiply_quaternions(velquat,player_qR,velquat)  `maybe want to use inverse?   `FAIL FAIL FAIL
+`_multiply_quaternions(velquat,velquat,player_qL)   `THIS IS EFFED UP THINK ABOUT IT WHEN AWAKE
+`what is invariant? something so can get invariant velocity in world frame
+`when player travelling forwards
+
+for c=0 to 3
+   text 100,80+10*c,str$(quats(movequat,c),5)
+   text 200,80+10*c,str$(quats(velquat,c),5)
+next c
+REMEND
+
+skeylast=skey
+skey=returnkey()
+if skey>skeylast
+   tech=1-tech
+   if tech
+      set effect technique 1,"DepthTest"
+      set effect technique 2,"DepthTest"
+   else
+      set effect technique 1,"simplyOneColour"
+      set effect technique 2,"simplyOneColour"
+   endif
+endif
+
+
+
+sync
+loop
+
+
+
+
+end
+
+
+
+
+
+function camera_movement()
+
+
+
+`build camera matrix
+`matrices(0, 0, 0) = 1 : matrices(0, 1, 0) = 0 : matrices(0, 2, 0) = 0 : matrices(0, 3, 0) = 0
+`matrices(0, 0, 1) = 0 : matrices(0, 1, 1) = 1 : matrices(0, 2, 1) = 0 : matrices(0, 3, 1) = 0
+`matrices(0, 0, 2) = 0 : matrices(0, 1, 2) = 0 : matrices(0, 2, 2) = 1 : matrices(0, 3, 2) = 0
+`matrices(0, 0, 3) = 0 : matrices(0, 1, 3) = 0 : matrices(0, 2, 3) = 0 : matrices(0, 3, 3) = 1
+
+
+movefwd#=( (mouseclick()&&1) -  ((mouseclick()&&2)>>1)   )*1.5 ` - mouseclick()&&2
+pitch#=(mousemovey())*-0.1
+turn#=(mousemovex())*-0.1
+moveup#=(upkey()-downkey())*0.1  `1.0
+moveleft#=(leftkey()-rightkey())*0.1
+roll#=keystate(51)-keystate(52)
+
+REMSTART
+`movefwd#=(shiftkey()-controlkey())*-0.5
+movefwd#=( (mouseclick()&&1) -  ((mouseclick()&&2)>>1)   )*0.5 ` - mouseclick()&&2
+`movefwd#=0.0-5.0*moveup# `override- see what happens to matrix when move along diagonal
+c#=cos(movefwd#)
+s#=sin(movefwd#)
+for t=0 to 3
+   temp#(t)=matrices(0, 0, t)
+   matrices(0, 0, t) = matrices(0, 0, t) * c# + matrices(0, 1, t) * s#
+   matrices(0, 1, t)= matrices(0, 1, t) * c# - temp#(t) * s#
+next t
+
+`pitch#=(upkey()-downkey())*2.0
+pitch#=(mousemovey())*-0.1
+c#=cos(pitch#)
+s#=sin(pitch#)
+for t=0 to 3
+   temp#(t)=matrices(0, 1, t)
+   matrices(0, 1, t) = matrices(0, 1, t) * c# + matrices(0, 2, t) * s#
+   matrices(0, 2, t)= matrices(0, 2, t) * c# - temp#(t) * s#
+next t
+
+`turn#=(leftkey()-rightkey())*2.0
+turn#=(mousemovex())*-0.1
+c#=cos(turn#)
+s#=sin(turn#)
+for t=0 to 3
+   temp#(t)=matrices(0, 1, t)
+   matrices(0, 1, t) = matrices(0, 1, t) * c# + matrices(0, 3, t) * s#
+   matrices(0, 3, t)= matrices(0, 3, t) * c# - temp#(t) * s#
+next t
+
+moveup#=(upkey()-downkey())*0.1  `1.0
+c#=cos(moveup#)
+s#=sin(moveup#)
+for t=0 to 3
+   temp#(t)=matrices(0, 0, t)
+   matrices(0, 0, t) = matrices(0, 0, t) * c# + matrices(0, 2, t) * s#
+   matrices(0, 2, t)= matrices(0, 2, t) * c# - temp#(t) * s#
+next t
+
+moveleft#=(leftkey()-rightkey())*0.1
+`moveleft#=2.0*moveup# `override- see what happens to matrix when move along diagonal
+c#=cos(moveleft#)
+s#=sin(moveleft#)
+for t=0 to 3
+   temp#(t)=matrices(0, 0, t)
+   matrices(0, 0, t) = matrices(0, 0, t) * c# + matrices(0, 3, t) * s#
+   matrices(0, 3, t)= matrices(0, 3, t) * c# - temp#(t) * s#
+next t
+
+roll#=keystate(51)-keystate(52)
+c#=cos(roll#)
+s#=sin(roll#)
+for t=0 to 3
+   temp#(t)=matrices(0, 2, t)
+   matrices(0, 2, t) = matrices(0, 2, t) * c# + matrices(0, 3, t) * s#
+   matrices(0, 3, t)= matrices(0, 3, t) * c# - temp#(t) * s#
+next t
+
+REMEND
+
+`guess new code to do rotation and movement via quaternions.
+`later will want to keep track of momentum etc - meaning want world frame. cross this bridge later.
+
+myconst#=(3.14/180.0)
+`movetot#=sqrt ( 1.0 - myconst#*myconst#*(movefwd#*movefwd# + moveleft#*moveleft# +moveup#*moveup#) )  `should use sines, but small angle approx?
+`rottot#=sqrt ( 1.0 - myconst#*myconst#*(roll#*roll# + turn#*turn# +pitch#*pitch#) )
+rotquatL=1
+rotquatR=2
+movequat=3  `L,R the same
+
+`quats(rotquatL,0)=rottot#
+`SMALL ANGLE APPROX- ADD SMALL PARTS OF QUATS INSTEAD OF MULTIPLYING WHOLE LOT.
+quats(rotquatL,1)=0.99*quats(rotquatL,1)-0.02*myconst#*roll# `this is sin(roll)
+quats(rotquatL,2)=0.99*quats(rotquatL,2)+0.02*myconst#*turn#
+quats(rotquatL,3)=0.99*quats(rotquatL,3)-0.02*myconst#*pitch#
+tot#=0.0
+for c=1 to 3
+   inc tot#,quats(rotquatL,c)*quats(rotquatL,c)
+next c
+quats(rotquatL,0)=sqrt(1.0-tot#)
+
+`quats(movequat,0)=movetot#
+braking#=0.98 `-0.05*controlkey()
+quats(movequat,1)=braking#*quats(movequat,1)-0.02*myconst#*movefwd#
+quats(movequat,2)=braking#*quats(movequat,2)-0.02*myconst#*moveup#
+quats(movequat,3)=braking#*quats(movequat,3)-0.02*myconst#*moveleft#
+tot#=0.0
+for c=1 to 3
+   inc tot#,quats(movequat,c)*quats(movequat,c)
+next c
+quats(movequat,0)=sqrt(1.0-tot#)
+
+IF DISPLAYINFO
+`display movequat. is it the same as velocity got other method? same 0th component?
+for c=0 to 3
+text 200,10*c,str$(quats(movequat,c),7)
+next c
+ENDIF
+`makes sense - square quaternion - zeroth component (small angles) 4x further away from 0.
+testquat=410
+_multiply_quaternions(testquat,movequat,movequat)
+IF DISPLAYINFO
+for c=0 to 3
+text 300,10*c,str$(quats(testquat,c),7)
+next c
+ENDIF
+
+quats(rotquatR,0)=quats(rotquatL,0)
+for c=1 to 3
+   quats(rotquatR,c)=-quats(rotquatL,c)
+next c
+
+
+`get total quaternion by multiplying together the move and rotate quats..
+`think i have to reverse rotation order for L and R
+`let's just give it a go!
+
+totalqL=4
+totalqR=5
+_multiply_quaternions(totalqL,rotquatL,movequat)
+_multiply_quaternions(totalqR,movequat,rotquatR)
+
+
+
+
+`ADD MOMENTUM!
+`want to remember previous total momentum.
+`however, if keep this as a quaternion, difficulty in having drag - presumably can raise quaternion to a power (eg 0.99)
+`, but i don't know how.
+
+`easier perhaps (although less elegant) to have momentum, angular momentum as 3-vectors. (in player frame)
+`not sure how will then have momentum this way for other objects. perhaps in the long run less easy?
+
+
+`now can do 2 ways.
+`intermediate - convert this to matrix and multiply by previous
+`my4matrix=10   `arbitrary number
+`_convert_quats_to_4matrix(totalqL,totalqR,my4matrix)
+
+`full - multiply this quat by previous, convert that to matrix
+_multiply_quaternions(player_qL,totalqL,player_qL)
+_multiply_quaternions(player_qR,player_qR,totalqR)
+
+normalise_quat(player_qL)  `WORKS FINE WITHOUT THESE
+normalise_quat(player_qR)  `ONLY REALLY NEED TO CALL ONCE IN A BLUE MOON!
+                           `NICE FOR PEACE OF MIND
+
+
+
+`==============================================
+`another diagnostic test. try to convert movequat somehow to world frame..
+`think only needs 3d rotation. odd..
+
+`PUT CLEVER STUFF HERE. aka guesswork
+`this looks okish but it's totally not!
+REMSTART
+quatrconj=409
+quats(quatrconj,0)=quats(player_qR,0)
+for c=1 to 3
+   quats(quatrconj,c)=-quats(player_qR,c)
+next c
+_multiply_quaternions(testquat,player_qR,movequat)
+_multiply_quaternions(testquat,movequat,testquat)
+_multiply_quaternions(testquat,testquat,quatrconj)
+REMEND
+
+quatlconj=409
+quats(quatlconj,0)=quats(player_qL,0)
+for c=1 to 3
+   quats(quatlconj,c)=-quats(player_qL,c)
+next c
+`_multiply_quaternions(testquat,player_qL,movequat)
+`_multiply_quaternions(testquat,testquat,quatlconj)
+`^no
+_multiply_quaternions(testquat,movequat,player_qL)
+_multiply_quaternions(testquat,quatlconj,testquat)
+`^^seems to be about half other vel quaternion! have i made trivial error where vel is of 2 steps or something??
+_multiply_quaternions(testquat,testquat,testquat)  `square it?!
+for c=1 to 3
+   quats(testquat,c)=-quats(testquat,c) `wrong sign for some reason!!!
+next c
+
+IF DISPLAYINFO
+for c=0 to 3
+   text 100,100+10*c,str$(quats(testquat,c),7)
+   text 100+400*quats(testquat,c),200+20*c,"|"  `test bars
+next c
+ENDIF
+
+`difference between this and quat 402 - calculated other way? should be ~0
+`either here, or after 402 calculated.
+IF DISPLAYINFO
+for c=0 to 3
+   text 100,300+10*c,str$(quats(testquat,c)-quats(402,c),7)
+next c
+ENDIF
+`tere is diff here. as expected - 402 not calculated yet
+
+
+`==============================================
+
+`shooting quat. add forward velocity
+shootquatp=408
+shootquatw=407
+_copy_quaternion(movequat,shootquatp)  `player frame shooting quat. (not moving player frame)
+dec quats(shootquatp,1),0.01   `0.025
+tot#=0.0
+for c=1 to 3
+   inc tot#,quats(shootquatp,c)*quats(shootquatp,c)
+next c
+quats(shootquatp,0)=sqrt(1.0-tot#)
+
+`code from before, but swapped testquat for shootquatw
+_multiply_quaternions(shootquatw,shootquatp,player_qL)
+_multiply_quaternions(shootquatw,quatlconj,shootquatw)
+`^^seems to be about half other vel quaternion! have i made trivial error where vel is of 2 steps or something??
+_multiply_quaternions(shootquatw,shootquatw,shootquatw)  `square it?!
+for c=1 to 3
+   quats(shootquatw,c)=-quats(shootquatw,c) `wrong sign for some reason!!!
+next c
+
+
+
+
+
+
+
+
+
+
+
+`now convert to rotation matrix, hoping signs are OK!!!!
+_convert_quats_to_4matrix(player_qL,player_qR,399) `guess at an unused number
+for a=0 to 3:for b=0 to 3  `copy across to old array
+   matrices(0, a, b)=matrices(399,a,b)
+next b:next a
+
+`fudge this - rotation should change velocity in player frame. not sure what order, r,l etc
+if spacekey()<10
+_multiply_quaternions(movequat,rotquatL,movequat)
+_multiply_quaternions(movequat,movequat,rotquatR)
+endif
+`^^ by symmetry, should i be rotating rotation by movement somehow???!!
+`seems to work OK!!
+
+`probably a way to apply velocity (and retain velocity) in world frame instead.
+
+endfunction
+
+function _set_axispoints(a)
+w=a&&3
+x=(a+1)&&3
+y=(a+2)&&3
+z=(a+3)&&3
+n=numboxes-59
+for m=0 to 59
+   quats(n,0)=axispoints(m,w)
+   quats(n,1)=axispoints(m,x)
+   quats(n,2)=axispoints(m,y)
+   quats(n,3)=axispoints(m,z)
+   inc n
+next m
+endfunction
+
+
+function single_pixel_image(imagenum,red,green,blue,alpha)
+temp_memblocknum=1
+   make memblock temp_memblocknum,16
+   write memblock dword temp_memblocknum,0,1
+   write memblock dword temp_memblocknum,4,1
+   write memblock dword temp_memblocknum,8,32
+   write memblock dword temp_memblocknum,12,rgba(red,green,blue,alpha)
+   make image from memblock imagenum,1
+   delete memblock temp_memblocknum
+endfunction
+
+`RGBA function by Aaron Miller
+function rgba(r,g,b,a)
+   c = (a and 0xff) << 24 or ((r and 0xff) << 16) or ((g and 0xff) << 8) or (b and 0xff)
+endfunction c
+
+
+`from random quaternion generator project
+function rand_quat_b(q)
+
+ang1#=0.1*rnd(3599)
+ang2#=0.1*rnd(3599)
+unif=rnd(1000)
+`unif#=rnd(1000)*0.001
+`t#=sqrt(0)  `test root 0 works
+`a#=sqrt(unif#)
+`b#=sqrt(1.0-unif#)
+a#=sqrt(unif*0.001)
+b#=sqrt((1000-unif)*0.001)
+quats(q,0)=a#*sin(ang1#)
+quats(q,1)=a#*cos(ang1#)
+quats(q,2)=b#*sin(ang2#)
+quats(q,3)=b#*cos(ang2#)
+
+endfunction
+
+`functions from "quaternions test" project. don't need all these just yet, but may as well copy all across.
+
+function _make_random_quaternion(q) `superceded by above. this is a poor random function (makes in a hypercube)
+   w#=rnd(1001)-500.5
+   x#=rnd(1001)-500.5
+   y#=rnd(1001)-500.5
+   z#=rnd(1001)-500.5
+   invsize#=1.0/sqrt(w#*w#+x#*x#+y#*y#+z#*z#)
+   w#=w#*invsize#
+   x#=x#*invsize#
+   y#=y#*invsize#
+   z#=z#*invsize#
+   quats(q,0)=w#
+   quats(q,1)=x#
+   quats(q,2)=y#
+   quats(q,3)=z#
+endfunction
+
+function normalise_quat(q)
+   w#=quats(q,0)
+   x#=quats(q,1)
+   y#=quats(q,2)
+   z#=quats(q,3)
+   invsize#=1.0/sqrt(w#*w#+x#*x#+y#*y#+z#*z#)
+   w#=w#*invsize#
+   x#=x#*invsize#
+   y#=y#*invsize#
+   z#=z#*invsize#
+   quats(q,0)=w#
+   quats(q,1)=x#
+   quats(q,2)=y#
+   quats(q,3)=z#
+endfunction
+
+function _convert_quat_to_matrix(q,m)
+   a as float
+   b as float
+   c as float
+   d as float
+   asq as float
+   bsq as float
+   csq as float
+   dsq as float
+   a=quats(q,0)
+   b=quats(q,1)
+   c=quats(q,2)
+   d=quats(q,3)
+   asq=a*a
+   bsq=b*b
+   csq=c*c
+   dsq=d*d
+
+   matrices(m,1,1)=asq+bsq-csq-dsq  :matrices(m,1,2)=2.0*(b*c-a*d)   :matrices(m,1,3)=2.0*(b*d+a*c)
+   matrices(m,2,1)=2.0*(b*c+a*d)    :matrices(m,2,2)=asq-bsq+csq-dsq :matrices(m,2,3)=2.0*(c*d-a*b)
+   matrices(m,3,1)=2.0*(b*d-a*c)    :matrices(m,3,2)=2.0*(c*d+a*b)   :matrices(m,3,3)=asq-bsq-csq+dsq
+
+endfunction
+
+function _convert_quats_to_4matrix(q1,q2,m)
+
+   a1 as float
+   b1 as float
+   c1 as float
+   d1 as float
+   a2 as float
+   b2 as float
+   c2 as float
+   d2 as float
+   a1=quats(q1,0)
+   b1=quats(q1,1)
+   c1=quats(q1,2)
+   d1=quats(q1,3)
+   a2=quats(q2,0)
+   b2=quats(q2,1)
+   c2=quats(q2,2)
+   d2=quats(q2,3)
+
+`   aa as float
+`   bb as float
+`   cc as float
+`   dd as float
+
+   a1a2#=a1*a2
+   a1b2#=a1*b2
+   a1c2#=a1*c2
+   a1d2#=a1*d2
+
+   b1a2#=b1*a2
+   b1b2#=b1*b2
+   b1c2#=b1*c2
+   b1d2#=b1*d2
+
+   c1a2#=c1*a2
+   c1b2#=c1*b2
+   c1c2#=c1*c2
+   c1d2#=c1*d2
+
+   d1a2#=d1*a2
+   d1b2#=d1*b2
+   d1c2#=d1*c2
+   d1d2#=d1*d2
+
+   matrices(m,0,0)=a1a2#-b1b2#-c1c2#-d1d2# :matrices(m,0,1)=-a1b2#-b1a2#+c1d2#-d1c2# :matrices(m,0,2)=-a1c2#-b1d2#-c1a2#+d1b2# :matrices(m,0,3)=-a1d2#+b1c2#-c1b2#-d1a2#
+   matrices(m,1,0)=b1a2#+a1b2#-d1c2#+c1d2# :matrices(m,1,1)=-b1b2#+a1a2#+d1d2#+c1c2# :matrices(m,1,2)=-b1c2#+a1d2#-d1a2#-c1b2# :matrices(m,1,3)=-b1d2#-a1c2#-d1b2#+c1a2#
+   matrices(m,2,0)=c1a2#+d1b2#+a1c2#-b1d2# :matrices(m,2,1)=-c1b2#+d1a2#-a1d2#-b1c2# :matrices(m,2,2)=-c1c2#+d1d2#+a1a2#+b1b2# :matrices(m,2,3)=-c1d2#-d1c2#+a1b2#-b1a2#
+   matrices(m,3,0)=d1a2#-c1b2#+b1c2#+a1d2# :matrices(m,3,1)=-d1b2#-c1a2#-b1d2#+a1c2# :matrices(m,3,2)=-d1c2#-c1d2#+b1a2#-a1b2# :matrices(m,3,3)=-d1d2#+c1c2#+b1b2#+a1a2#
+
+`   matrices(m,1,1)=asq+bsq-csq-dsq  :matrices(m,1,2)=2.0*(b*c-a*d)   :matrices(m,1,3)=2.0*(b*d+a*c)
+`   matrices(m,2,1)=2.0*(b*c+a*d)    :matrices(m,2,2)=asq-bsq+csq-dsq :matrices(m,2,3)=2.0*(c*d-a*b)
+`   matrices(m,3,1)=2.0*(b*d-a*c)    :matrices(m,3,2)=2.0*(c*d+a*b)   :matrices(m,3,3)=asq-bsq-csq+dsq
+
+endfunction
+
+function _multiply_quaternions(prod,a,b)
+REMSTART
+   quats(prod,0)=quats(a,0)*quats(b,0)-(quats(a,1)*quats(b,1)+quats(a,2)*quats(b,2)+quats(a,3)*quats(b,3))                  `s1s2 - v1.v2
+   `v ector part of product= s1v2+s2v1+s3v3 +v1 x v2
+   quats(prod,1)=quats(a,0)*quats(b,1)+quats(b,0)*quats(a,1)+ quats(a,2)*quats(b,3)-quats(a,3)*quats(b,2)
+   quats(prod,2)=quats(a,0)*quats(b,2)+quats(b,0)*quats(a,2)+ quats(a,3)*quats(b,1)-quats(a,1)*quats(b,3)
+   quats(prod,3)=quats(a,0)*quats(b,3)+quats(b,0)*quats(a,3)+ quats(a,1)*quats(b,2)-quats(a,2)*quats(b,1)
+   REMEND
+
+   `this verion less efficient, but allows use of prod=a or b
+   `can use clever code to never need this, but speed not critical.
+   w#=quats(a,0)*quats(b,0)-(quats(a,1)*quats(b,1)+quats(a,2)*quats(b,2)+quats(a,3)*quats(b,3))
+   x#=quats(a,0)*quats(b,1)+quats(b,0)*quats(a,1)+ quats(a,2)*quats(b,3)-quats(a,3)*quats(b,2)
+   y#=quats(a,0)*quats(b,2)+quats(b,0)*quats(a,2)+ quats(a,3)*quats(b,1)-quats(a,1)*quats(b,3)
+   z#=quats(a,0)*quats(b,3)+quats(b,0)*quats(a,3)+ quats(a,1)*quats(b,2)-quats(a,2)*quats(b,1)
+   quats(prod,0)=w#
+   quats(prod,1)=x#
+   quats(prod,2)=y#
+   quats(prod,3)=z#
+endfunction
+
+function _multiply_matrices(prod,a,b)
+for col=1 to 3:for row=1 to 3
+   matrices(prod,row,col)=0
+   for i=1 to 3
+      matrices(prod,row,col)=matrices(prod,row,col)+matrices(a,row,i)*matrices(b,i,col)
+   next i
+next row:next col
+endfunction
+
+function _multiply_4matrices(prod,a,b)
+for col=0 to 3:for row=0 to 3
+   matrices(prod,row,col)=0.0
+   for i=0 to 3
+      inc matrices(prod,row,col),matrices(a,row,i)*matrices(b,i,col)
+   next i
+next row:next col
+endfunction
+
+function _copy_matrix(m_from,m_to)
+for i=1 to 3:for j=1 to 3  `only 3x3 copy. use another func for full 4x4 copy
+   matrices(m_to,i,j)=matrices(m_from,i,j)
+next j:next i
+endfunction
+
+function _copy_4matrix(m_from,m_to)
+for i=0 to 3:for j=0 to 3  `full 4x4 copy
+   matrices(m_to,i,j)=matrices(m_from,i,j)
+next j:next i
+endfunction
+
+function _copy_quaternion(q_from,q_to)
+for i=0 to 3
+   quats(q_to,i)=quats(q_from,i)
+next i
+endfunction
+
+function _init_quaternion(q,w#,x#,y#,z#)
+   quats(q,0)=w#:quats(q,1)=x#:quats(q,2)=y#:quats(q,3)=z#
+endfunction
+
+REMSTART
+`this may be horribly inefficient! but it works OK. probably could do in way that bypasses matrices!
+`but actually quaternion multiplication is kind of similar in speed to matrix stuff
+`deinitely quite inefficent because junk 3 out of 4 rows/columns of result of matrix multiplication..
+function _calculate_decal_speedquat_for_target(n)
+q=800+n
+temp1=750
+temp2=751
+tempm=702
+`get positions, old and new
+_multiply_4matrices(tempm, n+500,n) `apply speed      `***see above****
+for c=0 to 3
+quats(temp1,c)=matrices(n,0,c)   `is position row or column?
+quats(temp2,c)=matrices(tempm,0,c)
+next c
+`divide them. need get conjugate (not sure of which)
+for c=1 to 3
+   quats(temp1,c)=-quats(temp1,c)
+next c
+_multiply_quaternions(q,temp2,temp1)   `new, old conj
+`^^ works! doesn't seem perfect. assume because shots not exactly at ast pos.
+`not sure what discrepancy will be - systematic? not sure.
+endfunction
+
+REMEND

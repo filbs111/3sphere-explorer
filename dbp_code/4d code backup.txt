@@ -1,0 +1,425 @@
+Rem Project: quaternions test
+Rem Created: 24/02/2010 23:28:54
+
+Rem ***** Main Source File *****
+
+
+dim matrices(10,3,3) as float `really only need 3x3 matrices for so3 but may as well make big enough for so4
+dim quats(10,3) as float
+
+
+
+
+_make_random_quaternion(0)
+_convert_quat_to_matrix(0,0)
+
+`1st easy test. make sure quats and matrices are normal, orthogonal.
+`later, test that rotate vector the same...
+
+sync on
+sync rate 0
+backdrop on
+
+REMSTART
+do
+
+m=0
+
+_make_random_quaternion(m)
+_convert_quat_to_matrix(m,m)
+text 0,0,str$(matrices(m,1,1),2) :text 50,0,str$(matrices(m,1,2),2) :text 100,0,str$(matrices(m,1,3),2)
+text 0,10,str$(matrices(m,2,1),2) :text 50,10,str$(matrices(m,2,2),2) :text 100,10,str$(matrices(m,2,3),2)
+text 0,20,str$(matrices(m,3,1),2) :text 50,20,str$(matrices(m,3,2),2) :text 100,20,str$(matrices(m,3,3),2)
+
+`check orthogonal
+sum as float
+
+for a=1 to 3:for b=1 to 3
+sum=0.0
+for i=1 to 3
+   inc sum,matrices(m,a,i)*matrices(m,b,i)
+next i
+text 70*a,50+10*b,str$(sum,4)
+next b:next a
+
+sync
+`sync
+
+wait key
+loop
+REMEND
+
+REMSTART
+`NEW PROGRAM - multiply matrix and quaternion by new one each time. see if result stays the same.
+counter=0
+_make_random_quaternion(0)
+_convert_quat_to_matrix(0,0)
+do
+inc counter
+text 0,300,str$(counter)
+
+m=0
+
+_make_random_quaternion(2)
+_convert_quat_to_matrix(2,2)
+
+
+_multiply_quaternions(1,0,2)  `not sure what order should multiply in. try one then swap. expect both orders will work OK
+_copy_quaternion(1,0)   `would be more efficient to use alternate switching (currently using "1" as temp)
+_multiply_matrices(1,0,2)
+_copy_matrix(1,0) `would be more efficient to use alternate switching (currently using "1" as temp)
+
+_convert_quat_to_matrix(0,3)  `this matrix SHOULD be the same (barring numerical errors) as matrix 0 (and therfore also 1, the temp)
+
+m=0
+text 0,0,str$(matrices(m,1,1),8) :text 100,0,str$(matrices(m,1,2),8) :text 200,0,str$(matrices(m,1,3),8)
+text 0,10,str$(matrices(m,2,1),8) :text 100,10,str$(matrices(m,2,2),8) :text 200,10,str$(matrices(m,2,3),8)
+text 0,20,str$(matrices(m,3,1),8) :text 100,20,str$(matrices(m,3,2),8) :text 200,20,str$(matrices(m,3,3),8)
+m=3
+text 0,100,str$(matrices(m,1,1),8) :text 100,100,str$(matrices(m,1,2),8) :text 200,100,str$(matrices(m,1,3),8)
+text 0,110,str$(matrices(m,2,1),8) :text 100,110,str$(matrices(m,2,2),8) :text 200,110,str$(matrices(m,2,3),8)
+text 0,120,str$(matrices(m,3,1),8) :text 100,120,str$(matrices(m,3,2),8) :text 200,120,str$(matrices(m,3,3),8)
+
+m=0
+`check orthogonal
+sum as float
+
+for a=1 to 3:for b=1 to 3
+sum=0.0
+for i=1 to 3
+   inc sum,matrices(m,a,i)*matrices(m,b,i)
+next i
+text 100*a,50+10*b,str$(sum,8)
+next b:next a
+
+m=3
+`check orthogonal
+sum as float
+
+for a=1 to 3:for b=1 to 3
+sum=0.0
+for i=1 to 3
+   inc sum,matrices(m,a,i)*matrices(m,b,i)
+next i
+text 100*a,150+10*b,str$(sum,8)
+next b:next a
+
+sync
+`sync
+
+`wait key
+
+do
+if returnkey() then normalise_quat(0)
+if spacekey() then exit
+loop
+
+loop
+
+REMEND
+
+
+
+REMSTART
+`new test 4x4
+
+`hopefully 2 random quaternions turns into an orthogonal 4x4 matrix...
+
+do
+
+_make_random_quaternion(0)
+_make_random_quaternion(1)
+_convert_quats_to_4matrix(0,1,2)
+
+m=2
+text 0,0,str$(matrices(m,0,0),8) :text 100,0,str$(matrices(m,0,1),8) :text 200,0,str$(matrices(m,0,2),8) :text 300,0,str$(matrices(m,0,3),8)
+text 0,10,str$(matrices(m,1,0),8) :text 100,10,str$(matrices(m,1,1),8) :text 200,10,str$(matrices(m,1,2),8) :text 300,10,str$(matrices(m,1,3),8)
+text 0,20,str$(matrices(m,2,0),8) :text 100,20,str$(matrices(m,2,1),8) :text 200,20,str$(matrices(m,2,2),8) :text 300,20,str$(matrices(m,2,3),8)
+text 0,30,str$(matrices(m,3,0),8) :text 100,30,str$(matrices(m,3,1),8) :text 200,30,str$(matrices(m,3,2),8) :text 300,30,str$(matrices(m,3,3),8)
+
+`check orthogonal
+sum as float
+
+for a=0 to 3:for b=0 to 3
+sum=0.0
+for i=0 to 3
+   inc sum,matrices(m,a,i)*matrices(m,b,i)
+next i
+text 100*a,50+10*b,str$(sum,8)
+next b:next a
+
+`^^ seems that created 4x4 rotation matrix from 2 quats IS orthogonal. However, can it be right, left handed?
+`no matter. Now, let's see if we can chain together rotations like did for 3d...
+
+
+sync
+
+do
+   if spacekey() then exit
+loop
+
+loop
+
+REMEND
+
+
+
+
+
+`NEW PROGRAM - multiply matrix and quaternion by new one each time. see if result stays the same.#
+`THIS VERSION FOR 4x4
+counter=0
+_make_random_quaternion(0)
+_make_random_quaternion(1)
+_convert_quats_to_4matrix(0,1,0) `quats 0,1 -> matrix 0
+
+do
+inc counter
+text 0,300,str$(counter)
+
+m=0
+
+_make_random_quaternion(2)
+_make_random_quaternion(3)
+_convert_quats_to_4matrix(2,3,2) `quats 2,3 -> matrix 2  `MAT 2 IS NEW ROTATION MATRIX
+
+`QUATS 0,1 CURRENT TOTAL ROTATION QUATS (RUNNING TOTAL)
+_multiply_quaternions(4,2,0)  `not sure what order should multiply in. try one then swap. expect both orders will work OK
+_copy_quaternion(4,0)   `would be more efficient to use alternate switching (currently using "1" as temp)
+_multiply_quaternions(4,1,3)  `should one be reverse order?
+_copy_quaternion(4,1)
+
+_convert_quats_to_4matrix(0,1,1)  `this matrix SHOULD be the same (barring numerical errors) as matrix 0 (and therfore also 1, the temp)
+
+_multiply_4matrices(3,2,0)  `mat2= mat1*mat0
+_copy_4matrix(3,0) `copy from 2 to 0 would be more efficient to use alternate switching (currently using "1" as temp)
+
+`MAT0 is result of multiplying all rotation matrices together
+`MAT1 is result of multiplying all quaternions together, and then converting to matrix
+
+m=0
+text 0,0,str$(matrices(m,0,0),8) :text 100,0,str$(matrices(m,0,1),8) :text 200,0,str$(matrices(m,0,2),8) :text 300,0,str$(matrices(m,0,3),8)
+text 0,10,str$(matrices(m,1,0),8) :text 100,10,str$(matrices(m,1,1),8) :text 200,10,str$(matrices(m,1,2),8) :text 300,10,str$(matrices(m,1,3),8)
+text 0,20,str$(matrices(m,2,0),8) :text 100,20,str$(matrices(m,2,1),8) :text 200,20,str$(matrices(m,2,2),8) :text 300,20,str$(matrices(m,2,3),8)
+text 0,30,str$(matrices(m,3,0),8) :text 100,30,str$(matrices(m,3,1),8) :text 200,30,str$(matrices(m,3,2),8) :text 300,30,str$(matrices(m,3,3),8)
+
+m=1
+text 0,100,str$(matrices(m,0,0),8) :text 100,100,str$(matrices(m,0,1),8) :text 200,100,str$(matrices(m,0,2),8) :text 300,100,str$(matrices(m,0,3),8)
+text 0,110,str$(matrices(m,1,0),8) :text 100,110,str$(matrices(m,1,1),8) :text 200,110,str$(matrices(m,1,2),8) :text 300,110,str$(matrices(m,1,3),8)
+text 0,120,str$(matrices(m,2,0),8) :text 100,120,str$(matrices(m,2,1),8) :text 200,120,str$(matrices(m,2,2),8) :text 300,120,str$(matrices(m,2,3),8)
+text 0,130,str$(matrices(m,3,0),8) :text 100,130,str$(matrices(m,3,1),8) :text 200,130,str$(matrices(m,3,2),8) :text 300,130,str$(matrices(m,3,3),8)
+
+
+m=0
+`check orthogonal
+sum as float
+
+for a=0 to 3:for b=0 to 3
+sum=0.0
+for i=0 to 3
+   inc sum,matrices(m,a,i)*matrices(m,b,i)
+next i
+text 100*a,50+10*b,str$(sum,8)
+next b:next a
+
+m=1
+`check orthogonal
+sum as float
+
+for a=0 to 3:for b=0 to 3
+sum=0.0
+for i=0 to 3
+   inc sum,matrices(m,a,i)*matrices(m,b,i)
+next i
+text 100*a,150+10*b,str$(sum,8)
+next b:next a
+
+sync
+`sync
+
+`wait key
+
+do
+if returnkey():normalise_quat(0):normalise_quat(1):endif
+if spacekey() then exit
+loop
+
+loop
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+end
+
+function _make_random_quaternion(q)
+   w#=rnd(1001)-500.5
+   x#=rnd(1001)-500.5
+   y#=rnd(1001)-500.5
+   z#=rnd(1001)-500.5
+   invsize#=1.0/sqrt(w#*w#+x#*x#+y#*y#+z#*z#)
+   w#=w#*invsize#
+   x#=x#*invsize#
+   y#=y#*invsize#
+   z#=z#*invsize#
+   quats(q,0)=w#
+   quats(q,1)=x#
+   quats(q,2)=y#
+   quats(q,3)=z#
+endfunction
+
+function normalise_quat(q)
+   w#=quats(q,0)
+   x#=quats(q,1)
+   y#=quats(q,2)
+   z#=quats(q,3)
+   invsize#=1.0/sqrt(w#*w#+x#*x#+y#*y#+z#*z#)
+   w#=w#*invsize#
+   x#=x#*invsize#
+   y#=y#*invsize#
+   z#=z#*invsize#
+   quats(q,0)=w#
+   quats(q,1)=x#
+   quats(q,2)=y#
+   quats(q,3)=z#
+endfunction
+
+function _convert_quat_to_matrix(q,m)
+   a as float
+   b as float
+   c as float
+   d as float
+   asq as float
+   bsq as float
+   csq as float
+   dsq as float
+   a=quats(q,0)
+   b=quats(q,1)
+   c=quats(q,2)
+   d=quats(q,3)
+   asq=a*a
+   bsq=b*b
+   csq=c*c
+   dsq=d*d
+
+   matrices(m,1,1)=asq+bsq-csq-dsq  :matrices(m,1,2)=2.0*(b*c-a*d)   :matrices(m,1,3)=2.0*(b*d+a*c)
+   matrices(m,2,1)=2.0*(b*c+a*d)    :matrices(m,2,2)=asq-bsq+csq-dsq :matrices(m,2,3)=2.0*(c*d-a*b)
+   matrices(m,3,1)=2.0*(b*d-a*c)    :matrices(m,3,2)=2.0*(c*d+a*b)   :matrices(m,3,3)=asq-bsq-csq+dsq
+
+endfunction
+
+function _convert_quats_to_4matrix(q1,q2,m)
+
+   a1 as float
+   b1 as float
+   c1 as float
+   d1 as float
+   a2 as float
+   b2 as float
+   c2 as float
+   d2 as float
+   a1=quats(q1,0)
+   b1=quats(q1,1)
+   c1=quats(q1,2)
+   d1=quats(q1,3)
+   a2=quats(q2,0)
+   b2=quats(q2,1)
+   c2=quats(q2,2)
+   d2=quats(q2,3)
+
+`   aa as float
+`   bb as float
+`   cc as float
+`   dd as float
+
+   a1a2#=a1*a2
+   a1b2#=a1*b2
+   a1c2#=a1*c2
+   a1d2#=a1*d2
+
+   b1a2#=b1*a2
+   b1b2#=b1*b2
+   b1c2#=b1*c2
+   b1d2#=b1*d2
+
+   c1a2#=c1*a2
+   c1b2#=c1*b2
+   c1c2#=c1*c2
+   c1d2#=c1*d2
+
+   d1a2#=d1*a2
+   d1b2#=d1*b2
+   d1c2#=d1*c2
+   d1d2#=d1*d2
+
+   matrices(m,0,0)=a1a2#-b1b2#-c1c2#-d1d2# :matrices(m,0,1)=-a1b2#-b1a2#+c1d2#-d1c2# :matrices(m,0,2)=-a1c2#-b1d2#-c1a2#+d1b2# :matrices(m,0,3)=-a1d2#+b1c2#-c1b2#-d1a2#
+   matrices(m,1,0)=b1a2#+a1b2#-d1c2#+c1d2# :matrices(m,1,1)=-b1b2#+a1a2#+d1d2#+c1c2# :matrices(m,1,2)=-b1c2#+a1d2#-d1a2#-c1b2# :matrices(m,1,3)=-b1d2#-a1c2#-d1b2#+c1a2#
+   matrices(m,2,0)=c1a2#+d1b2#+a1c2#-b1d2# :matrices(m,2,1)=-c1b2#+d1a2#-a1d2#-b1c2# :matrices(m,2,2)=-c1c2#+d1d2#+a1a2#+b1b2# :matrices(m,2,3)=-c1d2#-d1c2#+a1b2#-b1a2#
+   matrices(m,3,0)=d1a2#-c1b2#+b1c2#+a1d2# :matrices(m,3,1)=-d1b2#-c1a2#-b1d2#+a1c2# :matrices(m,3,2)=-d1c2#-c1d2#+b1a2#-a1b2# :matrices(m,3,3)=-d1d2#+c1c2#+b1b2#+a1a2#
+
+`   matrices(m,1,1)=asq+bsq-csq-dsq  :matrices(m,1,2)=2.0*(b*c-a*d)   :matrices(m,1,3)=2.0*(b*d+a*c)
+`   matrices(m,2,1)=2.0*(b*c+a*d)    :matrices(m,2,2)=asq-bsq+csq-dsq :matrices(m,2,3)=2.0*(c*d-a*b)
+`   matrices(m,3,1)=2.0*(b*d-a*c)    :matrices(m,3,2)=2.0*(c*d+a*b)   :matrices(m,3,3)=asq-bsq-csq+dsq
+
+endfunction
+
+function _multiply_quaternions(prod,a,b)
+   quats(prod,0)=quats(a,0)*quats(b,0)-(quats(a,1)*quats(b,1)+quats(a,2)*quats(b,2)+quats(a,3)*quats(b,3))                  `s1s2 - v1.v2
+   `v ector part of product= s1v2+s2v1+s3v3 +v1 x v2
+   quats(prod,1)=quats(a,0)*quats(b,1)+quats(b,0)*quats(a,1)+ quats(a,2)*quats(b,3)-quats(a,3)*quats(b,2)
+   quats(prod,2)=quats(a,0)*quats(b,2)+quats(b,0)*quats(a,2)+ quats(a,3)*quats(b,1)-quats(a,1)*quats(b,3)
+   quats(prod,3)=quats(a,0)*quats(b,3)+quats(b,0)*quats(a,3)+ quats(a,1)*quats(b,2)-quats(a,2)*quats(b,1)
+endfunction
+
+function _multiply_matrices(prod,a,b)
+for col=1 to 3:for row=1 to 3
+   matrices(prod,row,col)=0
+   for i=1 to 3
+      matrices(prod,row,col)=matrices(prod,row,col)+matrices(a,row,i)*matrices(b,i,col)
+   next i
+next row:next col
+endfunction
+
+function _multiply_4matrices(prod,a,b)
+for col=0 to 3:for row=0 to 3
+   matrices(prod,row,col)=0
+   for i=0 to 3
+      matrices(prod,row,col)=matrices(prod,row,col)+matrices(a,row,i)*matrices(b,i,col)
+   next i
+next row:next col
+endfunction
+
+function _copy_matrix(m_from,m_to)
+for i=1 to 3:for j=1 to 3  `only 3x3 copy. use another func for full 4x4 copy
+   matrices(m_to,i,j)=matrices(m_from,i,j)
+next j:next i
+endfunction
+
+function _copy_4matrix(m_from,m_to)
+for i=0 to 3:for j=0 to 3  `full 4x4 copy
+   matrices(m_to,i,j)=matrices(m_from,i,j)
+next j:next i
+endfunction
+
+function _copy_quaternion(q_from,q_to)
+for i=0 to 3
+   quats(q_to,i)=quats(q_from,i)
+next i
+endfunction
