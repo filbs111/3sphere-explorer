@@ -77,6 +77,24 @@ mylog(multiply_4matrices(convert_quats_to_4matrix(candidate_inverse_qpair_1), co
 mylog(multiply_4matrices(convert_quats_to_4matrix(candidate_inverse_qpair_2), convert_quats_to_4matrix(testqpair)));
 
 
+//try creating a "movement" matrix.
+
+var moveqp = makemovequatpair([1.23456,0,0]);
+var movem = convert_quats_to_4matrix(moveqp);
+mylog(movem);
+check4matB(movem);
+
+
+
+function makemovequatpair(move){
+	//work out direction, length. move is a 3-vector
+	var lengthsq = move[0]*move[0] + move[1]*move[1] + move[2]*move[2];
+	var length = Math.sqrt(lengthsq);
+	var mult = Math.sin(length)/length;
+	var q = [Math.cos(length), mult*move[0], mult*move[1], mult*move[2]];
+	return [q,q];
+}
+
 
 function mylog(obj){
 	console.log(JSON.stringify(obj));
