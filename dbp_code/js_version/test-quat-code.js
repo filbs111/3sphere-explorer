@@ -84,6 +84,10 @@ var movem = convert_quats_to_4matrix(moveqp);
 mylog(movem);
 check4matB(movem);
 
+var rotqp = makerotatequatpair([1.23456,0,0]);
+var rotm = convert_quats_to_4matrix(rotqp);
+mylog(rotm);
+check4matB(rotm);
 
 
 function makemovequatpair(move){
@@ -93,6 +97,16 @@ function makemovequatpair(move){
 	var mult = Math.sin(length)/length;
 	var q = [Math.cos(length), mult*move[0], mult*move[1], mult*move[2]];
 	return [q,q];
+}
+
+function makerotatequatpair(rot){
+	//work out direction, length. move is a 3-vector
+	var lengthsq = rot[0]*rot[0] + rot[1]*rot[1] + rot[2]*rot[2];
+	var length = Math.sqrt(lengthsq);
+	var mult = Math.sin(length)/length;
+	var q = [Math.cos(length), mult*rot[0], mult*rot[1], mult*rot[2]];
+	var qc = [-Math.cos(length), mult*rot[0], mult*rot[1], mult*rot[2]];
+	return [q,qc];
 }
 
 
