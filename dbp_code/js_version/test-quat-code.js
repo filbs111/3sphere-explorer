@@ -79,7 +79,7 @@ mylog(multiply_4matrices(convert_quats_to_4matrix(candidate_inverse_qpair_2), co
 
 //try creating a "movement" matrix.
 
-var testmovevector = [0.1,0,0];
+var testmovevector = [0.1,0.2,0.3];
 var halftestmovevector = scalarvectorprod(0.5,testmovevector);
 
 var moveqp = makemovequatpair(halftestmovevector);
@@ -89,7 +89,7 @@ mylog(movem);
 
 var rotqp = makerotatequatpair([1.23456,0,0]);
 var rotm = convert_quats_to_4matrix(rotqp);
-mylog(rotm);
+//mylog(rotm);
 //check4matB(rotm);
 
 
@@ -101,7 +101,27 @@ mat4.identity(glmat);
 xyzmove4mat(glmat, testmovevector);
 console.log(glmat);
 
+console.log(convert_format_mat(movem));	//TODO either use new format throughout, or make an alternative convert_quats_to_4matrix()
 
+
+function convert_format_mat(mat){
+	//convert a array of arrays matrix to a flat glamtrix matrix used in existing js 3spheres project.
+	//"new" version (derived from dbp code) has matrix contain
+	var outmat = mat4.create();
+	
+	//input mat (dbp style) listing indices of equivalent entries in glmatrix style matrix:
+	// [[15, 12, 13, 14],
+	//  [ 3,  0,  1,  2],
+	//  [ 7,  4,  5,  6],
+	//  [11,  8,  9, 10]]
+	
+	outmat[15]=mat[0][0];	outmat[12]=mat[0][1];	outmat[13]=mat[0][2];	outmat[14]=mat[0][3];
+	outmat[3]=mat[1][0];	outmat[0]=mat[1][1];	outmat[1]=mat[1][2];	outmat[2]=mat[1][3];
+	outmat[7]=mat[2][0];	outmat[4]=mat[2][1];	outmat[5]=mat[2][2];	outmat[6]=mat[2][3];
+	outmat[11]=mat[3][0];	outmat[8]=mat[3][1];	outmat[9]=mat[3][2];	outmat[10]=mat[3][3];
+	
+	return outmat;
+}
 
 
 function scalarvectorprod(sca,vec){
