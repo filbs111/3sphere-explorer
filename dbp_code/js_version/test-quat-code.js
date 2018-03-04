@@ -79,16 +79,34 @@ mylog(multiply_4matrices(convert_quats_to_4matrix(candidate_inverse_qpair_2), co
 
 //try creating a "movement" matrix.
 
-var moveqp = makemovequatpair([1.23456,0,0]);
+var testmovevector = [0.1,0,0];
+var halftestmovevector = scalarvectorprod(0.5,testmovevector);
+
+var moveqp = makemovequatpair(halftestmovevector);
 var movem = convert_quats_to_4matrix(moveqp);
 mylog(movem);
-check4matB(movem);
+//check4matB(movem);
 
 var rotqp = makerotatequatpair([1.23456,0,0]);
 var rotm = convert_quats_to_4matrix(rotqp);
 mylog(rotm);
-check4matB(rotm);
+//check4matB(rotm);
 
+
+//find equivalent to what using currently in 3-sphere explorer project to transform so4 mats.
+
+var glmat=mat4.create();
+mat4.identity(glmat);
+//console.log(glmat);
+xyzmove4mat(glmat, testmovevector);
+console.log(glmat);
+
+
+
+
+function scalarvectorprod(sca,vec){
+	return vec.map(function(val){return sca*val;});
+}
 
 function makemovequatpair(move){
 	//work out direction, length. move is a 3-vector
