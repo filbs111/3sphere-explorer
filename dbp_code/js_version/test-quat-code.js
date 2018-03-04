@@ -44,6 +44,40 @@ normalise_qpair(qp);
 check4matB(convert_quats_to_4matrix(qp));
 
 
+
+//check that can find pair of quaternions representing a matrix inverse, where the pair representing the matrix to invert are known.
+
+//what quaternion pair represents the identity matrix?
+mylog("identity:");
+var qid_1=[[1,0,0,0],[1,0,0,0]];		//this works
+mylog(convert_quats_to_4matrix(qid_1));
+
+var qid_2=[[-1,0,0,0],[-1,0,0,0]];		//this also works
+mylog(convert_quats_to_4matrix(qid_2));
+
+//multiplication of q pairs is multiply_quaternions(qa[0],qb[0]), multiply_quaternions(qb[1],qa[1])];
+//ie [1,0,0,0],[1,0,0,0] = q[0]*qinv[0] , q[1]*qinv[1]
+//ie [1,0,0,0] = q[0]*qinv[0] = q[1]*qinv[1]
+//ie qinv = [1,0,0,0]/q[0] , [1,0,0,0]/q[1]
+//quaternion division is IIRC multiplication by conjugate. something like the 1st term is *-1
+
+var testqpair = random_quat_pair();
+
+var candidate_inverse_qpair_1 = [[testqpair[0][0],-testqpair[0][1],-testqpair[0][2],-testqpair[0][3]], 
+			[testqpair[1][0],-testqpair[1][1],-testqpair[1][2],-testqpair[1][3]]];	//this works, producing [[1,0,0,0],[1,0,0,0]] (qid_1)
+
+var candidate_inverse_qpair_2 = [[-testqpair[0][0],testqpair[0][1],testqpair[0][2],testqpair[0][3]],
+			[-testqpair[1][0],testqpair[1][1],testqpair[1][2],testqpair[1][3]]];	//this works, producing [[1,0,0,0],[1,0,0,0]] (qid_2)
+								
+mylog(multiply_qpairs(testqpair, candidate_inverse_qpair_1));
+mylog(multiply_qpairs(testqpair, candidate_inverse_qpair_2));
+
+//check that the matrices produce identity when multiplied together
+mylog(multiply_4matrices(convert_quats_to_4matrix(candidate_inverse_qpair_1), convert_quats_to_4matrix(testqpair)));
+mylog(multiply_4matrices(convert_quats_to_4matrix(candidate_inverse_qpair_2), convert_quats_to_4matrix(testqpair)));
+
+
+
 function mylog(obj){
 	console.log(JSON.stringify(obj));
 }
