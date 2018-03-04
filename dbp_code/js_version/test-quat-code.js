@@ -11,10 +11,16 @@ var matb = convert_quats_to_4matrix(qb);	//todo pass in as pair variable?
 
 //multiply together matrices
 var matProduct = multiply_4matrices(mata, matb);
-
 var qp= multiply_qpairs(qa,qb);
 
-var matProductFromQuats = convert_quats_to_4matrix(qp);	//todo pass in as pair variable?
+
+for (var it=0;it<500000;it++){
+	var qnew=random_quat_pair();
+	var newmat = convert_quats_to_4matrix(qnew);
+	
+	qp= multiply_qpairs(qp,qnew);
+	matProduct = multiply_4matrices(matProduct, newmat);
+}
 
 
 mylog("a:");
@@ -27,7 +33,8 @@ mylog(matb);
 
 mylog("product:");
 mylog(matProduct);
-mylog(matProductFromQuats);
+//mylog(qp);
+mylog(convert_quats_to_4matrix(qp));
 
 
 
@@ -41,7 +48,7 @@ function new_empty_matrix(){
 }
 
 function random_quat_pair(){
-	qp=[];
+	var qp=[];
 	qp.push(random_quaternion());
 	qp.push(random_quaternion());
 	return qp;
