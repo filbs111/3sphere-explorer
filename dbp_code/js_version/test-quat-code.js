@@ -4,16 +4,17 @@
 //THIS VERSION FOR 4x4
 
 var qa=random_quat_pair();
-var mata = convert_quats_to_4matrix(qa[0],qa[1]);	//todo pass in as pair variable?
+var mata = convert_quats_to_4matrix(qa);	//todo pass in as pair variable?
 
 var qb=random_quat_pair();
-var matb = convert_quats_to_4matrix(qb[0],qb[1]);	//todo pass in as pair variable?
+var matb = convert_quats_to_4matrix(qb);	//todo pass in as pair variable?
 
 //multiply together matrices
 var matProduct = multiply_4matrices(mata, matb);
 
-var qp= [multiply_quaternions(qa[0],qb[0]), multiply_quaternions(qb[1],qa[1])];
-var matProductFromQuats = convert_quats_to_4matrix(qp[0],qp[1]);	//todo pass in as pair variable?
+var qp= multiply_qpairs(qa,qb);
+
+var matProductFromQuats = convert_quats_to_4matrix(qp);	//todo pass in as pair variable?
 
 
 mylog("a:");
@@ -69,7 +70,9 @@ function normalise_quat(q){
 
 //function _convert_quat_to_matrix(q,m)
 
-function convert_quats_to_4matrix(q1,q2){
+function convert_quats_to_4matrix(qpair){
+	var q1=qpair[0], q2=qpair[1];
+	
 	var m = new_empty_matrix();
 	
 	var a1=q1[0];
@@ -108,6 +111,10 @@ function multiply_quaternions(a,b){
 	prod[2]=a[0]*b[2]+b[0]*a[2]+ a[3]*b[1]-a[1]*b[3];
 	prod[3]=a[0]*b[3]+b[0]*a[3]+ a[1]*b[2]-a[2]*b[1];
 	return prod;
+}
+
+function multiply_qpairs(qa,qb){
+	return [multiply_quaternions(qa[0],qb[0]), multiply_quaternions(qb[1],qa[1])];
 }
 
 //function _multiply_matrices(prod,a,b)		//skipped since don't need 3matrix code.
