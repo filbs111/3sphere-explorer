@@ -13,9 +13,10 @@ var matb = convert_quats_to_4matrix(qb);	//todo pass in as pair variable?
 var matProduct = multiply_4matrices(mata, matb);
 var qp= multiply_qpairs(qa,qb);
 
+var qnew=random_quat_pair();
 
-for (var it=0;it<500000;it++){
-	var qnew=random_quat_pair();
+for (var it=0;it<10000;it++){
+	//var qnew=random_quat_pair();	//get better results (more orthogonal matrix) if randomise here!
 	var newmat = convert_quats_to_4matrix(qnew);
 	
 	qp= multiply_qpairs(qp,qnew);
@@ -36,6 +37,11 @@ mylog(matProduct);
 //mylog(qp);
 mylog(convert_quats_to_4matrix(qp));
 
+
+check4matB(matProduct);
+check4matB(convert_quats_to_4matrix(qp));
+normalise_qpair(qp);
+check4matB(convert_quats_to_4matrix(qp));
 
 
 function mylog(obj){
@@ -62,6 +68,11 @@ function random_quaternion(){
 	}
     normalise_quat(q);
 	return q;
+}
+
+function normalise_qpair(qp){
+	normalise_quat(qp[0]);
+	normalise_quat(qp[1]);
 }
 
 function normalise_quat(q){
@@ -157,4 +168,38 @@ function copy_quaternion(q_from,q_to){
 	for (var ii=0;ii<4;ii++){
 		q_to[ii] = q_from[ii];
 	}
+}
+
+
+function check4matB(mat){
+	check4mat(flatten(mat));
+}
+
+//designed for glmatrix style flat arrays.
+function check4mat(mat){
+	//see whether becoming not normalised/orthogonal
+	//var resultsarrRow=[];
+	
+	var resultsarrRowSq=[];
+	for (var aa=0;aa<4;aa++){
+		for (var bb=0;bb<4;bb++){
+			//var total=0;
+			var totalsq=0;
+			for (var cc=0;cc<4;cc++){
+				var vala=mat[4*aa + cc];
+				var valb=mat[4*bb + cc];
+				totalsq+=vala*valb;
+			}
+			//resultsarrRow.push(total);
+			resultsarrRowSq.push(totalsq);
+		}
+	}
+	console.log(resultsarrRowSq);
+
+	var logResults = resultsarrRowSq.map(function(val){return Math.log(val);});
+	//console.log(logResults);
+}
+
+function flatten(arr){
+  return [].concat.apply([], arr);
 }
