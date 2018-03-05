@@ -77,8 +77,7 @@ mylog(multiply_4matrices(convert_quats_to_4matrix(candidate_inverse_qpair_1), co
 mylog(multiply_4matrices(convert_quats_to_4matrix(candidate_inverse_qpair_2), convert_quats_to_4matrix(testqpair)));
 
 
-//try creating a "movement" matrix.
-
+//"movement" matrix.	------------------------------------------------
 var testmovevector = [0.1,0.2,0.3];
 var halftestmovevector = scalarvectorprod(0.5,testmovevector);
 
@@ -86,12 +85,6 @@ var moveqp = makemovequatpair(halftestmovevector);
 var movem = convert_quats_to_4matrix(moveqp);
 mylog(movem);
 //check4matB(movem);
-
-var rotqp = makerotatequatpair([1.23456,0,0]);
-var rotm = convert_quats_to_4matrix(rotqp);
-//mylog(rotm);
-//check4matB(rotm);
-
 
 //find equivalent to what using currently in 3-sphere explorer project to transform so4 mats.
 
@@ -102,6 +95,25 @@ xyzmove4mat(glmat, testmovevector);
 console.log(glmat);
 
 console.log(convert_format_mat(movem));	//TODO either use new format throughout, or make an alternative convert_quats_to_4matrix()
+
+
+
+//"rotation" matrix ---------------------------------------------------
+var testrotatevector = [0.1,0.2,0.3];
+var halftestrotatevector = scalarvectorprod(0.5,testrotatevector);
+
+var rotqp = makerotatequatpair(halftestrotatevector);
+var rotm = convert_quats_to_4matrix(rotqp);
+mylog(rotm);
+//check4matB(rotm);
+
+mat4.identity(glmat);
+//console.log(glmat);
+xyzrotate4mat(glmat, testrotatevector);
+console.log(glmat);
+
+console.log(convert_format_mat(rotm));
+
 
 
 function convert_format_mat(mat){
@@ -142,8 +154,8 @@ function makerotatequatpair(rot){
 	var lengthsq = rot[0]*rot[0] + rot[1]*rot[1] + rot[2]*rot[2];
 	var length = Math.sqrt(lengthsq);
 	var mult = Math.sin(length)/length;
-	var q = [Math.cos(length), mult*rot[0], mult*rot[1], mult*rot[2]];
-	var qc = [-Math.cos(length), mult*rot[0], mult*rot[1], mult*rot[2]];
+	var q = [Math.cos(length), -mult*rot[0], -mult*rot[1], -mult*rot[2]];
+	var qc = [Math.cos(length), mult*rot[0], mult*rot[1], mult*rot[2]];
 	return [q,qc];
 }
 
