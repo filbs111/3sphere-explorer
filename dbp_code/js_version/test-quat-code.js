@@ -21,6 +21,7 @@ for (var it=0;it<10000;it++){
 	
 	qp= multiply_qpairs(qp,qnew);
 	matProduct = multiply_4matrices(matProduct, newmat);
+	//matProduct = multiply_4matrices(newmat, matProduct);
 }
 
 
@@ -38,10 +39,10 @@ mylog(matProduct);
 mylog(convert_quats_to_4matrix(qp));
 
 
-check4matB(matProduct);
-check4matB(convert_quats_to_4matrix(qp));
+check4mat(matProduct);
+check4mat(convert_quats_to_4matrix(qp));
 normalise_qpair(qp);
-check4matB(convert_quats_to_4matrix(qp));
+check4mat(convert_quats_to_4matrix(qp));
 
 
 
@@ -94,8 +95,7 @@ mat4.identity(glmat);
 xyzmove4mat(glmat, testmovevector);
 console.log(glmat);
 
-console.log(convert_format_mat(movem));	//TODO either use new format throughout, or make an alternative convert_quats_to_4matrix()
-
+console.log(movem);	
 
 
 //"rotation" matrix ---------------------------------------------------
@@ -105,35 +105,15 @@ var halftestrotatevector = scalarvectorprod(0.5,testrotatevector);
 var rotqp = makerotatequatpair(halftestrotatevector);
 var rotm = convert_quats_to_4matrix(rotqp);
 mylog(rotm);
-//check4matB(rotm);
+//check4mat(rotm);
 
 mat4.identity(glmat);
 //console.log(glmat);
 xyzrotate4mat(glmat, testrotatevector);
 console.log(glmat);
 
-console.log(convert_format_mat(rotm));
+console.log(rotm);
 
-
-
-function convert_format_mat(mat){
-	//convert a array of arrays matrix to a flat glamtrix matrix used in existing js 3spheres project.
-	//"new" version (derived from dbp code) has matrix contain
-	var outmat = mat4.create();
-	
-	//input mat (dbp style) listing indices of equivalent entries in glmatrix style matrix:
-	// [[15, 12, 13, 14],
-	//  [ 3,  0,  1,  2],
-	//  [ 7,  4,  5,  6],
-	//  [11,  8,  9, 10]]
-	
-	outmat[15]=mat[0][0];	outmat[12]=mat[0][1];	outmat[13]=mat[0][2];	outmat[14]=mat[0][3];
-	outmat[3]=mat[1][0];	outmat[0]=mat[1][1];	outmat[1]=mat[1][2];	outmat[2]=mat[1][3];
-	outmat[7]=mat[2][0];	outmat[4]=mat[2][1];	outmat[5]=mat[2][2];	outmat[6]=mat[2][3];
-	outmat[11]=mat[3][0];	outmat[8]=mat[3][1];	outmat[9]=mat[3][2];	outmat[10]=mat[3][3];
-	
-	return outmat;
-}
 
 
 function scalarvectorprod(sca,vec){
@@ -161,12 +141,7 @@ function makerotatequatpair(rot){
 
 
 function mylog(obj){
-	console.log(JSON.stringify(obj));
-}
-
-
-function new_empty_matrix(){
-	return [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+	console.log(obj);
 }
 
 function random_quat_pair(){
@@ -202,12 +177,10 @@ function normalise_quat(q){
 	}
 }
 
-//function _convert_quat_to_matrix(q,m)
-
 function convert_quats_to_4matrix(qpair){
 	var q1=qpair[0], q2=qpair[1];
 	
-	var m = new_empty_matrix();
+	var m = mat4.create();
 	
 	var a1=q1[0];
     var b1=q1[1];
@@ -223,10 +196,10 @@ function convert_quats_to_4matrix(qpair){
 	var c1a2=c1*a2, c1b2=c1*b2, c1c2=c1*c2, c1d2=c1*d2;
 	var d1a2=d1*a2, d1b2=d1*b2, d1c2=d1*c2, d1d2=d1*d2;
 
-	m[0][0]=a1a2-b1b2-c1c2-d1d2;	m[0][1]=-a1b2-b1a2+c1d2-d1c2;	m[0][2]=-a1c2-b1d2-c1a2+d1b2;	m[0][3]=-a1d2+b1c2-c1b2-d1a2;
-	m[1][0]=b1a2+a1b2-d1c2+c1d2;	m[1][1]=-b1b2+a1a2+d1d2+c1c2;	m[1][2]=-b1c2+a1d2-d1a2-c1b2;	m[1][3]=-b1d2-a1c2-d1b2+c1a2;
-	m[2][0]=c1a2+d1b2+a1c2-b1d2;	m[2][1]=-c1b2+d1a2-a1d2-b1c2;	m[2][2]=-c1c2+d1d2+a1a2+b1b2;	m[2][3]=-c1d2-d1c2+a1b2-b1a2;
-	m[3][0]=d1a2-c1b2+b1c2+a1d2;	m[3][1]=-d1b2-c1a2-b1d2+a1c2;	m[3][2]=-d1c2-c1d2+b1a2-a1b2;	m[3][3]=-d1d2+c1c2+b1b2+a1a2;
+	m[15]=a1a2-b1b2-c1c2-d1d2;	m[12]=-a1b2-b1a2+c1d2-d1c2;	m[13]=-a1c2-b1d2-c1a2+d1b2;	m[14]=-a1d2+b1c2-c1b2-d1a2;
+	m[3]=b1a2+a1b2-d1c2+c1d2;	m[0]=-b1b2+a1a2+d1d2+c1c2;	m[1]=-b1c2+a1d2-d1a2-c1b2;	m[2]=-b1d2-a1c2-d1b2+c1a2;
+	m[7]=c1a2+d1b2+a1c2-b1d2;	m[4]=-c1b2+d1a2-a1d2-b1c2;	m[5]=-c1c2+d1d2+a1a2+b1b2;	m[6]=-c1d2-d1c2+a1b2-b1a2;
+	m[11]=d1a2-c1b2+b1c2+a1d2;	m[8]=-d1b2-c1a2-b1d2+a1c2;	m[9]=-d1c2-c1d2+b1a2-a1b2;	m[10]=-d1d2+c1c2+b1b2+a1a2;
 	
 	//matrices(m,1,1)=asq+bsq-csq-dsq  :matrices(m,1,2)=2.0*(b*c-a*d)   :matrices(m,1,3)=2.0*(b*d+a*c)
 	//matrices(m,2,1)=2.0*(b*c+a*d)    :matrices(m,2,2)=asq-bsq+csq-dsq :matrices(m,2,3)=2.0*(c*d-a*b)
@@ -237,7 +210,7 @@ function convert_quats_to_4matrix(qpair){
 
 
 
-function multiply_quaternions(a,b){
+function multiply_quaternions(b,a){	//note switched input order for consistency with matrix multiplication
 	var prod=[];
 	prod[0]=a[0]*b[0]-(a[1]*b[1]+a[2]*b[2]+a[3]*b[3]);       //s1s2 - v1.v2
     //vector part of product= s1v2+s2v1+s3v3 +v1 x v2
@@ -251,34 +224,13 @@ function multiply_qpairs(qa,qb){
 	return [multiply_quaternions(qa[0],qb[0]), multiply_quaternions(qb[1],qa[1])];
 }
 
-//function _multiply_matrices(prod,a,b)		//skipped since don't need 3matrix code.
-
 function multiply_4matrices(a,b){
-	var prod = [];
-	for (var row=0;row<4;row++){
-		prod[row]=[];
-		for (var col=0;col<4;col++){
-			prod[row][col]=0;
-			for (var ii=0;ii<4;ii++){
-				prod[row][col]+=a[row][ii]*b[ii][col];
-			}
-		}
-	}
+	var prod=mat4.create();
+	mat4.set(a,prod);
+	mat4.multiply(prod,b);
 	return prod;
 }
 
-//function _copy_matrix(m_from,m_to)	//skipped since don't need 3matrix code.
-
-//todo use matrix library for this. using this initially so minimal changes from dbp code.
-//note also has matrix as array of arrays rather than flat.
-
-function copy_4matrix(m_from,m_to){
-	for (var ii=0;ii<4;ii++){
-		for (var jj=0;jj<4;jj++){
-			m_to[ii][jj] = m_from[ii][jj];
-		}
-	}
-}
 
 function copy_quaternion(q_from,q_to){
 	for (var ii=0;ii<4;ii++){
@@ -286,10 +238,6 @@ function copy_quaternion(q_from,q_to){
 	}
 }
 
-
-function check4matB(mat){
-	check4mat(flatten(mat));
-}
 
 //designed for glmatrix style flat arrays.
 function check4mat(mat){
@@ -314,8 +262,4 @@ function check4mat(mat){
 
 	var logResults = resultsarrRowSq.map(function(val){return Math.log(val);});
 	//console.log(logResults);
-}
-
-function flatten(arr){
-  return [].concat.apply([], arr);
 }
