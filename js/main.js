@@ -901,7 +901,7 @@ function drawObjectFromPreppedBuffers(bufferObj, shaderProg){
 //need all of these???
 var mvMatrix = mat4.create();
 var pMatrix = mat4.create();
-var playerMatrix = mat4.create();
+//var playerMatrix = mat4.create();
 var playerCamera = mat4.create();
 var worldCamera = mat4.create();
 
@@ -970,7 +970,7 @@ function initCubemapFramebuffer(){
 function setupScene() {
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 	
-	mat4.identity(playerMatrix);
+//	mat4.identity(playerMatrix);
 	mat4.identity(playerCamera);	//not sure why have 2 matrices here...
 	
 	//start player off outside of boxes
@@ -1043,6 +1043,7 @@ var guiParams={
 	"culling":true,
 	"perPixelLighting":true,
 	fogColor:'#808080',
+	useQPair:false,
 	reflector:{
 		draw:true,
 		mappingType:'vertex projection',
@@ -1091,6 +1092,7 @@ function init(){
 	gui.add(guiParams, "perPixelLighting");
 	gui.add(guiParams, "smoothMovement");
 	gui.add(guiParams, "culling");
+	gui.add(guiParams, "useQPair");
 	var reflectorFolder = gui.addFolder('reflector');
 	reflectorFolder.add(guiParams.reflector, "draw");
 	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection']);
