@@ -1,12 +1,9 @@
 
-function fixPlayerMat(){
-	var qpair = playerCamera.qPair;
-	mat4.set(convert_quats_to_4matrix(qpair), playerCamera);
-}
-
 function xyzmove4mat(mat, movevector){
 	if (mat.qPair){
 		mat.qPair = multiply_qpairs( mat.qPair, makemovequatpair(scalarvectorprod(0.5,movevector)) );
+		mat4.set(convert_quats_to_4matrix(mat.qPair), playerCamera);
+		return;
 	}
 	
 	//movevector is axis*angle

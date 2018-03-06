@@ -179,8 +179,6 @@ function drawScene(frameTime){
 	resizecanvas();
 
 	if (guiParams.smoothMovement){iterateMechanics();}	//TODO make movement speed independent of framerate
-
-	if (guiParams.useQPair){fixPlayerMat();}
 	
 	requestAnimationFrame(drawScene);
 	stats.end();
@@ -1046,7 +1044,6 @@ var guiParams={
 	"culling":true,
 	"perPixelLighting":true,
 	fogColor:'#808080',
-	useQPair:false,
 	reflector:{
 		draw:true,
 		mappingType:'vertex projection',
@@ -1095,7 +1092,6 @@ function init(){
 	gui.add(guiParams, "perPixelLighting");
 	gui.add(guiParams, "smoothMovement");
 	gui.add(guiParams, "culling");
-	gui.add(guiParams, "useQPair");
 	var reflectorFolder = gui.addFolder('reflector');
 	reflectorFolder.add(guiParams.reflector, "draw");
 	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection']);
