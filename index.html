@@ -38,8 +38,8 @@
 <script type="text/javascript" src="data/sphere.js"></script>
 <script type="text/javascript" src="data/levelCubeData.js"></script>
 <script type="text/javascript" src="data/tennisBall.js"></script>
-<!--<script type="text/javascript" src="data/grid1.obj.json.min"></script>-->
-<script type="text/javascript" src="data/terrain/untitled64tri-deduped-wrap.obj.json.min"></script>
+<script type="text/javascript" src="data/grid1.obj.json.min"></script>
+<!--<script type="text/javascript" src="data/terrain/untitled64tri-deduped-wrap.obj.json.min"></script>-->
 <script type="text/javascript" src="data/tennisBallLoader.js"></script>
 <script type="text/javascript" src="data/cube-frame-a1-cubeproj.obj.json"></script>
 <script type="text/javascript" src="data/cube-frame-a2-cubeproj.obj.json"></script>
@@ -190,7 +190,8 @@
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		//falloff
 		light/=0.7 + 3.0*dot(adjustedPos,adjustedPos);	//1st num some const to ensure light doesn't go inf at short dist
-													//guess maybe similar to some gaussian light source
+		light=0.0;	//test											
+		//guess maybe similar to some gaussian light source
 		gl_FragColor = vec4( fog*( vec3(light) + uFogColor.xyz )*uColor.xyz, 1.0) + (1.0-fog)*uFogColor;
 	}
 </script>
@@ -267,6 +268,8 @@
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		//falloff
 		light/=0.7 + 3.0*dot(adjustedPos,adjustedPos);
+		
+		light=0.0;	//test
 		
 		gl_FragColor = vec4( fog*( vec3(light) + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		
