@@ -847,13 +847,13 @@ function drawTennisBall(){
 	
 	
 	for (var side=0;side<2;side++){	//TODO should only draw 1 side - work out which side player is on...
-		for (var xg=0;xg<4;xg+=2){		//
-			for (var yg=0;yg<4;yg+=2){	//TODO precalc cells array better than grids here.
+		for (var xg=0;xg<4;xg+=1){		//
+			for (var yg=0;yg<4;yg+=1){	//TODO precalc cells array better than grids here.
 				setMatrixUniforms(shaderProgramTexmap4Vec);
 				gl.drawElements(gl.TRIANGLES, tennisBallVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-				rotate4mat(mvMatrix, 0, 1, Math.PI*1.0);
+				rotate4mat(mvMatrix, 0, 1, Math.PI*0.5);
 			}
-			rotate4mat(mvMatrix, 2, 3, Math.PI*1.0);
+			rotate4mat(mvMatrix, 2, 3, Math.PI*0.5);
 		}
 		xmove4mat(mvMatrix, 0.5*Math.PI);			//switch to 
 		rotate4mat(mvMatrix, 1, 2, Math.PI*0.5);	//other side..
@@ -982,9 +982,9 @@ var terrainTexture;
 
 function initTexture(){
 	texture = makeTexture("img/0033.jpg");
-	//texture = makeTexture("img/grid-omni.png");
+	terrainTexture = makeTexture("img/grid-omni.png");
 	//texture = makeTexture("img/ash_uvgrid01-grey.tiny.png");	//numbered grid
-	terrainTexture = makeTexture("data/terrain/turbulent-seamless.png");
+	//terrainTexture = makeTexture("data/terrain/turbulent-seamless.png");
 }
 
 function makeTexture(src) {	//to do OO
@@ -1014,7 +1014,7 @@ var stats;
 
 var guiParams={
 	drawShapes:{
-		'x*x+y*y=z*z+w*w':false,
+		'x*x+y*y=z*z+w*w':true,
 		'x*x+z*z=y*y+w*w':false,
 		'x*x+w*w=y*y+z*z':false,
 		'boxes y=z=0':false,	//x*x+w*w=1
@@ -1027,7 +1027,7 @@ var guiParams={
 	"draw 5-cell":false,
 	"8-cell scale":1.0,
 	"subdiv frames":true,
-	"draw 8-cell":true,
+	"draw 8-cell":false,
 	"draw 16-cell":false,
 	"draw 24-cell":false,
 	"draw 120-cell":false,
@@ -1042,7 +1042,7 @@ var guiParams={
 	smoothMovement: true,
 	"culling":true,
 	"perPixelLighting":true,
-	fogColor:'#222222',
+	fogColor:'#808080',
 	reflector:{
 		draw:true,
 		mappingType:'vertex projection',
@@ -1245,7 +1245,7 @@ var iterateMechanics = (function iterateMechanics(){
 })();
 
 function portalTest(){
-	var adjustedRad = reflectorInfo.rad +0.003;	//avoid issues with rendering very close to surface
+	var adjustedRad = reflectorInfo.rad +0.007;	//avoid issues with rendering very close to surface
 	if (checkWithinReflectorRange(playerCamera, adjustedRad)){	
 		moveMatrixThruPortal(playerCamera, adjustedRad, 1.0005);
 	}
