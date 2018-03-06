@@ -599,7 +599,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	}	
 	
 	function drawSpaceship(matrix, matrixForTargeting){
-		modelScale=0.001;
+		modelScale=0.0001;
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.1, 0.1, 0.1, 1.0]);	//DARK
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 		
@@ -917,7 +917,7 @@ function setMatrixUniforms(shaderProgram) {
 
 var cubemapFramebuffer;
 var cubemapTexture;
-var cubemapSize = 512;
+var cubemapSize = 1024;
 //cube map code from http://www.humus.name/cubemapviewer.js (slightly modified)
 var cubemapFacelist;
 
