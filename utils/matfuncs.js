@@ -1,5 +1,14 @@
 
+function fixPlayerMat(){
+	var qpair = playerCamera.qPair;
+	mat4.set(convert_quats_to_4matrix(qpair), playerCamera);
+}
+
 function xyzmove4mat(mat, movevector){
+	if (mat.qPair){
+		mat.qPair = multiply_qpairs( mat.qPair, makemovequatpair(scalarvectorprod(0.5,movevector)) );
+	}
+	
 	//movevector is axis*angle
 	//rotating x,y,z into w (3rd )
 	
@@ -81,6 +90,10 @@ function zmove4mat(mat, angle){
 }
 
 function xyzrotate4mat(mat, rotatevector){
+	if (mat.qPair){
+		mat.qPair = multiply_qpairs( mat.qPair , makerotatequatpair(scalarvectorprod(0.5,rotatevector)));
+	}
+	
 	//angle/axis rotation.
 	//just make a fresh matrix, then multiply the input matrix by that.
 	var newMatrix = mat4.identity();
@@ -139,6 +152,7 @@ function scalarvectorprod(sca,vec){
 function makemovequatpair(move){
 	//work out direction, length. move is a 3-vector
 	var lengthsq = move[0]*move[0] + move[1]*move[1] + move[2]*move[2];
+	if (lengthsq==0){return [[1,0,0,0],[1,0,0,0]];}	//handle no movement
 	var length = Math.sqrt(lengthsq);
 	var mult = Math.sin(length)/length;
 	var q = [Math.cos(length), mult*move[0], mult*move[1], mult*move[2]];
@@ -148,6 +162,7 @@ function makemovequatpair(move){
 function makerotatequatpair(rot){
 	//work out direction, length. move is a 3-vector
 	var lengthsq = rot[0]*rot[0] + rot[1]*rot[1] + rot[2]*rot[2];
+	if (lengthsq==0){return [[1,0,0,0],[1,0,0,0]];}	//handle no movement
 	var length = Math.sqrt(lengthsq);
 	var mult = Math.sin(length)/length;
 	var q = [Math.cos(length), -mult*rot[0], -mult*rot[1], -mult*rot[2]];

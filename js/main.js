@@ -180,6 +180,8 @@ function drawScene(frameTime){
 
 	if (guiParams.smoothMovement){iterateMechanics();}	//TODO make movement speed independent of framerate
 
+	if (guiParams.useQPair){fixPlayerMat();}
+	
 	requestAnimationFrame(drawScene);
 	stats.end();
 	stats.begin();
@@ -901,8 +903,8 @@ function drawObjectFromPreppedBuffers(bufferObj, shaderProg){
 //need all of these???
 var mvMatrix = mat4.create();
 var pMatrix = mat4.create();
-//var playerMatrix = mat4.create();
 var playerCamera = mat4.create();
+
 var worldCamera = mat4.create();
 
 var cmapPMatrix = mat4.create();
@@ -970,8 +972,9 @@ function initCubemapFramebuffer(){
 function setupScene() {
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 	
-//	mat4.identity(playerMatrix);
 	mat4.identity(playerCamera);	//not sure why have 2 matrices here...
+	//bung extra quaternion stuff onto this for quick test
+	playerCamera.qPair = [[1,0,0,0],[1,0,0,0]];
 	
 	//start player off outside of boxes
 	xyzmove4mat(playerCamera,[0,0.7,-1.0]);
