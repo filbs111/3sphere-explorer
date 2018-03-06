@@ -1246,9 +1246,9 @@ var iterateMechanics = (function iterateMechanics(){
 })();
 
 function portalTest(){
-	var adjustedRad = reflectorInfo.rad +0.007;	//avoid issues with rendering very close to surface
+	var adjustedRad = reflectorInfo.rad +0.0005;	//avoid issues with rendering very close to surface
 	if (checkWithinReflectorRange(playerCamera, adjustedRad)){	
-		moveMatrixThruPortal(playerCamera, adjustedRad, 1.0005);
+		moveMatrixThruPortal(playerCamera, adjustedRad, 1.0001);
 	}
 }
 
