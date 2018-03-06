@@ -1273,13 +1273,13 @@ function movePlayer(vec){
 }
 
 function movePlayerFwd(amount){
-	zmove4mat(playerCamera, amount);
+	movePlayer([0,0,amount]);
 }
 function movePlayerLeft(amount){
-	xmove4mat(playerCamera, amount);
+	movePlayer([amount,0,0]);
 }
 function movePlayerUp(amount){
-	ymove4mat(playerCamera, amount);
+	movePlayer([0,amount,0]);
 }
 
 function rotatePlayer(vec){
@@ -1287,13 +1287,15 @@ function rotatePlayer(vec){
 }
 
 function rollPlayer(amount){
-	rotate4mat(playerCamera, 0, 1, -amount);
+	//rotate4mat(playerCamera, 0, 1, -amount);
+	xyzrotate4mat(playerCamera,[0,0,-amount]);
 }
 function turnPlayer(amount){
-	rotate4mat(playerCamera, 0, 2, amount);
+	//rotate4mat(playerCamera, 0, 2, amount);
+	xyzrotate4mat(playerCamera,[0,-amount,0]);
 }
 function pitchPlayer(amount){
-	rotate4mat(playerCamera, 1, 2, -amount);
+	xyzrotate4mat(playerCamera,[-amount,0,0]);
 }
 
 

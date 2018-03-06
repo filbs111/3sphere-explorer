@@ -68,15 +68,15 @@ function xyzmove4mat(mat, movevector){
 }
 
 function xmove4mat(mat, angle){
-	rotate4mat(mat, 0, 3, angle);
+	xyzmove4mat(mat, [angle,0,0]);
 	return mat;
 }
 function ymove4mat(mat, angle){
-	rotate4mat(mat, 1, 3, angle);
+	xyzmove4mat(mat, [0,angle,0]);
 	return mat;
 }
 function zmove4mat(mat, angle){
-	rotate4mat(mat, 2, 3, angle);
+	xyzmove4mat(mat, [0,0,angle]);
 	return mat;
 }
 
@@ -127,4 +127,25 @@ function rotate4matRows(mat, row1, row2, angle){
 		mat[idx2] = cAng*mat[idx2] - sAng*mat[idx1];
 		mat[idx1] = tempVal;
 	}
+}
+
+function check4mat(mat){
+	//see whether becoming not normalised/orthogonal
+	//var resultsarrRow=[];
+	var resultsarrRowSq=[];
+	for (var aa=0;aa<4;aa++){
+		for (var bb=0;bb<4;bb++){
+			//var total=0;
+			var totalsq=0;
+			for (var cc=0;cc<4;cc++){
+				var vala=mat[4*aa + cc];
+				var valb=mat[4*bb + cc];
+				totalsq+=vala*valb;
+			}
+			//resultsarrRow.push(total);
+			resultsarrRowSq.push(totalsq);
+		}
+	}
+	var logResults = resultsarrRowSq.map(function(val){return Math.log(val);});
+	console.log(logResults);
 }
