@@ -20,7 +20,7 @@ function initShaders(){
 					});
 	shaderProgramColoredPerPixelDiscard = loadShader( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs",{
 					attributes:["aVertexPosition","aVertexNormal"],
-					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uColor","uFogColor", "uModelScale","uReflectorPos","uReflectorCos"]
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uColor","uFogColor", "uModelScale","uReflectorPos","uReflectorCos"]
 					});				
 	
 	shaderProgramTexmapPerVertex = loadShader( "shader-texmap-vs", "shader-texmap-fs",{
@@ -33,7 +33,7 @@ function initShaders(){
 					});
 	shaderProgramTexmapPerPixelDiscard = loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs",{
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
-					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uModelScale","uReflectorPos","uReflectorCos"]
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uSampler","uColor","uFogColor","uModelScale","uReflectorPos","uReflectorCos"]
 					});
 					
 	shaderProgramTexmap4Vec = loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs",{
@@ -206,6 +206,12 @@ function calcReflectionInfo(toReflect,resultsObj){
 	resultsObj.shaderMatrix=reflectShaderMatrix;
 	
 	resultsObj.cubeViewShiftAdjusted = cubeViewShiftAdjusted;
+	
+	//only used for droplightpos2, and only different from shaderMatrix if reflector (rather than portal) (inefficient!)
+	var reflectShaderMatrix2 = mat4.create();
+	mat4.identity(reflectShaderMatrix2);
+	xyzmove4mat(reflectShaderMatrix2, cubeViewShiftAdjusted);	
+	resultsObj.shaderMatrix2=reflectShaderMatrix2;
 }
 
 function drawScene(frameTime){
@@ -339,7 +345,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	var dropLightReflectionInfo={};
 	calcReflectionInfo(sshipMatrix,dropLightReflectionInfo);
-	mat4.multiply(lightMat, dropLightReflectionInfo.shaderMatrix);
+	mat4.multiply(lightMat, dropLightReflectionInfo.shaderMatrix2);
 	dropLightPos2 = [lightMat[12], lightMat[13], lightMat[14], lightMat[15]];
 	
 	//var activeShaderProgram = shaderProgramColored;	//draw spheres
@@ -356,6 +362,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var boxRad = boxSize*Math.sqrt(3);
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
+	if (activeShaderProgram.uniforms.uDropLightPos2){
+		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos2, dropLightPos2);
+	}
 	
 	var numBallsInRing = 20;
 	var startAng = Math.PI / numBallsInRing;
@@ -582,6 +591,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 	gl.useProgram(activeShaderProgram);
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
+	if (activeShaderProgram.uniforms.uDropLightPos2){
+		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos2, dropLightPos2);
+	}
 	//gl.disableVertexAttribArray(1);	//don't need texcoords
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 0.8, 1.0]);	//BLUE

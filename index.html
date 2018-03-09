@@ -177,6 +177,7 @@
 	uniform float uReflectorCos;
 	varying float fog;
 	varying vec4 adjustedPos;
+	varying vec4 adjustedPos2;
 	varying vec4 transformedNormal;
 	varying vec4 toReflector;
 	varying vec4 transformedCoord;
@@ -190,7 +191,15 @@
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		//falloff
 		light/=0.7 + 3.0*dot(adjustedPos,adjustedPos);	//1st num some const to ensure light doesn't go inf at short dist
-		light=0.0;	//test											
+		
+		float light2 = -dot( normalize(adjustedPos2), transformedNormal);
+		light2 = max(light2,0.0);	//unnecessary if camera pos = light pos
+		//falloff
+		light2/=0.7 + 3.0*dot(adjustedPos2,adjustedPos2);	
+		
+		light+=light2;
+		//light=light2;	//test reflected light only
+		
 		//guess maybe similar to some gaussian light source
 		gl_FragColor = vec4( fog*( vec3(light) + uFogColor.xyz )*uColor.xyz, 1.0) + (1.0-fog)*uFogColor;
 	}
@@ -201,9 +210,11 @@
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
+	uniform vec4 uDropLightPos2;
 	uniform vec3 uModelScale;
 	varying float fog;
 	varying vec4 adjustedPos;
+	varying vec4 adjustedPos2;
 	varying vec4 transformedNormal;
 	varying vec4 transformedCoord;
 	
@@ -214,6 +225,7 @@
 
 		transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
 		adjustedPos = transformedCoord - uDropLightPos;
+		adjustedPos2 = transformedCoord - uDropLightPos2;
 		
 		fog = 0.5*(1.0 + transformedCoord.w);
 	}
@@ -256,6 +268,7 @@
 	uniform vec4 uReflectorPos;
 	uniform float uReflectorCos;
 	varying vec4 adjustedPos;
+	varying vec4 adjustedPos2;
 	varying vec4 transformedNormal;	
 	varying vec4 transformedCoord;	
 	
@@ -269,7 +282,12 @@
 		//falloff
 		light/=0.7 + 3.0*dot(adjustedPos,adjustedPos);
 		
-		light=0.0;	//test
+		float light2 = -dot( normalize(adjustedPos2), transformedNormal);
+		light2 = max(light2,0.0);	//unnecessary if camera pos = light pos
+		//falloff
+		light2/=0.7 + 3.0*dot(adjustedPos2,adjustedPos2);
+		
+		light+=light2;
 		
 		gl_FragColor = vec4( fog*( vec3(light) + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		
@@ -353,9 +371,11 @@
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
+	uniform vec4 uDropLightPos2;
 	varying float fog;
 	uniform vec3 uModelScale;
 	varying vec4 adjustedPos;
+	varying vec4 adjustedPos2;
 	varying vec4 transformedNormal;	
 	varying vec4 transformedCoord;
 	
@@ -367,6 +387,7 @@
 
 		transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
 		adjustedPos = transformedCoord - uDropLightPos;
+		adjustedPos2 = transformedCoord - uDropLightPos2;
 		
 		fog = 0.5*(1.0 + transformedCoord.w);
 
