@@ -38,7 +38,7 @@ function initShaders(){
 					
 	shaderProgramTexmap4Vec = loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs",{
 					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
-					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor"]
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uSampler","uColor","uFogColor"]
 					});
 					
 	shaderProgramCubemap = loadShader( "shader-cubemap-vs", "shader-cubemap-fs",{
@@ -298,7 +298,8 @@ var usePrecalcCells=true;
 
 function drawWorldScene(frameTime, isCubemapView) {
 	
-	var localVecFogColor = isCubemapView ? [0.2,1.0,0.8,1] : vecFogColor;
+	//var localVecFogColor = isCubemapView ? [0.2,1.0,0.8,1] : vecFogColor;
+	var localVecFogColor = isCubemapView ? [0.5,0.5,0.5,1] : vecFogColor;
 	
 	gl.clearColor.apply(gl,localVecFogColor);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -318,6 +319,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	
 	var dropLightPos;
+	var dropLightPos2;	//reflected light
 	if (!guiParams["drop spaceship"]){
 		dropSpaceship();	//note this is a bit poorly named and inefficient - when spaceship attached to camera,
 	}						//in drawspaceship, are just doing invertedWorldCamera*worldCamera = identity
@@ -326,6 +328,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 	mat4.set(invertedWorldCamera, lightMat);
 	mat4.multiply(lightMat, sshipMatrix);
 	dropLightPos = [lightMat[12], lightMat[13], lightMat[14], lightMat[15]];
+	
+	mat4.set(invertedWorldCamera, lightMat);
+	mat4.multiply(lightMat, reflectorInfo.shaderMatrix);
+	dropLightPos2 = [lightMat[12], lightMat[13], lightMat[14], lightMat[15]];
 	
 	//var activeShaderProgram = shaderProgramColored;	//draw spheres
 	var activeShaderProgram = shaderProgramTexmap;	//draw cubes
@@ -518,6 +524,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	gl.useProgram(activeShaderProgram);
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
+	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos2, dropLightPos2);
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
 	if (guiParams.drawShapes['x*x+y*y=z*z+w*w']){
 		mat4.set(invertedWorldCamera, mvMatrix);
@@ -766,8 +773,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.useProgram(activeShaderProgram);
 		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uPosShiftMat, false, reflectorInfo.shaderMatrix);
 		
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.9, 0.9, 0.9, 1.0]);	//grey
-		//gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
+		//gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.9, 0.9, 0.9, 1.0]);	//grey
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
 		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [reflectorInfo.rad,reflectorInfo.rad, reflectorInfo.rad]);
