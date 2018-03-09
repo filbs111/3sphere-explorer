@@ -175,25 +175,14 @@ var reflectorInfo={
 	rad:1
 };
 
-function drawScene(frameTime){
-	resizecanvas();
-
-	if (guiParams.smoothMovement){iterateMechanics();}	//TODO make movement speed independent of framerate
-	
-	requestAnimationFrame(drawScene);
-	stats.end();
-	stats.begin();
-	
-	
-	reflectorInfo.rad = guiParams.reflector.scale;
-	
+function calcReflectionInfo(toReflect,resultsObj){
 	//use player position directly. expect to behave like transparent
-	var cubeViewShift = [playerCamera[12],playerCamera[13],playerCamera[14]];	
-	var magsq = 1- playerCamera[15]*playerCamera[15];
+	var cubeViewShift = [toReflect[12],toReflect[13],toReflect[14]];	
+	var magsq = 1- toReflect[15]*toReflect[15];
 		//note can just fo 1-w*w, or just use w!
 	
 	//console.log("w: " + playerCamera[15]);
-	var angle = Math.acos(playerCamera[15]);	//from centre of portal to player
+	var angle = Math.acos(toReflect[15]);	//from centre of portal to player
 	var reflectionCentreTanAngle = 	reflectorInfo.rad/ ( 2 - ( reflectorInfo.rad/Math.tan(angle) ) );
 		//note could do tan(angle) directly from playerCamera[15] bypassing calculating angle		
 	
@@ -209,12 +198,29 @@ function drawScene(frameTime){
 	//position within spherical reflector BEFORE projection
 	var correctionFactorB = reflectionCentreTanAngle/mag;
 	correctionFactorB/=reflectorInfo.rad;
-	reflectorInfo.centreTanAngleVectorScaled = cubeViewShift.map(function(val){return -val*correctionFactorB});
+	resultsObj.centreTanAngleVectorScaled = cubeViewShift.map(function(val){return -val*correctionFactorB});
 	
 	var reflectShaderMatrix = mat4.create();
 	mat4.identity(reflectShaderMatrix);
 	xyzmove4mat(reflectShaderMatrix, cubeViewShiftAdjustedMinus);	
-	reflectorInfo.shaderMatrix=reflectShaderMatrix;
+	resultsObj.shaderMatrix=reflectShaderMatrix;
+	
+	resultsObj.cubeViewShiftAdjusted = cubeViewShiftAdjusted;
+}
+
+function drawScene(frameTime){
+	resizecanvas();
+
+	if (guiParams.smoothMovement){iterateMechanics();}	//TODO make movement speed independent of framerate
+	
+	requestAnimationFrame(drawScene);
+	stats.end();
+	stats.begin();
+	
+	
+	reflectorInfo.rad = guiParams.reflector.scale;
+	
+	calcReflectionInfo(playerCamera,reflectorInfo);
 	
 	//draw cubemap views
 	mat4.identity(worldCamera);	//TODO use correct matrices
@@ -237,7 +243,7 @@ function drawScene(frameTime){
 			//xyzmove4mat(worldCamera, [0,0.4,0]);	//moves camera downward
 			//xyzmove4mat(worldCamera, [0,0,0.4]);	//moves camera forward
 													// (from perspective of initial player position)
-			xyzmove4mat(worldCamera, cubeViewShiftAdjusted);	
+			xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);	
 			
 			switch(ii){
 				case 0:
@@ -330,7 +336,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 	dropLightPos = [lightMat[12], lightMat[13], lightMat[14], lightMat[15]];
 	
 	mat4.set(invertedWorldCamera, lightMat);
-	mat4.multiply(lightMat, reflectorInfo.shaderMatrix);
+	
+	var dropLightReflectionInfo={};
+	calcReflectionInfo(sshipMatrix,dropLightReflectionInfo);
+	mat4.multiply(lightMat, dropLightReflectionInfo.shaderMatrix);
 	dropLightPos2 = [lightMat[12], lightMat[13], lightMat[14], lightMat[15]];
 	
 	//var activeShaderProgram = shaderProgramColored;	//draw spheres
