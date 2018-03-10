@@ -1242,25 +1242,27 @@ function init(){
 
 var iterateMechanics = (function iterateMechanics(){
 	var lastTime=(new Date()).getTime();
-	var moveSpeed=0.002;
-	var rotateSpeed=-0.01;
+	var moveSpeed=0.0002;
+	var rotateSpeed=-0.001;
 
 	return function(){
 		var nowTime = (new Date()).getTime();
 		var timeElapsed = Math.min(nowTime - lastTime, 50);	//ms. 50ms -> slowdown if drop below 20fps 
 		//console.log("time elapsed: " + timeElapsed);
 		lastTime=nowTime;
+		var moveAmount = timeElapsed * moveSpeed;
+		var rotateAmount = timeElapsed * rotateSpeed;
 		
 		movePlayer([
-			moveSpeed*(keyThing.keystate(65)-keyThing.keystate(68)),	//lateral
-			moveSpeed*(keyThing.keystate(17)-keyThing.keystate(32)),	//vertical
-			moveSpeed*(keyThing.keystate(87)-keyThing.keystate(83)),	//fwd/back
+			moveAmount*(keyThing.keystate(65)-keyThing.keystate(68)),	//lateral
+			moveAmount*(keyThing.keystate(17)-keyThing.keystate(32)),	//vertical
+			moveAmount*(keyThing.keystate(87)-keyThing.keystate(83)),	//fwd/back
 		]);
 
 		rotatePlayer([
-			rotateSpeed*(keyThing.keystate(40)-keyThing.keystate(38)), //pitch
-			rotateSpeed*(keyThing.keystate(39)-keyThing.keystate(37)), //turn
-			rotateSpeed*(keyThing.keystate(69)-keyThing.keystate(81)), //roll
+			rotateAmount*(keyThing.keystate(40)-keyThing.keystate(38)), //pitch
+			rotateAmount*(keyThing.keystate(39)-keyThing.keystate(37)), //turn
+			rotateAmount*(keyThing.keystate(69)-keyThing.keystate(81)), //roll
 		]);
 	
 		/*
