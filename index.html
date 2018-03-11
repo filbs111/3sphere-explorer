@@ -173,6 +173,7 @@
 	precision mediump float;
 	uniform vec4 uColor;
 	uniform vec4 uFogColor;
+	uniform vec4 uReflectorColor;
 	uniform vec4 uReflectorPos;
 	uniform float uReflectorCos;
 	varying float fog;
@@ -182,7 +183,9 @@
 	varying vec4 transformedCoord;
 	
 	void main(void) {
-		if (dot(normalize(transformedCoord),uReflectorPos)>uReflectorCos){
+		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
+	
+		if (posCosDiff>0.0){
 			discard;
 		}
 	
@@ -201,13 +204,14 @@
 		
 		//light from portal. TODO pass in a colour for this, more complex lighting (at surface of portal, should be hemispherical light etc)
 		float portalLight = dot( uReflectorPos, transformedNormal);
-		portalLight = max(portalLight,0.0);	//unnecessary if camera pos = light pos
+		portalLight = max(0.5*portalLight +0.5- posCosDiff,0.0);	//unnecessary if camera pos = light pos
 		//falloff
-		portalLight/=0.7 + 3.0*dot(uReflectorPos,uReflectorPos);	
-		vec3 portalLightVec = vec3(10.0,0.0,0.0)*portalLight;	// hardcoded colour
+		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
+		
+		vec3 portalLightColor = uReflectorColor.xyz - uFogColor.xyz;	//difference between hardcoded portal color and outside colour
 		
 		//guess maybe similar to some gaussian light source
-		gl_FragColor = vec4( fog*( vec3(light)+ portalLightVec + uFogColor.xyz )*uColor.xyz, 1.0) + (1.0-fog)*uFogColor;
+		gl_FragColor = vec4( fog*( vec3(light)+ portalLightColor*portalLight + uFogColor.xyz )*uColor.xyz, 1.0) + (1.0-fog)*uFogColor;
 	}
 </script>
 <script id="shader-perpixel-discard-vs" type="x-shader/x-vertex">
@@ -271,6 +275,7 @@
 	uniform vec4 uColor;
 	varying float fog;
 	uniform vec4 uFogColor;
+	uniform vec4 uReflectorColor;
 	uniform vec4 uReflectorPos;
 	uniform float uReflectorCos;
 	varying vec4 adjustedPos;
@@ -279,7 +284,9 @@
 	varying vec4 transformedCoord;	
 	
 	void main(void) {
-		if (dot(normalize(transformedCoord),uReflectorPos)>uReflectorCos){
+		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
+	
+		if (posCosDiff>0.0){
 			discard;
 		}
 	
@@ -295,15 +302,19 @@
 		
 		light+=light2;
 		
+		
 		//light from portal. TODO pass in a colour for this, more complex lighting (at surface of portal, should be hemispherical light etc)
+		//this is just bodged/guessed to achieve correct behaviour at/across portal. TODO check/correct!
 		float portalLight = dot( uReflectorPos, transformedNormal);
-		portalLight = max(portalLight,0.0);	//unnecessary if camera pos = light pos
+		portalLight = max(0.5*portalLight +0.5- posCosDiff,0.0);	//unnecessary if camera pos = light pos
 		//falloff
-		portalLight/=0.7 + 3.0*dot(uReflectorPos,uReflectorPos);	
-		vec3 portalLightVec = vec3(10.0,0.0,0.0)*portalLight;	// hardcoded colour
+		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
 		
+		vec3 portalLightColor = uReflectorColor.xyz - uFogColor.xyz;	//difference between hardcoded portal color and outside colour
 		
-		gl_FragColor = vec4( fog*( vec3(light) + portalLightVec + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
+		//guess maybe similar to some gaussian light source
+		gl_FragColor = vec4( fog*( vec3(light) + portalLightColor*portalLight + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
+
 		
 		//gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		//gl_FragColor = (1.0-fog)*uFogColor;
