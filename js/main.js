@@ -20,7 +20,7 @@ function initShaders(){
 					});
 	shaderProgramColoredPerPixelDiscard = loadShader( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs",{
 					attributes:["aVertexPosition","aVertexNormal"],
-					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uColor","uFogColor", "uModelScale","uReflectorPos","uReflectorCos","uReflectorColor"]
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uColor","uFogColor", "uModelScale","uReflectorPos","uReflectorCos","uReflectorColor","uPlayerLightColor"]
 					});				
 	
 	shaderProgramTexmapPerVertex = loadShader( "shader-texmap-vs", "shader-texmap-fs",{
@@ -33,7 +33,7 @@ function initShaders(){
 					});
 	shaderProgramTexmapPerPixelDiscard = loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs",{
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
-					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uSampler","uColor","uFogColor","uModelScale","uReflectorPos","uReflectorCos","uReflectorColor"]
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uSampler","uColor","uFogColor","uModelScale","uReflectorPos","uReflectorCos","uReflectorColor","uPlayerLightColor"]
 					});
 					
 	shaderProgramTexmap4Vec = loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs",{
@@ -360,7 +360,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 	if (activeShaderProgram.uniforms.uReflectorColor){
 			gl.uniform4fv(activeShaderProgram.uniforms.uReflectorColor, localVecReflectorColor);
 	}
-	
+	if (activeShaderProgram.uniforms.uPlayerLightColor){
+		gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
+	}
 	gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
 	gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 	
@@ -550,6 +552,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 	if (activeShaderProgram.uniforms.uReflectorColor){
 			gl.uniform4fv(activeShaderProgram.uniforms.uReflectorColor, localVecReflectorColor);
 	}
+	if (activeShaderProgram.uniforms.uPlayerLightColor){
+		gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
+	}
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos2, dropLightPos2);
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
@@ -601,6 +606,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 	if (activeShaderProgram.uniforms.uReflectorColor){
 			gl.uniform4fv(activeShaderProgram.uniforms.uReflectorColor, localVecReflectorColor);
+	}
+	if (activeShaderProgram.uniforms.uPlayerLightColor){
+		gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 	}
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 	if (activeShaderProgram.uniforms.uDropLightPos2){
@@ -811,6 +819,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 		if (activeShaderProgram.uniforms.uReflectorColor){
 			gl.uniform4fv(activeShaderProgram.uniforms.uReflectorColor, localVecReflectorColor);
+		}
+		if (activeShaderProgram.uniforms.uPlayerLightColor){
+			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 		}
 
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [reflectorInfo.rad,reflectorInfo.rad, reflectorInfo.rad]);
@@ -1088,6 +1099,7 @@ var guiParams={
 	"perPixelLighting":true,
 	fogColor0:'#808080',
 	fogColor1:'#000000',
+	playerLight:'#ffffff',
 	reflector:{
 		draw:true,
 		mappingType:'vertex projection',
@@ -1096,6 +1108,7 @@ var guiParams={
 	}
 };
 var worldColors=[];
+var playerLight;
 var teapotMatrix=mat4.create();mat4.identity(teapotMatrix);
 xyzmove4mat(teapotMatrix,[0,1.5,0]);
 var sshipMatrix=mat4.create();mat4.identity(sshipMatrix);
@@ -1115,6 +1128,9 @@ function init(){
 	});
 	gui.addColor(guiParams, 'fogColor1').onChange(function(color){
 		setFog(1,color);
+	});
+	gui.addColor(guiParams, 'playerLight').onChange(function(color){
+		setPlayerLight(color);
 	});
 	var drawShapesFolder = gui.addFolder('drawShapes');
 	for (shape in guiParams.drawShapes){
@@ -1245,18 +1261,24 @@ function init(){
 	initBuffers();
 	setFog(0,guiParams.fogColor0);
 	setFog(1,guiParams.fogColor1);
+	setPlayerLight(guiParams.playerLight);
     gl.enable(gl.DEPTH_TEST);
 	//gl.disable(gl.DEPTH_TEST);
 	setupScene();
 	requestAnimationFrame(drawScene);
 	
 	function setFog(world,color){
-			var r = parseInt(color.substring(1,3),16) /255;
-			var g = parseInt(color.substring(3,5),16) /255;
-			var b = parseInt(color.substring(5,7),16) /255;
-			worldColors[world]=[r,g,b,1];
+		var r = parseInt(color.substring(1,3),16) /255;
+		var g = parseInt(color.substring(3,5),16) /255;
+		var b = parseInt(color.substring(5,7),16) /255;
+		worldColors[world]=[r,g,b,1];
 	}
-
+	function setPlayerLight(color){
+		var r = parseInt(color.substring(1,3),16) /255;
+		var g = parseInt(color.substring(3,5),16) /255;
+		var b = parseInt(color.substring(5,7),16) /255;
+		playerLight=[r,g,b];
+	}
 }
 
 var iterateMechanics = (function iterateMechanics(){

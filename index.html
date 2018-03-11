@@ -172,6 +172,7 @@
 <script id="shader-perpixel-discard-fs" type="x-shader/x-fragment">
 	precision mediump float;
 	uniform vec4 uColor;
+	uniform vec3 uPlayerLightColor;
 	uniform vec4 uFogColor;
 	uniform vec4 uReflectorColor;
 	uniform vec4 uReflectorPos;
@@ -217,7 +218,7 @@
 		vec3 portalLightColor = uReflectorColor.xyz - uFogColor.xyz;	//difference between hardcoded portal color and outside colour
 		
 		//guess maybe similar to some gaussian light source
-		gl_FragColor = vec4( fog*( vec3(light)+ portalLightColor*portalLight + uFogColor.xyz )*uColor.xyz, 1.0) + (1.0-fog)*uFogColor;
+		gl_FragColor = vec4( fog*( uPlayerLightColor*light+ portalLightColor*portalLight + uFogColor.xyz )*uColor.xyz, 1.0) + (1.0-fog)*uFogColor;
 		
 		//gl_FragColor.a =1.0;
 	}
@@ -281,6 +282,7 @@
 	varying vec3 vTextureCoord;
 	uniform sampler2D uSampler;
 	uniform vec4 uColor;
+	uniform vec3 uPlayerLightColor;
 	varying float fog;
 	uniform vec4 uFogColor;
 	uniform vec4 uReflectorColor;
@@ -320,9 +322,8 @@
 		vec3 portalLightColor = uReflectorColor.xyz - uFogColor.xyz;	//difference between hardcoded portal color and outside colour
 		
 		//guess maybe similar to some gaussian light source
-		gl_FragColor = vec4( fog*( vec3(light) + portalLightColor*portalLight + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
+		gl_FragColor = vec4( fog*( uPlayerLightColor*light + portalLightColor*portalLight + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 
-		
 		//gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		//gl_FragColor = (1.0-fog)*uFogColor;
 		gl_FragColor.a =1.0;
