@@ -307,12 +307,10 @@ function setProjectionMatrix(pMatrix, vFov, ratio, polarity){
 }
 
 var usePrecalcCells=true;
-var currentWorld=1;
+var currentWorld=0;
 
 function drawWorldScene(frameTime, isCubemapView) {
-	
-	var worldColors = [ [0.1,0.1,0.1,1], vecFogColor ];
-	
+		
 	var colorsSwitch = (isCubemapView?1:0)^currentWorld;
 	
 	var localVecFogColor = worldColors[colorsSwitch];
@@ -1088,7 +1086,8 @@ var guiParams={
 	smoothMovement: true,
 	"culling":true,
 	"perPixelLighting":true,
-	fogColor:'#808080',
+	fogColor0:'#808080',
+	fogColor1:'#000000',
 	reflector:{
 		draw:true,
 		mappingType:'vertex projection',
@@ -1096,7 +1095,7 @@ var guiParams={
 		isPortal:true
 	}
 };
-var vecFogColor = [1.0,0.0,0.0,1.0];
+var worldColors=[];
 var teapotMatrix=mat4.create();mat4.identity(teapotMatrix);
 xyzmove4mat(teapotMatrix,[0,1.5,0]);
 var sshipMatrix=mat4.create();mat4.identity(sshipMatrix);
@@ -1111,8 +1110,11 @@ function init(){
 	document.body.appendChild( stats.dom );
 
 	var gui = new dat.GUI();
-	gui.addColor(guiParams, 'fogColor').onChange(function(color){
-		setFog(color);
+	gui.addColor(guiParams, 'fogColor0').onChange(function(color){
+		setFog(0,color);
+	});
+	gui.addColor(guiParams, 'fogColor1').onChange(function(color){
+		setFog(1,color);
 	});
 	var drawShapesFolder = gui.addFolder('drawShapes');
 	for (shape in guiParams.drawShapes){
@@ -1241,18 +1243,18 @@ function init(){
 	initTexture();
 	initCubemapFramebuffer();
 	initBuffers();
-	setFog(guiParams.fogColor);
+	setFog(0,guiParams.fogColor0);
+	setFog(1,guiParams.fogColor1);
     gl.enable(gl.DEPTH_TEST);
 	//gl.disable(gl.DEPTH_TEST);
 	setupScene();
 	requestAnimationFrame(drawScene);
 	
-	function setFog(color){
+	function setFog(world,color){
 			var r = parseInt(color.substring(1,3),16) /255;
 			var g = parseInt(color.substring(3,5),16) /255;
 			var b = parseInt(color.substring(5,7),16) /255;
-			vecFogColor = [r,g,b,1];
-			gl.clearColor(r,g,b,1);
+			worldColors[world]=[r,g,b,1];
 	}
 
 }
