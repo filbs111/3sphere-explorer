@@ -311,7 +311,7 @@ var currentWorld=0;
 
 function drawWorldScene(frameTime, isCubemapView) {
 		
-	var colorsSwitch = (isCubemapView?1:0)^currentWorld;
+	var colorsSwitch = ((isCubemapView && guiParams.reflector.isPortal)?1:0)^currentWorld;
 	
 	var localVecFogColor = worldColors[colorsSwitch];
 	var localVecReflectorColor = worldColors[1-colorsSwitch];
