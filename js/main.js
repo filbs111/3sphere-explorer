@@ -38,7 +38,7 @@ function initShaders(){
 					
 	shaderProgramTexmap4Vec = loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs",{
 					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
-					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uSampler","uColor","uFogColor"]
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uSampler","uColor","uFogColor","uPlayerLightColor"]
 					});
 					
 	shaderProgramCubemap = loadShader( "shader-cubemap-vs", "shader-cubemap-fs",{

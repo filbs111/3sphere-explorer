@@ -111,12 +111,13 @@
 	uniform vec4 uColor;
 	varying float fog;
 	uniform vec4 uFogColor;
+	uniform vec3 uPlayerLightColor;
 	varying float light;
 	
 	void main(void) {
 		//gl_FragColor = uColor*texture2D(uSampler, vTextureCoord);
 		
-		gl_FragColor = vec4( fog*( vec3(light) + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
+		gl_FragColor = vec4( fog*( uPlayerLightColor*light + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		
 		//gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		//gl_FragColor = (1.0-fog)*uFogColor;
