@@ -200,18 +200,26 @@
 		light2/=0.7 + 3.0*dot(adjustedPos2,adjustedPos2);	
 		
 		light+=light2;
-		//light=light2;	//test reflected light only
 		
 		//light from portal. TODO pass in a colour for this, more complex lighting (at surface of portal, should be hemispherical light etc)
 		float portalLight = dot( uReflectorPos, transformedNormal);
-		portalLight = max(0.5*portalLight +0.5- posCosDiff,0.0);	//unnecessary if camera pos = light pos
+		portalLight = max(0.5*portalLight +0.5+ posCosDiff,0.0);	//unnecessary if camera pos = light pos
+		
 		//falloff
 		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
+		
+		
+		//ensure isn't something wierd! should be between -1, 1
+		//if (portalLight>0.95){portalLight=-0.9;}
+		//if (portalLight<-0.95){portalLight=0.9;}
+		//portalLight=0.0;
 		
 		vec3 portalLightColor = uReflectorColor.xyz - uFogColor.xyz;	//difference between hardcoded portal color and outside colour
 		
 		//guess maybe similar to some gaussian light source
 		gl_FragColor = vec4( fog*( vec3(light)+ portalLightColor*portalLight + uFogColor.xyz )*uColor.xyz, 1.0) + (1.0-fog)*uFogColor;
+		
+		//gl_FragColor.a =1.0;
 	}
 </script>
 <script id="shader-perpixel-discard-vs" type="x-shader/x-vertex">
@@ -302,11 +310,10 @@
 		
 		light+=light2;
 		
-		
 		//light from portal. TODO pass in a colour for this, more complex lighting (at surface of portal, should be hemispherical light etc)
 		//this is just bodged/guessed to achieve correct behaviour at/across portal. TODO check/correct!
 		float portalLight = dot( uReflectorPos, transformedNormal);
-		portalLight = max(0.5*portalLight +0.5- posCosDiff,0.0);	//unnecessary if camera pos = light pos
+		portalLight = max(0.5*portalLight +0.5+ posCosDiff,0.0);	//unnecessary if camera pos = light pos
 		//falloff
 		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
 		
