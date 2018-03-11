@@ -20,7 +20,7 @@ function initShaders(){
 					});
 	shaderProgramColoredPerPixelDiscard = loadShader( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs",{
 					attributes:["aVertexPosition","aVertexNormal"],
-					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uColor","uFogColor", "uModelScale","uReflectorPos","uReflectorCos","uReflectorColor","uPlayerLightColor"]
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uColor","uFogColor", "uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});				
 	
 	shaderProgramTexmapPerVertex = loadShader( "shader-texmap-vs", "shader-texmap-fs",{
@@ -33,12 +33,12 @@ function initShaders(){
 					});
 	shaderProgramTexmapPerPixelDiscard = loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs",{
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
-					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uSampler","uColor","uFogColor","uModelScale","uReflectorPos","uReflectorCos","uReflectorColor","uPlayerLightColor"]
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uSampler","uColor","uFogColor","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 					
 	shaderProgramTexmap4Vec = loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs",{
 					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
-					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uSampler","uColor","uFogColor","uPlayerLightColor"]
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 					
 	shaderProgramCubemap = loadShader( "shader-cubemap-vs", "shader-cubemap-fs",{
@@ -315,6 +315,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	var localVecFogColor = worldColors[colorsSwitch];
 	var localVecReflectorColor = worldColors[1-colorsSwitch];
+	var localVecReflectorDiffColor = [ localVecReflectorColor[0]-localVecFogColor[0],
+										localVecReflectorColor[1]-localVecFogColor[1],
+										localVecReflectorColor[2]-localVecFogColor[2]];	//todo use a vector class!
 	
 	gl.clearColor.apply(gl,localVecFogColor);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -357,8 +360,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 
 	gl.useProgram(activeShaderProgram);
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
-	if (activeShaderProgram.uniforms.uReflectorColor){
-			gl.uniform4fv(activeShaderProgram.uniforms.uReflectorColor, localVecReflectorColor);
+	if (activeShaderProgram.uniforms.uReflectorDiffColor){
+			gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
 	}
 	if (activeShaderProgram.uniforms.uPlayerLightColor){
 		gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
@@ -549,12 +552,14 @@ function drawWorldScene(frameTime, isCubemapView) {
 	activeShaderProgram = shaderProgramTexmap4Vec;
 	gl.useProgram(activeShaderProgram);
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
-	if (activeShaderProgram.uniforms.uReflectorColor){
-			gl.uniform4fv(activeShaderProgram.uniforms.uReflectorColor, localVecReflectorColor);
+	if (activeShaderProgram.uniforms.uReflectorDiffColor){
+			gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
 	}
 	if (activeShaderProgram.uniforms.uPlayerLightColor){
 		gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 	}
+	gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
+	gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos2, dropLightPos2);
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
@@ -604,8 +609,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 	activeShaderProgram = shaderProgramColored;
 	gl.useProgram(activeShaderProgram);
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
-	if (activeShaderProgram.uniforms.uReflectorColor){
-			gl.uniform4fv(activeShaderProgram.uniforms.uReflectorColor, localVecReflectorColor);
+	if (activeShaderProgram.uniforms.uReflectorDiffColor){
+			gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
 	}
 	if (activeShaderProgram.uniforms.uPlayerLightColor){
 		gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
@@ -817,8 +822,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.9, 0.9, 0.9, 1.0]);	//grey
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
 		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
-		if (activeShaderProgram.uniforms.uReflectorColor){
-			gl.uniform4fv(activeShaderProgram.uniforms.uReflectorColor, localVecReflectorColor);
+		if (activeShaderProgram.uniforms.uReflectorDiffColor){
+			gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
 		}
 		if (activeShaderProgram.uniforms.uPlayerLightColor){
 			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
@@ -1091,19 +1096,19 @@ var guiParams={
 	"teapot scale":0.7,
 	"draw spaceship":false,
 	"drop spaceship":false,
-	"draw target":true,
+	"draw target":false,
 	"target scale":0.25,
 	"indiv targeting":true,
 	smoothMovement: true,
 	"culling":true,
 	"perPixelLighting":true,
-	fogColor0:'#808080',
-	fogColor1:'#000000',
+	fogColor0:'#202020',
+	fogColor1:'#ff0000',
 	playerLight:'#ffffff',
 	reflector:{
 		draw:true,
 		mappingType:'vertex projection',
-		scale:1.0,
+		scale:0.8,
 		isPortal:true
 	}
 };

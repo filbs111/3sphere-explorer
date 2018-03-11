@@ -111,13 +111,12 @@
 	uniform vec4 uColor;
 	varying float fog;
 	uniform vec4 uFogColor;
-	uniform vec3 uPlayerLightColor;
-	varying float light;
+	varying vec3 veclight;
 	
 	void main(void) {
 		//gl_FragColor = uColor*texture2D(uSampler, vTextureCoord);
 		
-		gl_FragColor = vec4( fog*( uPlayerLightColor*light + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
+		gl_FragColor = vec4( fog*( veclight + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		
 		//gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		//gl_FragColor = (1.0-fog)*uFogColor;
@@ -175,7 +174,7 @@
 	uniform vec4 uColor;
 	uniform vec3 uPlayerLightColor;
 	uniform vec4 uFogColor;
-	uniform vec4 uReflectorColor;
+	uniform vec3 uReflectorDiffColor;
 	uniform vec4 uReflectorPos;
 	uniform float uReflectorCos;
 	varying float fog;
@@ -215,11 +214,9 @@
 		//if (portalLight>0.95){portalLight=-0.9;}
 		//if (portalLight<-0.95){portalLight=0.9;}
 		//portalLight=0.0;
-		
-		vec3 portalLightColor = uReflectorColor.xyz - uFogColor.xyz;	//difference between hardcoded portal color and outside colour
-		
+				
 		//guess maybe similar to some gaussian light source
-		gl_FragColor = vec4( fog*( uPlayerLightColor*light+ portalLightColor*portalLight + uFogColor.xyz )*uColor.xyz, 1.0) + (1.0-fog)*uFogColor;
+		gl_FragColor = vec4( fog*( uPlayerLightColor*light+ uReflectorDiffColor*portalLight + uFogColor.xyz )*uColor.xyz, 1.0) + (1.0-fog)*uFogColor;
 		
 		//gl_FragColor.a =1.0;
 	}
@@ -286,7 +283,7 @@
 	uniform vec3 uPlayerLightColor;
 	varying float fog;
 	uniform vec4 uFogColor;
-	uniform vec4 uReflectorColor;
+	uniform vec3 uReflectorDiffColor;
 	uniform vec4 uReflectorPos;
 	uniform float uReflectorCos;
 	varying vec4 adjustedPos;
@@ -319,11 +316,9 @@
 		portalLight = max(0.5*portalLight +0.5+ posCosDiff,0.0);	//unnecessary if camera pos = light pos
 		//falloff
 		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
-		
-		vec3 portalLightColor = uReflectorColor.xyz - uFogColor.xyz;	//difference between hardcoded portal color and outside colour
-		
+				
 		//guess maybe similar to some gaussian light source
-		gl_FragColor = vec4( fog*( uPlayerLightColor*light + portalLightColor*portalLight + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
+		gl_FragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 
 		//gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		//gl_FragColor = (1.0-fog)*uFogColor;
@@ -342,7 +337,7 @@
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 	varying float fog;
 	uniform vec3 uModelScale;
-	varying float light;
+	varying vec3 veclight;
 	
 	void main(void) {
 		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
@@ -352,11 +347,13 @@
 
 		vec4 transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
 		vec4 adjustedPos = transformedCoord - uDropLightPos;
-		light = -dot( normalize(adjustedPos), transformedNormal);
+		float light = -dot( normalize(adjustedPos), transformedNormal);
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		//falloff
 		light/=0.7 + 3.0*dot(adjustedPos,adjustedPos);	//1st num some const to ensure light doesn't go inf at short dist
 													//guess maybe similar to some gaussian light source
+		
+		veclight=vec3(light);
 		
 		fog = 0.5*(1.0 + transformedCoord.w);
 		
@@ -441,9 +438,13 @@
 	uniform mat4 uPMatrix;
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 	uniform vec4 uDropLightPos2;
+	uniform vec3 uPlayerLightColor;
+	uniform vec3 uReflectorDiffColor;
+	uniform vec4 uReflectorPos;
+	uniform float uReflectorCos;
 	varying float fog;
-	varying float light;
-
+	varying vec3 veclight;
+	
 	void main(void) {
 		vec4 transformedCoord = uMVMatrix * aVertexPosition;
 		
@@ -453,7 +454,7 @@
 		
 		vec4 transformedNormal = uMVMatrix * aVertexNormal;
 		vec4 adjustedPos = transformedCoord - uDropLightPos;
-		light = -dot( normalize(adjustedPos), transformedNormal);
+		float light = -dot( normalize(adjustedPos), transformedNormal);
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		light/=1.0 + 4.2*dot(adjustedPos,adjustedPos);		//terms higher than other shaders by sqrt(2) because length
 															//of 1,0,0,0 -> 0,1,0,0 (90 deg around world)
@@ -466,6 +467,21 @@
 		
 		light+=light2;
 		
+		veclight=uPlayerLightColor*light;
+		
+		
+		
+		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
+	
+		//light from portal. TODO pass in a colour for this, more complex lighting (at surface of portal, should be hemispherical light etc)
+		//this is just bodged/guessed to achieve correct behaviour at/across portal. TODO check/correct!
+		float portalLight = dot( uReflectorPos, transformedNormal);
+		portalLight = max(0.5*portalLight +0.5+ posCosDiff,0.0);	//unnecessary if camera pos = light pos
+		//falloff
+		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
+				
+		veclight+=uReflectorDiffColor*portalLight;
+				
 		vTextureCoord = vec3( aTextureCoord.st, 1.0 );
 	}
 </script>
