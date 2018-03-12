@@ -1215,6 +1215,10 @@ function init(){
 			case 71:	//G
 				fireGun();
 				break;
+				
+			case 70:	//F
+				goFullscreen(canvas);
+				break;
 			default:
 				willPreventDefault=false;
 				break;
