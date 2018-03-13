@@ -1142,14 +1142,15 @@ function init(){
 		console.log(shape);
 		drawShapesFolder.add(guiParams.drawShapes, shape );
 	}
-	gui.add(guiParams,"draw 5-cell");
-	gui.add(guiParams,"draw 8-cell",false);
-	gui.add(guiParams,"draw 16-cell");
-	gui.add(guiParams,"8-cell scale",0.2,2.0,0.05);
-	gui.add(guiParams,"subdiv frames");
-	gui.add(guiParams,"draw 24-cell",false);
-	gui.add(guiParams,"draw 120-cell",true);
-	gui.add(guiParams,"draw 600-cell",true);
+	var polytopesFolder = gui.addFolder('polytopes');
+	polytopesFolder.add(guiParams,"draw 5-cell");
+	polytopesFolder.add(guiParams,"draw 8-cell",false);
+	polytopesFolder.add(guiParams,"draw 16-cell");
+	polytopesFolder.add(guiParams,"8-cell scale",0.2,2.0,0.05);
+	polytopesFolder.add(guiParams,"subdiv frames");
+	polytopesFolder.add(guiParams,"draw 24-cell",false);
+	polytopesFolder.add(guiParams,"draw 120-cell",true);
+	polytopesFolder.add(guiParams,"draw 600-cell",true);
 	gui.add(guiParams,"draw teapot");
 	gui.add(guiParams,"teapot scale",0.2,2.0,0.05);
 	gui.add(guiParams,"draw spaceship",true);
