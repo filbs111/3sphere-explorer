@@ -52,10 +52,10 @@ function initShaders(){
 					});
 }
 
-var tennisBallVertexPositionBuffer,
-	tennisBallNormalBuffer,
-    tennisBallVertexTextureCoordBuffer,
-	tennisBallVertexIndexBuffer;
+var duocylinderObjects={
+	grid:{divs:4,step:Math.PI/2},
+	terrain:{divs:2,step:Math.PI}
+	};
 
 var sphereBuffers={};
 var cubeBuffers={};
@@ -72,35 +72,23 @@ var gunBuffers={};
 var icoballBuffers={};
 
 function initBuffers(){
+	loadDuocylinderBufferData(duocylinderObjects.grid, tballGridData);
+	loadDuocylinderBufferData(duocylinderObjects.terrain, terrainData);
 	
-	/*
-	//"tennis ball". data in data/tennisBall.js
-	tennisBallVertexPositionBuffer = gl.createBuffer();
-	bufferArrayData(tennisBallVertexPositionBuffer, tennisBallData.vertices, 4);
-	tennisBallNormalBuffer = gl.createBuffer();
-	bufferArrayData(tennisBallNormalBuffer, tennisBallData.normals, 4);
-	tennisBallVertexTextureCoordBuffer= gl.createBuffer();
-	bufferArrayData(tennisBallVertexTextureCoordBuffer, tennisBallData.uvcoords, 2);
-	tennisBallVertexIndexBuffer = gl.createBuffer();
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, tennisBallVertexIndexBuffer);
-	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(tennisBallData.indices), gl.STATIC_DRAW);
-	tennisBallVertexIndexBuffer.itemSize = 3;
-	tennisBallVertexIndexBuffer.numItems = tennisBallData.indices.length;
-	*/
-	
-	tennisBallVertexPositionBuffer = gl.createBuffer();
-	bufferArrayData(tennisBallVertexPositionBuffer, tballGridData.vertices, 4);
-	tennisBallNormalBuffer = gl.createBuffer();
-	bufferArrayData(tennisBallNormalBuffer, tballGridData.normals, 4);
-	tennisBallVertexTextureCoordBuffer= gl.createBuffer();
-	bufferArrayData(tennisBallVertexTextureCoordBuffer, tballGridData.texturecoords[0], 2);
-	tennisBallVertexIndexBuffer = gl.createBuffer();
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, tennisBallVertexIndexBuffer);
-	tballGridData.indices = [].concat.apply([],tballGridData.faces);
-	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(tballGridData.indices), gl.STATIC_DRAW);
-	tennisBallVertexIndexBuffer.itemSize = 3;
-	tennisBallVertexIndexBuffer.numItems = tballGridData.indices.length;
-	
+	function loadDuocylinderBufferData(bufferObj, sourceData){
+		bufferObj.vertexPositionBuffer = gl.createBuffer();
+		bufferArrayData(bufferObj.vertexPositionBuffer, sourceData.vertices, 4);
+		bufferObj.normalBuffer = gl.createBuffer();
+		bufferArrayData(bufferObj.normalBuffer, sourceData.normals, 4);
+		bufferObj.vertexTextureCoordBuffer= gl.createBuffer();
+		bufferArrayData(bufferObj.vertexTextureCoordBuffer, sourceData.uvcoords || sourceData.texturecoords[0], 2);	//handle inconsistent formats
+		bufferObj.vertexIndexBuffer = gl.createBuffer();
+		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
+		sourceData.indices = [].concat.apply([],sourceData.faces);
+		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(sourceData.indices), gl.STATIC_DRAW);
+		bufferObj.vertexIndexBuffer.itemSize = 3;
+		bufferObj.vertexIndexBuffer.numItems = sourceData.indices.length;
+	}
 	
 	//load blender object
 	//TODO use XMLHTTPRequest or something
@@ -563,19 +551,20 @@ function drawWorldScene(frameTime, isCubemapView) {
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos2, dropLightPos2);
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
+	var duocylinderObj = duocylinderObjects[guiParams.duocylinderModel];
 	if (guiParams.drawShapes['x*x+y*y=z*z+w*w']){
 		mat4.set(invertedWorldCamera, mvMatrix);
-		drawTennisBall();
+		drawTennisBall(duocylinderObj);
 	}
 	if (guiParams.drawShapes['x*x+w*w=y*y+z*z']){
 		mat4.set(invertedWorldCamera, mvMatrix);
 		rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
-		drawTennisBall();
+		drawTennisBall(duocylinderObj);
 	}
 	if (guiParams.drawShapes['x*x+z*z=y*y+w*w']){
 		mat4.set(invertedWorldCamera, mvMatrix);
 		rotate4mat(mvMatrix, 0, 3, Math.PI*0.5);
-		drawTennisBall();
+		drawTennisBall(duocylinderObj);
 	}
 	
 	function drawCubeFrame(){
@@ -887,32 +876,32 @@ function drawItem(){
 	drawObjectFromBuffers(cubeBuffers, shaderProgramTexmap);
 }
 
-function drawTennisBall(){
+function drawTennisBall(duocylinderObj){
+
 	gl.disable(gl.CULL_FACE);
-	gl.bindBuffer(gl.ARRAY_BUFFER, tennisBallVertexPositionBuffer);
-    gl.vertexAttribPointer(shaderProgramTexmap4Vec.attributes.aVertexPosition, tennisBallVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexPositionBuffer);
+    gl.vertexAttribPointer(shaderProgramTexmap4Vec.attributes.aVertexPosition, duocylinderObj.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	
-	gl.bindBuffer(gl.ARRAY_BUFFER, tennisBallNormalBuffer);
-    gl.vertexAttribPointer(shaderProgramTexmap4Vec.attributes.aVertexNormal, tennisBallNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.normalBuffer);
+    gl.vertexAttribPointer(shaderProgramTexmap4Vec.attributes.aVertexNormal, duocylinderObj.normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	
-	gl.bindBuffer(gl.ARRAY_BUFFER, tennisBallVertexTextureCoordBuffer);
-	gl.vertexAttribPointer(shaderProgramTexmap4Vec.attributes.aTextureCoord, tennisBallVertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexTextureCoordBuffer);
+	gl.vertexAttribPointer(shaderProgramTexmap4Vec.attributes.aTextureCoord, duocylinderObj.vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, tennisBallVertexIndexBuffer);
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, duocylinderObj.vertexIndexBuffer);
 	
 	gl.activeTexture(gl.TEXTURE0);
-	gl.bindTexture(gl.TEXTURE_2D, terrainTexture);
+	gl.bindTexture(gl.TEXTURE_2D, duocylinderObj.tex);
 	gl.uniform1i(shaderProgramTexmap4Vec.uniforms.uSampler, 0);
 	
-	
 	for (var side=0;side<2;side++){	//TODO should only draw 1 side - work out which side player is on...
-		for (var xg=0;xg<4;xg+=1){		//
-			for (var yg=0;yg<4;yg+=1){	//TODO precalc cells array better than grids here.
+		for (var xg=0;xg<duocylinderObj.divs;xg+=1){		//
+			for (var yg=0;yg<duocylinderObj.divs;yg+=1){	//TODO precalc cells array better than grids here.
 				setMatrixUniforms(shaderProgramTexmap4Vec);
-				gl.drawElements(gl.TRIANGLES, tennisBallVertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-				rotate4mat(mvMatrix, 0, 1, Math.PI*0.5);
+				gl.drawElements(gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+				rotate4mat(mvMatrix, 0, 1, duocylinderObj.step);
 			}
-			rotate4mat(mvMatrix, 2, 3, Math.PI*0.5);
+			rotate4mat(mvMatrix, 2, 3, duocylinderObj.step);
 		}
 		xmove4mat(mvMatrix, 0.5*Math.PI);			//switch to 
 		rotate4mat(mvMatrix, 1, 2, Math.PI*0.5);	//other side..
@@ -1042,9 +1031,10 @@ var terrainTexture;
 
 function initTexture(){
 	texture = makeTexture("img/0033.jpg");
-	terrainTexture = makeTexture("img/grid-omni.png");
+	duocylinderObjects.grid.tex = makeTexture("img/grid-omni.png");
+	duocylinderObjects.terrain.tex = makeTexture("data/terrain/turbulent-seamless.png");;
+	
 	//texture = makeTexture("img/ash_uvgrid01-grey.tiny.png");	//numbered grid
-	//terrainTexture = makeTexture("data/terrain/turbulent-seamless.png");
 }
 
 function makeTexture(src) {	//to do OO
@@ -1073,6 +1063,7 @@ var mouseInfo = {
 var stats;
 
 var guiParams={
+	duocylinderModel:"grid",
 	drawShapes:{
 		'x*x+y*y=z*z+w*w':true,
 		'x*x+z*z=y*y+w*w':false,
@@ -1138,6 +1129,7 @@ function init(){
 		setPlayerLight(color);
 	});
 	var drawShapesFolder = gui.addFolder('drawShapes');
+	drawShapesFolder.add(guiParams, "duocylinderModel", ["grid","terrain"] );
 	for (shape in guiParams.drawShapes){
 		console.log(shape);
 		drawShapesFolder.add(guiParams.drawShapes, shape );

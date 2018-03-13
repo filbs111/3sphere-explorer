@@ -24,15 +24,19 @@ cosCylRadius, sinCylRadius are determined by zo . cylRadius of PI/4 divides in 2
 */
 
 
-//data xo,yo,zo in tballGridData
+//data xo,yo,zo in toLoad
 
-(function loadGridData(){
-	var verts = tballGridData.vertices;
+loadGridData(tballGridData);
+loadGridData(terrainData);
+
+
+function loadGridData(toLoad){
+	var verts = toLoad.vertices;
 	var newverts = [];
 	var gridVertdataLen = verts.length;
 	console.log("tball vertexdata length = " +  gridVertdataLen);
 
-	var norms = tballGridData.normals;
+	var norms = toLoad.normals;
 	var newnorms = [];
 	var gridNormdataLen = norms.length;
 	console.log("tball normals length = " +  gridNormdataLen);
@@ -84,7 +88,7 @@ cosCylRadius, sinCylRadius are determined by zo . cylRadius of PI/4 divides in 2
 		}
 		
 	}
-	tballGridData.vertices = newverts;
-	tballGridData.normals = newnorms;
+	toLoad.vertices = newverts;
+	toLoad.normals = newnorms;
 
-})();
+};
