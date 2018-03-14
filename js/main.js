@@ -205,7 +205,7 @@ function calcReflectionInfo(toReflect,resultsObj){
 function drawScene(frameTime){
 	resizecanvas();
 
-	if (guiParams.smoothMovement){iterateMechanics();}	//TODO make movement speed independent of framerate
+	iterateMechanics();	//TODO make movement speed independent of framerate
 	
 	requestAnimationFrame(drawScene);
 	stats.end();
@@ -1090,7 +1090,6 @@ var guiParams={
 	"draw target":false,
 	"target scale":0.25,
 	"indiv targeting":true,
-	smoothMovement: true,
 	"culling":true,
 	"perPixelLighting":true,
 	fogColor0:'#202020',
@@ -1151,7 +1150,6 @@ function init(){
 	gui.add(guiParams,"target scale",0.02,20.0,0.05);
 	gui.add(guiParams, "indiv targeting");
 	gui.add(guiParams, "perPixelLighting");
-	gui.add(guiParams, "smoothMovement");
 	gui.add(guiParams, "culling");
 	var reflectorFolder = gui.addFolder('reflector');
 	reflectorFolder.add(guiParams.reflector, "draw");
@@ -1162,48 +1160,9 @@ function init(){
 	window.addEventListener("keydown",function(evt){
 		//console.log("key pressed : " + evt.keyCode);
 		var willPreventDefault=true;
-		var controlSpeed = guiParams.smoothMovement ? 0:0.02;
-		switch (evt.keyCode){
-			case 87:				//W
-				movePlayerFwd(controlSpeed);
-				break;
-			case 83:				//S
-				movePlayerFwd(-controlSpeed);
-				break;
-			case 65:				//A
-				movePlayerLeft(controlSpeed);
-				break;
-			case 68:				//D
-				movePlayerLeft(-controlSpeed);
-				break;
-			case 39:
-				turnPlayer(controlSpeed);
-				break;
-			case 37:
-				turnPlayer(-controlSpeed);
-				break;
-			case 81:				//Q
-				rollPlayer(-controlSpeed);	
-				break;
-			case 69:				//E
-				rollPlayer(controlSpeed);	
-				break;
-				
+		switch (evt.keyCode){	
 			case 84:	//T
 				xyzmove4mat(playerCamera,[0.01,0.0,0.01]);	//diagonally forwards/left
-				break;
-				
-			case 32:				//spacebar
-				movePlayerUp(-controlSpeed);
-				break;
-			case 17:				//ctrl
-				movePlayerUp(controlSpeed);
-				break;
-			case 38:
-				pitchPlayer(-controlSpeed);		//up arrow
-				break;
-			case 40:
-				pitchPlayer(controlSpeed);
 				break;
 			case 71:	//G
 				fireGun();
@@ -1348,30 +1307,8 @@ function movePlayer(vec){
 	xyzmove4mat(playerCamera, vec);
 }
 
-function movePlayerFwd(amount){
-	movePlayer([0,0,amount]);
-}
-function movePlayerLeft(amount){
-	movePlayer([amount,0,0]);
-}
-function movePlayerUp(amount){
-	movePlayer([0,amount,0]);
-}
-
 function rotatePlayer(vec){
 	xyzrotate4mat(playerCamera,vec);
-}
-
-function rollPlayer(amount){
-	//rotate4mat(playerCamera, 0, 1, -amount);
-	xyzrotate4mat(playerCamera,[0,0,-amount]);
-}
-function turnPlayer(amount){
-	//rotate4mat(playerCamera, 0, 2, amount);
-	xyzrotate4mat(playerCamera,[0,-amount,0]);
-}
-function pitchPlayer(amount){
-	xyzrotate4mat(playerCamera,[-amount,0,0]);
 }
 
 
