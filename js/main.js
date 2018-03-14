@@ -1242,30 +1242,47 @@ function init(){
 
 var iterateMechanics = (function iterateMechanics(){
 	var lastTime=(new Date()).getTime();
-	var moveSpeed=0.0002;
-	var rotateSpeed=-0.001;
+	var moveSpeed=0.0001;
+	var rotateSpeed=-0.0005;
 	var bulletSpeed=0.001;
+	
+	var playerVelVec = [0,0,0];	//TODO use matrix/quaternion for this
+	var playerAngVelVec = [0,0,0];
+	
+	var timeTracker =0;
+	var timeStep = 10;
 	
 	return function(){
 		var nowTime = (new Date()).getTime();
 		var timeElapsed = Math.min(nowTime - lastTime, 50);	//ms. 50ms -> slowdown if drop below 20fps 
 		//console.log("time elapsed: " + timeElapsed);
 		lastTime=nowTime;
+		
+		timeTracker+=timeElapsed;
+		var numSteps = Math.floor(timeTracker/timeStep);
+		timeTracker-=numSteps*timeStep;
+		for (var ii=0;ii<numSteps;ii++){
+			stepSpeed();
+		}
+		
+		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
+			playerVelVec[0]+=keyThing.keystate(65)-keyThing.keystate(68); //lateral
+			playerVelVec[1]+=keyThing.keystate(17)-keyThing.keystate(32); //vertical
+			playerVelVec[2]+=keyThing.keystate(87)-keyThing.keystate(83); //fwd/back
+			playerVelVec=playerVelVec.map(function(xx){return 0.9*xx});	//todo did i make a func for this?
+			
+			playerAngVelVec[0]+=keyThing.keystate(40)-keyThing.keystate(38); //pitch
+			playerAngVelVec[1]+=keyThing.keystate(39)-keyThing.keystate(37); //turn
+			playerAngVelVec[2]+=keyThing.keystate(69)-keyThing.keystate(81); //roll
+			playerAngVelVec=playerAngVelVec.map(function(xx){return 0.8*xx});	//todo did i make a func for this?
+		}
+		
 		var moveAmount = timeElapsed * moveSpeed;
 		var rotateAmount = timeElapsed * rotateSpeed;
 		var bulletMove = timeElapsed * bulletSpeed;
 		
-		movePlayer([
-			moveAmount*(keyThing.keystate(65)-keyThing.keystate(68)),	//lateral
-			moveAmount*(keyThing.keystate(17)-keyThing.keystate(32)),	//vertical
-			moveAmount*(keyThing.keystate(87)-keyThing.keystate(83)),	//fwd/back
-		]);
-
-		rotatePlayer([
-			rotateAmount*(keyThing.keystate(40)-keyThing.keystate(38)), //pitch
-			rotateAmount*(keyThing.keystate(39)-keyThing.keystate(37)), //turn
-			rotateAmount*(keyThing.keystate(69)-keyThing.keystate(81)), //roll
-		]);
+		movePlayer(playerVelVec.map(function(xx){return moveAmount*xx}));	//todo did i make a func for this?
+		rotatePlayer(playerAngVelVec.map(function(xx){return rotateAmount*xx}));	//todo did i make a func for this?
 		
 		for (var b in bullets){
 			var bulletMatrix=bullets[b];
