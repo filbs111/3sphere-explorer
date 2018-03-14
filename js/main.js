@@ -836,12 +836,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	for (var b in bullets){
 		var bulletMatrix=bullets[b];
-		//move bullet (todo decouple mechanics from drawing, or at least use deltaT)
-		xyzmove4mat(bulletMatrix,[0,0,0.001]);
 		//draw bullet
 		targetRad=0.00025;
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,20*targetRad]);	//long streaks
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.3, 1.0]);	//YELLOW
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,50*targetRad]);	//long streaks
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [2.0, 2.0, 0.5, 1.0]);	//YELLOW
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,bulletMatrix);
 		if (frustrumCull(mvMatrix,targetRad)){	
@@ -1246,7 +1244,8 @@ var iterateMechanics = (function iterateMechanics(){
 	var lastTime=(new Date()).getTime();
 	var moveSpeed=0.0002;
 	var rotateSpeed=-0.001;
-
+	var bulletSpeed=0.001;
+	
 	return function(){
 		var nowTime = (new Date()).getTime();
 		var timeElapsed = Math.min(nowTime - lastTime, 50);	//ms. 50ms -> slowdown if drop below 20fps 
@@ -1254,6 +1253,7 @@ var iterateMechanics = (function iterateMechanics(){
 		lastTime=nowTime;
 		var moveAmount = timeElapsed * moveSpeed;
 		var rotateAmount = timeElapsed * rotateSpeed;
+		var bulletMove = timeElapsed * bulletSpeed;
 		
 		movePlayer([
 			moveAmount*(keyThing.keystate(65)-keyThing.keystate(68)),	//lateral
@@ -1266,12 +1266,11 @@ var iterateMechanics = (function iterateMechanics(){
 			rotateAmount*(keyThing.keystate(39)-keyThing.keystate(37)), //turn
 			rotateAmount*(keyThing.keystate(69)-keyThing.keystate(81)), //roll
 		]);
-	
-		/*
-		for (var bb in bullets){
-			bullets[bb].iterate();
+		
+		for (var b in bullets){
+			var bulletMatrix=bullets[b];
+			xyzmove4mat(bulletMatrix,[0,0,bulletMove]);
 		}
-		*/
 		
 		portalTest();
 	}
@@ -1427,7 +1426,7 @@ function fireGun(){
 		mat4.set(gunMatrix,newBullet);
 		bullets.push(newBullet);
 		//limit number of bullets
-		if (bullets.length>10){
+		if (bullets.length>20){
 			bullets.shift();
 		}
 	}
