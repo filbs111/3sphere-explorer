@@ -1247,6 +1247,8 @@ var iterateMechanics = (function iterateMechanics(){
 	var bulletSpeed=0.001;
 	
 	var playerVelVec = [0,0,0];	//TODO use matrix/quaternion for this
+	var playerVelVecBodge=[];
+	
 	var playerAngVelVec = [0,0,0];
 	
 	var timeTracker =0;
@@ -1266,10 +1268,17 @@ var iterateMechanics = (function iterateMechanics(){
 		}
 		
 		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
+		
 			playerVelVec[0]+=keyThing.keystate(65)-keyThing.keystate(68); //lateral
 			playerVelVec[1]+=keyThing.keystate(17)-keyThing.keystate(32); //vertical
 			playerVelVec[2]+=keyThing.keystate(87)-keyThing.keystate(83); //fwd/back
-			playerVelVec=scalarvectorprod(0.9,playerVelVec);
+			playerVelVec=scalarvectorprod(0.95,playerVelVec);
+			
+			//make new velvec to make slow movement adjustment better, total amount moved nonlinear with press duration
+			//just multiply the "thrust" by its squared length. (ie its magnitude is cubed)
+			var playerVelVecMagsq = playerVelVec.reduce(function(total, val){return total+ val*val;}, 0);
+			playerVelVecMagsq/=1000;
+			playerVelVecBodge =  playerVelVec.map(function(val){return val*playerVelVecMagsq;});
 			
 			playerAngVelVec[0]+=keyThing.keystate(40)-keyThing.keystate(38); //pitch
 			playerAngVelVec[1]+=keyThing.keystate(39)-keyThing.keystate(37); //turn
@@ -1281,7 +1290,7 @@ var iterateMechanics = (function iterateMechanics(){
 		var rotateAmount = timeElapsed * rotateSpeed;
 		var bulletMove = timeElapsed * bulletSpeed;
 		
-		movePlayer(scalarvectorprod(moveAmount,playerVelVec));
+		movePlayer(scalarvectorprod(moveAmount,playerVelVecBodge));
 		rotatePlayer(scalarvectorprod(rotateAmount,playerAngVelVec));
 		
 		for (var b in bullets){
