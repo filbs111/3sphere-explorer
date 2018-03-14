@@ -837,9 +837,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 	for (var b in bullets){
 		var bulletMatrix=bullets[b];
 		//move bullet (todo decouple mechanics from drawing, or at least use deltaT)
-		xyzmove4mat(bulletMatrix,[0,0,0.025]);
+		xyzmove4mat(bulletMatrix,[0,0,0.001]);
 		//draw bullet
-		targetRad=0.0025;
+		targetRad=0.00025;
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,20*targetRad]);	//long streaks
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.3, 1.0]);	//YELLOW
 		mat4.set(invertedWorldCamera, mvMatrix);
