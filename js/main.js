@@ -1269,20 +1269,20 @@ var iterateMechanics = (function iterateMechanics(){
 			playerVelVec[0]+=keyThing.keystate(65)-keyThing.keystate(68); //lateral
 			playerVelVec[1]+=keyThing.keystate(17)-keyThing.keystate(32); //vertical
 			playerVelVec[2]+=keyThing.keystate(87)-keyThing.keystate(83); //fwd/back
-			playerVelVec=playerVelVec.map(function(xx){return 0.9*xx});	//todo did i make a func for this?
+			playerVelVec=scalarvectorprod(0.9,playerVelVec);
 			
 			playerAngVelVec[0]+=keyThing.keystate(40)-keyThing.keystate(38); //pitch
 			playerAngVelVec[1]+=keyThing.keystate(39)-keyThing.keystate(37); //turn
 			playerAngVelVec[2]+=keyThing.keystate(69)-keyThing.keystate(81); //roll
-			playerAngVelVec=playerAngVelVec.map(function(xx){return 0.8*xx});	//todo did i make a func for this?
+			playerAngVelVec=scalarvectorprod(0.8,playerAngVelVec);
 		}
 		
 		var moveAmount = timeElapsed * moveSpeed;
 		var rotateAmount = timeElapsed * rotateSpeed;
 		var bulletMove = timeElapsed * bulletSpeed;
 		
-		movePlayer(playerVelVec.map(function(xx){return moveAmount*xx}));	//todo did i make a func for this?
-		rotatePlayer(playerAngVelVec.map(function(xx){return rotateAmount*xx}));	//todo did i make a func for this?
+		movePlayer(scalarvectorprod(moveAmount,playerVelVec));
+		rotatePlayer(scalarvectorprod(rotateAmount,playerAngVelVec));
 		
 		for (var b in bullets){
 			var bulletMatrix=bullets[b];
