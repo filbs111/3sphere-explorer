@@ -1093,6 +1093,7 @@ var guiParams={
 	fogColor0:'#202020',
 	fogColor1:'#ff0000',
 	playerLight:'#ffffff',
+	onRails:false,
 	reflector:{
 		draw:true,
 		mappingType:'vertex projection',
@@ -1147,6 +1148,7 @@ function init(){
 	gui.add(guiParams, "draw target",false);
 	gui.add(guiParams,"target scale",0.05,0.5,0.05);
 	gui.add(guiParams, "indiv targeting");
+	gui.add(guiParams, "onRails");
 	gui.add(guiParams, "perPixelLighting");
 	gui.add(guiParams, "culling");
 	var reflectorFolder = gui.addFolder('reflector');
@@ -1160,7 +1162,8 @@ function init(){
 		var willPreventDefault=true;
 		switch (evt.keyCode){	
 			case 84:	//T
-				xyzmove4mat(playerCamera,[0.01,0.0,0.01]);	//diagonally forwards/left
+				//xyzmove4mat(playerCamera,[0.01,0.0,0.01]);	//diagonally forwards/left
+				console.log(testInfo);
 				break;
 			case 71:	//G
 				fireGun();
@@ -1249,10 +1252,13 @@ var iterateMechanics = (function iterateMechanics(){
 	var playerVelVec = [0,0,0];	//TODO use matrix/quaternion for this
 	var playerVelVecBodge=[];
 	
+	var playerVelVec = [0,0,0];
 	var playerAngVelVec = [0,0,0];
 	
 	var timeTracker =0;
 	var timeStep = 10;
+	
+	var thrust = 0.01;
 	
 	return function(){
 		var nowTime = (new Date()).getTime();
@@ -1269,16 +1275,10 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
 		
-			playerVelVec[0]+=keyThing.keystate(65)-keyThing.keystate(68); //lateral
-			playerVelVec[1]+=keyThing.keystate(17)-keyThing.keystate(32); //vertical
-			playerVelVec[2]+=keyThing.keystate(87)-keyThing.keystate(83); //fwd/back
-			playerVelVec=scalarvectorprod(0.95,playerVelVec);
-			
-			//make new velvec to make slow movement adjustment better, total amount moved nonlinear with press duration
-			//just multiply the "thrust" by its squared length. (ie its magnitude is cubed)
-			var playerVelVecMagsq = playerVelVec.reduce(function(total, val){return total+ val*val;}, 0);
-			playerVelVecMagsq/=1000;
-			playerVelVecBodge =  playerVelVec.map(function(val){return val*playerVelVecMagsq;});
+			playerVelVec[0]+=thrust*(keyThing.keystate(65)-keyThing.keystate(68)); //lateral
+			playerVelVec[1]+=thrust*(keyThing.keystate(17)-keyThing.keystate(32)); //vertical
+			playerVelVec[2]+=thrust*(keyThing.keystate(87)-keyThing.keystate(83)); //fwd/back
+			playerVelVec=scalarvectorprod(0.997,playerVelVec);
 			
 			playerAngVelVec[0]+=keyThing.keystate(40)-keyThing.keystate(38); //pitch
 			playerAngVelVec[1]+=keyThing.keystate(39)-keyThing.keystate(37); //turn
@@ -1290,8 +1290,33 @@ var iterateMechanics = (function iterateMechanics(){
 		var rotateAmount = timeElapsed * rotateSpeed;
 		var bulletMove = timeElapsed * bulletSpeed;
 		
-		movePlayer(scalarvectorprod(moveAmount,playerVelVecBodge));
+		
+		//make new velvec to make slow movement adjustment better, total amount moved nonlinear with press duration
+		//just multiply the "thrust" by its squared length. (ie its magnitude is cubed)
+		var playerVelVecMagsq = playerVelVec.reduce(function(total, val){return total+ val*val;}, 0);
+		
+		if (!guiParams.onRails){
+			//turning player makes velocity rotate relative to player.
+			//note does not yet apply to rotation due to mouse
+			
+			var len = 1-Math.sqrt(playerVelVecMagsq);
+			var playerVelVecQuat=[len,playerVelVec[0],playerVelVec[1],playerVelVec[2]];	//note this is only right for small angles, since quat is cos(t), axis*sin(t)
+			var rqpair = makerotatequatpair(scalarvectorprod(-0.5*rotateAmount,playerAngVelVec));
+			playerVelVecQuat=rotatequat_byquatpair(playerVelVecQuat,rqpair);
+			
+			testInfo = [rqpair,playerAngVelVec];
+			
+			//switch back to other format (extract 3vec).
+			playerVelVec = [playerVelVecQuat[1],playerVelVecQuat[2],playerVelVecQuat[3]];
+			
+			//TODO? just do quaternion rotation of 3vector, which exists in glmatrix lib. 
+			//maybe best is keep a vel quat, and multiply by a thrust quat.
+		}
+		
+		playerVelVecBodge =  playerVelVec.map(function(val){return val*playerVelVecMagsq;});
+		
 		rotatePlayer(scalarvectorprod(rotateAmount,playerAngVelVec));
+		movePlayer(scalarvectorprod(moveAmount,playerVelVecBodge));
 		
 		for (var b in bullets){
 			var bulletMatrix=bullets[b];

@@ -167,6 +167,10 @@ function makerotatequatpair(rot){
 	return [q,qc];
 }
 
+function rotatequat_byquatpair(quat,qpair){
+	return multiply_quaternions(multiply_quaternions(qpair[0],quat),qpair[1]);
+}
+
 function random_quat_pair(){
 	var qp=[];
 	qp.push(random_quaternion());
