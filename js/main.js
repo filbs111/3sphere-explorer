@@ -302,7 +302,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var colorsSwitch = ((isCubemapView && guiParams.reflector.isPortal)?1:0)^currentWorld;
 	
 	var localVecFogColor = worldColors[colorsSwitch];
-	var localVecReflectorColor = worldColors[1-colorsSwitch];
+	var localVecReflectorColor = guiParams.reflector.isPortal? worldColors[1-colorsSwitch]: worldColors[colorsSwitch];
 	var localVecReflectorDiffColor = [ localVecReflectorColor[0]-localVecFogColor[0],
 										localVecReflectorColor[1]-localVecFogColor[1],
 										localVecReflectorColor[2]-localVecFogColor[2]];	//todo use a vector class!
@@ -365,7 +365,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos2, dropLightPos2);
 	}
 	
-	var numBallsInRing = 20;
+	var numBallsInRing = 16;
 	var startAng = Math.PI / numBallsInRing;
 	var angleStep = startAng * 2.0;
 	
@@ -1103,7 +1103,7 @@ var guiParams={
 var worldColors=[];
 var playerLight;
 var teapotMatrix=mat4.create();mat4.identity(teapotMatrix);
-xyzmove4mat(teapotMatrix,[0,1.5,0]);
+xyzmove4mat(teapotMatrix,[0,1.85,0]);
 var sshipMatrix=mat4.create();mat4.identity(sshipMatrix);
 var targetMatrix=mat4.create();mat4.identity(targetMatrix);
 var bullets=[];
@@ -1145,14 +1145,14 @@ function init(){
 	gui.add(guiParams,"draw spaceship",true);
 	gui.add(guiParams, "drop spaceship",false);
 	gui.add(guiParams, "draw target",false);
-	gui.add(guiParams,"target scale",0.02,20.0,0.05);
+	gui.add(guiParams,"target scale",0.05,0.5,0.05);
 	gui.add(guiParams, "indiv targeting");
 	gui.add(guiParams, "perPixelLighting");
 	gui.add(guiParams, "culling");
 	var reflectorFolder = gui.addFolder('reflector');
 	reflectorFolder.add(guiParams.reflector, "draw");
 	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection']);
-	reflectorFolder.add(guiParams.reflector, "scale", 0.2,4,0.2);
+	reflectorFolder.add(guiParams.reflector, "scale", 0,4,0.1);
 	reflectorFolder.add(guiParams.reflector, "isPortal");
 	
 	window.addEventListener("keydown",function(evt){
