@@ -1162,8 +1162,7 @@ function init(){
 		var willPreventDefault=true;
 		switch (evt.keyCode){	
 			case 84:	//T
-				//xyzmove4mat(playerCamera,[0.01,0.0,0.01]);	//diagonally forwards/left
-				console.log(testInfo);
+				xyzmove4mat(playerCamera,[0.01,0.0,0.01]);	//diagonally forwards/left
 				break;
 			case 71:	//G
 				fireGun();
@@ -1207,7 +1206,8 @@ function init(){
 			
 			//rotate player 
 			//guess have signs here because of unplanned handedness of screen, 3d co-ord systems
-			xyzrotate4mat(playerCamera, [crossProd.x / crossProd.w, -crossProd.y / crossProd.w, -crossProd.z / crossProd.w]);
+			var rotateAmt = [crossProd.x / crossProd.w, -crossProd.y / crossProd.w, -crossProd.z / crossProd.w];
+			rotatePlayer(rotateAmt);
 			
 		}
 	});
@@ -1243,16 +1243,17 @@ function init(){
 	}
 }
 
+var playerVelVec = [0,0,0];	//TODO use matrix/quaternion for this
+							//todo not a global! how to set listeners eg mousemove witin iteratemechanics???
+
 var iterateMechanics = (function iterateMechanics(){
 	var lastTime=(new Date()).getTime();
 	var moveSpeed=0.0001;
 	var rotateSpeed=-0.0005;
 	var bulletSpeed=0.001;
 	
-	var playerVelVec = [0,0,0];	//TODO use matrix/quaternion for this
 	var playerVelVecBodge=[];
 	
-	var playerVelVec = [0,0,0];
 	var playerAngVelVec = [0,0,0];
 	
 	var timeTracker =0;
@@ -1295,27 +1296,8 @@ var iterateMechanics = (function iterateMechanics(){
 		//just multiply the "thrust" by its squared length. (ie its magnitude is cubed)
 		var playerVelVecMagsq = playerVelVec.reduce(function(total, val){return total+ val*val;}, 0);
 		
-		if (!guiParams.onRails){
-			//turning player makes velocity rotate relative to player.
-			//note does not yet apply to rotation due to mouse
-			
-			var len = 1-Math.sqrt(playerVelVecMagsq);
-			var playerVelVecQuat=[len,playerVelVec[0],playerVelVec[1],playerVelVec[2]];	//note this is only right for small angles, since quat is cos(t), axis*sin(t)
-			var rqpair = makerotatequatpair(scalarvectorprod(-0.5*rotateAmount,playerAngVelVec));
-			playerVelVecQuat=rotatequat_byquatpair(playerVelVecQuat,rqpair);
-			
-			testInfo = [rqpair,playerAngVelVec];
-			
-			//switch back to other format (extract 3vec).
-			playerVelVec = [playerVelVecQuat[1],playerVelVecQuat[2],playerVelVecQuat[3]];
-			
-			//TODO? just do quaternion rotation of 3vector, which exists in glmatrix lib. 
-			//maybe best is keep a vel quat, and multiply by a thrust quat.
-		}
-		
-		playerVelVecBodge =  playerVelVec.map(function(val){return val*playerVelVecMagsq;});
-		
 		rotatePlayer(scalarvectorprod(rotateAmount,playerAngVelVec));
+		playerVelVecBodge =  playerVelVec.map(function(val){return val*playerVelVecMagsq;});
 		movePlayer(scalarvectorprod(moveAmount,playerVelVecBodge));
 		
 		for (var b in bullets){
@@ -1326,6 +1308,21 @@ var iterateMechanics = (function iterateMechanics(){
 		portalTest();
 	}
 })();
+
+//TODO less of a bodge!
+function rotateVelVec(velVec,rotateVec){
+	var velVecMagsq = velVec.reduce(function(total, val){return total+ val*val;}, 0);
+	var len = 1-Math.sqrt(velVecMagsq);
+	var velVecQuat=[len,velVec[0],velVec[1],velVec[2]];	//note this is only right for small angles, since quat is cos(t), axis*sin(t)
+	var rqpair = makerotatequatpair(scalarvectorprod(-0.5,rotateVec));
+	velVecQuat=rotatequat_byquatpair(velVecQuat,rqpair);
+			
+	//switch back to other format (extract 3vec).
+	return [velVecQuat[1],velVecQuat[2],velVecQuat[3]];
+
+	//TODO? just do quaternion rotation of 3vector, which exists in glmatrix lib. 
+	//maybe best is keep a vel quat, and multiply by a thrust quat.
+}
 
 function portalTest(){
 	var adjustedRad = reflectorInfo.rad +0.0005;	//avoid issues with rendering very close to surface
@@ -1358,6 +1355,11 @@ function movePlayer(vec){
 }
 
 function rotatePlayer(vec){
+	if (!guiParams.onRails){
+		//turning player makes velocity rotate relative to player.
+		playerVelVec = rotateVelVec(playerVelVec,vec);
+	};
+	
 	xyzrotate4mat(playerCamera,vec);
 }
 
@@ -1436,7 +1438,8 @@ function handleTouchMove(evt){
 			
 			//rotate player 
 			//guess have signs here because of unplanned handedness of screen, 3d co-ord systems
-			xyzrotate4mat(playerCamera, [crossProd.x / crossProd.w, -crossProd.y / crossProd.w, -crossProd.z / crossProd.w]);
+			var rotAmount = [crossProd.x / crossProd.w, -crossProd.y / crossProd.w, -crossProd.z / crossProd.w];
+			rotatePlayer(rotAmount);
 		}
 		
 		logtouchevent(touches[i],i);
