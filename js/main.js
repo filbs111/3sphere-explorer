@@ -1261,6 +1261,10 @@ var iterateMechanics = (function iterateMechanics(){
 	
 	var thrust = 0.01;
 	
+	//gamepad
+	var activeGp, buttons, axes;
+	var deadZone = 0.15;	//for thumbsticks
+	
 	return function(){
 		var nowTime = (new Date()).getTime();
 		var timeElapsed = Math.min(nowTime - lastTime, 50);	//ms. 50ms -> slowdown if drop below 20fps 
@@ -1299,6 +1303,67 @@ var iterateMechanics = (function iterateMechanics(){
 		rotatePlayer(scalarvectorprod(rotateAmount,playerAngVelVec));
 		playerVelVecBodge =  playerVelVec.map(function(val){return val*playerVelVecMagsq;});
 		movePlayer(scalarvectorprod(moveAmount,playerVelVecBodge));
+		
+		
+		//GAMEPAD
+		//TODO? move gamepad finding outside iterate mechancs, do only once per requestAnimationFrame
+		activeGp=false;
+		//basic gamepad support
+		
+		//oculus touch controllers are recognised as controllers.
+		//to work around, abuse fact that these don't have 10th button.
+		//find the 1st gamepad with button 10.
+
+		var gpads=navigator.getGamepads();
+		if (gpads){
+			for (gg in gpads){
+				thisgp = gpads[gg];
+				if (thisgp.buttons && thisgp.buttons[10] && thisgp.axes){
+					activeGp = thisgp;
+					break;
+				}
+			}
+		}
+		//TODO handle choosing one of multiple gamepads and keeping that gamepad selected.
+		
+		if (activeGp){	
+			buttons = activeGp.buttons;
+			
+			//buttons 0 to 15, on xbox controller are:
+			//A,B,X,Y
+			//L1,R1,L2,R2,
+			//BACK,START,
+			//L3,R3,	(analog values)
+			//d-pad u,d,l,r
+			//button 16? don't know (there is a central xbox button but does nothing)
+			
+			axes = activeGp.axes;
+			
+			//axes for xbox controller:
+			//left thumbstick left(-1) to right(+1)
+			//left thumbstick up(-1) to down(+1)
+			//right thumbstick left(-1) to right(+1)
+			//right thumbstick up(-1) to down(+1)
+		//}
+		//if (activeGp){
+			var gpMove=[];
+			gpMove[0] = Math.abs(axes[0])>deadZone ? -moveAmount*axes[0] : 0; //lateral
+			gpMove[1] = Math.abs(axes[1])>deadZone ? moveAmount*axes[1] : 0; //vertical
+			gpMove[2] = moveAmount*(buttons[7].value-buttons[6].value); //fwd/back	//note Firefox at least fails to support analog triggers https://bugzilla.mozilla.org/show_bug.cgi?id=1434408
+			
+			var magsq = gpMove.reduce(function(total, val){return total+ val*val;}, 0);			
+			movePlayer(scalarvectorprod(10000000*magsq,gpMove));
+			//users may prefer to have left thumbstick up/down control forward/back and use another control for spaceship up/down (similar to FPS controls)
+			
+			var gpRotate=[];
+			gpRotate[0] = Math.abs(axes[3])>deadZone ? rotateAmount*axes[3] : 0; //pitch
+			gpRotate[1] = Math.abs(axes[2])>deadZone ? rotateAmount*axes[2] : 0; //turn
+			gpRotate[2] = rotateAmount*(buttons[5].value-buttons[4].value); //roll
+			
+			magsq = gpRotate.reduce(function(total, val){return total+ val*val;}, 0);		
+			rotatePlayer(scalarvectorprod(500000*magsq,gpRotate));
+		}
+		
 		
 		for (var b in bullets){
 			var bulletMatrix=bullets[b];
