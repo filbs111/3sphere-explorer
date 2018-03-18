@@ -1245,7 +1245,7 @@ function init(){
 
 var playerVelVec = [0,0,0];	//TODO use matrix/quaternion for this
 							//todo not a global! how to set listeners eg mousemove witin iteratemechanics???
-
+var testInfo="";
 var iterateMechanics = (function iterateMechanics(){
 	var lastTime=(new Date()).getTime();
 	var moveSpeed=0.0001;
@@ -1266,47 +1266,7 @@ var iterateMechanics = (function iterateMechanics(){
 	var deadZone = 0.15;	//for thumbsticks
 	
 	return function(){
-		var nowTime = (new Date()).getTime();
-		var timeElapsed = Math.min(nowTime - lastTime, 50);	//ms. 50ms -> slowdown if drop below 20fps 
-		//console.log("time elapsed: " + timeElapsed);
-		lastTime=nowTime;
-		
-		timeTracker+=timeElapsed;
-		var numSteps = Math.floor(timeTracker/timeStep);
-		timeTracker-=numSteps*timeStep;
-		for (var ii=0;ii<numSteps;ii++){
-			stepSpeed();
-		}
-		
-		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
-		
-			playerVelVec[0]+=thrust*(keyThing.keystate(65)-keyThing.keystate(68)); //lateral
-			playerVelVec[1]+=thrust*(keyThing.keystate(17)-keyThing.keystate(32)); //vertical
-			playerVelVec[2]+=thrust*(keyThing.keystate(87)-keyThing.keystate(83)); //fwd/back
-			playerVelVec=scalarvectorprod(0.996,playerVelVec);
-			
-			playerAngVelVec[0]+=keyThing.keystate(40)-keyThing.keystate(38); //pitch
-			playerAngVelVec[1]+=keyThing.keystate(39)-keyThing.keystate(37); //turn
-			playerAngVelVec[2]+=keyThing.keystate(69)-keyThing.keystate(81); //roll
-			playerAngVelVec=scalarvectorprod(0.8,playerAngVelVec);
-		}
-		
-		var moveAmount = timeElapsed * moveSpeed;
-		var rotateAmount = timeElapsed * rotateSpeed;
-		var bulletMove = timeElapsed * bulletSpeed;
-		
-		
-		//make new velvec to make slow movement adjustment better, total amount moved nonlinear with press duration
-		//just multiply the "thrust" by its squared length. (ie its magnitude is cubed)
-		var playerVelVecMagsq = playerVelVec.reduce(function(total, val){return total+ val*val;}, 0);
-		
-		rotatePlayer(scalarvectorprod(rotateAmount,playerAngVelVec));
-		playerVelVecBodge =  playerVelVec.map(function(val){return val*playerVelVecMagsq;});
-		movePlayer(scalarvectorprod(moveAmount,playerVelVecBodge));
-		
-		
 		//GAMEPAD
-		//TODO? move gamepad finding outside iterate mechancs, do only once per requestAnimationFrame
 		activeGp=false;
 		//basic gamepad support
 		
@@ -1344,35 +1304,82 @@ var iterateMechanics = (function iterateMechanics(){
 			//left thumbstick up(-1) to down(+1)
 			//right thumbstick left(-1) to right(+1)
 			//right thumbstick up(-1) to down(+1)
-		//}
-		//if (activeGp){
-			var gpMove=[];
-			gpMove[0] = Math.abs(axes[0])>deadZone ? -moveAmount*axes[0] : 0; //lateral
-			gpMove[1] = Math.abs(axes[1])>deadZone ? moveAmount*axes[1] : 0; //vertical
-			gpMove[2] = moveAmount*(buttons[7].value-buttons[6].value); //fwd/back	//note Firefox at least fails to support analog triggers https://bugzilla.mozilla.org/show_bug.cgi?id=1434408
+		}
+		
+		
+		var nowTime = (new Date()).getTime();
+		var timeElapsed = Math.min(nowTime - lastTime, 50);	//ms. 50ms -> slowdown if drop below 20fps 
+		//console.log("time elapsed: " + timeElapsed);
+		lastTime=nowTime;
+		
+		timeTracker+=timeElapsed;
+		var numSteps = Math.floor(timeTracker/timeStep);
+		timeTracker-=numSteps*timeStep;
+		for (var ii=0;ii<numSteps;ii++){
+			stepSpeed();
+		}
+		
+		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
+		
+			playerVelVec[0]+=thrust*(keyThing.keystate(65)-keyThing.keystate(68)); //lateral
+			playerVelVec[1]+=thrust*(keyThing.keystate(17)-keyThing.keystate(32)); //vertical
+			playerVelVec[2]+=thrust*(keyThing.keystate(87)-keyThing.keystate(83)); //fwd/back
 			
-			var magsq = gpMove.reduce(function(total, val){return total+ val*val;}, 0);			
-			gpMove = scalarvectorprod(10000000*magsq,gpMove);
+			playerAngVelVec[0]+=keyThing.keystate(40)-keyThing.keystate(38); //pitch
+			playerAngVelVec[1]+=keyThing.keystate(39)-keyThing.keystate(37); //turn
+			playerAngVelVec[2]+=keyThing.keystate(69)-keyThing.keystate(81); //roll
 			
-			//note doing cube bodge to both thrust and to adding velocity to position (see key controls code)
-			//maybe better to pick one! (probably should apply cube logic to acc'n for exponential smoothed binary key input, do something "realistic" for drag forces
+			if (activeGp){
+				//TODO move calculation of total input from keys/gamepad outside this loop
+				var gpMove=[];
+				gpMove[0] = Math.abs(axes[0])>deadZone ? -moveSpeed*axes[0] : 0; //lateral
+				gpMove[1] = Math.abs(axes[1])>deadZone ? moveSpeed*axes[1] : 0; //vertical
+				gpMove[2] = moveSpeed*(buttons[7].value-buttons[6].value); //fwd/back	//note Firefox at least fails to support analog triggers https://bugzilla.mozilla.org/show_bug.cgi?id=1434408
+				
+				var magsq = gpMove.reduce(function(total, val){return total+ val*val;}, 0);			
+				gpMove = scalarvectorprod(10000000000*magsq,gpMove);
+				
+				//testInfo=[axes,buttons,gpMove,magsq];
+				
+				//note doing cube bodge to both thrust and to adding velocity to position (see key controls code)
+				//maybe better to pick one! (probably should apply cube logic to acc'n for exponential smoothed binary key input, do something "realistic" for drag forces
+				
+				playerVelVec[0]+=gpMove[0];	//todo either write vector addition func or use glmatrix vectors
+				playerVelVec[1]+=gpMove[1];
+				playerVelVec[2]+=gpMove[2];
+				
+				
+				playerAngVelVec[2]+=(buttons[5].value-buttons[4].value); //roll
+			}
 			
-			playerVelVec[0]+=gpMove[0];	//todo either write vector addition func or use glmatrix vectors
-			playerVelVec[1]+=gpMove[1];
-			playerVelVec[2]+=gpMove[2];
-			
-			
-			//users may prefer to have left thumbstick up/down control forward/back and use another control for spaceship up/down (similar to FPS controls)
-			
+			playerVelVec=scalarvectorprod(0.996,playerVelVec);
+			playerAngVelVec=scalarvectorprod(0.8,playerAngVelVec);
+		}
+		
+		var moveAmount = timeElapsed * moveSpeed;
+		var rotateAmount = timeElapsed * rotateSpeed;
+		var bulletMove = timeElapsed * bulletSpeed;
+		
+		
+		//make new velvec to make slow movement adjustment better, total amount moved nonlinear with press duration
+		//just multiply the "thrust" by its squared length. (ie its magnitude is cubed)
+		var playerVelVecMagsq = playerVelVec.reduce(function(total, val){return total+ val*val;}, 0);
+		
+		rotatePlayer(scalarvectorprod(rotateAmount,playerAngVelVec));
+		
+		if (activeGp){
 			var gpRotate=[];
 			gpRotate[0] = Math.abs(axes[3])>deadZone ? rotateAmount*axes[3] : 0; //pitch
 			gpRotate[1] = Math.abs(axes[2])>deadZone ? rotateAmount*axes[2] : 0; //turn
-			gpRotate[2] = rotateAmount*(buttons[5].value-buttons[4].value); //roll
-			
+			gpRotate[2] = 0;	//moved to code above
+				
 			magsq = gpRotate.reduce(function(total, val){return total+ val*val;}, 0);		
-			rotatePlayer(scalarvectorprod(400000*magsq,gpRotate));
+			rotatePlayer(scalarvectorprod(100000*magsq,gpRotate));
+			//rotatePlayer(gpRotate);
 		}
 		
+		playerVelVecBodge =  playerVelVec.map(function(val){return val*playerVelVecMagsq;});
+		movePlayer(scalarvectorprod(moveAmount,playerVelVecBodge));
 		
 		for (var b in bullets){
 			var bulletMatrix=bullets[b];
