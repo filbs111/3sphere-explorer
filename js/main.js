@@ -1283,7 +1283,7 @@ var iterateMechanics = (function iterateMechanics(){
 			playerVelVec[0]+=thrust*(keyThing.keystate(65)-keyThing.keystate(68)); //lateral
 			playerVelVec[1]+=thrust*(keyThing.keystate(17)-keyThing.keystate(32)); //vertical
 			playerVelVec[2]+=thrust*(keyThing.keystate(87)-keyThing.keystate(83)); //fwd/back
-			playerVelVec=scalarvectorprod(0.997,playerVelVec);
+			playerVelVec=scalarvectorprod(0.996,playerVelVec);
 			
 			playerAngVelVec[0]+=keyThing.keystate(40)-keyThing.keystate(38); //pitch
 			playerAngVelVec[1]+=keyThing.keystate(39)-keyThing.keystate(37); //turn
@@ -1352,7 +1352,16 @@ var iterateMechanics = (function iterateMechanics(){
 			gpMove[2] = moveAmount*(buttons[7].value-buttons[6].value); //fwd/back	//note Firefox at least fails to support analog triggers https://bugzilla.mozilla.org/show_bug.cgi?id=1434408
 			
 			var magsq = gpMove.reduce(function(total, val){return total+ val*val;}, 0);			
-			movePlayer(scalarvectorprod(10000000*magsq,gpMove));
+			gpMove = scalarvectorprod(10000000*magsq,gpMove);
+			
+			//note doing cube bodge to both thrust and to adding velocity to position (see key controls code)
+			//maybe better to pick one! (probably should apply cube logic to acc'n for exponential smoothed binary key input, do something "realistic" for drag forces
+			
+			playerVelVec[0]+=gpMove[0];	//todo either write vector addition func or use glmatrix vectors
+			playerVelVec[1]+=gpMove[1];
+			playerVelVec[2]+=gpMove[2];
+			
+			
 			//users may prefer to have left thumbstick up/down control forward/back and use another control for spaceship up/down (similar to FPS controls)
 			
 			var gpRotate=[];
@@ -1361,7 +1370,7 @@ var iterateMechanics = (function iterateMechanics(){
 			gpRotate[2] = rotateAmount*(buttons[5].value-buttons[4].value); //roll
 			
 			magsq = gpRotate.reduce(function(total, val){return total+ val*val;}, 0);		
-			rotatePlayer(scalarvectorprod(500000*magsq,gpRotate));
+			rotatePlayer(scalarvectorprod(400000*magsq,gpRotate));
 		}
 		
 		
