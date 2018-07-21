@@ -302,7 +302,7 @@ function drawScene(frameTime){
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 	
-	setProjectionMatrix(pMatrix, 110.0, gl.viewportHeight/gl.viewportWidth);
+	setProjectionMatrix(pMatrix, 110.0, gl.viewportHeight/gl.viewportWidth);	//note mouse code assumes 90 deg fov used. TODO fix.
 	frustrumCull = generateCullFunc(pMatrix);
 		
 	mat4.set(offsetPlayerCamera, worldCamera);	//set worldCamera to playerCamera
@@ -450,6 +450,29 @@ function drawWorldScene(frameTime, isCubemapView) {
 		xmove4mat(mvMatrix, startAng);
 		for (var ii=0;ii<numBallsInRing;ii++){
 			xmove4mat(mvMatrix, angleStep);
+			if (frustrumCull(mvMatrix,boxRad)){
+				drawItem();
+			}
+		}
+	}
+	
+	var numRandomBoxes = guiParams['random boxes'];
+	if (numRandomBoxes>0){
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.9, 0.9, 1.0, 0.9]);
+		
+		boxSize = 0.005;
+		boxRad = boxSize*Math.sqrt(3);
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
+		
+		var criticalWPos = Math.cos(Math.atan(guiParams.reflector.scale) + Math.atan(boxRad));
+		
+		numRandomBoxes = Math.min(randomMats.length, numRandomBoxes);	//TODO check this doesn't happen/ make obvious error!
+		
+		for (var ii=0;ii<numRandomBoxes;ii++){
+			var thisMat = randomMats[ii];
+			mat4.set(invertedWorldCamera, mvMatrix);
+			mat4.multiply(mvMatrix, thisMat);
+			if (thisMat[15]>criticalWPos){continue;}	//don't draw boxes too close to portal
 			if (frustrumCull(mvMatrix,boxRad)){
 				drawItem();
 			}
@@ -1070,8 +1093,14 @@ function initCubemapFramebuffer(){
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
+var randomMats = [];	//some random poses. used for "dust motes". really only positions required, but flexible, can use for random boxes/whatever 
+
 function setupScene() {
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+	
+	for (var ii=0;ii<1000;ii++){
+		randomMats.push(convert_quats_to_4matrix(random_quat_pair()));
+	}
 	
 	mat4.identity(playerCamera);	//not sure why have 2 matrices here...
 	//bung extra quaternion stuff onto this for quick test
@@ -1130,6 +1159,7 @@ var guiParams={
 		'boxes y=w=0':false,
 		'boxes z=w=0':false
 	},
+	'random boxes':200,
 	"draw 5-cell":false,
 	"8-cell scale":1.0,
 	"subdiv frames":true,
@@ -1191,6 +1221,7 @@ function init(){
 		console.log(shape);
 		drawShapesFolder.add(guiParams.drawShapes, shape );
 	}
+	drawShapesFolder.add(guiParams, "random boxes",0,1000,50);
 	var polytopesFolder = gui.addFolder('polytopes');
 	polytopesFolder.add(guiParams,"draw 5-cell");
 	polytopesFolder.add(guiParams,"draw 8-cell",false);
@@ -1214,7 +1245,7 @@ function init(){
 	var reflectorFolder = gui.addFolder('reflector');
 	reflectorFolder.add(guiParams.reflector, "draw");
 	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection']);
-	reflectorFolder.add(guiParams.reflector, "scale", 0.5,4,0.1);
+	reflectorFolder.add(guiParams.reflector, "scale", 0.5,2,0.01);
 	reflectorFolder.add(guiParams.reflector, "isPortal");
 	reflectorFolder.add(guiParams.reflector, "moveAway", 0,0.001,0.0001);	//value required here is dependent on minimum scale. TODO moveawayvector should be in DIRECTION away from portal, but fixed length.
 
