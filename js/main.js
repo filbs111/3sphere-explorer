@@ -220,8 +220,18 @@ function drawScene(frameTime){
 	
 	mat4.set(playerCamera, offsetPlayerCamera);	
 	
-	var offsetVec = [0,-0.01,-0.015];	//3rd person
-	//var offsetVec = [0,0,0.001];	//shifted forward slightly
+	var offsetVec;
+	switch(guiParams.cameraType){	//TODO smooth transition between these vectors.
+		case "near 3rd person":
+		offsetVec = [0,-0.01,-0.015];
+		break;
+		case "far 3rd person":
+		offsetVec = [0,-0.02,-0.03];
+		break;
+		case "cockpit":
+		offsetVec = [0,0,0.001];
+	}
+	
 	var offsetSteps = 100;
 	var offsetVecStep = offsetVec.map(function(item){return item/offsetSteps;});
 	for (var ii=0;ii<100;ii++){	//TODO more efficient. if insufficient subdivision, transition stepped.
@@ -1141,6 +1151,7 @@ var guiParams={
 	fogColor1:'#ff0000',
 	playerLight:'#ffffff',
 	onRails:false,
+	cameraType:"near 3rd person",
 	reflector:{
 		draw:true,
 		mappingType:'vertex projection',
@@ -1197,6 +1208,7 @@ function init(){
 	gui.add(guiParams,"target scale",0.05,0.5,0.05);
 	gui.add(guiParams, "indiv targeting");
 	gui.add(guiParams, "onRails");
+	gui.add(guiParams, "cameraType", ["cockpit", "near 3rd person", "far 3rd person"]);
 	gui.add(guiParams, "perPixelLighting");
 	gui.add(guiParams, "culling");
 	var reflectorFolder = gui.addFolder('reflector');
