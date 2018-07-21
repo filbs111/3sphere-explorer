@@ -202,6 +202,7 @@ function calcReflectionInfo(toReflect,resultsObj){
 	resultsObj.shaderMatrix2=reflectShaderMatrix2;
 }
 
+var moveAwayVec;
 function drawScene(frameTime){
 	resizecanvas();
 
@@ -214,7 +215,30 @@ function drawScene(frameTime){
 	
 	reflectorInfo.rad = guiParams.reflector.scale;
 	
-	calcReflectionInfo(playerCamera,reflectorInfo);
+	
+	var saveWorld = currentWorld;
+	
+	mat4.set(playerCamera, offsetPlayerCamera);	
+	
+	var offsetVec = [0,-0.01,-0.015];	//3rd person
+	//var offsetVec = [0,0,0.001];	//shifted forward slightly
+	var offsetSteps = 100;
+	var offsetVecStep = offsetVec.map(function(item){return item/offsetSteps;});
+	for (var ii=0;ii<100;ii++){	//TODO more efficient. if insufficient subdivision, transition stepped.
+		xyzmove4mat(offsetPlayerCamera,offsetVecStep);	
+		portalTest(offsetPlayerCamera,0);
+	}
+	
+	//move camera away from portal (todo ensure player model movement references offsetPlayerCamera BEFORE this move!
+	moveAwayVec = [ offsetPlayerCamera[3]* guiParams.reflector.moveAway,
+						offsetPlayerCamera[7]* guiParams.reflector.moveAway,
+						offsetPlayerCamera[11]* guiParams.reflector.moveAway];
+	xyzmove4mat(offsetPlayerCamera, moveAwayVec);
+	
+	
+	mat4.set(offsetPlayerCamera, worldCamera);
+	
+	calcReflectionInfo(worldCamera,reflectorInfo);
 	
 	//draw cubemap views
 	mat4.identity(worldCamera);	//TODO use correct matrices
@@ -232,11 +256,6 @@ function drawScene(frameTime){
 			
 			mat4.identity(worldCamera);
 			
-			//shift centre?
-			//xyzmove4mat(worldCamera, [0.4,0,0]);	//moves camera to left
-			//xyzmove4mat(worldCamera, [0,0.4,0]);	//moves camera downward
-			//xyzmove4mat(worldCamera, [0,0,0.4]);	//moves camera forward
-													// (from perspective of initial player position)
 			xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);	
 			
 			switch(ii){
@@ -273,12 +292,16 @@ function drawScene(frameTime){
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 	
-	setProjectionMatrix(pMatrix, 90.0, gl.viewportHeight/gl.viewportWidth);
+	setProjectionMatrix(pMatrix, 110.0, gl.viewportHeight/gl.viewportWidth);
 	frustrumCull = generateCullFunc(pMatrix);
 		
-	mat4.set(playerCamera, worldCamera);	//set worldCamera to playerCamera
-
+	mat4.set(offsetPlayerCamera, worldCamera);	//set worldCamera to playerCamera
+	//xyzmove4mat(worldCamera,[0,-0.01,-0.015]);	//3rd person camera
+	//xyzmove4mat(worldCamera,[0,0,0.005]);	//forward camera
+	
+	
 	drawWorldScene(frameTime, false);
+	currentWorld = saveWorld;
 }
 
 function setProjectionMatrix(pMatrix, vFov, ratio, polarity){
@@ -332,13 +355,18 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//get light pos in frame of camera. light is at spaceship
 	var lightMat = mat4.create();	//TODO mat*mat is unnecessary - only need to do dropLightPos = sshipMatrix*lightPosInWorld 
 	mat4.set(invertedWorldCamera, lightMat);
-	mat4.multiply(lightMat, sshipMatrix);
+	
+	var sshipMatrixShifted = mat4.create();	//TODO permanent/reuse (code duplicated from elsewhere.
+	mat4.set(sshipMatrix, sshipMatrixShifted)
+	xyzmove4mat(sshipMatrixShifted, moveAwayVec);
+	
+	mat4.multiply(lightMat, sshipMatrixShifted);
 	dropLightPos = [lightMat[12], lightMat[13], lightMat[14], lightMat[15]];
 	
 	mat4.set(invertedWorldCamera, lightMat);
 	
 	var dropLightReflectionInfo={};
-	calcReflectionInfo(sshipMatrix,dropLightReflectionInfo);
+	calcReflectionInfo(sshipMatrixShifted,dropLightReflectionInfo);
 	mat4.multiply(lightMat, dropLightReflectionInfo.shaderMatrix2);
 	dropLightPos2 = [lightMat[12], lightMat[13], lightMat[14], lightMat[15]];
 	
@@ -630,14 +658,28 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	var drawFunc = guiParams["draw spaceship"]? drawSpaceship : drawBall;
 	
-	drawFunc(sshipMatrix);
+	//TODO permanent
+	var sshipMatrixShifted = mat4.create();
+	mat4.set(sshipMatrix, sshipMatrixShifted)
 	
-	if (checkWithinReflectorRange(sshipMatrix, Math.tan(Math.atan(reflectorInfo.rad) +0.1))){
+	//MOVE MODEL AWAY FROM PORTAL.
+	//in order to jump camera across portal to avoid too close rendering issues (z-buffer)
+	//should do this for everything! (maybe nicer to use special (inv)cameraMatrix ?)
+	//likely sufficient to just do for camera and spaceship initially.
+	//what to do about lights, bullets etc consider later.
+	//basically idea is to move everything in the same direction - along line of portal to camera.
+	//conceivably current code will only work for objects near camera. TODO test.
+	
+	xyzmove4mat(sshipMatrixShifted, moveAwayVec);
+	
+	drawFunc(sshipMatrixShifted);
+	
+	if (checkWithinReflectorRange(sshipMatrixShifted, Math.tan(Math.atan(reflectorInfo.rad) +0.1))){
 		var portaledMatrix = mat4.create();
-		mat4.set(sshipMatrix, portaledMatrix);
+		mat4.set(sshipMatrixShifted, portaledMatrix);
 		moveMatrixThruPortal(portaledMatrix, reflectorInfo.rad, 1);
 	
-		drawFunc(portaledMatrix, sshipMatrix);
+		drawFunc(portaledMatrix, sshipMatrixShifted);
 	}	
 	
 	function drawSpaceship(matrix, matrixForTargeting){
@@ -646,6 +688,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 		
 		mat4.set(invertedWorldCamera, mvMatrix);
+		
 		mat4.multiply(mvMatrix,matrix);		
 		drawObjectFromBuffers(sshipBuffers, shaderProgramColored);
 		
@@ -793,6 +836,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}
 	}
 	
+	//DRAW PORTAL/REFLECTOR
 	if (guiParams.reflector.draw && !isCubemapView){
 		var savedActiveProg = activeShaderProgram;
 		
@@ -823,6 +867,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform1f(activeShaderProgram.uniforms.uPolarity, reflectorInfo.polarity);
 		
 		mat4.set(invertedWorldCamera, mvMatrix);
+		
 		if (frustrumCull(mvMatrix,reflectorInfo.rad)){
 			if(guiParams.reflector.mappingType == 'vertex projection'){
 				gl.uniform3fv(activeShaderProgram.uniforms.uCentrePosScaled, reflectorInfo.centreTanAngleVectorScaled	);
@@ -945,9 +990,11 @@ function drawObjectFromPreppedBuffers(bufferObj, shaderProg){
 }
 
 //need all of these???
+var moveAwayVec;
 var mvMatrix = mat4.create();
 var pMatrix = mat4.create();
 var playerCamera = mat4.create();
+var offsetPlayerCamera = mat4.create();
 
 var worldCamera = mat4.create();
 
@@ -1083,7 +1130,7 @@ var guiParams={
 	"draw 600-cell":false,
 	"draw teapot":true,
 	"teapot scale":0.7,
-	"draw spaceship":false,
+	"draw spaceship":true,
 	"drop spaceship":false,
 	"draw target":false,
 	"target scale":0.25,
@@ -1098,7 +1145,8 @@ var guiParams={
 		draw:true,
 		mappingType:'vertex projection',
 		scale:0.8,
-		isPortal:true
+		isPortal:true,
+		moveAway:0.0008
 	}
 };
 var worldColors=[];
@@ -1154,9 +1202,10 @@ function init(){
 	var reflectorFolder = gui.addFolder('reflector');
 	reflectorFolder.add(guiParams.reflector, "draw");
 	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection']);
-	reflectorFolder.add(guiParams.reflector, "scale", 0,4,0.1);
+	reflectorFolder.add(guiParams.reflector, "scale", 0.5,4,0.1);
 	reflectorFolder.add(guiParams.reflector, "isPortal");
-	
+	reflectorFolder.add(guiParams.reflector, "moveAway", 0,0.001,0.0001);	//value required here is dependent on minimum scale. TODO moveawayvector should be in DIRECTION away from portal, but fixed length.
+
 	window.addEventListener("keydown",function(evt){
 		//console.log("key pressed : " + evt.keyCode);
 		var willPreventDefault=true;
@@ -1386,7 +1435,7 @@ var iterateMechanics = (function iterateMechanics(){
 			xyzmove4mat(bulletMatrix,[0,0,bulletMove]);
 		}
 		
-		portalTest();
+		portalTest(playerCamera, 0);
 	}
 })();
 
@@ -1405,10 +1454,10 @@ function rotateVelVec(velVec,rotateVec){
 	//maybe best is keep a vel quat, and multiply by a thrust quat.
 }
 
-function portalTest(){
-	var adjustedRad = reflectorInfo.rad +0.0005;	//avoid issues with rendering very close to surface
-	if (checkWithinReflectorRange(playerCamera, adjustedRad)){	
-		moveMatrixThruPortal(playerCamera, adjustedRad, 1.0001);
+function portalTest(mat, amount){
+	var adjustedRad = reflectorInfo.rad + amount;	//avoid issues with rendering very close to surface
+	if (checkWithinReflectorRange(mat, adjustedRad)){	
+		moveMatrixThruPortal(mat, adjustedRad, 1.00000001);
 		currentWorld=1-currentWorld;
 		console.log("currentWorld now = " + currentWorld);
 	}
