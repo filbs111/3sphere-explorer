@@ -757,8 +757,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gunMatrices=[];
 		drawRelativeToSpacehip([gunHoriz,gunVert,gunFront]); //left, down, forwards
 		drawRelativeToSpacehip([-gunHoriz,gunVert,gunFront]);
-		drawRelativeToSpacehip([gunHoriz,-gunVert,gunFront]);
 		drawRelativeToSpacehip([-gunHoriz,-gunVert,gunFront]);
+		drawRelativeToSpacehip([gunHoriz,-gunVert,gunFront]);
 		
 		function drawRelativeToSpacehip(vec){
 			var gunMatrixCosmetic = mat4.create();
@@ -1652,15 +1652,19 @@ function log(info){		//can to enable/disable logging globally
 function dropSpaceship(){
 	mat4.set(playerCamera,sshipMatrix);	//copy current player 4-rotation matrix to the spaceship object
 }
+var gunEven=1;
 function fireGun(){
+	gunEven = 1-gunEven;
 	for (var g in gunMatrices){
-		var gunMatrix = gunMatrices[g];
-		var newBullet = mat4.create();
-		mat4.set(gunMatrix,newBullet);
-		bullets.push(newBullet);
-		//limit number of bullets
-		if (bullets.length>20){
-			bullets.shift();
+		if (g%2 == gunEven){
+			var gunMatrix = gunMatrices[g];
+			var newBullet = mat4.create();
+			mat4.set(gunMatrix,newBullet);
+			bullets.push(newBullet);
+			//limit number of bullets
+			if (bullets.length>20){
+				bullets.shift();
+			}
 		}
 	}
 	gunHeat+=1;
