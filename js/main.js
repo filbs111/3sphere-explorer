@@ -303,7 +303,7 @@ function drawScene(frameTime){
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 	
-	setProjectionMatrix(pMatrix, 110.0, gl.viewportHeight/gl.viewportWidth);	//note mouse code assumes 90 deg fov used. TODO fix.
+	setProjectionMatrix(pMatrix, mainCamFov, gl.viewportHeight/gl.viewportWidth);	//note mouse code assumes 90 deg fov used. TODO fix.
 	frustrumCull = generateCullFunc(pMatrix);
 		
 	mat4.set(offsetPlayerCamera, worldCamera);	//set worldCamera to playerCamera
@@ -315,6 +315,7 @@ function drawScene(frameTime){
 	currentWorld = saveWorld;
 }
 
+var mainCamFov = 105;	//degrees.
 function setProjectionMatrix(pMatrix, vFov, ratio, polarity){
 	mat4.identity(pMatrix);
 	
@@ -1565,8 +1566,8 @@ function getPointingDirectionFromScreenCoordinate(coords){
 	var xpos = maxxvert*(coords.x*2.0/gl.viewportWidth   -1.0 );
 	var ypos = maxyvert*(coords.y*2.0/gl.viewportHeight   -1.0 );
 	var radsq = xpos*xpos + ypos*ypos;
-	var zpos = 1.0;	//FOV 90 deg
-	
+	var zpos = 1.0/Math.tan(mainCamFov*Math.PI/90); //TODO precalc
+
 	//normalise - use sending back homogenous co-ords because maybe a tiny amount more efficient since cross producting anyway
 	var mag= Math.sqrt(radsq + zpos*zpos);
 	
