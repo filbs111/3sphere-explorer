@@ -1450,8 +1450,7 @@ var iterateMechanics = (function iterateMechanics(){
 				playerVelVec[1]+=gpMove[1];
 				playerVelVec[2]+=gpMove[2];
 				
-				
-				playerAngVelVec[2]+=(buttons[5].value-buttons[4].value); //roll
+				playerAngVelVec[2]+=(buttons[15].value-buttons[14].value); //roll -dpad left/right
 			}
 			
 			playerVelVec=scalarvectorprod(0.996,playerVelVec);
@@ -1460,7 +1459,7 @@ var iterateMechanics = (function iterateMechanics(){
 			if (autoFireCountdown>0){
 				autoFireCountdown--;
 			}else{
-				if (keyThing.keystate(71) ||( activeGp && activeGp.buttons[0].value)){	//G key or A button
+				if (keyThing.keystate(71) ||( activeGp && activeGp.buttons[5].value)){	//G key or R1 button
 					fireGun();
 					autoFireCountdown=autoFireCountdownStartVal;
 				}
@@ -1675,7 +1674,7 @@ function fireGun(){
 			var gunMatrix = gunMatrices[g];
 			var newBulletMatrix = mat4.create();
 			mat4.set(gunMatrix,newBulletMatrix);
-			bullets.push({matrix:newBulletMatrix,vel:playerVelVec.map(function(val,ii){return (ii==2)? val+3:val;})});	//filter adds muzzle vel
+			bullets.push({matrix:newBulletMatrix,vel:playerVelVec.map(function(val,ii){return (ii==2)? val+5:val;})});	//filter adds muzzle vel
 																		//TODO velocity in frame of bullet? (different if gun aimed off-centre)
 			//limit number of bullets
 			if (bullets.length>20){
