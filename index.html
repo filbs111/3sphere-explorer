@@ -62,12 +62,13 @@
 
 	precision mediump float;
 	uniform vec4 uColor;
+	uniform vec3 uEmitColor;
 	varying float fog;
 	uniform vec4 uFogColor;
 	varying float light;
 	
 	void main(void) {
-		gl_FragColor = vec4( fog*( vec3(light) + uFogColor.xyz )*uColor.xyz, 1.0) + (1.0-fog)*uFogColor;
+		gl_FragColor = vec4( fog*(( vec3(light) + uFogColor.xyz )*uColor.xyz + uEmitColor), 1.0) + (1.0-fog)*uFogColor;
 	}
 </script>
 <!-- vertex shader -->
@@ -132,6 +133,7 @@
 
 	precision mediump float;
 	uniform vec4 uColor;
+	uniform vec3 uEmitColor;
 	uniform vec4 uFogColor;
 	varying float fog;
 	varying vec4 adjustedPos;
@@ -143,7 +145,7 @@
 		//falloff
 		light/=0.7 + 3.0*dot(adjustedPos,adjustedPos);	//1st num some const to ensure light doesn't go inf at short dist
 													//guess maybe similar to some gaussian light source
-		gl_FragColor = vec4( fog*( vec3(light) + uFogColor.xyz )*uColor.xyz, 1.0) + (1.0-fog)*uFogColor;
+		gl_FragColor = vec4( fog*(( vec3(light) + uFogColor.xyz )*uColor.xyz + uEmitColor), 1.0) + (1.0-fog)*uFogColor;
 	}
 </script>
 <script id="shader-perpixel-vs" type="x-shader/x-vertex">
@@ -173,6 +175,7 @@
 <script id="shader-perpixel-discard-fs" type="x-shader/x-fragment">
 	precision mediump float;
 	uniform vec4 uColor;
+	uniform vec3 uEmitColor;
 	uniform vec3 uPlayerLightColor;
 	uniform vec4 uFogColor;
 	uniform vec3 uReflectorDiffColor;
@@ -217,7 +220,7 @@
 		//portalLight=0.0;
 				
 		//guess maybe similar to some gaussian light source
-		gl_FragColor = vec4( fog*( uPlayerLightColor*light+ uReflectorDiffColor*portalLight + uFogColor.xyz )*uColor.xyz, 1.0) + (1.0-fog)*uFogColor;
+		gl_FragColor = vec4( fog*(( uPlayerLightColor*light+ uReflectorDiffColor*portalLight + uFogColor.xyz )*uColor.xyz + uEmitColor), 1.0) + (1.0-fog)*uFogColor;
 		
 		//gl_FragColor.a =1.0;
 	}

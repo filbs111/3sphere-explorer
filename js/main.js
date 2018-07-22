@@ -12,15 +12,15 @@ var shaderProgramColored,
 function initShaders(){				
 	shaderProgramColoredPerVertex = loadShader( "shader-simple-vs", "shader-simple-fs",{
 					attributes:["aVertexPosition","aVertexNormal"],
-					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uColor","uFogColor", "uModelScale"]
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uColor","uEmitColor","uFogColor", "uModelScale"]
 					});
 	shaderProgramColoredPerPixel = loadShader( "shader-perpixel-vs", "shader-perpixel-fs",{
 					attributes:["aVertexPosition","aVertexNormal"],
-					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uColor","uFogColor", "uModelScale"]
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uColor","uEmitColor","uFogColor", "uModelScale"]
 					});
 	shaderProgramColoredPerPixelDiscard = loadShader( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs",{
 					attributes:["aVertexPosition","aVertexNormal"],
-					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uColor","uFogColor", "uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uColor","uEmitColor","uFogColor", "uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});				
 	
 	shaderProgramTexmapPerVertex = loadShader( "shader-texmap-vs", "shader-texmap-fs",{
@@ -386,6 +386,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//gl.enableVertexAttribArray(1);	//do need tex coords
 
 	gl.useProgram(activeShaderProgram);
+		
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 	if (activeShaderProgram.uniforms.uReflectorDiffColor){
 			gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
@@ -659,6 +660,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	activeShaderProgram = shaderProgramColored;
 	gl.useProgram(activeShaderProgram);
+	
+	gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);	//no emmision
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 	if (activeShaderProgram.uniforms.uReflectorDiffColor){
 			gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
@@ -673,6 +676,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//gl.disableVertexAttribArray(1);	//don't need texcoords
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 0.8, 1.0]);	//BLUE
+	gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0.1,0.3]);	//some emmision
 	modelScale = guiParams["teapot scale"];
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 
@@ -719,6 +723,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	function drawSpaceship(matrix, matrixForTargeting){
 		modelScale=0.0002;
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.2, 0.2, 0.2, 1.0]);	//DARK
+		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 		
 		mat4.set(invertedWorldCamera, mvMatrix);
@@ -729,9 +734,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//draw guns
 		var gunScale = 50*modelScale;
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [gunScale,gunScale,gunScale]);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.3+gunHeat/15, 0.3+gunHeat/30, 0.3+gunHeat/45, 1.0]);	//GREY
-														//TODO emmisive colour - 0.3 is diffuse part. emmisive should be separate.
-
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.3, 0.3, 0.3, 1.0]);	//GREY
+		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [gunHeat/15,gunHeat/30,gunHeat/45]);
+														
 		var gunHoriz = 20*modelScale;
 		var gunVert = 10*modelScale;
 		var gunFront = 5*modelScale;
