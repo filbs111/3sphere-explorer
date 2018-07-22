@@ -918,7 +918,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	}
 	
 	for (var b in bullets){
-		var bulletMatrix=bullets[b];
+		var bulletMatrix=bullets[b].matrix;
 		//draw bullet
 		targetRad=0.00025;
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,50*targetRad]);	//long streaks
@@ -1154,7 +1154,7 @@ var stats;
 var guiParams={
 	duocylinderModel:"grid",
 	drawShapes:{
-		'x*x+y*y=z*z+w*w':true,
+		'x*x+y*y=z*z+w*w':false,
 		'x*x+z*z=y*y+w*w':false,
 		'x*x+w*w=y*y+z*z':false,
 		'boxes y=z=0':false,	//x*x+w*w=1
@@ -1168,7 +1168,7 @@ var guiParams={
 	"draw 5-cell":false,
 	"8-cell scale":1.0,
 	"subdiv frames":true,
-	"draw 8-cell":false,
+	"draw 8-cell":true,
 	"draw 16-cell":false,
 	"draw 24-cell":false,
 	"draw 120-cell":false,
@@ -1186,11 +1186,11 @@ var guiParams={
 	fogColor1:'#ff0000',
 	playerLight:'#ffffff',
 	onRails:false,
-	cameraType:"near 3rd person",
+	cameraType:"far 3rd person",
 	reflector:{
 		draw:true,
 		mappingType:'vertex projection',
-		scale:0.8,
+		scale:0.5,
 		isPortal:true,
 		moveAway:0.0008
 	}
@@ -1261,10 +1261,6 @@ function init(){
 			case 84:	//T
 				xyzmove4mat(playerCamera,[0.01,0.0,0.01]);	//diagonally forwards/left
 				break;
-			case 71:	//G
-				fireGun();
-				break;
-				
 			case 70:	//F
 				goFullscreen(canvas);
 				break;
@@ -1345,7 +1341,7 @@ var playerVelVec = [0,0,0];	//TODO use matrix/quaternion for this
 var testInfo="";
 var iterateMechanics = (function iterateMechanics(){
 	var lastTime=(new Date()).getTime();
-	var moveSpeed=0.0001;
+	var moveSpeed=0.00015;
 	var rotateSpeed=-0.0005;
 	var bulletSpeed=0.001;
 	
@@ -1356,11 +1352,14 @@ var iterateMechanics = (function iterateMechanics(){
 	var timeTracker =0;
 	var timeStep = 10;
 	
-	var thrust = 0.01;
+	var thrust = 0.02;	//TODO make keyboard/gamepad fair! currently thrust, moveSpeed config independent!
 	
 	//gamepad
 	var activeGp, buttons, axes;
 	var deadZone = 0.15;	//for thumbsticks
+	
+	var autoFireCountdown=0;
+	var autoFireCountdownStartVal=6;
 	
 	return function(){
 		//GAMEPAD
@@ -1385,7 +1384,6 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		if (activeGp){	
 			buttons = activeGp.buttons;
-			
 			//buttons 0 to 15, on xbox controller are:
 			//A,B,X,Y
 			//L1,R1,L2,R2,
@@ -1452,11 +1450,20 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			playerVelVec=scalarvectorprod(0.996,playerVelVec);
 			playerAngVelVec=scalarvectorprod(0.8,playerAngVelVec);
+			
+			if (autoFireCountdown>0){
+				autoFireCountdown--;
+			}else{
+				if (keyThing.keystate(71) ||( activeGp && activeGp.buttons[0].value)){	//G key or A button
+					fireGun();
+					autoFireCountdown=autoFireCountdownStartVal;
+				}
+			}
 		}
 		
 		var moveAmount = timeElapsed * moveSpeed;
 		var rotateAmount = timeElapsed * rotateSpeed;
-		var bulletMove = timeElapsed * bulletSpeed;
+		//var bulletMove = timeElapsed * bulletSpeed;
 		
 		
 		//make new velvec to make slow movement adjustment better, total amount moved nonlinear with press duration
@@ -1476,12 +1483,14 @@ var iterateMechanics = (function iterateMechanics(){
 			//rotatePlayer(gpRotate);
 		}
 		
-		playerVelVecBodge =  playerVelVec.map(function(val){return val*playerVelVecMagsq;});
-		movePlayer(scalarvectorprod(moveAmount,playerVelVecBodge));
-		
+		//playerVelVecBodge =  playerVelVec.map(function(val){return val*playerVelVecMagsq;});
+		//movePlayer(scalarvectorprod(moveAmount,playerVelVecBodge));	//no bodge because using playerVelVec for bullets
+		movePlayer(scalarvectorprod(moveAmount,playerVelVec));
+
 		for (var b in bullets){
-			var bulletMatrix=bullets[b];
-			xyzmove4mat(bulletMatrix,[0,0,bulletMove]);
+			var bulletMatrix=bullets[b].matrix;
+			var bulletVel=bullets[b].vel;
+			xyzmove4mat(bulletMatrix,scalarvectorprod(moveAmount,bulletVel));
 		}
 		
 		portalTest(playerCamera, 0);
@@ -1658,9 +1667,10 @@ function fireGun(){
 	for (var g in gunMatrices){
 		if (g%2 == gunEven){
 			var gunMatrix = gunMatrices[g];
-			var newBullet = mat4.create();
-			mat4.set(gunMatrix,newBullet);
-			bullets.push(newBullet);
+			var newBulletMatrix = mat4.create();
+			mat4.set(gunMatrix,newBulletMatrix);
+			bullets.push({matrix:newBulletMatrix,vel:playerVelVec.map(function(val,ii){return (ii==2)? val+3:val;})});	//filter adds muzzle vel
+																		//TODO velocity in frame of bullet? (different if gun aimed off-centre)
 			//limit number of bullets
 			if (bullets.length>20){
 				bullets.shift();
