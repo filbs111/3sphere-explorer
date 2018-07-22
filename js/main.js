@@ -203,6 +203,7 @@ function calcReflectionInfo(toReflect,resultsObj){
 }
 
 var moveAwayVec;
+var gunHeat = 0;
 function drawScene(frameTime){
 	resizecanvas();
 
@@ -728,7 +729,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//draw guns
 		var gunScale = 50*modelScale;
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [gunScale,gunScale,gunScale]);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.3, 0.3, 0.3, 1.0]);	//GREY
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.3+gunHeat/15, 0.3+gunHeat/30, 0.3+gunHeat/45, 1.0]);	//GREY
+														//TODO emmisive colour - 0.3 is diffuse part. emmisive should be separate.
 
 		var gunHoriz = 20*modelScale;
 		var gunVert = 10*modelScale;
@@ -742,6 +744,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 		pointingDir = capGunPointing(pointingDir);
 		
 		var rotvec = getRotFromPointing(pointingDir);
+		
+		//bodge to demo
+		rotvec = [0,0,0];
 		
 		matrixForTargeting = matrixForTargeting || matrix;
 		
@@ -1409,6 +1414,7 @@ var iterateMechanics = (function iterateMechanics(){
 		timeTracker-=numSteps*timeStep;
 		for (var ii=0;ii<numSteps;ii++){
 			stepSpeed();
+			gunHeat*=0.995;
 		}
 		
 		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
@@ -1657,4 +1663,5 @@ function fireGun(){
 			bullets.shift();
 		}
 	}
+	gunHeat+=1;
 }
