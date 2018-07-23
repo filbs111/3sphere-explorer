@@ -334,7 +334,7 @@ function drawScene(frameTime){
 	xyzmove4mat(mvMatrix,[0,0,0.01]);	//camera near plane. todo render with transparency
 	gl.disable(gl.DEPTH_TEST);	
 	
-	prepBuffersForDrawing(quadBuffers, activeShaderProgram, false);
+	prepBuffersForDrawing(quadBuffers, activeShaderProgram);
 	
 	gl.activeTexture(gl.TEXTURE0);		//TODO put inside other function (prepbuffers) to avoid assigning then reassigning texture. should
 										//retain texture info with other object info. also can avoid setting when unchanged.
@@ -507,11 +507,12 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	
 	function drawRing(){
+		prepBuffersForDrawing(cubeBuffers, shaderProgramTexmap);
 		xmove4mat(mvMatrix, startAng);
 		for (var ii=0;ii<numBallsInRing;ii++){
 			xmove4mat(mvMatrix, angleStep);
 			if (frustrumCull(mvMatrix,boxRad)){
-				drawItem();
+				drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
 			}
 		}
 	}
@@ -528,13 +529,14 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		numRandomBoxes = Math.min(randomMats.length, numRandomBoxes);	//TODO check this doesn't happen/ make obvious error!
 		
+		prepBuffersForDrawing(cubeBuffers, shaderProgramTexmap);
 		for (var ii=0;ii<numRandomBoxes;ii++){
 			var thisMat = randomMats[ii];
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix, thisMat);
 			if (thisMat[15]>criticalWPos){continue;}	//don't draw boxes too close to portal
 			if (frustrumCull(mvMatrix,boxRad)){
-				drawItem();
+				drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
 			}
 		}
 	}
@@ -983,7 +985,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//draw bullets
 	//assume active shader program already shaderProgramColored
 	//gl.useProgram(shaderProgramColored);
-	prepBuffersForDrawing(sphereBuffers, shaderProgramColored, false);	
+	prepBuffersForDrawing(sphereBuffers, shaderProgramColored);	
 	targetRad=0.00025;
 	gl.uniform3fv(shaderProgramColored.uniforms.uModelScale, [targetRad,targetRad,50*targetRad]);	//long streaks
 	gl.uniform4fv(shaderProgramColored.uniforms.uColor, [0, 0, 0, 1.0]);	//black
@@ -1021,10 +1023,6 @@ function generateCullFunc(pMat){
 	}
 }
 
-
-function drawItem(){
-	drawObjectFromBuffers(cubeBuffers, shaderProgramTexmap);
-}
 
 function drawTennisBall(duocylinderObj){
 
