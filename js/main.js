@@ -332,9 +332,7 @@ function drawScene(frameTime){
 
 	mat4.identity(mvMatrix);
 	xyzmove4mat(mvMatrix,[0,0,0.0001]);	//camera near plane. todo render with transparency
-	//gl.disable(gl.DEPTH_TEST);	//this strangely, doesn't disable drawing over by portal! maybe portal is actually rendered for previous frame?? 
-								//maybe this is a browser dependent bug.
-								//some strangeness related to drawing to texture? to work around, just draw as close to cam as possible
+	//gl.disable(gl.DEPTH_TEST);	//don't need currently because drawing hud at near camera.
 	
 	prepBuffersForDrawing(quadBuffers, activeShaderProgram, false);
 	
