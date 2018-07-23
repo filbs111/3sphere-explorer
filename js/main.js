@@ -1604,7 +1604,7 @@ function getPointingDirectionFromScreenCoordinate(coords){
 	var xpos = maxxvert*(coords.x*2.0/gl.viewportWidth   -1.0 );
 	var ypos = maxyvert*(coords.y*2.0/gl.viewportHeight   -1.0 );
 	var radsq = xpos*xpos + ypos*ypos;
-	var zpos = 1.0/Math.tan(mainCamFov*Math.PI/90); //TODO precalc
+	var zpos = 1.0/Math.tan(mainCamFov*Math.PI/360); //TODO precalc
 
 	//normalise - use sending back homogenous co-ords because maybe a tiny amount more efficient since cross producting anyway
 	var mag= Math.sqrt(radsq + zpos*zpos);
