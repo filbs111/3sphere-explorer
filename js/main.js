@@ -327,15 +327,14 @@ function drawScene(frameTime){
 	gl.useProgram(activeShaderProgram);
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.0, 0.5]);
-	var mScale = 0.00004;
+	var mScale = 0.004;
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [mScale,mScale,mScale]);
 
 	mat4.identity(mvMatrix);
-	xyzmove4mat(mvMatrix,[0,0,0.0001]);	//camera near plane. todo render with transparency
-	//gl.disable(gl.DEPTH_TEST);	//don't need currently because drawing hud at near camera.
+	xyzmove4mat(mvMatrix,[0,0,0.01]);	//camera near plane. todo render with transparency
+	gl.disable(gl.DEPTH_TEST);	
 	
 	prepBuffersForDrawing(quadBuffers, activeShaderProgram, false);
-	
 	
 	gl.activeTexture(gl.TEXTURE0);		//TODO put inside other function (prepbuffers) to avoid assigning then reassigning texture. should
 										//retain texture info with other object info. also can avoid setting when unchanged.
@@ -346,9 +345,29 @@ function drawScene(frameTime){
 	
 	drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
 	
-	gl.disable(gl.BLEND);
 	
-	//gl.enable(gl.DEPTH_TEST);
+	//draw another showing direction bullets will go in (useful for aiming at stationary targets)
+	//TODO maybe these should rotate about camera instead (so look like ellipses in rectilinear camera when off-centre)
+	if (fireDirectionVec[2] > 0.1){	//??
+		mScale = 0.002;
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [mScale,mScale,mScale]);
+		mat4.identity(mvMatrix);
+		xyzmove4mat(mvMatrix,[0.01*fireDirectionVec[0]/fireDirectionVec[2],0.01*fireDirectionVec[1]/fireDirectionVec[2],0.01]);
+		drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
+	}
+	
+	//direction of flight
+	if (playerVelVec[2] > 0.1){	//??
+		mScale = 0.002;
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [mScale,mScale,mScale]);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.0, 0.5, 1.0, 0.5]);
+		mat4.identity(mvMatrix);
+		xyzmove4mat(mvMatrix,[0.01*playerVelVec[0]/playerVelVec[2],0.01*playerVelVec[1]/playerVelVec[2],0.01]);
+		drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
+	}
+	
+	gl.disable(gl.BLEND);
+	gl.enable(gl.DEPTH_TEST);
 	
 	currentWorld = saveWorld;
 }
@@ -1383,6 +1402,9 @@ function init(){
 
 var playerVelVec = [0,0,0];	//TODO use matrix/quaternion for this
 							//todo not a global! how to set listeners eg mousemove witin iteratemechanics???
+var fireDirectionVec = [0,0,1];	//TODO check if requried to define something here
+var muzzleVel = 5;
+							
 var testInfo="";
 var iterateMechanics = (function iterateMechanics(){
 	var lastTime=(new Date()).getTime();
@@ -1536,6 +1558,9 @@ var iterateMechanics = (function iterateMechanics(){
 			var bulletVel=bullets[b].vel;
 			xyzmove4mat(bulletMatrix,scalarvectorprod(moveAmount,bulletVel));
 		}
+		
+		fireDirectionVec = playerVelVec.map(function(val,ii){return (ii==2)? val+muzzleVel:val;});
+			//TODO velocity in frame of bullet? (different if gun aimed off-centre)
 		
 		portalTest(playerCamera, 0);
 	}
@@ -1713,8 +1738,8 @@ function fireGun(){
 			var gunMatrix = gunMatrices[g];
 			var newBulletMatrix = mat4.create();
 			mat4.set(gunMatrix,newBulletMatrix);
-			bullets.push({matrix:newBulletMatrix,vel:playerVelVec.map(function(val,ii){return (ii==2)? val+5:val;})});	//filter adds muzzle vel
-																		//TODO velocity in frame of bullet? (different if gun aimed off-centre)
+			bullets.push({matrix:newBulletMatrix,vel:fireDirectionVec.map(function(val){return val;})});	//straight vector copy. TODO func for this.
+																	
 			//limit number of bullets
 			if (bullets.length>20){
 				bullets.shift();
