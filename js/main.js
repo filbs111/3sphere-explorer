@@ -337,17 +337,16 @@ function drawScene(frameTime){
 								//some strangeness related to drawing to texture? to work around, just draw as close to cam as possible
 	
 	prepBuffersForDrawing(quadBuffers, activeShaderProgram, false);
-
-	/*
-	gl.activeTexture(gl.TEXTURE0);
-	gl.bindTexture(gl.TEXTURE_2D, texture);
-	gl.uniform1i(activeShaderProgram.uniforms.uSampler, 0);
-			*/			
+	
+	
+	gl.activeTexture(gl.TEXTURE0);		//TODO put inside other function (prepbuffers) to avoid assigning then reassigning texture. should
+										//retain texture info with other object info. also can avoid setting when unchanged.
+	gl.bindTexture(gl.TEXTURE_2D, hudTexture);		
 	
 	gl.enable(gl.BLEND);
 	gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);	
 	
-	drawObjectFromBuffers(quadBuffers, activeShaderProgram);
+	drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
 	
 	gl.disable(gl.BLEND);
 	
@@ -1163,10 +1162,11 @@ function setupScene() {
 }
 
 var texture;
-var terrainTexture;
+var hudTexture;
 
 function initTexture(){
 	texture = makeTexture("img/0033.jpg");
+	hudTexture = makeTexture("img/circles.png");
 	duocylinderObjects.grid.tex = makeTexture("img/grid-omni.png");
 	duocylinderObjects.terrain.tex = makeTexture("data/terrain/turbulent-seamless.png");;
 	

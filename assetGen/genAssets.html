@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+
+<script type="text/javascript">
+
+function init(){
+	//draw hud object that can manually save as image file, use as game asset
+	var canvas = document.getElementById("mycanvas");
+	var halfSize = 256;
+	canvas.height=halfSize*2;
+	canvas.width=halfSize*2;
+	var ctx = canvas.getContext("2d");
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#ffffff';
+	
+	ctx.beginPath();
+	ctx.arc(halfSize, halfSize, halfSize*0.95, 0, 2 * Math.PI, false);
+    ctx.stroke();
+	
+	ctx.beginPath();
+	ctx.arc(halfSize, halfSize, halfSize*0.05, 0, 2 * Math.PI, false);
+    ctx.stroke();
+}
+
+</script>
+
+<head>
+</head>
+
+
+<body onload="init()">
+
+
+<canvas id="mycanvas">
+
+</canvas>
+
+</body>
+</html>
