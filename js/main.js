@@ -980,18 +980,24 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.useProgram(activeShaderProgram);
 	}
 	
+	//draw bullets
+	//assume active shader program already shaderProgramColored
+	//gl.useProgram(shaderProgramColored);
+	prepBuffersForDrawing(sphereBuffers, shaderProgramColored, false);	
+	targetRad=0.00025;
+	gl.uniform3fv(shaderProgramColored.uniforms.uModelScale, [targetRad,targetRad,50*targetRad]);	//long streaks
+	gl.uniform4fv(shaderProgramColored.uniforms.uColor, [0, 0, 0, 1.0]);	//black
+	gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [2.0, 2.0, 0.5]);	//YELLOW	TODO emit color for flat color objects
 	for (var b in bullets){
 		var bulletMatrix=bullets[b].matrix;
-		//draw bullet
-		targetRad=0.00025;
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,50*targetRad]);	//long streaks
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [2.0, 2.0, 0.5, 1.0]);	//YELLOW
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,bulletMatrix);
 		if (frustrumCull(mvMatrix,targetRad)){	
-			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
+			drawObjectFromPreppedBuffers(sphereBuffers, shaderProgramColored);
 		}
 	}
+	gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [0, 0, 0]);
+
 	
 }
 
