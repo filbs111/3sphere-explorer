@@ -37,6 +37,7 @@
 <script type="text/javascript" src="utils/webgl_utils.js"></script>
 <script type="text/javascript" src="utils/keys.js"></script>
 <script type="text/javascript" src="data/sphere.js"></script>
+<script type="text/javascript" src="data/quad.js"></script>
 <script type="text/javascript" src="data/levelCubeData.js"></script>
 <script type="text/javascript" src="data/tennisBall.js"></script>
 <script type="text/javascript" src="data/grid1.obj.json.min"></script>
@@ -55,6 +56,38 @@
 <script type="text/javascript" src="data/icoball.obj.json"></script>
 <script type="text/javascript" src="utils/matfuncs.js"></script>
 <script type="text/javascript" src="data/cells.js"></script>
+
+
+<!-- tex mapped decal pix shader -->
+<script id="shader-decal-fs" type="x-shader/x-fragment">
+	precision mediump float;
+	varying vec3 vTextureCoord;
+	uniform sampler2D uSampler;
+	uniform vec4 uColor;
+	
+	void main(void) {
+		gl_FragColor = uColor*texture2DProj(uSampler, vTextureCoord);	//TODO don't use projective texture if not necessary! (eg for quads)
+		//gl_FragColor = uColor;
+	}
+</script>
+
+<!-- vertex shader with tex coords -->
+<script id="shader-decal-vs" type="x-shader/x-vertex">
+	attribute vec3 aVertexPosition;
+	attribute vec2 aTextureCoord;
+	varying vec3 vTextureCoord;
+	uniform mat4 uMVMatrix;
+	uniform mat4 uPMatrix;
+	uniform vec3 uModelScale;
+	
+	void main(void) {
+		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
+		vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
+		gl_Position = uPMatrix * transformedCoord;
+		float myZ = aVertexPositionNormalized.w;
+		vTextureCoord = vec3( aTextureCoord.st*myZ, myZ );
+	}
+</script>
 
 <!-- simple pix shader -->
 <script id="shader-simple-fs" type="x-shader/x-fragment">
@@ -573,7 +606,10 @@
 <body onload="init()">
 <div id="info">3-sphere visualised in WebGL demo. Arrow keys, QE, click+drag mouse to rotate. WASD, space/ctrl to translate.<a href="https://github.com/filbs111/3sphere-explorer" target="_blank">https://github.com/filbs111/3sphere-explorer</a></div>
 		
-
+<!--<svg style="position:absolute;background:#0000;left:780px;top:330px" height="200" width="200">
+  <circle cx="100" cy="100" r="80" stroke="yellow" stroke-width="2" fill="none" />
+  <circle cx="100" cy="100" r="5" stroke="yellow" stroke-width="2" fill="none" />
+</svg>-->
 <canvas id="mycanvas" width="0" height="0">CANVAS TO GO HERE</canvas>
 
 

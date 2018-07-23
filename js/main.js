@@ -8,7 +8,8 @@ var shaderProgramColored,
 	shaderProgramTexmapPerPixelDiscard,
 	shaderProgramTexmap4Vec,
 	shaderProgramCubemap,
-	shaderProgramVertprojCubemap;
+	shaderProgramVertprojCubemap,
+	shaderProgramDecal;
 function initShaders(){				
 	shaderProgramColoredPerVertex = loadShader( "shader-simple-vs", "shader-simple-fs",{
 					attributes:["aVertexPosition","aVertexNormal"],
@@ -50,6 +51,11 @@ function initShaders(){
 					attributes:["aVertexPosition"],
 					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor","uModelScale", "uPosShiftMat","uCentrePosScaled","uPolarity"]
 					});
+					
+	shaderProgramDecal = loadShader( "shader-decal-vs", "shader-decal-fs",{
+					attributes:["aVertexPosition","aTextureCoord"],
+					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor", "uModelScale"]
+					});
 }
 
 var duocylinderObjects={
@@ -58,6 +64,7 @@ var duocylinderObjects={
 	};
 
 var sphereBuffers={};
+var quadBuffers={};
 var cubeBuffers={};
 var cubeFrameBuffers={};
 var cubeFrameSubdivBuffers={};
@@ -107,6 +114,7 @@ function initBuffers(){
 	var icoballObj = loadBlenderExport(icoballdata);
 
 	loadBufferData(sphereBuffers, makeSphereData(99,200,1)); //todo use normalized box or icosohedron
+	loadBufferData(quadBuffers, quadData);
 	loadBufferData(cubeBuffers, levelCubeData);
 	loadBufferData(cubeFrameBuffers, cubeFrameBlenderObject);
 	loadBufferData(cubeFrameSubdivBuffers, cubeFrameSubdivObject);
@@ -312,6 +320,39 @@ function drawScene(frameTime){
 	
 	
 	drawWorldScene(frameTime, false);
+	
+	//draw target box ?
+	//var activeShaderProgram = shaderProgramColored;
+	var activeShaderProgram = shaderProgramDecal;
+	gl.useProgram(activeShaderProgram);
+	
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.0, 0.5]);
+	var mScale = 0.00004;
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [mScale,mScale,mScale]);
+
+	mat4.identity(mvMatrix);
+	xyzmove4mat(mvMatrix,[0,0,0.0001]);	//camera near plane. todo render with transparency
+	//gl.disable(gl.DEPTH_TEST);	//this strangely, doesn't disable drawing over by portal! maybe portal is actually rendered for previous frame?? 
+								//maybe this is a browser dependent bug.
+								//some strangeness related to drawing to texture? to work around, just draw as close to cam as possible
+	
+	prepBuffersForDrawing(quadBuffers, activeShaderProgram, false);
+
+	/*
+	gl.activeTexture(gl.TEXTURE0);
+	gl.bindTexture(gl.TEXTURE_2D, texture);
+	gl.uniform1i(activeShaderProgram.uniforms.uSampler, 0);
+			*/			
+	
+	gl.enable(gl.BLEND);
+	gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);	
+	
+	drawObjectFromBuffers(quadBuffers, activeShaderProgram);
+	
+	gl.disable(gl.BLEND);
+	
+	//gl.enable(gl.DEPTH_TEST);
+	
 	currentWorld = saveWorld;
 }
 
