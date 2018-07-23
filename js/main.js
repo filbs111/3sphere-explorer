@@ -1260,7 +1260,9 @@ var guiParams={
 	}
 };
 var worldColors=[];
+var playerLightUnscaled;
 var playerLight;
+var muzzleFlashAmount=0;
 var teapotMatrix=mat4.create();mat4.identity(teapotMatrix);
 xyzmove4mat(teapotMatrix,[0,1.85,0]);
 var sshipMatrix=mat4.create();mat4.identity(sshipMatrix);
@@ -1396,7 +1398,7 @@ function init(){
 		var r = parseInt(color.substring(1,3),16) /255;
 		var g = parseInt(color.substring(3,5),16) /255;
 		var b = parseInt(color.substring(5,7),16) /255;
-		playerLight=[r,g,b];
+		playerLightUnscaled=[r,g,b];
 	}
 }
 
@@ -1561,6 +1563,10 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		fireDirectionVec = playerVelVec.map(function(val,ii){return (ii==2)? val+muzzleVel:val;});
 			//TODO velocity in frame of bullet? (different if gun aimed off-centre)
+		
+		muzzleFlashAmount*=0.9;
+		muzzleFlashAmount+=0.03;	//some default lighting when no firing
+		playerLight = playerLightUnscaled.map(function(val){return val*muzzleFlashAmount});
 		
 		portalTest(playerCamera, 0);
 	}
@@ -1732,6 +1738,7 @@ function dropSpaceship(){
 }
 var gunEven=1;
 function fireGun(){
+	muzzleFlashAmount+=1.5;
 	gunEven = 1-gunEven;
 	for (var g in gunMatrices){
 		if (g%2 == gunEven){
