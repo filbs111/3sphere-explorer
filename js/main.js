@@ -815,7 +815,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		matrixForTargeting = matrixForTargeting || matrix;
 		
-		if (guiParams["draw target"]){
+		if (guiParams["draw target"] && guiParams["targeting"]!="off"){
 			rotvec = getRotBetweenMats(matrixForTargeting, cellMatData.d16[0]);	//target in frame of spaceship.
 		}
 		
@@ -835,8 +835,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 			xyzmove4mat(gunMatrix,vec);
 			
 			
-			if (guiParams["draw target"] && guiParams["indiv targeting"]){
-				rotvec = getRotBetweenMats(matrixForTargeting, cellMatData.d16[0]);
+			if (guiParams["draw target"] && guiParams["targeting"]=="individual"){
+				rotvec = getRotBetweenMats(gunMatrix, cellMatData.d16[0]);
 			}
 			
 			//rotate guns to follow mouse
@@ -926,7 +926,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//TODO find exact values and process to calculate ( either largest distance points from origin in model, or calculate)
 	
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,targetRad]);
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.3, 0.3, 1.0]);	//RED
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0, 0, 0, 1]);	//black
+	gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0, 1, 0]);	//GREEN
 	//draw sphere. to be targeted by guns
 	if (guiParams["draw target"]){
 		mat4.set(invertedWorldCamera, mvMatrix);
@@ -938,7 +939,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 			//drawObjectFromBuffers(icoballBuffers, shaderProgramColored);
 		}
 	}
-	
+	gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0, 0, 0]);
+
 	//DRAW PORTAL/REFLECTOR
 	if (guiParams.reflector.draw && !isCubemapView){
 		var savedActiveProg = activeShaderProgram;
@@ -1247,8 +1249,8 @@ var guiParams={
 	"draw spaceship":true,
 	"drop spaceship":false,
 	"draw target":false,
-	"target scale":0.25,
-	"indiv targeting":true,
+	"target scale":0.01,
+	"targeting":"off",
 	"culling":true,
 	"perPixelLighting":true,
 	fogColor0:'#202020',
@@ -1312,8 +1314,8 @@ function init(){
 	gui.add(guiParams,"draw spaceship",true);
 	gui.add(guiParams, "drop spaceship",false);
 	gui.add(guiParams, "draw target",false);
-	gui.add(guiParams,"target scale",0.05,0.5,0.05);
-	gui.add(guiParams, "indiv targeting");
+	gui.add(guiParams,"target scale",0.01,0.1,0.01);
+	gui.add(guiParams, "targeting", ["off","simple","individual"]);
 	gui.add(guiParams, "onRails");
 	gui.add(guiParams, "cameraType", ["cockpit", "near 3rd person", "far 3rd person"]);
 	gui.add(guiParams, "perPixelLighting");
