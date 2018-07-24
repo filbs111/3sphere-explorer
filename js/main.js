@@ -816,7 +816,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		matrixForTargeting = matrixForTargeting || matrix;
 		
 		if (guiParams["draw target"] && guiParams["targeting"]!="off"){
-			rotvec = getRotBetweenMats(matrixForTargeting, cellMatData.d16[0]);	//target in frame of spaceship.
+			rotvec = getRotBetweenMats(matrixForTargeting, targetMatrix);	//target in frame of spaceship.
 		}
 		
 		gunMatrices=[];
@@ -836,7 +836,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			
 			
 			if (guiParams["draw target"] && guiParams["targeting"]=="individual"){
-				rotvec = getRotBetweenMats(gunMatrix, cellMatData.d16[0]);
+				rotvec = getRotBetweenMats(gunMatrix, targetMatrix);
 			}
 			
 			//rotate guns to follow mouse
@@ -926,13 +926,12 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//TODO find exact values and process to calculate ( either largest distance points from origin in model, or calculate)
 	
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,targetRad]);
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0, 0, 0, 1]);	//black
-	gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0, 1, 0]);	//GREEN
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.2, 0.2, 0.2, 1]);
+	gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0, 0.5, 0.5]);	//CYAN
 	//draw sphere. to be targeted by guns
 	if (guiParams["draw target"]){
 		mat4.set(invertedWorldCamera, mvMatrix);
-		//mat4.multiply(mvMatrix,targetMatrix);
-		mat4.multiply(mvMatrix,	cellMatData.d16[0]);
+		mat4.multiply(mvMatrix,targetMatrix);
 		if (frustrumCull(mvMatrix,targetRad)){	//normally use +ve radius
 									//-ve to make disappear when not entirely inside view frustrum (for testing)
 			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
@@ -1182,6 +1181,8 @@ function setupScene() {
 	
 	//start player off outside of boxes
 	xyzmove4mat(playerCamera,[0,0.7,-1.0]);
+	
+	targetMatrix = cellMatData.d16[0];
 }
 
 var texture;
@@ -1239,7 +1240,7 @@ var guiParams={
 	"draw 5-cell":false,
 	"8-cell scale":1.0,
 	"subdiv frames":true,
-	"draw 8-cell":true,
+	"draw 8-cell":false,
 	"draw 16-cell":false,
 	"draw 24-cell":false,
 	"draw 120-cell":false,
@@ -1248,8 +1249,8 @@ var guiParams={
 	"teapot scale":0.7,
 	"draw spaceship":true,
 	"drop spaceship":false,
-	"draw target":false,
-	"target scale":0.01,
+	"draw target":true,
+	"target scale":0.1,
 	"targeting":"off",
 	"culling":true,
 	"perPixelLighting":true,
@@ -1562,10 +1563,22 @@ var iterateMechanics = (function iterateMechanics(){
 		//movePlayer(scalarvectorprod(moveAmount,playerVelVecBodge));	//no bodge because using playerVelVec for bullets
 		movePlayer(scalarvectorprod(moveAmount,playerVelVec));
 
+		//var critValue = 1-guiParams["target scale"]*guiParams["target scale"];	//small ang approx
+		var critValue = 1/Math.sqrt(1+guiParams["target scale"]*guiParams["target scale"]);	//some small ang approx here
+		var invTargetMat = mat4.create();
+		mat4.set(targetMatrix, invTargetMat);
+		mat4.transpose(invTargetMat);
+		var relativeMat = mat4.create();
 		for (var b in bullets){
 			var bulletMatrix=bullets[b].matrix;
 			var bulletVel=bullets[b].vel;
 			xyzmove4mat(bulletMatrix,scalarvectorprod(moveAmount,bulletVel));
+			
+			mat4.set(invTargetMat,relativeMat);
+			mat4.multiply(relativeMat, bulletMatrix);
+			if (relativeMat[15]>critValue){
+				bullets[b].vel = [0,0,0];	//if colliding with target, stop bullet.
+			}	
 		}
 		
 		fireDirectionVec = playerVelVec.map(function(val,ii){return (ii==2)? val+muzzleVel:val;});
@@ -1755,7 +1768,7 @@ function fireGun(){
 			bullets.push({matrix:newBulletMatrix,vel:fireDirectionVec.map(function(val){return val;})});	//straight vector copy. TODO func for this.
 																	
 			//limit number of bullets
-			if (bullets.length>20){
+			if (bullets.length>200){
 				bullets.shift();
 			}
 		}
