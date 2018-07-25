@@ -232,7 +232,7 @@ function drawScene(frameTime){
 	var offsetVec;
 	switch(guiParams.cameraType){	//TODO smooth transition between these vectors.
 		case "near 3rd person":
-		offsetVec = [0,-0.01,-0.015];
+		offsetVec = [0,-0.0075,-0.005];
 		break;
 		case "far 3rd person":
 		offsetVec = [0,-0.02,-0.03];
@@ -365,6 +365,24 @@ function drawScene(frameTime){
 		xyzmove4mat(mvMatrix,[0.01*playerVelVec[0]/playerVelVec[2],0.01*playerVelVec[1]/playerVelVec[2],0.01]);
 		drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
 	}
+	
+	
+	mScale = 0.001;
+		//direction to target (shows where target is on screen)
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [mScale,mScale,mScale]);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1, 0.1, 0, 0.5]);
+		mat4.identity(mvMatrix);
+		xyzmove4mat(mvMatrix,[0.01*targetWorldFrame[0]/targetWorldFrame[2],0.01*targetWorldFrame[1]/targetWorldFrame[2],0.01]);
+		drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
+	
+		//where should shoot in order to hit target (accounting for player velocity)
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1, 0.1, 1.0, 0.5]);
+		mat4.identity(mvMatrix);
+		xyzmove4mat(mvMatrix,[0.01*selectedTargeting[0]/selectedTargeting[2],0.01*selectedTargeting[1]/selectedTargeting[2],0.01]);
+		drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
+	
+	
+	
 	
 	gl.disable(gl.BLEND);
 	gl.enable(gl.DEPTH_TEST);
@@ -818,6 +836,78 @@ function drawWorldScene(frameTime, isCubemapView) {
 		if (guiParams["draw target"] && guiParams["targeting"]!="off"){
 			rotvec = getRotBetweenMats(matrixForTargeting, targetMatrix);	//target in frame of spaceship.
 		}
+		
+		//solve accounting for launch velocity
+		//get position of target in frame of player. can then plot this on screen.
+		//unit vector of this is "targetWorldFrame"
+		//then the gun velocity (in frame of player) should be (see paper calculations, 2018-07-25)
+		// t = targetWorldFrame
+		// v= playervel
+		// m= muzzle speed
+		// g= muzzle velocity
+		
+		// g = t (t.v (+/-) sqrt(v.v - (t.v)^2 + m*m )) - v
+		//should confirm that |g| = m
+		//depending if part in sqrt is +ve or -ve, have 2 or 0 solutions (for the +/- bit in the sqrt).
+			//+ve has greater velocity, so gets there quicker
+		//should pick 1st if guns can rotate to that direction, else 2nd if guns can get there, else no solution.
+		
+		//first get target direction in frame of screen.
+		var targetPos = [targetMatrix[12],targetMatrix[13],targetMatrix[14],targetMatrix[15]];
+		for (var ii=0;ii<4;ii++){
+			var total=0;
+			for (var jj=0;jj<4;jj++){
+				total+=matrixForTargeting[ii*4+jj]*targetPos[jj];
+			}
+			targetWorldFrame[ii]=total;
+		}
+		//normalise x,y,z parts of to target vector.
+		var length = Math.sqrt(1-targetWorldFrame[3]*targetWorldFrame[3]);	//TODO ensure not 0. can combo with range check.
+														//TODO ensure not behind player.
+		targetWorldFrame = targetWorldFrame.map(function(val){return val/length;});	//FWIW last value unneeded
+		
+		//confirm tWF length 1? 
+		var lensqtwf=0;
+		for (var ii=0;ii<3;ii++){
+			lensqtwf += targetWorldFrame[ii]*targetWorldFrame[ii];
+		}
+		
+		var playerVelVecMagsq = playerVelVec.reduce(function(total, val){return total+ val*val;}, 0);	//v.v
+					//todo reuse code or result (copied from elsewhere)
+		var tDotV = playerVelVec.reduce(function(total, val, ii){return total+ val*targetWorldFrame[ii];}, 0);
+		var inSqrtBracket =  tDotV*tDotV + muzzleVel*muzzleVel -playerVelVecMagsq;
+		
+		//console.log(inSqrtBracket);
+		
+		var sqrtResult = inSqrtBracket>0 ? Math.sqrt(inSqrtBracket): 0;	//TODO something else for 0 (no solution)
+		//console.log(sqrtResult);
+		
+		for (var ii=0;ii<3;ii++){
+			targetingResultOne[ii] = targetWorldFrame[ii]*(tDotV + sqrtResult) - playerVelVec[ii];
+			targetingResultTwo[ii] = targetWorldFrame[ii]*(tDotV - sqrtResult) - playerVelVec[ii];
+		}
+		//check lengths of these = muzzle vel sq
+		var targetingResultOneLengthSq = targetingResultOne.reduce(function(total, val){return total+ val*val;}, 0);
+		var targetingResultTwoLengthSq = targetingResultTwo.reduce(function(total, val){return total+ val*val;}, 0);
+
+		//select a result. 
+		if (targetingResultOne[2]>0){
+			selectedTargeting = targetingResultOne;
+		}else if(targetingResultTwo[2]>0){
+			selectedTargeting = targetingResultTwo;
+		}else{
+			selectedTargeting = "none";
+		}
+		//TODO check that angle isn't too extreme.
+		
+		//console.log(targetingResultOneLengthSq);
+		document.getElementById("info2").innerHTML = "lensqtwf: " + lensqtwf + "<br/>" +
+											"targetWorldFrame[3]: " + targetWorldFrame[3] + "<br/>" +
+											"sqrtResult: " + sqrtResult + "<br/>" +
+											"targetingResultOneLengthSq: " + targetingResultOneLengthSq + "<br/>" +
+											"targetingResultTwoLengthSq: " + targetingResultTwoLengthSq + "<br/>" +
+											"selectedTargeting: " + selectedTargeting;
+		
 		
 		gunMatrices=[];
 		drawRelativeToSpacehip([gunHoriz,gunVert,gunFront]); //left, down, forwards
@@ -1275,6 +1365,10 @@ var teapotMatrix=mat4.create();mat4.identity(teapotMatrix);
 xyzmove4mat(teapotMatrix,[0,1.85,0]);
 var sshipMatrix=mat4.create();mat4.identity(sshipMatrix);
 var targetMatrix=mat4.create();mat4.identity(targetMatrix);
+var targetWorldFrame=[];
+var targetingResultOne=[];
+var targetingResultTwo=[];
+var selectedTargeting="none";
 var bullets=[];
 var gunMatrices=[];
 var canvas;
@@ -1315,7 +1409,7 @@ function init(){
 	gui.add(guiParams,"draw spaceship",true);
 	gui.add(guiParams, "drop spaceship",false);
 	gui.add(guiParams, "draw target",false);
-	gui.add(guiParams,"target scale",0.01,0.1,0.01);
+	gui.add(guiParams,"target scale",0.005,0.1,0.005);
 	gui.add(guiParams, "targeting", ["off","simple","individual"]);
 	gui.add(guiParams, "onRails");
 	gui.add(guiParams, "cameraType", ["cockpit", "near 3rd person", "far 3rd person"]);
@@ -1333,7 +1427,7 @@ function init(){
 		var willPreventDefault=true;
 		switch (evt.keyCode){	
 			case 84:	//T
-				xyzmove4mat(playerCamera,[0.01,0.0,0.01]);	//diagonally forwards/left
+				//xyzmove4mat(playerCamera,[0.01,0.0,0.01]);	//diagonally forwards/left
 				break;
 			case 70:	//F
 				goFullscreen(canvas);
