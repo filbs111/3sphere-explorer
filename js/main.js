@@ -1062,7 +1062,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,targetRad]);
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.2, 0.2, 0.2, 1]);
-	gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0, 0.5, 0.5]);	//CYAN
+	var emitColor = Math.sin(frameTime*0.01);
+	emitColor*=emitColor;
+	
+	gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [emitColor, emitColor, emitColor/2]);	//YELLOW
 	//draw sphere. to be targeted by guns
 	if (guiParams["draw target"]){
 		mat4.set(invertedWorldCamera, mvMatrix);
