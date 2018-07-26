@@ -1113,8 +1113,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//assume active shader program already shaderProgramColored
 	//gl.useProgram(shaderProgramColored);
 	prepBuffersForDrawing(sphereBuffers, shaderProgramColored);	
-	targetRad=0.00025;
-	gl.uniform3fv(shaderProgramColored.uniforms.uModelScale, [targetRad,targetRad,50*targetRad]);	//long streaks
+	targetRad=0.0005;
+	gl.uniform3fv(shaderProgramColored.uniforms.uModelScale, [targetRad,targetRad,25*targetRad]);	//long streaks
 	gl.uniform4fv(shaderProgramColored.uniforms.uColor, [0, 0, 0, 1.0]);	//black
 	gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [2.0, 2.0, 0.5]);	//YELLOW	TODO emit color for flat color objects
 	for (var b in bullets){
@@ -1897,7 +1897,46 @@ function fireGun(){
 			var gunMatrix = gunMatrices[g];
 			var newBulletMatrix = mat4.create();
 			mat4.set(gunMatrix,newBulletMatrix);
-			bullets.push({matrix:newBulletMatrix,vel:fireDirectionVec.map(function(val){return val;})});	//straight vector copy. TODO func for this.
+			
+			
+			//work out what fireDirectionVec should be in frame of gun/bullet (rather than player ship body)
+			//this maybe better done with targeting code.
+			var relativeMatrix = mat4.create();
+			/*
+			mat4.set(sshipMatrix,relativeMatrix);
+			mat4.transpose(relativeMatrix);
+			mat4.multiply(relativeMatrix, gunMatrix);
+			*/
+			mat4.set(sshipMatrix,relativeMatrix);
+			//console.log(relativeMatrix);
+			
+			mat4.transpose(relativeMatrix);
+			mat4.multiply(relativeMatrix, gunMatrix);
+			console.log(relativeMatrix);
+
+			//mat4.transpose(relativeMatrix);
+			
+			console.log(fireDirectionVec);
+			
+			//multiply fireDirectionVec by matrix.
+			var newFireDirectionVec = [];
+			for (var ii=0;ii<3;ii++){
+				var sum=0;
+				for (var jj=0;jj<3;jj++){
+					sum+=relativeMatrix[ii*4+jj]*fireDirectionVec[jj];
+				}
+				newFireDirectionVec.push(sum);
+			}
+			console.log(newFireDirectionVec);
+			
+			bullets.push({matrix:newBulletMatrix,vel:newFireDirectionVec});
+			//bullets.push({matrix:newBulletMatrix,vel:fireDirectionVec.map(function(val){return val;})});
+				//WRONG FOR ROTATED GUNS! (fireDirectionVec) 
+				//code seems to assume that guns pointed forwards. surprising that targeting works at all!!
+			
+			//^^ results look wrong, but this is because fireDirectionVec is wrong currently
+			
+			//straight vector copy. TODO func for this.
 																	
 			//limit number of bullets
 			if (bullets.length>200){
