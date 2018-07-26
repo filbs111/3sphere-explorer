@@ -311,6 +311,8 @@ function drawScene(frameTime){
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 	
+	mainCamFov = guiParams.cameraFov;
+	
 	setProjectionMatrix(pMatrix, mainCamFov, gl.viewportHeight/gl.viewportWidth);	//note mouse code assumes 90 deg fov used. TODO fix.
 	frustrumCull = generateCullFunc(pMatrix);
 		
@@ -367,7 +369,7 @@ function drawScene(frameTime){
 	}
 	
 	
-	mScale = 0.001;
+	mScale = 0.0015;
 		//direction to target (shows where target is on screen)
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [mScale,mScale,mScale]);
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1, 0.1, 0, 0.5]);
@@ -379,6 +381,19 @@ function drawScene(frameTime){
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1, 0.1, 1.0, 0.5]);
 		mat4.identity(mvMatrix);
 		xyzmove4mat(mvMatrix,[0.01*selectedTargeting[0]/selectedTargeting[2],0.01*selectedTargeting[1]/selectedTargeting[2],0.01]);
+		drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
+	
+	mScale = 0.0012;
+		//direction to target (shows where target is on screen)
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [mScale,mScale,mScale]);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1, 1.0, 1.0, 1]);
+		mat4.identity(mvMatrix);
+	xyzmove4mat(mvMatrix,[0.01*targetingResultOne[0]/targetingResultOne[2],0.01*targetingResultOne[1]/targetingResultOne[2],0.01]);
+		drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
+		
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0, 0, 0, 1]);
+		mat4.identity(mvMatrix);
+	xyzmove4mat(mvMatrix,[0.01*targetingResultTwo[0]/targetingResultTwo[2],0.01*targetingResultTwo[1]/targetingResultTwo[2],0.01]);
 		drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
 	
 	
@@ -820,8 +835,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 		var gunFront = 5*modelScale;
 
 		var mousP=mouseInfo.currentPointingDir;
-		var gunAngRangeVert = 0.16;	//quite small else individual gun targeting can make guns clash TODO avoid this.
-		var gunAngRangeHoriz = 0.25;
+		//var gunAngRangeVert = 0.16;	//quite small else individual gun targeting can make guns clash TODO avoid this.
+		//var gunAngRangeHoriz = 0.25;
+		var gunAngRangeVert = 10;		//big limit for testing
+		var gunAngRangeHoriz = 10;
 		//get angle to rotate to this point (similar to mouse drag rotation system)
 		var pointingDir = {x:-mousP.x, y:mousP.y, z:mousP.z};
 		pointingDir = capGunPointing(pointingDir);
@@ -890,13 +907,19 @@ function drawWorldScene(frameTime, isCubemapView) {
 		var targetingResultOneLengthSq = targetingResultOne.reduce(function(total, val){return total+ val*val;}, 0);
 		var targetingResultTwoLengthSq = targetingResultTwo.reduce(function(total, val){return total+ val*val;}, 0);
 
-		//select a result. 
+		//select a result.
+		//appears to in practice pick solution 2, which seems to be correct result
+		//todo find if can just dump solution 1. 
+		var selectedTargetingString;
 		if (targetingResultOne[2]>0){
 			selectedTargeting = targetingResultOne;
+			selectedTargetingString = "ONE";
 		}else if(targetingResultTwo[2]>0){
 			selectedTargeting = targetingResultTwo;
+			selectedTargetingString = "TWO";
 		}else{
 			selectedTargeting = "none";
+			selectedTargetingString = "NONE";
 		}
 		//TODO check that angle isn't too extreme.
 		
@@ -906,7 +929,17 @@ function drawWorldScene(frameTime, isCubemapView) {
 											"sqrtResult: " + sqrtResult + "<br/>" +
 											"targetingResultOneLengthSq: " + targetingResultOneLengthSq + "<br/>" +
 											"targetingResultTwoLengthSq: " + targetingResultTwoLengthSq + "<br/>" +
-											"selectedTargeting: " + selectedTargeting;
+											"selectedTargeting: " + selectedTargetingString;
+		
+		//override original gun rotation code (todo delete previous/ option to disable/enable this correction)
+		if (selectedTargeting!="none"){
+			if (guiParams["draw target"] && guiParams["targeting"]!="off"){
+				//rotvec = getRotBetweenMats(matrixForTargeting, targetMatrix);	//target in frame of spaceship.
+				var pointingDir={x:selectedTargeting[0],y:selectedTargeting[1],z:selectedTargeting[2]};
+				pointingDir = capGunPointing(pointingDir);						
+				rotvec=getRotFromPointing(pointingDir);
+			}
+		}
 		
 		
 		gunMatrices=[];
@@ -914,6 +947,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawRelativeToSpacehip([-gunHoriz,gunVert,gunFront]);
 		drawRelativeToSpacehip([-gunHoriz,-gunVert,gunFront]);
 		drawRelativeToSpacehip([gunHoriz,-gunVert,gunFront]);
+		
+		
+		
 		
 		function drawRelativeToSpacehip(vec){
 			var gunMatrixCosmetic = mat4.create();
@@ -1349,6 +1385,7 @@ var guiParams={
 	playerLight:'#ffffff',
 	onRails:false,
 	cameraType:"far 3rd person",
+	cameraFov:105,
 	reflector:{
 		draw:true,
 		mappingType:'vertex projection',
@@ -1413,6 +1450,7 @@ function init(){
 	gui.add(guiParams, "targeting", ["off","simple","individual"]);
 	gui.add(guiParams, "onRails");
 	gui.add(guiParams, "cameraType", ["cockpit", "near 3rd person", "far 3rd person"]);
+	gui.add(guiParams, "cameraFov", 60,120,5);
 	gui.add(guiParams, "perPixelLighting");
 	gui.add(guiParams, "culling");
 	var reflectorFolder = gui.addFolder('reflector');
