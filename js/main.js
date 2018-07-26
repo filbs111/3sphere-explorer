@@ -836,10 +836,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 		var gunFront = 5*modelScale;
 
 		var mousP=mouseInfo.currentPointingDir;
-		//var gunAngRangeVert = 0.16;	//quite small else individual gun targeting can make guns clash TODO avoid this.
-		//var gunAngRangeHoriz = 0.25;
-		var gunAngRangeVert = 10;		//big limit for testing
-		var gunAngRangeHoriz = 10;
+		
+		var gunAngRangeRad = 0.35;
+		
 		//get angle to rotate to this point (similar to mouse drag rotation system)
 		var pointingDir = {x:-mousP.x, y:mousP.y, z:mousP.z};
 		pointingDir = capGunPointing(pointingDir);
@@ -983,8 +982,17 @@ function drawWorldScene(frameTime, isCubemapView) {
 			pointingDir={x:-pointingDir.x/pointingDir.z, 
 					y:-pointingDir.y/pointingDir.z, z:1
 				}
-			pointingDir.x=Math.max(Math.min(pointingDir.x,gunAngRangeHoriz),-gunAngRangeHoriz);
-			pointingDir.y=Math.max(Math.min(pointingDir.y,gunAngRangeVert),-gunAngRangeVert);
+			
+			var sqDist = pointingDir.x*pointingDir.x + pointingDir.y*pointingDir.y;
+			if (sqDist>gunAngRangeRad*gunAngRangeRad){
+				pointingDir.z = Math.sqrt(sqDist)/gunAngRangeRad;
+			}
+			
+			//shouldn't need, but seems like z value unused / assumed to be 1
+			//TODO neater
+			pointingDir={x:pointingDir.x/pointingDir.z, 
+					y:pointingDir.y/pointingDir.z, z:1
+				};
 			return pointingDir;
 		}
 		
