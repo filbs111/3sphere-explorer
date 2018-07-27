@@ -370,7 +370,7 @@ function drawScene(frameTime){
 	}
 	
 	
-	mScale = 0.0015;
+	mScale = 0.0008;
 		//direction to target (shows where target is on screen)
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [mScale,mScale,mScale]);
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1, 0.1, 0, 0.5]);
@@ -384,7 +384,7 @@ function drawScene(frameTime){
 		xyzmove4mat(mvMatrix,[0.01*selectedTargeting[0]/selectedTargeting[2],0.01*selectedTargeting[1]/selectedTargeting[2],0.01]);
 		drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
 	
-	mScale = 0.0012;
+	mScale = 0.0006;
 		//direction to target (shows where target is on screen)
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [mScale,mScale,mScale]);
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1, 1.0, 1.0, 1]);
@@ -770,7 +770,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//gl.disableVertexAttribArray(1);	//don't need texcoords
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 0.8, 1.0]);	//BLUE
-	gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0.1,0.3]);	//some emmision
+	gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0.1,0.3]);	//some emission
 	modelScale = guiParams["teapot scale"];
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 
@@ -1062,21 +1062,20 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,targetRad]);
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.2, 0.2, 0.2, 1]);
-	var emitColor = Math.sin(frameTime*0.01);
-	emitColor*=emitColor;
-	
-	gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [emitColor, emitColor, emitColor/2]);	//YELLOW
+	//var emitColor = Math.sin(frameTime*0.01);
+	//emitColor*=emitColor
+	//gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [emitColor, emitColor, emitColor/2]);	//YELLOW
+	gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0.5, 0.5, 0.5]);
 	//draw sphere. to be targeted by guns
 	if (guiParams["draw target"]){
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,targetMatrix);
 		if (frustrumCull(mvMatrix,targetRad)){	//normally use +ve radius
 									//-ve to make disappear when not entirely inside view frustrum (for testing)
-			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
-			//drawObjectFromBuffers(icoballBuffers, shaderProgramColored);
+			drawObjectFromBuffers(sphereBuffers, activeShaderProgram);
+			//drawObjectFromBuffers(icoballBuffers, activeShaderProgram);
 		}
 	}
-	gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0, 0, 0]);
 
 	//DRAW PORTAL/REFLECTOR
 	if (guiParams.reflector.draw && !isCubemapView){
@@ -1128,19 +1127,39 @@ function drawWorldScene(frameTime, isCubemapView) {
 	targetRad=0.0005;
 	gl.uniform3fv(shaderProgramColored.uniforms.uModelScale, [targetRad,targetRad,25*targetRad]);	//long streaks
 	gl.uniform4fv(shaderProgramColored.uniforms.uColor, [0, 0, 0, 1.0]);	//black
-	gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [2.0, 2.0, 0.5]);	//YELLOW	TODO emit color for flat color objects
+	gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [2.0, 2.0, 0.5]);	//YELLOW
 	for (var b in bullets){
-		var bulletMatrix=bullets[b].matrix;
-		mat4.set(invertedWorldCamera, mvMatrix);
-		mat4.multiply(mvMatrix,bulletMatrix);
-		if (frustrumCull(mvMatrix,targetRad)){	
-			drawObjectFromPreppedBuffers(sphereBuffers, shaderProgramColored);
+		if (bullets[b].active){
+			var bulletMatrix=bullets[b].matrix;
+			mat4.set(invertedWorldCamera, mvMatrix);
+			mat4.multiply(mvMatrix,bulletMatrix);
+			if (frustrumCull(mvMatrix,targetRad)){	
+				drawObjectFromPreppedBuffers(sphereBuffers, shaderProgramColored);
+			}
 		}
 	}
+	
+	
+	//draw an explosion object. initially just one. set position to last bullet hit.
+	if (singleExplosion.life>0){
+		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.multiply(mvMatrix,singleExplosion.matrix);
+		var radius = singleExplosion.life*0.0002;
+		if (frustrumCull(mvMatrix,radius)){	
+			gl.uniform4fv(shaderProgramColored.uniforms.uColor, [0, 0, 0, 1.0]);	//black
+			gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [1, 1, 0]);
+			gl.uniform3fv(shaderProgramColored.uniforms.uModelScale, [radius,radius,radius]);
+			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
+		}
+		singleExplosion.life-=1;
+		//console.log(singleExplosion.life);
+	}
+	
 	gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [0, 0, 0]);
 
-	
 }
+
+var singleExplosion={life:0};
 
 //TODO button to toggle culling (so can check that doesn't impact what's drawn)
 var frustrumCull;
@@ -1388,8 +1407,8 @@ var guiParams={
 	"draw spaceship":true,
 	"drop spaceship":false,
 	"draw target":true,
-	"target scale":0.1,
-	"targeting":"off",
+	"target scale":0.03,
+	"targeting":"simple",
 	"culling":true,
 	"perPixelLighting":true,
 	fogColor0:'#202020',
@@ -1714,15 +1733,21 @@ var iterateMechanics = (function iterateMechanics(){
 		mat4.transpose(invTargetMat);
 		var relativeMat = mat4.create();
 		for (var b in bullets){
-			var bulletMatrix=bullets[b].matrix;
-			var bulletVel=bullets[b].vel;
-			xyzmove4mat(bulletMatrix,scalarvectorprod(moveAmount,bulletVel));
-			
-			mat4.set(invTargetMat,relativeMat);
-			mat4.multiply(relativeMat, bulletMatrix);
-			if (relativeMat[15]>critValue){
-				bullets[b].vel = [0,0,0];	//if colliding with target, stop bullet.
-			}	
+			var bullet = bullets[b];
+			if (bullet.active){	//TODO just delete/unlink removed objects
+				var bulletMatrix=bullet.matrix;
+				var bulletVel=bullet.vel;
+				xyzmove4mat(bulletMatrix,scalarvectorprod(moveAmount,bulletVel));
+				
+				mat4.set(invTargetMat,relativeMat);
+				mat4.multiply(relativeMat, bulletMatrix);
+				if (relativeMat[15]>critValue){
+					bullet.vel = [0,0,0];	//if colliding with target, stop bullet.
+					bullet.active=false;
+					singleExplosion.life = 100;
+					singleExplosion.matrix = bulletMatrix;
+				}
+			}
 		}
 		
 		fireDirectionVec = playerVelVec.map(function(val,ii){return (ii==2)? val+muzzleVel:val;});
@@ -1927,7 +1952,7 @@ function fireGun(){
 				newFireDirectionVec.push(sum);
 			}			
 			newFireDirectionVec[2]+=muzzleVel;
-			bullets.push({matrix:newBulletMatrix,vel:newFireDirectionVec});
+			bullets.push({matrix:newBulletMatrix,vel:newFireDirectionVec,active:true});
 																	
 			//limit number of bullets
 			if (bullets.length>200){
