@@ -1060,20 +1060,38 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//targetRad=1.73;			//16-cell
 	//TODO find exact values and process to calculate ( either largest distance points from origin in model, or calculate)
 	
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,targetRad]);
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.2, 0.2, 0.2, 1]);
-	//var emitColor = Math.sin(frameTime*0.01);
-	//emitColor*=emitColor
-	//gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [emitColor, emitColor, emitColor/2]);	//YELLOW
-	gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0.5, 0.5, 0.5]);
-	//draw sphere. to be targeted by guns
+	//draw object to be targeted by guns
 	if (guiParams.target.type!="none"){
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,targetMatrix);
-		if (frustrumCull(mvMatrix,targetRad)){	//normally use +ve radius
-									//-ve to make disappear when not entirely inside view frustrum (for testing)
-			drawObjectFromBuffers(sphereBuffers, activeShaderProgram);
-			//drawObjectFromBuffers(icoballBuffers, activeShaderProgram);
+		switch (guiParams.target.type){
+			case "sphere":
+				if (frustrumCull(mvMatrix,targetRad)){	//normally use +ve radius
+											//-ve to make disappear when not entirely inside view frustrum (for testing)
+					gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,targetRad]);
+					gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.2, 0.2, 0.2, 1]);
+					//var emitColor = Math.sin(frameTime*0.01);
+					//emitColor*=emitColor
+					//gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [emitColor, emitColor, emitColor/2]);	//YELLOW
+					gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0.5, 0.5, 0.5]);
+					drawObjectFromBuffers(sphereBuffers, activeShaderProgram);
+					//drawObjectFromBuffers(icoballBuffers, activeShaderProgram);
+				}
+				break;
+			case "box":
+				var boxRad = targetRad*Math.sqrt(3);
+				if (frustrumCull(mvMatrix,boxRad)){
+					var savedActiveProg = activeShaderProgram;	//todo push things onto a to draw list, 
+																//minimise shader switching
+					activeShaderProgram = shaderProgramTexmap;
+					gl.useProgram(activeShaderProgram);
+					gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,targetRad]);
+					gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1, 1, 1, 1]);
+					drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
+					activeShaderProgram = savedActiveProg;
+					gl.useProgram(activeShaderProgram);
+				}
+				break;
 		}
 	}
 
@@ -1480,7 +1498,7 @@ function init(){
 	gui.add(guiParams, "drop spaceship",false);
 	
 	var targetFolder = gui.addFolder('target');
-	targetFolder.add(guiParams.target, "type",["none", "sphere"]);
+	targetFolder.add(guiParams.target, "type",["none", "sphere","box"]);
 	targetFolder.add(guiParams.target, "scale",0.005,0.1,0.005);
 	
 	gui.add(guiParams, "targeting", ["off","simple","individual"]);
@@ -1731,6 +1749,8 @@ var iterateMechanics = (function iterateMechanics(){
 		//movePlayer(scalarvectorprod(moveAmount,playerVelVecBodge));	//no bodge because using playerVelVec for bullets
 		movePlayer(scalarvectorprod(moveAmount,playerVelVec));
 
+		//value used in sphere collision TODO? avoid this if switched to box. eg referencing some general
+		//collision func. TODO recalc critvalue only when changes
 		//var critValue = 1-guiParams.target.scale*guiParams.target.scale;	//small ang approx
 		var critValue = 1/Math.sqrt(1+guiParams.target.scale*guiParams.target.scale);	//some small ang approx here
 		var invTargetMat = mat4.create();
@@ -1746,7 +1766,23 @@ var iterateMechanics = (function iterateMechanics(){
 				
 				mat4.set(invTargetMat,relativeMat);
 				mat4.multiply(relativeMat, bulletMatrix);
-				if (relativeMat[15]>critValue){
+				
+				switch (guiParams.target.type){
+					case "sphere":
+						if (relativeMat[15]>critValue){
+							detonateBullet();
+						}
+						break;
+					case "box":
+						if (Math.max(Math.abs(relativeMat[12]),
+									Math.abs(relativeMat[13]),
+									Math.abs(relativeMat[14]))<guiParams.target.scale){
+							detonateBullet();
+						}
+						break;
+				}
+						
+				function detonateBullet(){	//TODO what scope does this have? best practice???
 					bullet.vel = [0,0,0];	//if colliding with target, stop bullet.
 					bullet.active=false;
 					singleExplosion.life = 100;
