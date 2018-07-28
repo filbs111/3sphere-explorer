@@ -388,33 +388,34 @@ function drawScene(frameTime){
 	}
 	
 	
-	mScale = 0.0008;
-		//direction to target (shows where target is on screen)
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [mScale,mScale,mScale]);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1, 0.1, 0, 0.5]);
-		mat4.identity(mvMatrix);
-		xyzmove4mat(mvMatrix,[0.01*targetWorldFrame[0]/targetWorldFrame[2],0.01*targetWorldFrame[1]/targetWorldFrame[2],0.01]);
-		drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
-	
-		//where should shoot in order to hit target (accounting for player velocity)
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1, 0.1, 1.0, 0.5]);
-		mat4.identity(mvMatrix);
-		xyzmove4mat(mvMatrix,[0.01*selectedTargeting[0]/selectedTargeting[2],0.01*selectedTargeting[1]/selectedTargeting[2],0.01]);
-		drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
-	
-	mScale = 0.0006;
-		//direction to target (shows where target is on screen)
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [mScale,mScale,mScale]);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1, 1.0, 1.0, 1]);
-		mat4.identity(mvMatrix);
-	xyzmove4mat(mvMatrix,[0.01*targetingResultOne[0]/targetingResultOne[2],0.01*targetingResultOne[1]/targetingResultOne[2],0.01]);
-		drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
+	if (guiParams.target.type!="none" && guiParams["targeting"]!="off"){
+		mScale = 0.0008;
+			//direction to target (shows where target is on screen)
+			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [mScale,mScale,mScale]);
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1, 0.1, 0, 0.5]);
+			mat4.identity(mvMatrix);
+			xyzmove4mat(mvMatrix,[0.01*targetWorldFrame[0]/targetWorldFrame[2],0.01*targetWorldFrame[1]/targetWorldFrame[2],0.01]);
+			drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
 		
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0, 0, 0, 1]);
-		mat4.identity(mvMatrix);
-	xyzmove4mat(mvMatrix,[0.01*targetingResultTwo[0]/targetingResultTwo[2],0.01*targetingResultTwo[1]/targetingResultTwo[2],0.01]);
-		drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
-	
+			//where should shoot in order to hit target (accounting for player velocity)
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1, 0.1, 1.0, 0.5]);
+			mat4.identity(mvMatrix);
+			xyzmove4mat(mvMatrix,[0.01*selectedTargeting[0]/selectedTargeting[2],0.01*selectedTargeting[1]/selectedTargeting[2],0.01]);
+			drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
+		
+		mScale = 0.0006;
+			//direction to target (shows where target is on screen)
+			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [mScale,mScale,mScale]);
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1, 1.0, 1.0, 1]);
+			mat4.identity(mvMatrix);
+		xyzmove4mat(mvMatrix,[0.01*targetingResultOne[0]/targetingResultOne[2],0.01*targetingResultOne[1]/targetingResultOne[2],0.01]);
+			drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
+			
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0, 0, 0, 1]);
+			mat4.identity(mvMatrix);
+		xyzmove4mat(mvMatrix,[0.01*targetingResultTwo[0]/targetingResultTwo[2],0.01*targetingResultTwo[1]/targetingResultTwo[2],0.01]);
+			drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
+	}
 	
 	
 	
