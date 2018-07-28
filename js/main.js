@@ -850,7 +850,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		matrixForTargeting = matrixForTargeting || matrix;
 		
-		if (guiParams["draw target"] && guiParams["targeting"]!="off"){
+		if (guiParams.target.type!="none" && guiParams["targeting"]!="off"){
 			rotvec = getRotBetweenMats(matrixForTargeting, targetMatrix);	//target in frame of spaceship.
 		}
 		
@@ -933,7 +933,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		//override original gun rotation code (todo delete previous/ option to disable/enable this correction)
 		if (selectedTargeting!="none"){
-			if (guiParams["draw target"] && guiParams["targeting"]!="off"){
+			if (guiParams.target.type!="none" && guiParams["targeting"]!="off"){
 				//rotvec = getRotBetweenMats(matrixForTargeting, targetMatrix);	//target in frame of spaceship.
 				var pointingDir={x:selectedTargeting[0],y:selectedTargeting[1],z:selectedTargeting[2]};
 				pointingDir = capGunPointing(pointingDir);						
@@ -961,7 +961,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			xyzmove4mat(gunMatrix,vec);
 			
 			
-			if (guiParams["draw target"] && guiParams["targeting"]=="individual"){
+			if (guiParams.target.type!="none" && guiParams["targeting"]=="individual"){
 				rotvec = getRotBetweenMats(gunMatrix, targetMatrix);
 			}
 			
@@ -1048,7 +1048,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}
 	}
 	
-	var targetRad=guiParams["target scale"];
+	var targetRad=guiParams.target.scale;
 	
 	//var targetRad=0.02;
 	//change radii to test that have right bounding spheres for various cells.
@@ -1067,7 +1067,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [emitColor, emitColor, emitColor/2]);	//YELLOW
 	gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0.5, 0.5, 0.5]);
 	//draw sphere. to be targeted by guns
-	if (guiParams["draw target"]){
+	if (guiParams.target.type!="none"){
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,targetMatrix);
 		if (frustrumCull(mvMatrix,targetRad)){	//normally use +ve radius
@@ -1406,8 +1406,10 @@ var guiParams={
 	"teapot scale":0.7,
 	"draw spaceship":true,
 	"drop spaceship":false,
-	"draw target":true,
-	"target scale":0.03,
+	target:{
+		type:"sphere",
+		scale:0.03
+	},
 	"targeting":"simple",
 	"culling":true,
 	"perPixelLighting":true,
@@ -1476,8 +1478,11 @@ function init(){
 	gui.add(guiParams,"teapot scale",0.2,2.0,0.05);
 	gui.add(guiParams,"draw spaceship",true);
 	gui.add(guiParams, "drop spaceship",false);
-	gui.add(guiParams, "draw target",false);
-	gui.add(guiParams,"target scale",0.005,0.1,0.005);
+	
+	var targetFolder = gui.addFolder('target');
+	targetFolder.add(guiParams.target, "type",["none", "sphere"]);
+	targetFolder.add(guiParams.target, "scale",0.005,0.1,0.005);
+	
 	gui.add(guiParams, "targeting", ["off","simple","individual"]);
 	gui.add(guiParams, "onRails");
 	gui.add(guiParams, "cameraType", ["cockpit", "near 3rd person", "far 3rd person"]);
@@ -1726,8 +1731,8 @@ var iterateMechanics = (function iterateMechanics(){
 		//movePlayer(scalarvectorprod(moveAmount,playerVelVecBodge));	//no bodge because using playerVelVec for bullets
 		movePlayer(scalarvectorprod(moveAmount,playerVelVec));
 
-		//var critValue = 1-guiParams["target scale"]*guiParams["target scale"];	//small ang approx
-		var critValue = 1/Math.sqrt(1+guiParams["target scale"]*guiParams["target scale"]);	//some small ang approx here
+		//var critValue = 1-guiParams.target.scale*guiParams.target.scale;	//small ang approx
+		var critValue = 1/Math.sqrt(1+guiParams.target.scale*guiParams.target.scale);	//some small ang approx here
 		var invTargetMat = mat4.create();
 		mat4.set(targetMatrix, invTargetMat);
 		mat4.transpose(invTargetMat);
