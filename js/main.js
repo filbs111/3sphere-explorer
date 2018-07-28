@@ -2043,5 +2043,6 @@ function fireGun(){
 			}
 		}
 	}
+	myAudioPlayer.playGunSound(0);	//todo use delay param to play at exact time.
 	gunHeat+=1;
 }
