@@ -894,7 +894,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			
 			
 			if (guiParams.target.type!="none" && guiParams["targeting"]=="individual"){
-				rotvec = getRotBetweenMats(gunMatrix, targetMatrix);
+				rotvec = getTargetingSolution(gunMatrix, targetMatrix).rotvec;
 			}
 			
 			//rotate guns to follow mouse
@@ -1182,8 +1182,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//assume active shader program already shaderProgramColored
 	//gl.useProgram(shaderProgramColored);
 	prepBuffersForDrawing(sphereBuffers, shaderProgramColored);	
-	targetRad=0.0005;
-	gl.uniform3fv(shaderProgramColored.uniforms.uModelScale, [targetRad,targetRad,25*targetRad]);	//long streaks
+	targetRad=0.0125;
+	gl.uniform3fv(shaderProgramColored.uniforms.uModelScale, [targetRad/25,targetRad/25,targetRad]);	//long streaks
 	gl.uniform4fv(shaderProgramColored.uniforms.uColor, [0, 0, 0, 1.0]);	//black
 	gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [2.0, 2.0, 0.5]);	//YELLOW
 	for (var b in bullets){
