@@ -212,6 +212,34 @@ function calcReflectionInfo(toReflect,resultsObj){
 
 var moveAwayVec;
 var gunHeat = 0;
+
+var offsetCam = (function(){
+	var offsetVec;
+	var targetForType = {
+		"near 3rd person":[0,-0.0075,-0.005],
+		"far 3rd person":[0,-0.02,-0.03],
+		"cockpit":offsetVec = [0,0,0.001]
+	}
+	offsetVecTarget = targetForType["far 3rd person"];
+	offsetVec = offsetVecTarget;	
+
+	var mult1=0.95;
+	var mult2=1-mult1;
+	
+	return {
+		getVec: function (){
+			return offsetVec;
+		},
+		setType: function(type){
+			offsetVecTarget = targetForType[type];
+		},
+		iterate: function(){
+			offsetVec = offsetVec.map(function(val,ii){return val*mult1+offsetVecTarget[ii]*mult2;})
+		}
+	}
+})();
+
+
 function drawScene(frameTime){
 	resizecanvas();
 
@@ -229,20 +257,10 @@ function drawScene(frameTime){
 	
 	mat4.set(playerCamera, offsetPlayerCamera);	
 	
-	var offsetVec;
-	switch(guiParams.cameraType){	//TODO smooth transition between these vectors.
-		case "near 3rd person":
-		offsetVec = [0,-0.0075,-0.005];
-		break;
-		case "far 3rd person":
-		offsetVec = [0,-0.02,-0.03];
-		break;
-		case "cockpit":
-		offsetVec = [0,0,0.001];
-	}
-	
+	offsetCam.setType(guiParams.cameraType);
+
 	var offsetSteps = 100;
-	var offsetVecStep = offsetVec.map(function(item){return item/offsetSteps;});
+	var offsetVecStep = offsetCam.getVec().map(function(item){return item/offsetSteps;});
 	for (var ii=0;ii<100;ii++){	//TODO more efficient. if insufficient subdivision, transition stepped.
 		xyzmove4mat(offsetPlayerCamera,offsetVecStep);	
 		portalTest(offsetPlayerCamera,0);
@@ -1676,6 +1694,7 @@ var iterateMechanics = (function iterateMechanics(){
 		for (var ii=0;ii<numSteps;ii++){
 			stepSpeed();
 			gunHeat*=0.995;
+			offsetCam.iterate();
 		}
 		
 		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
