@@ -857,13 +857,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		var gunAngRangeRad = 0.35;
 		
-		//get angle to rotate to this point (similar to mouse drag rotation system)
-		var pointingDir = {x:-mousP.x, y:mousP.y, z:mousP.z};
-		pointingDir = capGunPointing(pointingDir);
-		
-		var rotvec = getRotFromPointing(pointingDir);
-		
-		//bodge to demo
+		//default (no targeting) - guns unrotated, point straight ahead.
 		rotvec = [0,0,0];
 		
 		matrixForTargeting = matrixForTargeting || matrix;
