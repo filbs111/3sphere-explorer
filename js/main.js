@@ -1197,9 +1197,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}
 	}
 	
+	for (var ee in explosions){
+		var singleExplosion = explosions[ee];
 	
-	//draw an explosion object. initially just one. set position to last bullet hit.
-	if (singleExplosion.life>0){
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,singleExplosion.matrix);
 		var radius = singleExplosion.life*0.0002;
@@ -1209,8 +1209,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniform3fv(shaderProgramColored.uniforms.uModelScale, [radius,radius,radius]);
 			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
 		}
-		singleExplosion.life-=1;
-		//console.log(singleExplosion.life);
+		singleExplosion.life-=0.02;
+		if (singleExplosion.life<1){
+			delete explosions[ee];
+		}
 	}
 	
 	gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [0, 0, 0]);
@@ -1218,7 +1220,17 @@ function drawWorldScene(frameTime, isCubemapView) {
 }
 
 
-var singleExplosion={life:0};
+var explosions ={};		//todo how to contain this? eg should constructor be eg explosions.construct()? what's good practice?
+var Explosion=function(){
+	var nextExplId = 0;
+	return function(matrix){
+		this.matrix = matrix;
+		this.life=100;
+		explosions[nextExplId]=this;
+		nextExplId+=1;
+	}
+}();
+
 
 //TODO button to toggle culling (so can check that doesn't impact what's drawn)
 var frustrumCull;
@@ -1827,8 +1839,9 @@ var iterateMechanics = (function iterateMechanics(){
 				function detonateBullet(){	//TODO what scope does this have? best practice???
 					bullet.vel = [0,0,0];	//if colliding with target, stop bullet.
 					bullet.active=false;
-					singleExplosion.life = 100;
-					singleExplosion.matrix = bulletMatrix;
+					var tmp=new Explosion(bulletMatrix);
+					//singleExplosion.life = 100;
+					//singleExplosion.matrix = bulletMatrix;
 				}
 			}
 		}
