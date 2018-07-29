@@ -1216,7 +1216,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniform4fv(shaderProgramColored.uniforms.uColor, [0, 0, 0, opac]);	//black, but opacity applies to emit too.
 			gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [opac, opac/2, opac/4]);
 			gl.uniform3fv(shaderProgramColored.uniforms.uModelScale, [radius,radius,radius]);
-			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
+			drawObjectFromPreppedBuffers(sphereBuffers, shaderProgramColored);
 		}
 		singleExplosion.life-=0.2;
 		if (singleExplosion.life<1){
@@ -1226,15 +1226,16 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	//muzzle flash? 
 	var mfRad = 0.005;
-	gl.uniform4fv(shaderProgramColored.uniforms.uColor, [0, 0, 0, muzzleFlashAmount]);	//black, but opacity applies to emit too.
-	gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [muzzleFlashAmount, muzzleFlashAmount/2, muzzleFlashAmount/4]);
-	gl.uniform3fv(shaderProgramColored.uniforms.uModelScale, [mfRad,mfRad,mfRad]);
 	
-	for (var gg in gunMatrices){	//TODO independent flash amounts for each gun
+	for (var gg in gunMatrices){
+		var flashAmount = muzzleFlashAmounts[gg]
+		gl.uniform4fv(shaderProgramColored.uniforms.uColor, [0, 0, 0, flashAmount]);	//black, but opacity applies to emit too.
+		gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [flashAmount, flashAmount/2, flashAmount/4]);
+		gl.uniform3fv(shaderProgramColored.uniforms.uModelScale, [mfRad,mfRad,mfRad]);
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,gunMatrices[gg]);
 		xyzmove4mat(mvMatrix,[0,0,0.01]);
-		drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
+		drawObjectFromPreppedBuffers(sphereBuffers, shaderProgramColored);
 	}
 	
 	gl.depthMask(true);
@@ -1526,7 +1527,7 @@ var guiParams={
 var worldColors=[];
 var playerLightUnscaled;
 var playerLight;
-var muzzleFlashAmount=0;
+var muzzleFlashAmounts=[0,0,0,0];
 var teapotMatrix=mat4.create();mat4.identity(teapotMatrix);
 xyzmove4mat(teapotMatrix,[0,1.85,0]);
 var sshipMatrix=mat4.create();mat4.identity(sshipMatrix);
@@ -1874,8 +1875,12 @@ var iterateMechanics = (function iterateMechanics(){
 		fireDirectionVec = playerVelVec.map(function(val,ii){return (ii==2)? val+muzzleVel:val;});
 			//TODO velocity in frame of bullet? (different if gun aimed off-centre)
 		
-		muzzleFlashAmount*=0.9;
-		var flashAmount = muzzleFlashAmount+0.03;	//some default lighting when no firing
+		var flashAmount = 0.03;
+		for (var gg in muzzleFlashAmounts){
+			muzzleFlashAmounts[gg]*=0.9;
+			flashAmount+= muzzleFlashAmounts[gg]+0.03;	//some default lighting when no firing	
+		}
+		console.log(flashAmount);
 		playerLight = playerLightUnscaled.map(function(val){return val*flashAmount});
 		
 		portalTest(playerCamera, 0);
@@ -2048,10 +2053,11 @@ function dropSpaceship(){
 }
 var gunEven=1;
 function fireGun(){
-	muzzleFlashAmount+=0.5;
 	gunEven = 1-gunEven;
 	for (var g in gunMatrices){
 		if (g%2 == gunEven){
+			muzzleFlashAmounts[g]+=0.5
+			
 			var gunMatrix = gunMatrices[g];
 			var newBulletMatrix = mat4.create();
 			mat4.set(gunMatrix,newBulletMatrix);
