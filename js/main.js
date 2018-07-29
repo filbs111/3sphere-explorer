@@ -346,12 +346,6 @@ function drawScene(frameTime){
 	var activeShaderProgram = shaderProgramDecal;
 	gl.useProgram(activeShaderProgram);
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.0, 0.5]);
-	var mScale = 0.004;
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [mScale,mScale,mScale]);
-
-	mat4.identity(mvMatrix);
-	xyzmove4mat(mvMatrix,[0,0,0.01]);	//camera near plane. todo render with transparency
 	gl.disable(gl.DEPTH_TEST);	
 	
 	prepBuffersForDrawing(quadBuffers, activeShaderProgram);
@@ -362,61 +356,39 @@ function drawScene(frameTime){
 	
 	gl.enable(gl.BLEND);
 	gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);	
+
 	
-	drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
+	drawTargetDecal(0.004, [1.0, 1.0, 0.0, 0.5], [0,0,0.01]);	//camera near plane. todo render with transparency
 	
-	
-	//draw another showing direction bullets will go in (useful for aiming at stationary targets)
-	//TODO maybe these should rotate about camera instead (so look like ellipses in rectilinear camera when off-centre)
-	//this shows where will shoot IF guns pointing dead ahead.
-	if (fireDirectionVec[2] > 0.1){	//??
-		mScale = 0.002;
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [mScale,mScale,mScale]);
-		mat4.identity(mvMatrix);
-		xyzmove4mat(mvMatrix,[0.01*fireDirectionVec[0]/fireDirectionVec[2],0.01*fireDirectionVec[1]/fireDirectionVec[2],0.01]);
-		drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
-	}
-	
-	//direction of flighte
+	//direction of flight
 	if (playerVelVec[2] > 0.1){	//??
-		mScale = 0.002;
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [mScale,mScale,mScale]);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.0, 0.5, 1.0, 0.5]);
-		mat4.identity(mvMatrix);
-		xyzmove4mat(mvMatrix,[0.01*playerVelVec[0]/playerVelVec[2],0.01*playerVelVec[1]/playerVelVec[2],0.01]);
-		drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
+		drawTargetDecal(0.001, [0.0, 0.5, 1.0, 0.5], playerVelVec);
 	}
-	
 	
 	if (guiParams.target.type!="none" && guiParams["targeting"]!="off"){
-		mScale = 0.0008;
-			//direction to target (shows where target is on screen)
-			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [mScale,mScale,mScale]);
-			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1, 0.1, 0, 0.5]);
-			mat4.identity(mvMatrix);
-			xyzmove4mat(mvMatrix,[0.01*targetWorldFrame[0]/targetWorldFrame[2],0.01*targetWorldFrame[1]/targetWorldFrame[2],0.01]);
-			drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
+			drawTargetDecal(0.0008, [1, 0.1, 0, 0.5], targetWorldFrame);	//direction to target (shows where target is on screen)
+			drawTargetDecal(0.0008, [1, 0.1, 1, 0.5], selectedTargeting);	//where should shoot in order to hit target (accounting for player velocity)
 		
-			//where should shoot in order to hit target (accounting for player velocity)
-			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1, 0.1, 1.0, 0.5]);
-			mat4.identity(mvMatrix);
-			xyzmove4mat(mvMatrix,[0.01*selectedTargeting[0]/selectedTargeting[2],0.01*selectedTargeting[1]/selectedTargeting[2],0.01]);
-			drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
+			//drawTargetDecal(0.0006, [1, 1, 1, 1], targetingResultOne);
+			//drawTargetDecal(0.0006, [0, 0, 0, 1], targetingResultTwo);
+	}else{
+		//TODO maybe should show where guns will shoot, including when targeting enabled.
+		//draw another showing direction bullets will go in (useful for aiming at stationary targets)
 		
-		mScale = 0.0006;
-			//direction to target (shows where target is on screen)
-			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [mScale,mScale,mScale]);
-			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1, 1.0, 1.0, 1]);
-			mat4.identity(mvMatrix);
-		xyzmove4mat(mvMatrix,[0.01*targetingResultOne[0]/targetingResultOne[2],0.01*targetingResultOne[1]/targetingResultOne[2],0.01]);
-			drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
-			
-			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0, 0, 0, 1]);
-			mat4.identity(mvMatrix);
-		xyzmove4mat(mvMatrix,[0.01*targetingResultTwo[0]/targetingResultTwo[2],0.01*targetingResultTwo[1]/targetingResultTwo[2],0.01]);
-			drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
+		//TODO maybe these should rotate about camera instead (so look like ellipses in rectilinear camera when off-centre)
+		//this shows where will shoot IF guns pointing dead ahead.
+		if (fireDirectionVec[2] > 0.1){	//??
+			drawTargetDecal(0.002, [1.0, 1.0, 0.0, 0.5], fireDirectionVec);
+		}
 	}
 	
+	function drawTargetDecal(scale, color, pos){
+			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [scale,scale,scale]);
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, color);
+			mat4.identity(mvMatrix);
+			xyzmove4mat(mvMatrix,[0.01*pos[0]/pos[2],0.01*pos[1]/pos[2],0.01]);
+			drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
+	}
 	
 	
 	gl.disable(gl.BLEND);
