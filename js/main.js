@@ -546,7 +546,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	if (numRandomBoxes>0){
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.9, 0.9, 1.0, 0.9]);
 		
-		boxSize = 0.005;
+		boxSize = 0.002;
 		boxRad = boxSize*Math.sqrt(3);
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
 		
@@ -1197,17 +1197,20 @@ function drawWorldScene(frameTime, isCubemapView) {
 	}
 	
 	//muzzle flash? 
-	var mfRad = 0.005;
-	
 	for (var gg in gunMatrices){
+		var mfRad = 0.007;
 		var flashAmount = muzzleFlashAmounts[gg]
 		gl.uniform4fv(shaderProgramColored.uniforms.uColor, [0, 0, 0, flashAmount]);	//black, but opacity applies to emit too.
 		gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [flashAmount, flashAmount/2, flashAmount/4]);
-		gl.uniform3fv(shaderProgramColored.uniforms.uModelScale, [mfRad,mfRad,mfRad]);
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,gunMatrices[gg]);
 		xyzmove4mat(mvMatrix,[0,0,0.01]);
-		drawObjectFromPreppedBuffers(sphereBuffers, shaderProgramColored);
+
+		for (var xx=0;xx<3;xx++){	//nested spheres
+			gl.uniform3fv(shaderProgramColored.uniforms.uModelScale, [mfRad,mfRad,mfRad]);
+			drawObjectFromPreppedBuffers(sphereBuffers, shaderProgramColored);
+			mfRad*=-.8;
+		}
 	}
 	
 	gl.depthMask(true);
