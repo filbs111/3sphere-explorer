@@ -1185,8 +1185,13 @@ function drawWorldScene(frameTime, isCubemapView) {
 	prepBuffersForDrawing(sphereBuffers, shaderProgramColored);	
 	targetRad=0.0125;
 	gl.uniform3fv(shaderProgramColored.uniforms.uModelScale, [targetRad/25,targetRad/25,targetRad]);	//long streaks
-	gl.uniform4fv(shaderProgramColored.uniforms.uColor, [0, 0, 0, 1.0]);	//black
-	gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [2.0, 2.0, 0.5]);	//YELLOW
+	gl.uniform4fv(shaderProgramColored.uniforms.uColor, [0, 0, 0, 0.25]);	//black
+	gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [1.0, 1.0, 0.5]);	//YELLOW
+	
+	gl.enable(gl.BLEND);
+	gl.blendFunc(gl.ONE, gl.ONE);	
+	gl.depthMask(false);
+	
 	for (var b in bullets){
 		if (bullets[b].active){
 			var bulletMatrix=bullets[b].matrix;
@@ -1203,18 +1208,37 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,singleExplosion.matrix);
-		var radius = singleExplosion.life*0.0002;
+		//var radius = singleExplosion.life*0.0002;
+		var radius = (100-singleExplosion.life)*0.0005;
+		var opac = 0.01*singleExplosion.life;
 		if (frustrumCull(mvMatrix,radius)){	
-			gl.uniform4fv(shaderProgramColored.uniforms.uColor, [0, 0, 0, 1.0]);	//black
-			gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [1, 1, 0]);
+				//TODO check is draw order independent transparency
+			gl.uniform4fv(shaderProgramColored.uniforms.uColor, [0, 0, 0, opac]);	//black, but opacity applies to emit too.
+			gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [opac, opac/2, opac/4]);
 			gl.uniform3fv(shaderProgramColored.uniforms.uModelScale, [radius,radius,radius]);
 			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
 		}
-		singleExplosion.life-=0.02;
+		singleExplosion.life-=0.2;
 		if (singleExplosion.life<1){
 			delete explosions[ee];
 		}
 	}
+	
+	//muzzle flash? 
+	var mfRad = 0.005;
+	gl.uniform4fv(shaderProgramColored.uniforms.uColor, [0, 0, 0, muzzleFlashAmount]);	//black, but opacity applies to emit too.
+	gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [muzzleFlashAmount, muzzleFlashAmount/2, muzzleFlashAmount/4]);
+	gl.uniform3fv(shaderProgramColored.uniforms.uModelScale, [mfRad,mfRad,mfRad]);
+	
+	for (var gg in gunMatrices){	//TODO independent flash amounts for each gun
+		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.multiply(mvMatrix,gunMatrices[gg]);
+		xyzmove4mat(mvMatrix,[0,0,0.01]);
+		drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
+	}
+	
+	gl.depthMask(true);
+	gl.disable(gl.BLEND);
 	
 	gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [0, 0, 0]);
 
@@ -1851,8 +1875,8 @@ var iterateMechanics = (function iterateMechanics(){
 			//TODO velocity in frame of bullet? (different if gun aimed off-centre)
 		
 		muzzleFlashAmount*=0.9;
-		muzzleFlashAmount+=0.03;	//some default lighting when no firing
-		playerLight = playerLightUnscaled.map(function(val){return val*muzzleFlashAmount});
+		var flashAmount = muzzleFlashAmount+0.03;	//some default lighting when no firing
+		playerLight = playerLightUnscaled.map(function(val){return val*flashAmount});
 		
 		portalTest(playerCamera, 0);
 	}
@@ -2024,7 +2048,7 @@ function dropSpaceship(){
 }
 var gunEven=1;
 function fireGun(){
-	muzzleFlashAmount+=1.5;
+	muzzleFlashAmount+=0.5;
 	gunEven = 1-gunEven;
 	for (var g in gunMatrices){
 		if (g%2 == gunEven){

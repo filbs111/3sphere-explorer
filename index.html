@@ -264,7 +264,7 @@
 		//guess maybe similar to some gaussian light source
 		gl_FragColor = vec4( fog*(( uPlayerLightColor*light+ uReflectorDiffColor*portalLight + uFogColor.xyz )*uColor.xyz + uEmitColor), 1.0) + (1.0-fog)*uFogColor;
 		
-		//gl_FragColor.a =1.0;
+		gl_FragColor.a =uColor.a;	//TODO confirm check logic for transparent objects
 	}
 </script>
 <script id="shader-perpixel-discard-vs" type="x-shader/x-vertex">
