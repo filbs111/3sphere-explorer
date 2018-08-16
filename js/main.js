@@ -352,18 +352,19 @@ function drawScene(frameTime){
 	
 	gl.activeTexture(gl.TEXTURE0);		//TODO put inside other function (prepbuffers) to avoid assigning then reassigning texture. should
 										//retain texture info with other object info. also can avoid setting when unchanged.
-	gl.bindTexture(gl.TEXTURE_2D, hudTexture);		
 	
 	gl.enable(gl.BLEND);
 	gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);	
 
-	
-	drawTargetDecal(0.004, [1.0, 1.0, 0.0, 0.5], [0,0,0.01]);	//camera near plane. todo render with transparency
-	
 	//direction of flight
 	if (playerVelVec[2] > 0.1){	//??
+		gl.bindTexture(gl.TEXTURE_2D, hudTexturePlus);		//todo texture atlas for all hud 
 		drawTargetDecal(0.001, [0.0, 0.5, 1.0, 0.5], playerVelVec);
 	}
+	gl.bindTexture(gl.TEXTURE_2D, hudTexture);		
+	
+	
+	drawTargetDecal(0.004, [1.0, 1.0, 0.0, 0.5], [0,0,0.01]);	//camera near plane. todo render with transparency
 	
 	if (guiParams.target.type!="none" && guiParams["targeting"]!="off"){
 			drawTargetDecal(0.0008, [1, 0.1, 0, 0.5], targetWorldFrame);	//direction to target (shows where target is on screen)
@@ -1414,12 +1415,12 @@ function setupScene() {
 	targetMatrix = cellMatData.d16[0];
 }
 
-var texture;
-var hudTexture;
+var texture,hudTexture,hudTexturePlus;
 
 function initTexture(){
 	texture = makeTexture("img/0033.jpg");
 	hudTexture = makeTexture("img/circles.png");
+	hudTexturePlus = makeTexture("img/plus.png");
 	duocylinderObjects.grid.tex = makeTexture("img/grid-omni.png");
 	duocylinderObjects.terrain.tex = makeTexture("data/terrain/turbulent-seamless.png");;
 	

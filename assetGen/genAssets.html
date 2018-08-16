@@ -3,7 +3,7 @@
 
 <script type="text/javascript">
 
-function init(){
+var drawCircleHud = function(){
 	//draw hud object that can manually save as image file, use as game asset
 	var canvas = document.getElementById("mycanvas");
 	var halfSize = 256;
@@ -21,6 +21,29 @@ function init(){
 	ctx.arc(halfSize, halfSize, halfSize*0.05, 0, 2 * Math.PI, false);
     ctx.stroke();
 }
+
+var drawPlusHud = function(){
+//draw hud object that can manually save as image file, use as game asset
+	var canvas = document.getElementById("mycanvas");
+	var fullSize = 256;
+	var halfSize = fullSize/2;
+	canvas.height=fullSize;
+	canvas.width=fullSize;
+	var ctx = canvas.getContext("2d");
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#ffffff';
+	
+	ctx.beginPath();
+	ctx.moveTo(1, 1);
+	ctx.moveTo(halfSize, 1);
+	ctx.lineTo(halfSize, fullSize-2);
+	ctx.moveTo(1, halfSize);
+	ctx.lineTo(fullSize-2,halfSize);
+    ctx.stroke();
+}
+
+var init=drawPlusHud;
+
 
 </script>
 
