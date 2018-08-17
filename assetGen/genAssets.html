@@ -22,6 +22,25 @@ var drawCircleHud = function(){
     ctx.stroke();
 }
 
+var drawSmallCircleHud = function(){
+	//draw hud object that can manually save as image file, use as game asset
+	var canvas = document.getElementById("mycanvas");
+	var halfSize = 128;
+	canvas.height=halfSize*2;
+	canvas.width=halfSize*2;
+	var ctx = canvas.getContext("2d");
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#ffffff';
+	
+	ctx.beginPath();
+	ctx.arc(halfSize, halfSize, halfSize*0.95, 0, 2 * Math.PI, false);
+    ctx.stroke();
+	
+	ctx.beginPath();
+	ctx.arc(halfSize, halfSize, halfSize*0.05, 0, 2 * Math.PI, false);
+    ctx.stroke();
+}
+
 var drawPlusHud = function(){
 //draw hud object that can manually save as image file, use as game asset
 	var canvas = document.getElementById("mycanvas");
@@ -42,7 +61,51 @@ var drawPlusHud = function(){
     ctx.stroke();
 }
 
-var init=drawPlusHud;
+var drawXHud = function(){
+//draw hud object that can manually save as image file, use as game asset
+	var canvas = document.getElementById("mycanvas");
+	var fullSize = 256;
+	var halfSize = fullSize/2;
+	canvas.height=fullSize;
+	canvas.width=fullSize;
+	var ctx = canvas.getContext("2d");
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#ffffff';
+	
+	var innerFraction=0.1;
+	var outerFraction=0.95;
+	
+	ctx.beginPath();
+	ctx.moveTo(halfSize*(1-outerFraction), halfSize*(1-outerFraction));
+	ctx.lineTo(halfSize*(1-innerFraction), halfSize*(1-innerFraction));
+	ctx.moveTo(halfSize*(1+outerFraction), halfSize*(1-outerFraction));
+	ctx.lineTo(halfSize*(1+innerFraction), halfSize*(1-innerFraction));
+	ctx.moveTo(halfSize*(1-outerFraction), halfSize*(1+outerFraction));
+	ctx.lineTo(halfSize*(1-innerFraction), halfSize*(1+innerFraction));
+	ctx.moveTo(halfSize*(1+outerFraction), halfSize*(1+outerFraction));
+	ctx.lineTo(halfSize*(1+innerFraction), halfSize*(1+innerFraction));
+
+    ctx.stroke();
+}
+
+var drawBoxHud = function(){
+//draw hud object that can manually save as image file, use as game asset
+	var canvas = document.getElementById("mycanvas");
+	var fullSize = 256;
+	canvas.height=fullSize;
+	canvas.width=fullSize;
+	var ctx = canvas.getContext("2d");
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#ffffff';
+	
+	var indent=0.05*fullSize;
+	
+	ctx.beginPath();
+	ctx.rect(indent,indent,fullSize-2*indent,fullSize-2*indent);
+    ctx.stroke();
+}
+
+var init=drawBoxHud;
 
 
 </script>
