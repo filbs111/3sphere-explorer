@@ -1886,13 +1886,14 @@ var iterateMechanics = (function iterateMechanics(){
 				if (numRandomBoxes>0){
 					
 					for (var ii=0;ii<numRandomBoxes;ii++){
-						if (randomMats[ii][15]<critValueRandBox){continue;}	//early sphere check
 						if (randomMats[ii][15]>criticalWPos){continue;}	//not drawing boxes too close to portal, so don't collide with them either!
 															//TODO move to setup stage
 						
 						mat4.set(randomMats[ii], relativeMat);
 						mat4.transpose(relativeMat);
 						mat4.multiply(relativeMat, bulletMatrix);
+						
+						if (relativeMat[15]<critValueRandBox){continue;}	//early sphere check
 						
 						if (relativeMat[15]>0 && Math.max(Math.abs(relativeMat[12]),
 									Math.abs(relativeMat[13]),
