@@ -302,32 +302,41 @@
 	uniform float uReflectorCos;
 	varying float fog;	//note currently assume fog distance same for all colours
 	varying vec4 transformedCoord;
+	varying vec4 transformedNormal;
 	
 	void main(void) {
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
 		if (posCosDiff>0.0){
 			discard;
 		}
-	
-		//guess maybe similar to some gaussian light source
-		gl_FragColor = vec4(uEmitColor, 1.0);
+		
+		//some hack for falloff by ~normal dot camera direction to make edges of spherical explosions fade out
+		//float light = dot( normalize(transformedCoord).xyz, transformedNormal.xyz);
+		float light = transformedNormal.z;	//this very approx.
+		//todo actually dot with direction to camera, divide by sqrt(1-wsq) ? (guess currently get excessive depth falloff)
+											//probably should just combo with "fog" value calculation in vert shader
+		
+		gl_FragColor = vec4(uEmitColor, fog*light);
+		//gl_FragColor = vec4(uEmitColor, light);
+		//gl_FragColor = vec4(uEmitColor, fog);
 	}
 </script>
 <script id="shader-perpixel-transparent-discard-vs" type="x-shader/x-vertex">
 	attribute vec3 aVertexPosition;
-	attribute vec3 aVertexNormal;	//todo maybe falloff by normal dot camera direction (spherical explosions)
+	attribute vec3 aVertexNormal;
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
 	uniform vec3 uModelScale;
 	varying float fog;
 	varying vec4 transformedCoord;
+	varying vec4 transformedNormal;
 	
 	void main(void) {	
 		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
 		transformedCoord = uMVMatrix * aVertexPositionNormalized;
 		gl_Position = uPMatrix * transformedCoord;
 
-		//transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
+		transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
 		
 		fog = 0.5*(1.0 + transformedCoord.w);
 	}

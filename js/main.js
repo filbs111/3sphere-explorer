@@ -1218,6 +1218,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	//muzzle flash? 
 	for (var gg in gunMatrices){
+		//if (gg>0) continue;
 		var mfRad = 0.007;
 		var flashAmount = muzzleFlashAmounts[gg]
 		gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [flashAmount, flashAmount/2, flashAmount/4]);
@@ -1225,10 +1226,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 		mat4.multiply(mvMatrix,gunMatrices[gg]);
 		xyzmove4mat(mvMatrix,[0,0,0.01]);
 
-		for (var xx=0;xx<3;xx++){	//nested spheres
+		for (var xx=0;xx<4;xx++){	//nested spheres
 			gl.uniform3fv(transpShadProg.uniforms.uModelScale, [mfRad,mfRad,mfRad]);
 			drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
-			mfRad*=-.8;
+			mfRad-=.0005;
 		}
 	}
 	
@@ -1512,7 +1513,7 @@ var guiParams={
 	fogColor1:'#ff0000',
 	playerLight:'#ffffff',
 	onRails:false,
-	cameraType:"far 3rd person",
+	cameraType:"near 3rd person",
 	cameraFov:105,
 	reflector:{
 		draw:true,
