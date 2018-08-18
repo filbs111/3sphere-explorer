@@ -1850,6 +1850,8 @@ var iterateMechanics = (function iterateMechanics(){
 		var boxRad = boxSize*Math.sqrt(3);
 		var criticalWPos = Math.cos(Math.atan(guiParams.reflector.scale) + Math.atan(boxRad));
 		
+		var critValueRandBox = 1/Math.sqrt(1+boxSize*boxSize);
+		
 		for (var b in bullets){
 			var bullet = bullets[b];
 			if (bullet.active){	//TODO just delete/unlink removed objects
@@ -1884,6 +1886,7 @@ var iterateMechanics = (function iterateMechanics(){
 				if (numRandomBoxes>0){
 					
 					for (var ii=0;ii<numRandomBoxes;ii++){
+						if (randomMats[ii][15]<critValueRandBox){continue;}	//early sphere check
 						if (randomMats[ii][15]>criticalWPos){continue;}	//not drawing boxes too close to portal, so don't collide with them either!
 															//TODO move to setup stage
 						
