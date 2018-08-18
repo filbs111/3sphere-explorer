@@ -376,7 +376,8 @@ function drawScene(frameTime){
 	drawTargetDecal(0.0037/(1+shiftAmount*playerVelVec[2]), [1.0, 1.0, 0.0, 0.5], [shiftAmount*playerVelVec[0],shiftAmount*playerVelVec[1],1+shiftAmount*playerVelVec[2]]);	//TODO vector add!
 	
 	if (guiParams.target.type!="none" && guiParams["targeting"]!="off"){
-			gl.bindTexture(gl.TEXTURE_2D, hudTextureBox);		
+		if (targetWorldFrame[2]<0){	//if in front of player
+			gl.bindTexture(gl.TEXTURE_2D, hudTextureBox);				
 			drawTargetDecal(0.001, [1, 0.1, 0, 0.5], targetWorldFrame);	//direction to target (shows where target is on screen)
 								//TODO put where is on screen, not direction from spaceship (obvious difference in 3rd person)
 			gl.bindTexture(gl.TEXTURE_2D, hudTextureSmallCircles);	
@@ -384,7 +385,8 @@ function drawScene(frameTime){
 				//not required if using shifted gun direction circle
 		
 			//drawTargetDecal(0.0006, [1, 1, 1, 1], targetingResultOne);
-			//drawTargetDecal(0.0006, [0, 0, 0, 1], targetingResultTwo);	
+			//drawTargetDecal(0.0006, [0, 0, 0, 1], targetingResultTwo);
+		}
 	}
 	
 	//show where guns will shoot
