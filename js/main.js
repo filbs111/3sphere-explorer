@@ -376,18 +376,13 @@ function drawScene(frameTime){
 				//not required if using shifted gun direction circle
 		
 			//drawTargetDecal(0.0006, [1, 1, 1, 1], targetingResultOne);
-			//drawTargetDecal(0.0006, [0, 0, 0, 1], targetingResultTwo);
-	}else{
-		//TODO maybe should show where guns will shoot, including when targeting enabled.
-		//draw another showing direction bullets will go in (useful for aiming at stationary targets)
-		
-		//TODO maybe these should rotate about camera instead (so look like ellipses in rectilinear camera when off-centre)
-		//this shows where will shoot IF guns pointing dead ahead.
-		if (fireDirectionVec[2] > 0.1){	//??
-			gl.bindTexture(gl.TEXTURE_2D, hudTextureX);
-			drawTargetDecal(0.001, [1.0, 1.0, 0.0, 0.5], fireDirectionVec);
-		}
-		
+			//drawTargetDecal(0.0006, [0, 0, 0, 1], targetingResultTwo);	
+	}
+	
+	//show where guns will shoot
+	if (fireDirectionVec[2] > 0.1){	//??
+		gl.bindTexture(gl.TEXTURE_2D, hudTextureX);
+		drawTargetDecal(0.001, [1.0, 1.0, 0.0, 0.5], fireDirectionVec);
 	}
 	
 	function drawTargetDecal(scale, color, pos){
@@ -853,9 +848,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 			selectedTargeting = targetingSolution.selected;
 			targetWorldFrame = targetingSolution.targetWorldFrame;
 		}
-		//^^ TODO use this targeting solution to get firedirectionvec to draw on hud
-		
-		
 		
 		gunMatrices=[];
 		drawRelativeToSpacehip([gunHoriz,gunVert,gunFront]); //left, down, forwards
@@ -1044,8 +1036,18 @@ function drawWorldScene(frameTime, isCubemapView) {
 				if (guiParams.target.type!="none" && guiParams["targeting"]!="off"){
 					//rotvec = getRotBetweenMats(matrixForTargeting, targetMatrix);	//target in frame of spaceship.
 					var pointingDir={x:selectedTargeting[0],y:selectedTargeting[1],z:selectedTargeting[2]};
-					pointingDir = capGunPointing(pointingDir);						
+					pointingDir = capGunPointing(pointingDir);					
 					rotvec=getRotFromPointing(pointingDir);
+					
+					//override fireDirectionVec for hud purposes
+					fireDirectionVec = [-pointingDir.x,-pointingDir.y,pointingDir.z].map(function(val){return val*muzzleVel;}); 
+						//todo pointingdir simple vector!( not .x, .y, ,z)
+					
+						//redo adding player velocity (todo maybe combine with where do this elsewhere..)
+						//ie guntargetingvec
+						//todo solve targeting in mechanics loop - currently doing when drawing !!!!!!!!!!!!!!!!!!! stupid!
+					fireDirectionVec = fireDirectionVec.map(function(val,ii){return val+playerVelVec[ii];});
+						
 				}
 			}
 			
