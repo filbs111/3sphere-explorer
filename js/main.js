@@ -987,7 +987,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			}
 			//normalise x,y,z parts of to target vector.
 			var length = Math.sqrt(1-targetWorldFrame[3]*targetWorldFrame[3]);	//TODO ensure not 0. can combo with range check.
-															//TODO ensure not behind player.
+			
 			targetWorldFrame = targetWorldFrame.map(function(val){return val/length;});	//FWIW last value unneeded
 			
 			//confirm tWF length 1? 
@@ -1029,6 +1029,14 @@ function drawWorldScene(frameTime, isCubemapView) {
 				selectedTargetingString = "NONE";
 			}
 			//TODO check that angle isn't too extreme.
+			
+			//if (targetWorldFrame[2] > 0){	//behind player
+			if (targetWorldFrame[2] > -0.5 ||	//appears to check that within a cone in front of player. works because this vector is was normalised 
+												//is direction towards target)
+				targetWorldFrame[3] < -0.5){	//exclude beyond some distance (w=1 close, w=-1 opposite side of 3-sphere)								
+					selectedTargeting = "none";
+					selectedTargetingString = "NONE";
+			}
 			
 			if (logStuff){
 				//console.log(targetingResultOneLengthSq);
