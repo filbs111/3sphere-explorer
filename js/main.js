@@ -1220,15 +1220,15 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//muzzle flash? 
 	for (var gg in gunMatrices){
 		//if (gg>0) continue;
-		var mfRad = 0.007;
+		var mfRad = 0.01;
 		var flashAmount = muzzleFlashAmounts[gg]
 		gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [flashAmount, flashAmount/2, flashAmount/4]);
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,gunMatrices[gg]);
-		xyzmove4mat(mvMatrix,[0,0,0.01]);
+		xyzmove4mat(mvMatrix,[0,0,0.015]);
 
 		for (var xx=0;xx<3;xx++){	//nested spheres
-			gl.uniform3fv(transpShadProg.uniforms.uModelScale, [mfRad,mfRad,mfRad]);
+			gl.uniform3fv(transpShadProg.uniforms.uModelScale, [mfRad/5,mfRad/5,mfRad]);
 			drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
 			mfRad-=.0005;
 		}
@@ -1707,7 +1707,8 @@ var iterateMechanics = (function iterateMechanics(){
 	var deadZone = 0.15;	//for thumbsticks
 	
 	var autoFireCountdown=0;
-	var autoFireCountdownStartVal=6;
+	//var autoFireCountdownStartVal=6;
+	var autoFireCountdownStartVal=1;
 	
 	return function(){
 		//GAMEPAD
@@ -2129,5 +2130,5 @@ function fireGun(){
 		}
 	}
 	myAudioPlayer.playGunSound(0);	//todo use delay param to play at exact time.
-	gunHeat+=1;
+	gunHeat+=0.1;
 }

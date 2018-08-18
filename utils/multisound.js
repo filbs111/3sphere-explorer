@@ -94,6 +94,7 @@ var myAudioPlayer = (function(){
 	//make a few sounds
 	//var gunSound  = new MySound('audio/gunfire50k.mp3');
 	//var bombSound = new MySound('sounds/bomb50k.mp3');
+	//var gunSound  = new MySound('audio/gunmix.wav');
 	var gunSound  = new MySound('audio/gun.wav');
 
 	return {
