@@ -2,6 +2,7 @@ var shaderProgramColored,
 	shaderProgramColoredPerVertex,
 	shaderProgramColoredPerPixel,
 	shaderProgramColoredPerPixelDiscard,
+	shaderProgramColoredPerPixelTransparentDiscard,
 	shaderProgramTexmap,
 	shaderProgramTexmapPerVertex,
 	shaderProgramTexmapPerPixel,
@@ -15,14 +16,21 @@ function initShaders(){
 					attributes:["aVertexPosition","aVertexNormal"],
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uColor","uEmitColor","uFogColor", "uModelScale"]
 					});
+					/*
 	shaderProgramColoredPerPixel = loadShader( "shader-perpixel-vs", "shader-perpixel-fs",{
 					attributes:["aVertexPosition","aVertexNormal"],
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uColor","uEmitColor","uFogColor", "uModelScale"]
 					});
+					*/	//unused shader
 	shaderProgramColoredPerPixelDiscard = loadShader( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs",{
 					attributes:["aVertexPosition","aVertexNormal"],
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uColor","uEmitColor","uFogColor", "uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
-					});				
+					});
+
+	shaderProgramColoredPerPixelTransparentDiscard = loadShader( "shader-perpixel-transparent-discard-vs", "shader-perpixel-transparent-discard-fs",{
+					attributes:["aVertexPosition","aVertexNormal"],
+					uniforms:["uPMatrix","uMVMatrix","uEmitColor", "uModelScale","uReflectorPos","uReflectorCos"]
+					});
 	
 	shaderProgramTexmapPerVertex = loadShader( "shader-texmap-vs", "shader-texmap-fs",{
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
@@ -1164,16 +1172,17 @@ function drawWorldScene(frameTime, isCubemapView) {
 	}
 	
 	//draw bullets
-	//assume active shader program already shaderProgramColored
-	//gl.useProgram(shaderProgramColored);
-	prepBuffersForDrawing(sphereBuffers, shaderProgramColored);	
+	var transpShadProg = shaderProgramColoredPerPixelTransparentDiscard;
+	//var transpShadProg = shaderProgramColoredPerPixelDiscard;
+	gl.useProgram(transpShadProg);
+	
+	prepBuffersForDrawing(sphereBuffers, transpShadProg);	
 	targetRad=0.0125;
-	gl.uniform3fv(shaderProgramColored.uniforms.uModelScale, [targetRad/25,targetRad/25,targetRad]);	//long streaks
-	gl.uniform4fv(shaderProgramColored.uniforms.uColor, [0, 0, 0, 0.25]);	//black
-	gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [1.0, 1.0, 0.5]);	//YELLOW
+	gl.uniform3fv(transpShadProg.uniforms.uModelScale, [targetRad/25,targetRad/25,targetRad]);	//long streaks
+	gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [1.0, 1.0, 0.5]);	//YELLOW
 	
 	gl.enable(gl.BLEND);
-	gl.blendFunc(gl.ONE, gl.ONE);	
+	gl.blendFunc(gl.SRC_ALPHA , gl.ONE);	
 	gl.depthMask(false);
 	
 	for (var b in bullets){
@@ -1182,7 +1191,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix,bulletMatrix);
 			if (frustrumCull(mvMatrix,targetRad)){	
-				drawObjectFromPreppedBuffers(sphereBuffers, shaderProgramColored);
+				drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
 			}
 		}
 	}
@@ -1197,10 +1206,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 		var opac = 0.01*singleExplosion.life;
 		if (frustrumCull(mvMatrix,radius)){	
 				//TODO check is draw order independent transparency
-			gl.uniform4fv(shaderProgramColored.uniforms.uColor, [0, 0, 0, opac]);	//black, but opacity applies to emit too.
-			gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [opac, opac/2, opac/4]);
-			gl.uniform3fv(shaderProgramColored.uniforms.uModelScale, [radius,radius,radius]);
-			drawObjectFromPreppedBuffers(sphereBuffers, shaderProgramColored);
+			gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [opac, opac/2, opac/4]);
+			gl.uniform3fv(transpShadProg.uniforms.uModelScale, [radius,radius,radius]);
+			drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
 		}
 		singleExplosion.life-=0.2;
 		if (singleExplosion.life<1){
@@ -1212,15 +1220,14 @@ function drawWorldScene(frameTime, isCubemapView) {
 	for (var gg in gunMatrices){
 		var mfRad = 0.007;
 		var flashAmount = muzzleFlashAmounts[gg]
-		gl.uniform4fv(shaderProgramColored.uniforms.uColor, [0, 0, 0, flashAmount]);	//black, but opacity applies to emit too.
-		gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [flashAmount, flashAmount/2, flashAmount/4]);
+		gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [flashAmount, flashAmount/2, flashAmount/4]);
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,gunMatrices[gg]);
 		xyzmove4mat(mvMatrix,[0,0,0.01]);
 
 		for (var xx=0;xx<3;xx++){	//nested spheres
-			gl.uniform3fv(shaderProgramColored.uniforms.uModelScale, [mfRad,mfRad,mfRad]);
-			drawObjectFromPreppedBuffers(sphereBuffers, shaderProgramColored);
+			gl.uniform3fv(transpShadProg.uniforms.uModelScale, [mfRad,mfRad,mfRad]);
+			drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
 			mfRad*=-.8;
 		}
 	}
@@ -1228,7 +1235,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 	gl.depthMask(true);
 	gl.disable(gl.BLEND);
 	
-	gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [0, 0, 0]);
+	//gl.useProgram(shaderProgramColored);
+	//gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [0, 0, 0]);
 
 }
 
@@ -1870,7 +1878,6 @@ var iterateMechanics = (function iterateMechanics(){
 			muzzleFlashAmounts[gg]*=0.9;
 			flashAmount+= muzzleFlashAmounts[gg]+0.03;	//some default lighting when no firing	
 		}
-		console.log(flashAmount);
 		playerLight = playerLightUnscaled.map(function(val){return val*flashAmount});
 		
 		portalTest(playerCamera, 0);

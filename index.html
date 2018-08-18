@@ -294,6 +294,44 @@
 	}
 </script>
 
+<script id="shader-perpixel-transparent-discard-fs" type="x-shader/x-fragment">
+	precision mediump float;
+	uniform vec3 uEmitColor;
+
+	uniform vec4 uReflectorPos;
+	uniform float uReflectorCos;
+	varying float fog;	//note currently assume fog distance same for all colours
+	varying vec4 transformedCoord;
+	
+	void main(void) {
+		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
+		if (posCosDiff>0.0){
+			discard;
+		}
+	
+		//guess maybe similar to some gaussian light source
+		gl_FragColor = vec4(uEmitColor, 1.0);
+	}
+</script>
+<script id="shader-perpixel-transparent-discard-vs" type="x-shader/x-vertex">
+	attribute vec3 aVertexPosition;
+	attribute vec3 aVertexNormal;	//todo maybe falloff by normal dot camera direction (spherical explosions)
+	uniform mat4 uMVMatrix;
+	uniform mat4 uPMatrix;
+	uniform vec3 uModelScale;
+	varying float fog;
+	varying vec4 transformedCoord;
+	
+	void main(void) {	
+		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
+		transformedCoord = uMVMatrix * aVertexPositionNormalized;
+		gl_Position = uPMatrix * transformedCoord;
+
+		//transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
+		
+		fog = 0.5*(1.0 + transformedCoord.w);
+	}
+</script>
 
 
 
