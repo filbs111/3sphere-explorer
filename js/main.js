@@ -554,11 +554,12 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}
 	}
 	
-	var numRandomBoxes = guiParams['random boxes'];
+	var numRandomBoxes = guiParams['random boxes'].number;
+	
 	if (numRandomBoxes>0){
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.9, 0.9, 1.0, 0.9]);
 		
-		boxSize = 0.05;
+		boxSize = guiParams['random boxes'].size;
 		boxRad = boxSize*Math.sqrt(3);
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
 		
@@ -1489,7 +1490,10 @@ var guiParams={
 		'boxes y=w=0':false,
 		'boxes z=w=0':false
 	},
-	'random boxes':200,
+	'random boxes':{
+		number:200,
+		size:0.02
+	},
 	"draw 5-cell":false,
 	"8-cell scale":1.0,
 	"subdiv frames":true,
@@ -1560,7 +1564,10 @@ function init(){
 		console.log(shape);
 		drawShapesFolder.add(guiParams.drawShapes, shape );
 	}
-	drawShapesFolder.add(guiParams, "random boxes",0,1000,50);
+	var randBoxesFolder = drawShapesFolder.addFolder("random boxes");
+	randBoxesFolder.add(guiParams["random boxes"],"number",0,1000,50);
+	randBoxesFolder.add(guiParams["random boxes"],"size",0.01,0.05,0.01);
+	
 	var polytopesFolder = gui.addFolder('polytopes');
 	polytopesFolder.add(guiParams,"draw 5-cell");
 	polytopesFolder.add(guiParams,"draw 8-cell",false);
@@ -1836,10 +1843,10 @@ var iterateMechanics = (function iterateMechanics(){
 		mat4.set(targetMatrix, invTargetMat);
 		mat4.transpose(invTargetMat);
 		var relativeMat = mat4.create();
-		var numRandomBoxes = guiParams['random boxes'];
+		var numRandomBoxes = guiParams['random boxes'].number;
 		numRandomBoxes = Math.min(randomMats.length, numRandomBoxes);	//TODO check this doesn't happen/ make obvious error!
 		
-		var boxSize = 0.05;
+		var boxSize = guiParams['random boxes'].size;
 		var boxRad = boxSize*Math.sqrt(3);
 		var criticalWPos = Math.cos(Math.atan(guiParams.reflector.scale) + Math.atan(boxRad));
 		
