@@ -1805,6 +1805,16 @@ var iterateMechanics = (function iterateMechanics(){
 				playerVelVec[2]+=gpMove[2];
 				
 				playerAngVelVec[2]+=(buttons[15].value-buttons[14].value); //roll -dpad left/right
+				
+				//other rotation
+				var gpRotate=[];
+				var fixedRotateAmount = 10*rotateSpeed;
+				gpRotate[0] = Math.abs(axes[3])>deadZone ? fixedRotateAmount*axes[3] : 0; //pitch
+				gpRotate[1] = Math.abs(axes[2])>deadZone ? fixedRotateAmount*axes[2] : 0; //turn
+				gpRotate[2] = 0;	//moved to code above
+					
+				magsq = gpRotate.reduce(function(total, val){return total+ val*val;}, 0);		
+				rotatePlayer(scalarvectorprod(100000*magsq,gpRotate));	//TODO add rotational momentum - not direct rotate
 			}
 			
 			playerVelVec=scalarvectorprod(0.996,playerVelVec);
@@ -1831,16 +1841,6 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		rotatePlayer(scalarvectorprod(rotateAmount,playerAngVelVec));
 		
-		if (activeGp){
-			var gpRotate=[];
-			gpRotate[0] = Math.abs(axes[3])>deadZone ? rotateAmount*axes[3] : 0; //pitch
-			gpRotate[1] = Math.abs(axes[2])>deadZone ? rotateAmount*axes[2] : 0; //turn
-			gpRotate[2] = 0;	//moved to code above
-				
-			magsq = gpRotate.reduce(function(total, val){return total+ val*val;}, 0);		
-			rotatePlayer(scalarvectorprod(100000*magsq,gpRotate));
-			//rotatePlayer(gpRotate);
-		}
 		
 		//playerVelVecBodge =  playerVelVec.map(function(val){return val*playerVelVecMagsq;});
 		//movePlayer(scalarvectorprod(moveAmount,playerVelVecBodge));	//no bodge because using playerVelVec for bullets
