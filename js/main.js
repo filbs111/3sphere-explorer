@@ -558,7 +558,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	if (numRandomBoxes>0){
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.9, 0.9, 1.0, 0.9]);
 		
-		boxSize = 0.002;
+		boxSize = 0.05;
 		boxRad = boxSize*Math.sqrt(3);
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
 		
@@ -1226,7 +1226,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		mat4.multiply(mvMatrix,gunMatrices[gg]);
 		xyzmove4mat(mvMatrix,[0,0,0.01]);
 
-		for (var xx=0;xx<4;xx++){	//nested spheres
+		for (var xx=0;xx<3;xx++){	//nested spheres
 			gl.uniform3fv(transpShadProg.uniforms.uModelScale, [mfRad,mfRad,mfRad]);
 			drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
 			mfRad-=.0005;
@@ -1506,7 +1506,7 @@ var guiParams={
 		type:"sphere",
 		scale:0.03
 	},
-	"targeting":"simple",
+	"targeting":"off",
 	"culling":true,
 	"perPixelLighting":true,
 	fogColor0:'#202020',
@@ -1836,6 +1836,13 @@ var iterateMechanics = (function iterateMechanics(){
 		mat4.set(targetMatrix, invTargetMat);
 		mat4.transpose(invTargetMat);
 		var relativeMat = mat4.create();
+		var numRandomBoxes = guiParams['random boxes'];
+		numRandomBoxes = Math.min(randomMats.length, numRandomBoxes);	//TODO check this doesn't happen/ make obvious error!
+		
+		var boxSize = 0.05;
+		var boxRad = boxSize*Math.sqrt(3);
+		var criticalWPos = Math.cos(Math.atan(guiParams.reflector.scale) + Math.atan(boxRad));
+		
 		for (var b in bullets){
 			var bullet = bullets[b];
 			if (bullet.active){	//TODO just delete/unlink removed objects
@@ -1853,13 +1860,38 @@ var iterateMechanics = (function iterateMechanics(){
 						}
 						break;
 					case "box":
-						if (Math.max(Math.abs(relativeMat[12]),
+						if (relativeMat[15]>0 && Math.max(Math.abs(relativeMat[12]),
 									Math.abs(relativeMat[13]),
 									Math.abs(relativeMat[14]))<guiParams.target.scale){
 							detonateBullet();
 						}
 						break;
 				}
+				
+				
+				//slow collision detection between bullet and array of boxes.
+				//todo 1 try simple optimisation by matrix/scalar multiplication instead of matrix-matrix
+				//todo 2 another simple optimisation - sphere check by xyzw distance. previous check only if passes
+				//todo 3 heirarchical bounding boxes or gridding system!
+				
+				if (numRandomBoxes>0){
+					
+					for (var ii=0;ii<numRandomBoxes;ii++){
+						if (randomMats[ii][15]>criticalWPos){continue;}	//not drawing boxes too close to portal, so don't collide with them either!
+															//TODO move to setup stage
+						
+						mat4.set(randomMats[ii], relativeMat);
+						mat4.transpose(relativeMat);
+						mat4.multiply(relativeMat, bulletMatrix);
+						
+						if (relativeMat[15]>0 && Math.max(Math.abs(relativeMat[12]),
+									Math.abs(relativeMat[13]),
+									Math.abs(relativeMat[14]))<boxSize){
+							detonateBullet();
+						}
+					}
+				}
+				
 						
 				function detonateBullet(){	//TODO what scope does this have? best practice???
 					bullet.vel = [0,0,0];	//if colliding with target, stop bullet.
@@ -2054,7 +2086,7 @@ function fireGun(){
 	gunEven = 1-gunEven;
 	for (var g in gunMatrices){
 		if (g%2 == gunEven){
-			muzzleFlashAmounts[g]+=0.5
+			muzzleFlashAmounts[g]+=0.25
 			
 			var gunMatrix = gunMatrices[g];
 			var newBulletMatrix = mat4.create();
