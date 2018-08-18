@@ -312,13 +312,12 @@
 		
 		//some hack for falloff by ~normal dot camera direction to make edges of spherical explosions fade out
 		//float light = dot( normalize(transformedCoord).xyz, transformedNormal.xyz);
-		float light = transformedNormal.z;	//this very approx.
+		//float light = transformedNormal.z;	//this very approx.
 		//todo actually dot with direction to camera, divide by sqrt(1-wsq) ? (guess currently get excessive depth falloff)
 											//probably should just combo with "fog" value calculation in vert shader
 		
-		gl_FragColor = vec4(uEmitColor, fog*light);
-		//gl_FragColor = vec4(uEmitColor, light);
-		//gl_FragColor = vec4(uEmitColor, fog);
+		//gl_FragColor = vec4(uEmitColor, fog*light);
+		gl_FragColor = vec4(uEmitColor, fog);
 	}
 </script>
 <script id="shader-perpixel-transparent-discard-vs" type="x-shader/x-vertex">
@@ -335,8 +334,6 @@
 		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
 		transformedCoord = uMVMatrix * aVertexPositionNormalized;
 		gl_Position = uPMatrix * transformedCoord;
-
-		transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
 		
 		fog = 0.5*(1.0 + transformedCoord.w);
 	}
