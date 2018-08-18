@@ -361,18 +361,19 @@ function drawScene(frameTime){
 		gl.bindTexture(gl.TEXTURE_2D, hudTexturePlus);		//todo texture atlas for all hud 
 		drawTargetDecal(0.001, [0.0, 0.5, 1.0, 0.5], playerVelVec);
 	}
-	gl.bindTexture(gl.TEXTURE_2D, hudTexture);		
-	drawTargetDecal(0.004, [1.0, 1.0, 0.0, 0.5], [0,0,0.01]);	//camera near plane. todo render with transparency
+	gl.bindTexture(gl.TEXTURE_2D, hudTexture);	
 	
-	gl.bindTexture(gl.TEXTURE_2D, hudTextureSmallCircles);		
-
+	//drawTargetDecal(0.004, [1.0, 1.0, 0.0, 0.5], [0,0,0.01]);	//camera near plane. todo render with transparency
+	var shiftAmount = 0.01/muzzleVel;	//shift according to player velocity
+	drawTargetDecal(0.004, [1.0, 1.0, 0.0, 0.5], [shiftAmount*playerVelVec[0],shiftAmount*playerVelVec[1],0.01+shiftAmount*playerVelVec[2]]);	//TODO vector add!
 	
 	if (guiParams.target.type!="none" && guiParams["targeting"]!="off"){
 			gl.bindTexture(gl.TEXTURE_2D, hudTextureBox);		
 			drawTargetDecal(0.0008, [1, 0.1, 0, 0.5], targetWorldFrame);	//direction to target (shows where target is on screen)
 								//TODO put where is on screen, not direction from spaceship (obvious difference in 3rd person)
 			gl.bindTexture(gl.TEXTURE_2D, hudTextureSmallCircles);	
-			drawTargetDecal(0.0008, [1, 0.1, 1, 0.5], selectedTargeting);	//where should shoot in order to hit target (accounting for player velocity)
+			//drawTargetDecal(0.0008, [1, 0.1, 1, 0.5], selectedTargeting);	//where should shoot in order to hit target (accounting for player velocity)
+				//not required if using shifted gun direction circle
 		
 			//drawTargetDecal(0.0006, [1, 1, 1, 1], targetingResultOne);
 			//drawTargetDecal(0.0006, [0, 0, 0, 1], targetingResultTwo);
@@ -385,8 +386,8 @@ function drawScene(frameTime){
 		if (fireDirectionVec[2] > 0.1){	//??
 			gl.bindTexture(gl.TEXTURE_2D, hudTextureX);
 			drawTargetDecal(0.001, [1.0, 1.0, 0.0, 0.5], fireDirectionVec);
-			gl.bindTexture(gl.TEXTURE_2D, hudTextureSmallCircles);		
 		}
+		
 	}
 	
 	function drawTargetDecal(scale, color, pos){
@@ -1663,7 +1664,7 @@ function init(){
 var playerVelVec = [0,0,0];	//TODO use matrix/quaternion for this
 							//todo not a global! how to set listeners eg mousemove witin iteratemechanics???
 var fireDirectionVec = [0,0,1];	//TODO check if requried to define something here
-var muzzleVel = 5;
+var muzzleVel = 10;
 							
 var testInfo="";
 var iterateMechanics = (function iterateMechanics(){
