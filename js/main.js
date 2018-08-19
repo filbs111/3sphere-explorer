@@ -1507,7 +1507,7 @@ var guiParams={
 	"draw 5-cell":false,
 	"8-cell scale":1.0,
 	"subdiv frames":true,
-	"draw 8-cell":false,
+	"draw 8-cell":true,
 	"draw 16-cell":false,
 	"draw 24-cell":false,
 	"draw 120-cell":false,
@@ -1523,8 +1523,8 @@ var guiParams={
 	"targeting":"off",
 	"culling":true,
 	"perPixelLighting":true,
-	fogColor0:'#202020',
-	fogColor1:'#ff0000',
+	fogColor0:'#506050',
+	fogColor1:'#ff8888',
 	playerLight:'#ffffff',
 	onRails:false,
 	cameraType:"near 3rd person",
@@ -1582,7 +1582,7 @@ function init(){
 	polytopesFolder.add(guiParams,"draw 5-cell");
 	polytopesFolder.add(guiParams,"draw 8-cell",false);
 	polytopesFolder.add(guiParams,"draw 16-cell");
-	polytopesFolder.add(guiParams,"8-cell scale",0.2,2.0,0.05);
+	polytopesFolder.add(guiParams,"8-cell scale",0.05,2.0,0.05);
 	polytopesFolder.add(guiParams,"subdiv frames");
 	polytopesFolder.add(guiParams,"draw 24-cell",false);
 	polytopesFolder.add(guiParams,"draw 120-cell",true);
@@ -1908,7 +1908,24 @@ var iterateMechanics = (function iterateMechanics(){
 						
 						if (relativeMat[15]>0 && Math.max(Math.abs(relativeMat[12]),
 									Math.abs(relativeMat[13]),
-									Math.abs(relativeMat[14]))<boxSize){
+									Math.abs(relativeMat[14]))<boxSize*relativeMat[15]){
+							detonateBullet();
+						}
+					}
+				}
+				
+				//similar thing for 8-cell frames
+				var cellSize = guiParams["8-cell scale"];
+				if (guiParams["draw 8-cell"]){
+					for (dd in cellMatData.d8){
+						var thisMat = cellMatData.d8[dd];
+						mat4.set(thisMat, relativeMat);
+						mat4.transpose(relativeMat);
+						mat4.multiply(relativeMat, bulletMatrix);
+												
+						if (relativeMat[15]>0 && Math.max(Math.abs(relativeMat[12]),
+									Math.abs(relativeMat[13]),
+									Math.abs(relativeMat[14]))<cellSize*relativeMat[15]){
 							detonateBullet();
 						}
 					}
