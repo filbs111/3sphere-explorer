@@ -372,11 +372,11 @@ function drawScene(frameTime){
 	gl.bindTexture(gl.TEXTURE_2D, hudTexture);	
 	
 	//drawTargetDecal(0.004, [1.0, 1.0, 0.0, 0.5], [0,0,0.01]);	//camera near plane. todo render with transparency
-	var shiftAmount = 1/muzzleVel;	//shift according to player velocity. 0.1 could be 1, but 
-	drawTargetDecal(0.0037/(1+shiftAmount*playerVelVec[2]), [1.0, 1.0, 0.0, 0.5], [shiftAmount*playerVelVec[0],shiftAmount*playerVelVec[1],1+shiftAmount*playerVelVec[2]]);	//TODO vector add!
-	
-	if (guiParams.target.type!="none" && guiParams["targeting"]!="off"){
-		if (targetWorldFrame[2]<0){	//if in front of player
+	if (guiParams["targeting"]!="off"){
+		var shiftAmount = 1/muzzleVel;	//shift according to player velocity. 0.1 could be 1, but 
+		drawTargetDecal(0.0037/(1+shiftAmount*playerVelVec[2]), [1.0, 1.0, 0.0, 0.5], [shiftAmount*playerVelVec[0],shiftAmount*playerVelVec[1],1+shiftAmount*playerVelVec[2]]);	//TODO vector add!
+		
+		if (guiParams.target.type!="none" && targetWorldFrame[2]<0){	//if in front of player){
 			gl.bindTexture(gl.TEXTURE_2D, hudTextureBox);				
 			drawTargetDecal(0.001, [1, 0.1, 0, 0.5], targetWorldFrame);	//direction to target (shows where target is on screen)
 								//TODO put where is on screen, not direction from spaceship (obvious difference in 3rd person)
