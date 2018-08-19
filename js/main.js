@@ -1033,7 +1033,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			//TODO check that angle isn't too extreme.
 			
 			//if (targetWorldFrame[2] > 0){	//behind player
-			if (targetWorldFrame[2] > -0.5 ||	//appears to check that within a cone in front of player. works because this vector is was normalised 
+			if (targetWorldFrame[2] > -0.85 ||	//appears to check that within a cone in front of player. works because this vector is was normalised 
 												//is direction towards target)
 				targetWorldFrame[3] < -0.5){	//exclude beyond some distance (w=1 close, w=-1 opposite side of 3-sphere)								
 					selectedTargeting = "none";
@@ -1113,11 +1113,11 @@ function drawWorldScene(frameTime, isCubemapView) {
 				if (frustrumCull(mvMatrix,targetRad)){	//normally use +ve radius
 											//-ve to make disappear when not entirely inside view frustrum (for testing)
 					gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,targetRad]);
-					gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.2, 0.2, 0.2, 1]);
-					//var emitColor = Math.sin(frameTime*0.01);
+					gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1, 0.2, 0.2, 1]);
+					var emitColor = Math.sin(frameTime*0.01);
 					//emitColor*=emitColor
-					//gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [emitColor, emitColor, emitColor/2]);	//YELLOW
-					gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0.5, 0.5, 0.5]);
+					gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [emitColor, emitColor, emitColor/2]);	//YELLOW
+					//gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0.5, 0.5, 0.5]);
 					drawObjectFromBuffers(sphereBuffers, activeShaderProgram);
 					//drawObjectFromBuffers(icoballBuffers, activeShaderProgram);
 				}
@@ -1505,14 +1505,14 @@ var guiParams={
 		size:0.02
 	},
 	"draw 5-cell":false,
-	"8-cell scale":1.0,
+	"8-cell scale":0.5,
 	"subdiv frames":true,
 	"draw 8-cell":true,
 	"draw 16-cell":false,
 	"draw 24-cell":false,
 	"draw 120-cell":false,
 	"draw 600-cell":false,
-	"draw teapot":true,
+	"draw teapot":false,
 	"teapot scale":0.7,
 	"draw spaceship":true,
 	"drop spaceship":false,
@@ -1923,10 +1923,14 @@ var iterateMechanics = (function iterateMechanics(){
 						mat4.transpose(relativeMat);
 						mat4.multiply(relativeMat, bulletMatrix);
 												
-						if (relativeMat[15]>0 && Math.max(Math.abs(relativeMat[12]),
-									Math.abs(relativeMat[13]),
-									Math.abs(relativeMat[14]))<cellSize*relativeMat[15]){
-							detonateBullet();
+						if (relativeMat[15]>0){
+							var projectedPosAbs = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return Math.abs(val)/(cellSize*relativeMat[15]);});
+							if (Math.max(projectedPosAbs[0],projectedPosAbs[1],projectedPosAbs[2])<1){
+								var count=projectedPosAbs.reduce(function (sum,val){return val>0.8?sum+1:sum;},0);
+								if (count>1){
+									detonateBullet();
+								}
+							}
 						}
 					}
 				}
