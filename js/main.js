@@ -597,6 +597,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	if (guiParams["draw 16-cell"]){
 		var cellScale = 4/Math.sqrt(6);		//in the model, vertices are 0.75*sqrt(2) from the centre, and want to scale to tan(PI/3)=sqrt(3)
+		
+		cellScale*=guiParams["16-cell scale"];
+		
 		//var moveAmount = Math.PI/3;	
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [cellScale,cellScale,cellScale]);
 		
@@ -1505,10 +1508,11 @@ var guiParams={
 		size:0.02
 	},
 	"draw 5-cell":false,
-	"8-cell scale":0.5,
 	"subdiv frames":true,
 	"draw 8-cell":true,
-	"draw 16-cell":false,
+	"8-cell scale":0.3,		//0.5 to tesselate
+	"draw 16-cell":true,
+	"16-cell scale":0.45,		//1 to tesselate
 	"draw 24-cell":false,
 	"draw 120-cell":false,
 	"draw 600-cell":false,
@@ -1581,8 +1585,9 @@ function init(){
 	var polytopesFolder = gui.addFolder('polytopes');
 	polytopesFolder.add(guiParams,"draw 5-cell");
 	polytopesFolder.add(guiParams,"draw 8-cell",false);
-	polytopesFolder.add(guiParams,"draw 16-cell");
 	polytopesFolder.add(guiParams,"8-cell scale",0.05,2.0,0.05);
+	polytopesFolder.add(guiParams,"draw 16-cell");
+	polytopesFolder.add(guiParams,"16-cell scale",0.05,2.0,0.05);
 	polytopesFolder.add(guiParams,"subdiv frames");
 	polytopesFolder.add(guiParams,"draw 24-cell",false);
 	polytopesFolder.add(guiParams,"draw 120-cell",true);
