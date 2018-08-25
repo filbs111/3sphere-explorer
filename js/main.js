@@ -1227,8 +1227,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,singleExplosion.matrix);
 		//var radius = singleExplosion.life*0.0002;
-		var radius = (100-singleExplosion.life)*0.0005;
-		//var radius = (100-singleExplosion.life)*0.00005; //small for collision detection testing
+		//var radius = (100-singleExplosion.life)*0.0005;
+		var radius = (100-singleExplosion.life)*0.00005; //small for collision detection testing
 		var opac = 0.01*singleExplosion.life;
 		if (frustrumCull(mvMatrix,radius)){	
 				//TODO check is draw order independent transparency
@@ -1236,8 +1236,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniform3fv(transpShadProg.uniforms.uModelScale, [radius,radius,radius]);
 			drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
 		}
-		singleExplosion.life-=0.2;
-		//singleExplosion.life-=0.01;	//slow for collision detection testing
+		//singleExplosion.life-=0.2;
+		singleExplosion.life-=0.02;	//slow for collision detection testing
 		if (singleExplosion.life<1){
 			delete explosions[ee];
 		}
@@ -1714,7 +1714,7 @@ function init(){
 var playerVelVec = [0,0,0];	//TODO use matrix/quaternion for this
 							//todo not a global! how to set listeners eg mousemove witin iteratemechanics???
 var fireDirectionVec = [0,0,1];	//TODO check if requried to define something here
-var muzzleVel = 15;
+var muzzleVel = 2;
 							
 var testInfo="";
 
@@ -1724,6 +1724,10 @@ tetraPlanesToCheck.push([0,Math.sqrt(3),0]);
 tetraPlanesToCheck.push([0,-1/Math.sqrt(3),-2*Math.sqrt(2/3)]);
 tetraPlanesToCheck.push([Math.sqrt(2),-1/Math.sqrt(3),Math.sqrt(2/3)]);
 tetraPlanesToCheck.push([-Math.sqrt(2),-1/Math.sqrt(3),Math.sqrt(2/3)]);
+
+var tetraInnerPlanesToCheck = [];
+var innerPlaneScale = 1.33;
+tetraInnerPlanesToCheck.push([[0,0,-0.666*Math.sqrt(3)*innerPlaneScale],[-innerPlaneScale,0,0.333*Math.sqrt(3)*innerPlaneScale],[innerPlaneScale,0,0.333*Math.sqrt(3)*innerPlaneScale]]);
 
 var iterateMechanics = (function iterateMechanics(){
 	var lastTime=(new Date()).getTime();
@@ -1991,16 +1995,37 @@ var iterateMechanics = (function iterateMechanics(){
 							//	isInside = false;
 							//}
 							
-							//check within 4 outer faces of tetrahedron
-							if (planeCheck(tetraPlanesToCheck[0],projectedPos) ||
-								planeCheck(tetraPlanesToCheck[1],projectedPos) || 
-								planeCheck(tetraPlanesToCheck[2],projectedPos) ||
-								planeCheck(tetraPlanesToCheck[3],projectedPos) 
-							   ){
+							var selection = -1;
+							var best = 1;
+							
+							//identify which quarter of tetrahedron are in (therefore which outer plane, set of 3 inner planes to check against.
+							for (var ii=0;ii<4;ii++){
+								var toPlane = planeCheck(tetraPlanesToCheck[ii],projectedPos);
+								if (toPlane < best){
+									best = toPlane;
+									selection = ii;
+								}
+							}
+							
+							if (best < -1){
 								isInside = false;
 							}
 							
-							//TODO find if hitting frame
+							//temp - only check for 1 quarter.
+							if (selection!=0){
+								isInside = false;
+							}
+							
+							//check is not inside all 3 inner planes for relevant quarter.
+							//TODO array of planes to check for each quarter.
+							if (selection==0){
+								var innerPlanes = tetraInnerPlanesToCheck[selection];
+								if (planeCheck(innerPlanes[0],projectedPos) >-1 &&
+									planeCheck(innerPlanes[1],projectedPos) >-1 &&
+									planeCheck(innerPlanes[2],projectedPos) >-1){
+										isInside = false;
+									}
+							}
 							
 							if (isInside){
 								detonateBullet();
@@ -2008,7 +2033,7 @@ var iterateMechanics = (function iterateMechanics(){
 							
 							//todo 4th number for comparison value - means can still work if plane thru origin.
 							function planeCheck(planeVec,pos){
-								return (pos[0]*planeVec[0] + pos[1]*planeVec[1] +pos[2]*planeVec[2] < -1)
+								return pos[0]*planeVec[0] + pos[1]*planeVec[1] +pos[2]*planeVec[2];
 							}
 						}
 					}
