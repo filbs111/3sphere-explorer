@@ -612,10 +612,12 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 	}
 	
-	modelScale = 1.0;
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 	
 	if (guiParams["draw 24-cell"]){
+		modelScale = 1.0;
+		modelScale*=guiParams["24-cell scale"];
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+	
 		drawArrayOfModels(
 			cellMatData.d24.cells,
 			(guiParams["culling"] ? 1: false),
@@ -1509,11 +1511,12 @@ var guiParams={
 	},
 	"draw 5-cell":false,
 	"subdiv frames":true,
-	"draw 8-cell":true,
+	"draw 8-cell":false,
 	"8-cell scale":0.3,		//0.5 to tesselate
-	"draw 16-cell":true,
+	"draw 16-cell":false,
 	"16-cell scale":0.45,		//1 to tesselate
-	"draw 24-cell":false,
+	"draw 24-cell":true,
+	"24-cell scale":0.2,
 	"draw 120-cell":false,
 	"draw 600-cell":false,
 	"draw teapot":false,
@@ -1584,12 +1587,13 @@ function init(){
 	
 	var polytopesFolder = gui.addFolder('polytopes');
 	polytopesFolder.add(guiParams,"draw 5-cell");
-	polytopesFolder.add(guiParams,"draw 8-cell",false);
+	polytopesFolder.add(guiParams,"draw 8-cell");
 	polytopesFolder.add(guiParams,"8-cell scale",0.05,2.0,0.05);
 	polytopesFolder.add(guiParams,"draw 16-cell");
 	polytopesFolder.add(guiParams,"16-cell scale",0.05,2.0,0.05);
 	polytopesFolder.add(guiParams,"subdiv frames");
-	polytopesFolder.add(guiParams,"draw 24-cell",false);
+	polytopesFolder.add(guiParams,"draw 24-cell");
+	polytopesFolder.add(guiParams,"24-cell scale",0.05,2.0,0.05);
 	polytopesFolder.add(guiParams,"draw 120-cell",true);
 	polytopesFolder.add(guiParams,"draw 600-cell",true);
 	gui.add(guiParams,"draw teapot");
@@ -1935,6 +1939,26 @@ var iterateMechanics = (function iterateMechanics(){
 								if (count>1){
 									detonateBullet();
 								}
+							}
+						}
+					}
+				}
+				
+				
+				//octohedron collision
+				if (guiParams["draw 24-cell"]){
+					var cellSize24 = guiParams["24-cell scale"];
+					
+					for (dd in cellMatData.d24.cells){
+						var thisMat = cellMatData.d24.cells[dd];
+						mat4.set(thisMat, relativeMat);
+						mat4.transpose(relativeMat);
+						mat4.multiply(relativeMat, bulletMatrix);
+												
+						if (relativeMat[15]>0){
+							var projectedPosAbs = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return Math.abs(val);});
+							if (projectedPosAbs[0]+projectedPosAbs[1]+projectedPosAbs[2] < cellSize24*relativeMat[15]){
+								detonateBullet();
 							}
 						}
 					}
