@@ -609,7 +609,16 @@ function drawWorldScene(frameTime, isCubemapView) {
 			(guiParams["culling"] ? 1.73: false),
 			drawTetraFrame
 		);	
-		
+		/*
+		//see how tetra frame is aligned
+		//seems aligned it in poor way - verts at (-1,-1,1),(1,1,-1),... maybe better
+		drawArrayOfModels(
+			//[cellMatData.d16[0]],
+			cellMatData.d16,
+			(guiParams["culling"] ? 1.73: false),
+			drawCubeFrame
+		);	
+		*/
 	}
 	
 	
@@ -1508,16 +1517,16 @@ var guiParams={
 		'boxes z=w=0':false
 	},
 	'random boxes':{
-		number:200,
+		number:0,
 		size:0.02
 	},
 	"draw 5-cell":false,
 	"subdiv frames":true,
 	"draw 8-cell":false,
 	"8-cell scale":0.3,		//0.5 to tesselate
-	"draw 16-cell":false,
-	"16-cell scale":0.45,		//1 to tesselate
-	"draw 24-cell":true,
+	"draw 16-cell":true,
+	"16-cell scale":0.1,		//1 to tesselate
+	"draw 24-cell":false,
 	"24-cell scale":1,
 	"draw 120-cell":false,
 	"draw 600-cell":false,
@@ -1708,6 +1717,14 @@ var fireDirectionVec = [0,0,1];	//TODO check if requried to define something her
 var muzzleVel = 15;
 							
 var testInfo="";
+
+//tetrahedron planes for collision check
+var tetraPlanesToCheck = [];
+tetraPlanesToCheck.push([0,Math.sqrt(3),0]);
+tetraPlanesToCheck.push([0,-1/Math.sqrt(3),-2*Math.sqrt(2/3)]);
+tetraPlanesToCheck.push([Math.sqrt(2),-1/Math.sqrt(3),Math.sqrt(2/3)]);
+tetraPlanesToCheck.push([-Math.sqrt(2),-1/Math.sqrt(3),Math.sqrt(2/3)]);
+
 var iterateMechanics = (function iterateMechanics(){
 	var lastTime=(new Date()).getTime();
 	var moveSpeed=0.00015;
@@ -1947,6 +1964,56 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 				
 				
+				//tetrahedron. (16-cell and 600-cell)
+				if (guiParams["draw 16-cell"]){
+					var cellSize16 = guiParams["16-cell scale"];
+					for (dd in cellMatData.d16){
+						var thisMat = cellMatData.d16[dd];
+						mat4.set(thisMat, relativeMat);
+						mat4.transpose(relativeMat);
+						mat4.multiply(relativeMat, bulletMatrix);
+						
+						if (relativeMat[15]>0){
+							var projectedPos = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return val/(cellSize16*relativeMat[15]);});
+							
+							//initially just find a corner
+							//seems is triangular pyramid, with "top" in 1-axis direction
+							//seems 0 - axis parrallel to one base edge
+							//1 - "up"
+							//2 - other base axis
+							// ie top point = (0,sqrt(3),0)
+							// therefore inside has to be above base ( pos[2] > -0.33*root(3) = 1/root(3)
+														
+							var isInside = true;
+							
+							//bottom plane
+							//if (projectedPos[1] <-0.33*Math.sqrt(3)){
+							//	isInside = false;
+							//}
+							
+							//check within 4 outer faces of tetrahedron
+							if (planeCheck(tetraPlanesToCheck[0],projectedPos) ||
+								planeCheck(tetraPlanesToCheck[1],projectedPos) || 
+								planeCheck(tetraPlanesToCheck[2],projectedPos) ||
+								planeCheck(tetraPlanesToCheck[3],projectedPos) 
+							   ){
+								isInside = false;
+							}
+							
+							//TODO find if hitting frame
+							
+							if (isInside){
+								detonateBullet();
+							}
+							
+							//todo 4th number for comparison value - means can still work if plane thru origin.
+							function planeCheck(planeVec,pos){
+								return (pos[0]*planeVec[0] + pos[1]*planeVec[1] +pos[2]*planeVec[2] < -1)
+							}
+						}
+					}
+				}
+				
 				//octohedron collision
 				if (guiParams["draw 24-cell"]){
 					var cellSize24 = guiParams["24-cell scale"];
@@ -1958,6 +2025,9 @@ var iterateMechanics = (function iterateMechanics(){
 						mat4.multiply(relativeMat, bulletMatrix);
 												
 						if (relativeMat[15]>0){
+							//todo speed up. division for all vec parts not necessary
+							//change number inside if rhs comparison
+							//also should apply multiplier to 0.8 for inner check.
 							var projectedPosAbs = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return Math.abs(val)/(cellSize24*relativeMat[15]);});
 							if (projectedPosAbs[0]+projectedPosAbs[1]+projectedPosAbs[2] < 1){
 								//inside octohedron. frame is octohedron minus small octohedron extruded.
