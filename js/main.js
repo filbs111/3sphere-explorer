@@ -1219,6 +1219,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		mat4.multiply(mvMatrix,singleExplosion.matrix);
 		//var radius = singleExplosion.life*0.0002;
 		var radius = (100-singleExplosion.life)*0.0005;
+		//var radius = (100-singleExplosion.life)*0.00005; //small for collision detection testing
 		var opac = 0.01*singleExplosion.life;
 		if (frustrumCull(mvMatrix,radius)){	
 				//TODO check is draw order independent transparency
@@ -1227,6 +1228,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
 		}
 		singleExplosion.life-=0.2;
+		//singleExplosion.life-=0.01;	//slow for collision detection testing
 		if (singleExplosion.life<1){
 			delete explosions[ee];
 		}
@@ -1516,7 +1518,7 @@ var guiParams={
 	"draw 16-cell":false,
 	"16-cell scale":0.45,		//1 to tesselate
 	"draw 24-cell":true,
-	"24-cell scale":0.2,
+	"24-cell scale":1,
 	"draw 120-cell":false,
 	"draw 600-cell":false,
 	"draw teapot":false,
@@ -1956,9 +1958,14 @@ var iterateMechanics = (function iterateMechanics(){
 						mat4.multiply(relativeMat, bulletMatrix);
 												
 						if (relativeMat[15]>0){
-							var projectedPosAbs = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return Math.abs(val);});
-							if (projectedPosAbs[0]+projectedPosAbs[1]+projectedPosAbs[2] < cellSize24*relativeMat[15]){
-								detonateBullet();
+							var projectedPosAbs = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return Math.abs(val)/(cellSize24*relativeMat[15]);});
+							if (projectedPosAbs[0]+projectedPosAbs[1]+projectedPosAbs[2] < 1){
+								//inside octohedron. frame is octohedron minus small octohedron extruded.
+								if (projectedPosAbs[0]+projectedPosAbs[1]>2*projectedPosAbs[2]+0.8 ||
+								    projectedPosAbs[0]+projectedPosAbs[2]>2*projectedPosAbs[1]+0.8 ||
+								    projectedPosAbs[1]+projectedPosAbs[2]>2*projectedPosAbs[0]+0.8){
+									detonateBullet();
+								}
 							}
 						}
 					}
