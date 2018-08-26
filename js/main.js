@@ -1838,7 +1838,7 @@ var iterateMechanics = (function iterateMechanics(){
 				gpMove[1] = Math.abs(axes[1])>deadZone ? moveSpeed*axes[1] : 0; //vertical
 				gpMove[2] = moveSpeed*(buttons[7].value-buttons[6].value); //fwd/back	//note Firefox at least fails to support analog triggers https://bugzilla.mozilla.org/show_bug.cgi?id=1434408
 				
-				var magsq = gpMove.reduce(function(total, val){return total+ val*val;}, 0);			
+				var magsq = gpMove.reduce(function(total, val){return total+ val*val;}, 0);
 				gpMove = scalarvectorprod(10000000000*magsq,gpMove);
 				
 				//testInfo=[axes,buttons,gpMove,magsq];
@@ -1859,8 +1859,10 @@ var iterateMechanics = (function iterateMechanics(){
 				gpRotate[1] = Math.abs(axes[2])>deadZone ? fixedRotateAmount*axes[2] : 0; //turn
 				gpRotate[2] = 0;	//moved to code above
 					
-				magsq = gpRotate.reduce(function(total, val){return total+ val*val;}, 0);		
-				rotatePlayer(scalarvectorprod(100000*magsq,gpRotate));	//TODO add rotational momentum - not direct rotate
+				magsq = gpRotate.reduce(function(total, val){return total+ val*val;}, 0);
+				var magpow = Math.pow(50*magsq,1.5);
+				
+				rotatePlayer(scalarvectorprod(100000*magpow,gpRotate));	//TODO add rotational momentum - not direct rotate
 			}
 			
 			playerVelVec=scalarvectorprod(0.996,playerVelVec);
