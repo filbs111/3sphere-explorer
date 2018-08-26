@@ -1989,16 +1989,21 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 				
 				
+				
 				//tetrahedron. (16-cell and 600-cell)
 				if (guiParams["draw 16-cell"]){
 					var cellSize16 = guiParams["16-cell scale"];
+					var critValue16 = 1/Math.sqrt(1+cellSize16*cellSize16*3);
+				
 					for (dd in cellMatData.d16){
 						var thisMat = cellMatData.d16[dd];
 						mat4.set(thisMat, relativeMat);
 						mat4.transpose(relativeMat);
 						mat4.multiply(relativeMat, bulletMatrix);
-						
-						if (relativeMat[15]>0){
+							
+						if (relativeMat[15]>0){			
+							if (relativeMat[15]<critValue16){continue;}	//early sphere check
+							
 							var projectedPos = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return val/(cellSize16*relativeMat[15]);});
 							
 							//initially just find a corner
