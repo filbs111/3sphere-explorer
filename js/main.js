@@ -1992,19 +1992,24 @@ var iterateMechanics = (function iterateMechanics(){
 				
 				//tetrahedron. (16-cell and 600-cell)
 				if (guiParams["draw 16-cell"]){
-					var cellSize16 = guiParams["16-cell scale"];
-					var critValue16 = 1/Math.sqrt(1+cellSize16*cellSize16*3);
+					checkTetraCollisionForArray(guiParams["16-cell scale"], cellMatData.d16);
+				}
+				if (guiParams["draw 600-cell"]){
+					checkTetraCollisionForArray(0.385/(4/Math.sqrt(6)), cellMatData.d600);
+				}
 				
-					for (dd in cellMatData.d16){
-						var thisMat = cellMatData.d16[dd];
+				function checkTetraCollisionForArray(cellScale, matsArr){
+					var critVal = 1/Math.sqrt(1+cellScale*cellScale*3);
+					for (dd in matsArr){
+						var thisMat = matsArr[dd];
 						mat4.set(thisMat, relativeMat);
 						mat4.transpose(relativeMat);
 						mat4.multiply(relativeMat, bulletMatrix);
 							
 						if (relativeMat[15]>0){			
-							if (relativeMat[15]<critValue16){continue;}	//early sphere check
+							if (relativeMat[15]<critVal){continue;}	//early sphere check
 							
-							var projectedPos = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return val/(cellSize16*relativeMat[15]);});
+							var projectedPos = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return val/(cellScale*relativeMat[15]);});
 							
 							//initially just find a corner
 							//seems is triangular pyramid, with "top" in 1-axis direction
@@ -2015,11 +2020,6 @@ var iterateMechanics = (function iterateMechanics(){
 							// therefore inside has to be above base ( pos[2] > -0.33*root(3) = 1/root(3)
 														
 							var isInside = true;
-							
-							//bottom plane
-							//if (projectedPos[1] <-0.33*Math.sqrt(3)){
-							//	isInside = false;
-							//}
 							
 							var selection = -1;
 							var best = 1;
