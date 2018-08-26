@@ -263,12 +263,14 @@ function drawScene(frameTime){
 	
 	var saveWorld = currentWorld;
 	
-	mat4.set(playerCamera, offsetPlayerCamera);	
+	mat4.set(playerCameraInterp, offsetPlayerCamera);	
+	//mat4.set(playerCamera, offsetPlayerCamera);	
 	
 	offsetCam.setType(guiParams.cameraType);
 
 	var offsetSteps = 100;
 	var offsetVecStep = offsetCam.getVec().map(function(item){return item/offsetSteps;});
+	portalTest(offsetPlayerCamera,0);
 	for (var ii=0;ii<100;ii++){	//TODO more efficient. if insufficient subdivision, transition stepped.
 		xyzmove4mat(offsetPlayerCamera,offsetVecStep);	
 		portalTest(offsetPlayerCamera,0);
@@ -1370,6 +1372,7 @@ var moveAwayVec;
 var mvMatrix = mat4.create();
 var pMatrix = mat4.create();
 var playerCamera = mat4.create();
+var playerCameraInterp = mat4.create();
 var offsetPlayerCamera = mat4.create();
 
 var worldCamera = mat4.create();
@@ -1765,6 +1768,7 @@ var iterateMechanics = (function iterateMechanics(){
 	var autoFireCountdown=0;
 	//var autoFireCountdownStartVal=6;
 	var autoFireCountdownStartVal=1;
+	var lastPlayerAngMove = [0,0,0];	//for interpolation
 	
 	return function(){
 		//GAMEPAD
@@ -1862,7 +1866,8 @@ var iterateMechanics = (function iterateMechanics(){
 				magsq = gpRotate.reduce(function(total, val){return total+ val*val;}, 0);
 				var magpow = Math.pow(50*magsq,1.5);
 				
-				rotatePlayer(scalarvectorprod(100000*magpow,gpRotate));	//TODO add rotational momentum - not direct rotate
+				lastPlayerAngMove = scalarvectorprod(100000*magpow,gpRotate);
+				rotatePlayer(lastPlayerAngMove);	//TODO add rotational momentum - not direct rotate
 			}
 			
 			playerVelVec=scalarvectorprod(0.996,playerVelVec);
@@ -2110,6 +2115,10 @@ var iterateMechanics = (function iterateMechanics(){
 		playerLight = playerLightUnscaled.map(function(val){return val*flashAmount});
 		
 		portalTest(playerCamera, 0);
+		
+		//rotate remainder of time for aesthetic. (TODO ensure doesn't cock up frustum culling, hud etc)
+		mat4.set(playerCamera, playerCameraInterp);
+		xyzrotate4mat(playerCameraInterp, scalarvectorprod(timeTracker/timeStep -1,lastPlayerAngMove));
 	}
 })();
 
@@ -2275,7 +2284,7 @@ function log(info){		//can to enable/disable logging globally
 	//console.log(info);
 }
 function dropSpaceship(){
-	mat4.set(playerCamera,sshipMatrix);	//copy current player 4-rotation matrix to the spaceship object
+	mat4.set(playerCameraInterp,sshipMatrix);	//copy current player 4-rotation matrix to the spaceship object
 }
 var gunEven=1;
 function fireGun(){
