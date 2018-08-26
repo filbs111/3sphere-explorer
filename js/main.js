@@ -608,17 +608,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			cellMatData.d16,
 			(guiParams["culling"] ? 1.73: false),
 			drawTetraFrame
-		);	
-		/*
-		//see how tetra frame is aligned
-		//seems aligned it in poor way - verts at (-1,-1,1),(1,1,-1),... maybe better
-		drawArrayOfModels(
-			//[cellMatData.d16[0]],
-			cellMatData.d16,
-			(guiParams["culling"] ? 1.73: false),
-			drawCubeFrame
-		);	
-		*/
+		);
 	}
 	
 	
@@ -663,11 +653,14 @@ function drawWorldScene(frameTime, isCubemapView) {
 
 	//new draw dodeca stuff...
 	if (guiParams["draw 120-cell"]){
-		var dodecaScale=0.515;	//guess TODO use right value (0.5 is too small)
+		//var dodecaScale=0.515;	//guess TODO use right value (0.5 is too small)
+		var dodecaScale=2;	
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [dodecaScale,dodecaScale,dodecaScale]);
 		drawArrayOfModels(
-			cellMatData.d120,
-			(guiParams["culling"] ? 0.4: false),
+			//cellMatData.d120,
+			[cellMatData.d120[0]],
+			//(guiParams["culling"] ? 0.4: false),	//note culling value is for 0.515
+			false,
 			drawDodecaFrame
 		);
 	}
@@ -1524,11 +1517,11 @@ var guiParams={
 	"subdiv frames":true,
 	"draw 8-cell":false,
 	"8-cell scale":0.3,		//0.5 to tesselate
-	"draw 16-cell":true,
+	"draw 16-cell":false,
 	"16-cell scale":1,		//1 to tesselate
 	"draw 24-cell":false,
 	"24-cell scale":1,
-	"draw 120-cell":false,
+	"draw 120-cell":true,
 	"draw 600-cell":false,
 	"draw teapot":false,
 	"teapot scale":0.7,
@@ -1605,8 +1598,8 @@ function init(){
 	polytopesFolder.add(guiParams,"subdiv frames");
 	polytopesFolder.add(guiParams,"draw 24-cell");
 	polytopesFolder.add(guiParams,"24-cell scale",0.05,2.0,0.05);
-	polytopesFolder.add(guiParams,"draw 120-cell",true);
-	polytopesFolder.add(guiParams,"draw 600-cell",true);
+	polytopesFolder.add(guiParams,"draw 120-cell");
+	polytopesFolder.add(guiParams,"draw 600-cell");
 	gui.add(guiParams,"draw teapot");
 	gui.add(guiParams,"teapot scale",0.2,2.0,0.05);
 	gui.add(guiParams,"draw spaceship",true);
@@ -2084,6 +2077,15 @@ var iterateMechanics = (function iterateMechanics(){
 					}
 				}
 				
+				if (guiParams["draw 120-cell"]){
+					//dodecohedron collision. 
+					//initially, sphere check
+					// for convenience, make 1 dodeca, make quite big
+					// then outer dodeca collision (6 abs checks)
+					// then calculate which of abs value along axes is smallest,
+					// apply reflection along some axis depending on sign??
+					// then apply 5 inner thing checks
+				}
 						
 				function detonateBullet(){	//TODO what scope does this have? best practice???
 					bullet.vel = [0,0,0];	//if colliding with target, stop bullet.
