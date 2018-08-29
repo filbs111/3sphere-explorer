@@ -656,11 +656,11 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//new draw dodeca stuff...
 	if (guiParams["draw 120-cell"]){
 		//var dodecaScale=0.515;	//guess TODO use right value (0.5 is too small)
-		var dodecaScale=2;	
+		//var dodecaScale=2;	
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [dodecaScale,dodecaScale,dodecaScale]);
 		drawArrayOfModels(
 			//cellMatData.d120,
-			[cellMatData.d120[0]],
+			[cellMatData.d120[2]],
 			//(guiParams["culling"] ? 0.4: false),	//note culling value is for 0.515
 			false,
 			drawDodecaFrame
@@ -1231,8 +1231,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniform3fv(transpShadProg.uniforms.uModelScale, [radius,radius,radius]);
 			drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
 		}
-		singleExplosion.life-=0.1;
-		//singleExplosion.life-=0.02;	//slow for collision detection testing
+		//singleExplosion.life-=0.1;
+		singleExplosion.life-=0.02;	//slow for collision detection testing
 		if (singleExplosion.life<1){
 			delete explosions[ee];
 		}
@@ -1710,7 +1710,7 @@ function init(){
 var playerVelVec = [0,0,0];	//TODO use matrix/quaternion for this
 							//todo not a global! how to set listeners eg mousemove witin iteratemechanics???
 var fireDirectionVec = [0,0,1];	//TODO check if requried to define something here
-var muzzleVel = 10;
+var muzzleVel = 2;
 							
 var testInfo="";
 
@@ -1745,6 +1745,10 @@ for (var ii=0;ii<4;ii++){
 	}
 	tetraInnerPlanesToCheck.push(innerPlanes);
 }
+
+//move outside since used in collision and drawing (TODO collide/draw methods on dodeca object)
+//var dodecaScale=0.515;	//guess TODO use right value (0.5 is too small)
+var dodecaScale=0.7;	//some larger number for testing
 
 var iterateMechanics = (function iterateMechanics(){
 	var lastTime=(new Date()).getTime();
@@ -2092,6 +2096,58 @@ var iterateMechanics = (function iterateMechanics(){
 					// then calculate which of abs value along axes is smallest,
 					// apply reflection along some axis depending on sign??
 					// then apply 5 inner thing checks
+					
+					//var dodecaScaleFudge = dodecaScale * (0.4/0.505);	//THIS IS A FUDGE!! TODO where do numbers come from!!
+					var dodecaScaleFudge = dodecaScale;	//too big (so can see effect of other part of collision
+					var critVal = 1/Math.sqrt(1+dodecaScaleFudge*dodecaScaleFudge);
+
+					for (dd in [cellMatData.d120[2]]){	//single element of array for convenience
+						//var thisMat = cellMatData.d120[dd];
+						var thisMat = cellMatData.d120[2];
+						mat4.set(thisMat, relativeMat);
+						mat4.transpose(relativeMat);
+						mat4.multiply(relativeMat, bulletMatrix);
+												
+						if (relativeMat[15]>0){
+								//if outside bounding sphere
+							if (relativeMat[15]<critVal){continue;}
+							
+							var projectedPos = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return val/(dodecaScale*relativeMat[15]);});
+							
+								//shave top/bottom off 
+							//if (Math.abs(relativeMat[13]/relativeMat[15])>dodecaScale*0.525){continue;}	//todo find correct number!
+							if (Math.abs(projectedPos[1])>0.63){continue;}	//todo find correct number!
+																			//todo at least use correct relation to bounding sphere, even if otherwise fudge val
+							//correct number ? apparently icosahedron vertices at 
+							// (0, ±1, ± φ)
+							//(±1, ± φ, 0) 
+							//(± φ, 0, ±1)
+							
+							//can't use directly, since am using with verts at (±1,0,0), but triangle of centre, outer edge? 
+							//between (±1, φ, 0)  ->dot product = (φ^2 - 1) / (φ^2 + 1)
+							//using identity φ+1 = φ^2
+							// -> φ / (φ + 2)
+							
+							//...
+							// https://en.wikipedia.org/wiki/Regular_icosahedron
+							// Spherical coordinates
+							//The locations of the vertices of a regular icosahedron can be described using spherical coordinates, for instance as latitude and longitude. If two vertices are taken to be at the north and south poles (latitude ±90°), then the other ten vertices are at latitude ±arctan(1/2) ≈ ±26.57°. These ten vertices are at evenly spaced longitudes (36° apart), alternating between north and south latitudes. 
+							
+							
+							var yValDirection = 1/Math.sqrt(5);
+							var xzValDirection = 2*yValDirection;
+							
+							var hasMissed = false;
+							for (var ang=0;ang<5;ang++){
+								var angRad = ang*Math.PI/2.5;
+								var myDotProduct = yValDirection*projectedPos[1] + xzValDirection*(Math.cos(angRad)*projectedPos[0]+Math.sin(angRad)*projectedPos[2]);
+								if (Math.abs(myDotProduct)>0.63){hasMissed = true;}
+							}
+							if (hasMissed){continue;}
+							
+							detonateBullet();
+						}
+					}
 				}
 						
 				function detonateBullet(){	//TODO what scope does this have? best practice???
