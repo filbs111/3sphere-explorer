@@ -2142,46 +2142,32 @@ var iterateMechanics = (function iterateMechanics(){
 							//inner plane check
 							
 							var isInsidePrism = true;
+							var dirA,dirB;
 							if (selection == 0){
-								var reversedPos0 = best>0 ? projectedPos[0]:-projectedPos[0];
-								for (var ang=0;ang<5;ang++){
-									var angRad = ang*Math.PI/2.5;
-									var myDotP = reversedPos0*Math.cos(angRad) + projectedPos[2]*Math.sin(angRad);
-									if (myDotP>0.31){isInsidePrism=false;}
-								}
-								if (isInsidePrism){isInside=false;}
-							}else{
-
-							//todo precalc this stuff...
-								/*
-								var yValDirection = 1/Math.sqrt(5);
-								var xzValDirection = 2*yValDirection;
-								for (var ang=0;ang<5;ang++){
-									var angRad = ang*Math.PI/2.5;
-									dodecaPlanesToCheck.push([xzValDirection*Math.cos(angRad), yValDirection, xzValDirection*Math.sin(angRad)]);
-								}
-								*/
+								dirA = [1,0,0];
+								dirB = [0,0,1];
 								
+							}else{
 								var ang1 = selection-1;
 								var angRad1 = ang1*Math.PI/2.5;
 								
 								//2 axes perpendicular to this face
-								var dirA = [-yValDirection*Math.cos(angRad1),xzValDirection, -yValDirection*Math.sin(angRad1)];
-								var dirB = [Math.sin(angRad1),0,-Math.cos(angRad1)];
-								
-								//dot product of directions with 
-								var dotA = dirA[0]*projectedPos[0] + dirA[1]*projectedPos[1] + dirA[2]*projectedPos[2];  
-								var dotB = dirB[0]*projectedPos[0] + dirB[1]*projectedPos[1] + dirB[2]*projectedPos[2];  
-								
-								dotA = best>0 ? dotA:-dotA;	//????
-								
-								for (var ang=0;ang<5;ang++){
-									var angRad = ang*Math.PI/2.5;	//oh shit where has this 0.25 come from?!!
-									var myDotP = dotA*Math.cos(angRad) + dotB*Math.sin(angRad);
-									if (myDotP>0.31){isInsidePrism=false;}
-								}
-								if (isInsidePrism){isInside=false;}
+								dirA = [-yValDirection*Math.cos(angRad1),xzValDirection, -yValDirection*Math.sin(angRad1)];
+								dirB = [Math.sin(angRad1),0,-Math.cos(angRad1)];
 							}
+							
+							//dot product of directions with 
+							var dotA = dirA[0]*projectedPos[0] + dirA[1]*projectedPos[1] + dirA[2]*projectedPos[2];  
+							var dotB = dirB[0]*projectedPos[0] + dirB[1]*projectedPos[1] + dirB[2]*projectedPos[2];  
+							
+							dotA = best>0 ? dotA:-dotA;	//????
+							
+							for (var ang=0;ang<5;ang++){
+								var angRad = ang*Math.PI/2.5;	//oh shit where has this 0.25 come from?!!
+								var myDotP = dotA*Math.cos(angRad) + dotB*Math.sin(angRad);
+								if (myDotP>0.31){isInsidePrism=false;}
+							}
+							if (isInsidePrism){isInside=false;}
 							
 							if (isInside){
 								detonateBullet();
