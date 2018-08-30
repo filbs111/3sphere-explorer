@@ -2124,7 +2124,6 @@ var iterateMechanics = (function iterateMechanics(){
 							
 							var projectedPos = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return val/(dodecaScale*relativeMat[15]);});
 							
-							var isInside = true;
 							var selection = -1;
 							var best = 0;
 							for (var ii in dodecaPlanesToCheck){
@@ -2136,7 +2135,7 @@ var iterateMechanics = (function iterateMechanics(){
 							}
 							
 							if (Math.abs(best) > 0.63){
-								isInside = false;
+								continue;
 							}
 							
 							//inner plane check
@@ -2167,11 +2166,8 @@ var iterateMechanics = (function iterateMechanics(){
 								var myDotP = dotA*Math.cos(angRad) + dotB*Math.sin(angRad);
 								if (myDotP>0.31){isInsidePrism=false;}
 							}
-							if (isInsidePrism){isInside=false;}
+							if (!isInsidePrism){detonateBullet();}
 							
-							if (isInside){
-								detonateBullet();
-							}
 							
 							//todo reuse tetra version / general dot product function!
 							function planeCheck(planeVec,pos){
