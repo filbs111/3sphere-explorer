@@ -2124,13 +2124,24 @@ var iterateMechanics = (function iterateMechanics(){
 							
 							var projectedPos = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return val/(dodecaScale*relativeMat[15]);});
 							
-							var hasMissed = false;
+							var isInside = true;
+							var selection = -1;
+							var best = -1;
 							for (var ii in dodecaPlanesToCheck){
-								if (Math.abs(planeCheck(dodecaPlanesToCheck[ii],projectedPos))>0.63){hasMissed=true;}
+								var toPlane = planeCheck(dodecaPlanesToCheck[ii],projectedPos);
+								if (Math.abs(toPlane) > best){
+									best = toPlane;
+									selection = ii;
+								}
 							}
-							if (hasMissed){continue;}
 							
-							detonateBullet();
+							if (Math.abs(best) > 0.63){
+								isInside = false;
+							}
+							
+							if (isInside){
+								detonateBullet();
+							}
 							
 							//todo reuse tetra version / general dot product function!
 							function planeCheck(planeVec,pos){
