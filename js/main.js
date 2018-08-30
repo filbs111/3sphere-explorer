@@ -1842,7 +1842,7 @@ var iterateMechanics = (function iterateMechanics(){
 		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
 		
 			playerVelVec[0]+=thrust*(keyThing.keystate(65)-keyThing.keystate(68)); //lateral
-			playerVelVec[1]+=thrust*(keyThing.keystate(17)-keyThing.keystate(32)); //vertical
+			playerVelVec[1]+=thrust*(keyThing.keystate(32)-keyThing.keystate(220)); //vertical
 			playerVelVec[2]+=thrust*(keyThing.keystate(87)-keyThing.keystate(83)); //fwd/back
 			
 			playerAngVelVec[0]+=keyThing.keystate(40)-keyThing.keystate(38); //pitch
