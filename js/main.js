@@ -1222,7 +1222,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,singleExplosion.matrix);
 		//var radius = singleExplosion.life*0.0002;
-		var radius = (100-singleExplosion.life)*0.0002;
+		var radius = (100-singleExplosion.life)*0.0003;
 		//var radius = (100-singleExplosion.life)*0.00005; //small for collision detection testing
 		var opac = 0.01*singleExplosion.life;
 		if (frustrumCull(mvMatrix,radius)){	
@@ -1232,7 +1232,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
 		}
 		//singleExplosion.life-=0.1;
-		singleExplosion.life-=0.02;	//slow for collision detection testing
+		singleExplosion.life-=0.01;	//slow for collision detection testing
 		if (singleExplosion.life<1){
 			delete explosions[ee];
 		}
@@ -1710,7 +1710,7 @@ function init(){
 var playerVelVec = [0,0,0];	//TODO use matrix/quaternion for this
 							//todo not a global! how to set listeners eg mousemove witin iteratemechanics???
 var fireDirectionVec = [0,0,1];	//TODO check if requried to define something here
-var muzzleVel = 2;
+var muzzleVel = 10;
 							
 var testInfo="";
 
@@ -2141,12 +2141,43 @@ var iterateMechanics = (function iterateMechanics(){
 							
 							//inner plane check
 							
+							var isInsidePrism = true;
 							if (selection == 0){
-								var isInsidePrism = true;
-								var reversedPos0 = projectedPos[1]>0 ? projectedPos[0]:-projectedPos[0];
+								var reversedPos0 = best>0 ? projectedPos[0]:-projectedPos[0];
 								for (var ang=0;ang<5;ang++){
 									var angRad = ang*Math.PI/2.5;
 									var myDotP = reversedPos0*Math.cos(angRad) + projectedPos[2]*Math.sin(angRad);
+									if (myDotP>0.31){isInsidePrism=false;}
+								}
+								if (isInsidePrism){isInside=false;}
+							}else{
+
+							//todo precalc this stuff...
+								/*
+								var yValDirection = 1/Math.sqrt(5);
+								var xzValDirection = 2*yValDirection;
+								for (var ang=0;ang<5;ang++){
+									var angRad = ang*Math.PI/2.5;
+									dodecaPlanesToCheck.push([xzValDirection*Math.cos(angRad), yValDirection, xzValDirection*Math.sin(angRad)]);
+								}
+								*/
+								
+								var ang1 = selection-1;
+								var angRad1 = ang1*Math.PI/2.5;
+								
+								//2 axes perpendicular to this face
+								var dirA = [Math.sin(angRad1),0,-Math.cos(angRad1)];	//signs??
+								var dirB = [yValDirection*Math.cos(angRad1),-xzValDirection, yValDirection*Math.sin(angRad1)];
+								
+								//dot product of directions with 
+								var dotA = dirA[0]*projectedPos[0] + dirA[1]*projectedPos[1] + dirA[2]*projectedPos[2];  
+								var dotB = dirB[0]*projectedPos[0] + dirB[1]*projectedPos[1] + dirB[2]*projectedPos[2];  
+								
+								dotB = best>0 ? -dotB:dotB;	//????
+								
+								for (var ang=0;ang<5;ang++){
+									var angRad = (ang+0.25)*Math.PI/2.5;	//oh shit where has this 0.25 come from?!!
+									var myDotP = dotA*Math.cos(angRad) + dotB*Math.sin(angRad);
 									if (myDotP>0.31){isInsidePrism=false;}
 								}
 								if (isInsidePrism){isInside=false;}
