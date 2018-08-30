@@ -1751,12 +1751,15 @@ for (var ii=0;ii<4;ii++){
 var dodecaScale=0.7;	//some larger number for testing
 
 var dodecaPlanesToCheck = [];
+var dodecaDirs = [];	//a,b - really these are orthoganal directions with dodecaPlanesToCheck vectors. todo combo into matrix.
 dodecaPlanesToCheck.push([0,1,0]);
+dodecaDirs.push([[1,0,0],[0,0,1]]);
 var yValDirection = 1/Math.sqrt(5);
 var xzValDirection = 2*yValDirection;
 for (var ang=0;ang<5;ang++){
 	var angRad = ang*Math.PI/2.5;
 	dodecaPlanesToCheck.push([xzValDirection*Math.cos(angRad), yValDirection, xzValDirection*Math.sin(angRad)]);
+	dodecaDirs.push([[-yValDirection*Math.cos(angRad),xzValDirection, -yValDirection*Math.sin(angRad)], [Math.sin(angRad),0,-Math.cos(angRad)]]);
 }
 
 
@@ -2139,21 +2142,10 @@ var iterateMechanics = (function iterateMechanics(){
 							}
 							
 							//inner plane check
-							
 							var isInsidePrism = true;
-							var dirA,dirB;
-							if (selection == 0){
-								dirA = [1,0,0];
-								dirB = [0,0,1];
-								
-							}else{
-								var ang1 = selection-1;
-								var angRad1 = ang1*Math.PI/2.5;
-								
-								//2 axes perpendicular to this face
-								dirA = [-yValDirection*Math.cos(angRad1),xzValDirection, -yValDirection*Math.sin(angRad1)];
-								dirB = [Math.sin(angRad1),0,-Math.cos(angRad1)];
-							}
+							var dirsArr = dodecaDirs[selection];
+							var dirA=dirsArr[0];
+							var dirB=dirsArr[1];
 							
 							//dot product of directions with 
 							var dotA = dirA[0]*projectedPos[0] + dirA[1]*projectedPos[1] + dirA[2]*projectedPos[2];  
@@ -2161,8 +2153,8 @@ var iterateMechanics = (function iterateMechanics(){
 							
 							dotA = best>0 ? dotA:-dotA;	//????
 							
-							for (var ang=0;ang<5;ang++){
-								var angRad = ang*Math.PI/2.5;	//oh shit where has this 0.25 come from?!!
+							for (var ang=0;ang<5;ang++){	//note doing this in other order (eg 0,2,4,1,5) with early exit could be quicker
+								var angRad = ang*Math.PI/2.5;
 								var myDotP = dotA*Math.cos(angRad) + dotB*Math.sin(angRad);
 								if (myDotP>0.31){isInsidePrism=false;}
 							}
