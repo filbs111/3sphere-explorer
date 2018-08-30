@@ -1750,6 +1750,16 @@ for (var ii=0;ii<4;ii++){
 //var dodecaScale=0.515;	//guess TODO use right value (0.5 is too small)
 var dodecaScale=0.7;	//some larger number for testing
 
+var dodecaPlanesToCheck = [];
+dodecaPlanesToCheck.push([0,1,0]);
+var yValDirection = 1/Math.sqrt(5);
+var xzValDirection = 2*yValDirection;
+for (var ang=0;ang<5;ang++){
+	var angRad = ang*Math.PI/2.5;
+	dodecaPlanesToCheck.push([xzValDirection*Math.cos(angRad), yValDirection, xzValDirection*Math.sin(angRad)]);
+}
+
+
 var iterateMechanics = (function iterateMechanics(){
 	var lastTime=(new Date()).getTime();
 	var moveSpeed=0.00015;
@@ -2114,38 +2124,18 @@ var iterateMechanics = (function iterateMechanics(){
 							
 							var projectedPos = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return val/(dodecaScale*relativeMat[15]);});
 							
-								//shave top/bottom off 
-							//if (Math.abs(relativeMat[13]/relativeMat[15])>dodecaScale*0.525){continue;}	//todo find correct number!
-							if (Math.abs(projectedPos[1])>0.63){continue;}	//todo find correct number!
-																			//todo at least use correct relation to bounding sphere, even if otherwise fudge val
-							//correct number ? apparently icosahedron vertices at 
-							// (0, ±1, ± φ)
-							//(±1, ± φ, 0) 
-							//(± φ, 0, ±1)
-							
-							//can't use directly, since am using with verts at (±1,0,0), but triangle of centre, outer edge? 
-							//between (±1, φ, 0)  ->dot product = (φ^2 - 1) / (φ^2 + 1)
-							//using identity φ+1 = φ^2
-							// -> φ / (φ + 2)
-							
-							//...
-							// https://en.wikipedia.org/wiki/Regular_icosahedron
-							// Spherical coordinates
-							//The locations of the vertices of a regular icosahedron can be described using spherical coordinates, for instance as latitude and longitude. If two vertices are taken to be at the north and south poles (latitude ±90°), then the other ten vertices are at latitude ±arctan(1/2) ≈ ±26.57°. These ten vertices are at evenly spaced longitudes (36° apart), alternating between north and south latitudes. 
-							
-							
-							var yValDirection = 1/Math.sqrt(5);
-							var xzValDirection = 2*yValDirection;
-							
 							var hasMissed = false;
-							for (var ang=0;ang<5;ang++){
-								var angRad = ang*Math.PI/2.5;
-								var myDotProduct = yValDirection*projectedPos[1] + xzValDirection*(Math.cos(angRad)*projectedPos[0]+Math.sin(angRad)*projectedPos[2]);
-								if (Math.abs(myDotProduct)>0.63){hasMissed = true;}
+							for (var ii in dodecaPlanesToCheck){
+								if (Math.abs(planeCheck(dodecaPlanesToCheck[ii],projectedPos))>0.63){hasMissed=true;}
 							}
 							if (hasMissed){continue;}
 							
 							detonateBullet();
+							
+							//todo reuse tetra version / general dot product function!
+							function planeCheck(planeVec,pos){
+								return pos[0]*planeVec[0] + pos[1]*planeVec[1] +pos[2]*planeVec[2];
+							}
 						}
 					}
 				}
