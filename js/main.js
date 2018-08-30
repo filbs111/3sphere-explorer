@@ -2126,10 +2126,10 @@ var iterateMechanics = (function iterateMechanics(){
 							
 							var isInside = true;
 							var selection = -1;
-							var best = -1;
+							var best = 0;
 							for (var ii in dodecaPlanesToCheck){
 								var toPlane = planeCheck(dodecaPlanesToCheck[ii],projectedPos);
-								if (Math.abs(toPlane) > best){
+								if (Math.abs(toPlane) > Math.abs(best)){
 									best = toPlane;
 									selection = ii;
 								}
@@ -2137,6 +2137,19 @@ var iterateMechanics = (function iterateMechanics(){
 							
 							if (Math.abs(best) > 0.63){
 								isInside = false;
+							}
+							
+							//inner plane check
+							
+							if (selection == 0){
+								var isInsidePrism = true;
+								var reversedPos0 = projectedPos[1]>0 ? projectedPos[0]:-projectedPos[0];
+								for (var ang=0;ang<5;ang++){
+									var angRad = ang*Math.PI/2.5;
+									var myDotP = reversedPos0*Math.cos(angRad) + projectedPos[2]*Math.sin(angRad);
+									if (myDotP>0.31){isInsidePrism=false;}
+								}
+								if (isInsidePrism){isInside=false;}
 							}
 							
 							if (isInside){
