@@ -655,14 +655,11 @@ function drawWorldScene(frameTime, isCubemapView) {
 
 	//new draw dodeca stuff...
 	if (guiParams["draw 120-cell"]){
-		//var dodecaScale=0.515;	//guess TODO use right value (0.5 is too small)
-		//var dodecaScale=2;	
+		var cullVal =  dodecaScale*(0.4/0.515);
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [dodecaScale,dodecaScale,dodecaScale]);
 		drawArrayOfModels(
-			//cellMatData.d120,
-			[cellMatData.d120[2]],
-			//(guiParams["culling"] ? 0.4: false),	//note culling value is for 0.515
-			false,
+			cellMatData.d120,
+			(guiParams["culling"] ? cullVal: false),
 			drawDodecaFrame
 		);
 	}
@@ -1231,8 +1228,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniform3fv(transpShadProg.uniforms.uModelScale, [radius,radius,radius]);
 			drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
 		}
-		//singleExplosion.life-=0.1;
-		singleExplosion.life-=0.01;	//slow for collision detection testing
+		singleExplosion.life-=0.1;
+		//singleExplosion.life-=0.01;	//slow for collision detection testing
 		if (singleExplosion.life<1){
 			delete explosions[ee];
 		}
@@ -1747,8 +1744,7 @@ for (var ii=0;ii<4;ii++){
 }
 
 //move outside since used in collision and drawing (TODO collide/draw methods on dodeca object)
-//var dodecaScale=0.515;	//guess TODO use right value (0.5 is too small)
-var dodecaScale=0.7;	//some larger number for testing
+var dodecaScale=0.515;	//guess TODO use right value (0.5 is too small)
 
 var dodecaPlanesToCheck = [];
 var dodecaDirs = [];	//a,b - really these are orthoganal directions with dodecaPlanesToCheck vectors. todo combo into matrix.
@@ -2110,13 +2106,12 @@ var iterateMechanics = (function iterateMechanics(){
 					// apply reflection along some axis depending on sign??
 					// then apply 5 inner thing checks
 					
-					//var dodecaScaleFudge = dodecaScale * (0.4/0.505);	//THIS IS A FUDGE!! TODO where do numbers come from!!
-					var dodecaScaleFudge = dodecaScale;	//too big (so can see effect of other part of collision
+					var dodecaScaleFudge = dodecaScale * (0.4/0.505);	//TODO where do numbers come from!!
+													//possibly this is sqrt(0.63) and 0.63 is (1+2/sqrt(5))/3;
 					var critVal = 1/Math.sqrt(1+dodecaScaleFudge*dodecaScaleFudge);
 
-					for (dd in [cellMatData.d120[2]]){	//single element of array for convenience
-						//var thisMat = cellMatData.d120[dd];
-						var thisMat = cellMatData.d120[2];
+					for (dd in cellMatData.d120){	//single element of array for convenience
+						var thisMat = cellMatData.d120[dd];
 						mat4.set(thisMat, relativeMat);
 						mat4.transpose(relativeMat);
 						mat4.multiply(relativeMat, bulletMatrix);
