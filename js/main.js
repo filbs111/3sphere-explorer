@@ -1796,7 +1796,7 @@ var iterateMechanics = (function iterateMechanics(){
 		if (gpads){
 			for (gg in gpads){
 				thisgp = gpads[gg];
-				if (thisgp.buttons && thisgp.buttons[10] && thisgp.axes){
+				if (thisgp && thisgp.buttons && thisgp.buttons[10] && thisgp.axes){
 					activeGp = thisgp;
 					break;
 				}
