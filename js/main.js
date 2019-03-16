@@ -8,6 +8,7 @@ var shaderProgramColored,
 	shaderProgramTexmapPerPixel,
 	shaderProgramTexmapPerPixelDiscard,
 	shaderProgramTexmap4Vec,
+	shaderProgramDuocylinderSea,
 	shaderProgramCubemap,
 	shaderProgramVertprojCubemap,
 	shaderProgramDecal;
@@ -50,6 +51,11 @@ function initShaders(){
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 					
+	shaderProgramDuocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-flat-fs",{
+					attributes:["aVertexPosition"],
+					uniforms:["uPMatrix","uMVMatrix","uTime","uDropLightPos","uDropLightPos2","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					});
+					
 	shaderProgramCubemap = loadShader( "shader-cubemap-vs", "shader-cubemap-fs",{
 					attributes:["aVertexPosition"],
 					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor","uModelScale", "uPosShiftMat","uPolarity"]
@@ -68,7 +74,9 @@ function initShaders(){
 
 var duocylinderObjects={
 	grid:{divs:4,step:Math.PI/2},
-	terrain:{divs:2,step:Math.PI}
+	terrain:{divs:2,step:Math.PI},
+	//sea:{divs:2,step:Math.PI}
+	sea:{divs:1,step:2*Math.PI}
 	};
 
 var sphereBuffers={};
@@ -87,8 +95,9 @@ var gunBuffers={};
 var icoballBuffers={};
 
 function initBuffers(){
-	loadDuocylinderBufferData(duocylinderObjects.grid, tballGridData);
+	loadDuocylinderBufferData(duocylinderObjects.grid, tballGridDataPantheonStyle);
 	loadDuocylinderBufferData(duocylinderObjects.terrain, terrainData);
+	loadDuocylinderSeaBufferData(duocylinderObjects.sea, gridData);	//for use in a different shader. no precalculation of mapping to 4-verts
 	
 	function loadDuocylinderBufferData(bufferObj, sourceData){
 		bufferObj.vertexPositionBuffer = gl.createBuffer();
@@ -102,6 +111,18 @@ function initBuffers(){
 		sourceData.indices = [].concat.apply([],sourceData.faces);
 		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(sourceData.indices), gl.STATIC_DRAW);
 		bufferObj.vertexIndexBuffer.itemSize = 3;
+		bufferObj.vertexIndexBuffer.numItems = sourceData.indices.length;
+	}
+	
+	function loadDuocylinderSeaBufferData(bufferObj, sourceData){
+		bufferObj.vertexPositionBuffer = gl.createBuffer();
+		bufferArrayData(bufferObj.vertexPositionBuffer, sourceData.vertices, 2);
+		bufferObj.vertexIndexBuffer = gl.createBuffer();
+		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
+		//sourceData.indices = [].concat.apply([],sourceData.faces);
+		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(sourceData.indices), gl.STATIC_DRAW);
+		bufferObj.vertexIndexBuffer.itemSize = 3;
+		//bufferObj.vertexIndexBuffer.numItems = sourceData.indices.length/3;	//todo why isn't /3 used in loadDuocylinderBufferData ?
 		bufferObj.vertexIndexBuffer.numItems = sourceData.indices.length;
 	}
 	
@@ -706,8 +727,16 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//console.log("num drawn: " + numDrawn);
 	}
 	
-	activeShaderProgram = shaderProgramTexmap4Vec;
-	gl.useProgram(activeShaderProgram);
+	//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
+	if (!duocylinderObjects[guiParams.duocylinderModel].isSea){
+		activeShaderProgram = shaderProgramTexmap4Vec;
+		gl.useProgram(activeShaderProgram);
+	}else{
+		activeShaderProgram = shaderProgramDuocylinderSea;
+		gl.useProgram(activeShaderProgram);
+		gl.uniform1fv(activeShaderProgram.uniforms.uTime, [0.00005*((new Date()).getTime() % 20000 )]);	//20s loop
+	}
+	
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 	if (activeShaderProgram.uniforms.uReflectorDiffColor){
 			gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
@@ -720,20 +749,21 @@ function drawWorldScene(frameTime, isCubemapView) {
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos2, dropLightPos2);
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
+	
 	var duocylinderObj = duocylinderObjects[guiParams.duocylinderModel];
 	if (guiParams.drawShapes['x*x+y*y=z*z+w*w']){
 		mat4.set(invertedWorldCamera, mvMatrix);
-		drawTennisBall(duocylinderObj);
+		drawTennisBall(duocylinderObj, activeShaderProgram);
 	}
 	if (guiParams.drawShapes['x*x+w*w=y*y+z*z']){
 		mat4.set(invertedWorldCamera, mvMatrix);
 		rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
-		drawTennisBall(duocylinderObj);
+		drawTennisBall(duocylinderObj, activeShaderProgram);
 	}
 	if (guiParams.drawShapes['x*x+z*z=y*y+w*w']){
 		mat4.set(invertedWorldCamera, mvMatrix);
 		rotate4mat(mvMatrix, 0, 3, Math.PI*0.5);
-		drawTennisBall(duocylinderObj);
+		drawTennisBall(duocylinderObj, activeShaderProgram);
 	}
 	
 	function drawCubeFrame(){
@@ -1294,28 +1324,34 @@ function generateCullFunc(pMat){
 }
 
 
-function drawTennisBall(duocylinderObj){
+function drawTennisBall(duocylinderObj, shader){
 
 	gl.disable(gl.CULL_FACE);
 	gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexPositionBuffer);
-    gl.vertexAttribPointer(shaderProgramTexmap4Vec.attributes.aVertexPosition, duocylinderObj.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribPointer(shader.attributes.aVertexPosition, duocylinderObj.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	
-	gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.normalBuffer);
-    gl.vertexAttribPointer(shaderProgramTexmap4Vec.attributes.aVertexNormal, duocylinderObj.normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
-	
-	gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexTextureCoordBuffer);
-	gl.vertexAttribPointer(shaderProgramTexmap4Vec.attributes.aTextureCoord, duocylinderObj.vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
-	
+	if (duocylinderObj.normalBuffer){	//not used in duocylinder-sea
+		gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.normalBuffer);
+		gl.vertexAttribPointer(shader.attributes.aVertexNormal, duocylinderObj.normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	}
+	if (duocylinderObj.vertexTextureCoordBuffer){	//not used in duocylinder-sea
+		gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexTextureCoordBuffer);
+		gl.vertexAttribPointer(shader.attributes.aTextureCoord, duocylinderObj.vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	}
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, duocylinderObj.vertexIndexBuffer);
 	
-	gl.activeTexture(gl.TEXTURE0);
-	gl.bindTexture(gl.TEXTURE_2D, duocylinderObj.tex);
-	gl.uniform1i(shaderProgramTexmap4Vec.uniforms.uSampler, 0);
+	if (!duocylinderObj.isSea){	//todo should tex be switched off?
+		gl.activeTexture(gl.TEXTURE0);
+		gl.bindTexture(gl.TEXTURE_2D, duocylinderObj.tex);
+		gl.uniform1i(shader.uniforms.uSampler, 0);
+	}else{
+		gl.bindTexture(gl.TEXTURE_2D, null);
+	}
 	
 	for (var side=0;side<2;side++){	//TODO should only draw 1 side - work out which side player is on...
 		for (var xg=0;xg<duocylinderObj.divs;xg+=1){		//
 			for (var yg=0;yg<duocylinderObj.divs;yg+=1){	//TODO precalc cells array better than grids here.
-				setMatrixUniforms(shaderProgramTexmap4Vec);
+				setMatrixUniforms(shader);
 				gl.drawElements(gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 				rotate4mat(mvMatrix, 0, 1, duocylinderObj.step);
 			}
@@ -1466,6 +1502,8 @@ function initTexture(){
 	hudTextureBox = makeTexture("img/box.png");
 	duocylinderObjects.grid.tex = makeTexture("img/grid-omni.png");
 	duocylinderObjects.terrain.tex = makeTexture("data/terrain/turbulent-seamless.png");;
+	duocylinderObjects.sea.tex = null;
+	duocylinderObjects.sea.isSea=true;
 	
 	//texture = makeTexture("img/ash_uvgrid01-grey.tiny.png");	//numbered grid
 }
@@ -1499,7 +1537,7 @@ var stats;
 var guiParams={
 	duocylinderModel:"grid",
 	drawShapes:{
-		'x*x+y*y=z*z+w*w':false,
+		'x*x+y*y=z*z+w*w':true,
 		'x*x+z*z=y*y+w*w':false,
 		'x*x+w*w=y*y+z*z':false,
 		'boxes y=z=0':false,	//x*x+w*w=1
@@ -1521,7 +1559,7 @@ var guiParams={
 	"16-cell scale":1,		//1 to tesselate
 	"draw 24-cell":false,
 	"24-cell scale":1,
-	"draw 120-cell":true,
+	"draw 120-cell":false,
 	"draw 600-cell":false,
 	"draw teapot":false,
 	"teapot scale":0.7,
@@ -1580,7 +1618,7 @@ function init(){
 		setPlayerLight(color);
 	});
 	var drawShapesFolder = gui.addFolder('drawShapes');
-	drawShapesFolder.add(guiParams, "duocylinderModel", ["grid","terrain"] );
+	drawShapesFolder.add(guiParams, "duocylinderModel", ["grid","terrain","sea"] );
 	for (shape in guiParams.drawShapes){
 		console.log(shape);
 		drawShapesFolder.add(guiParams.drawShapes, shape );

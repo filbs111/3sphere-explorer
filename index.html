@@ -51,6 +51,7 @@
 <script type="text/javascript" src="data/tennisBall.js"></script>
 <script type="text/javascript" src="data/grid1.obj.json.min"></script>
 <script type="text/javascript" src="data/terrain/untitled64tri-deduped-wrap.obj.json.min"></script>
+<script type="text/javascript" src="data/gridData.js"></script>
 <script type="text/javascript" src="data/tennisBallLoader.js"></script>
 <script type="text/javascript" src="data/cube-frame-a1-cubeproj.obj.json"></script>
 <script type="text/javascript" src="data/cube-frame-a2-cubeproj.obj.json"></script>
@@ -164,6 +165,22 @@
 		
 		//gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		//gl_FragColor = (1.0-fog)*uFogColor;
+		gl_FragColor.a =1.0;
+	}
+</script>
+
+<!-- no tex pix shader -->
+<script id="shader-flat-fs" type="x-shader/x-fragment">
+	precision mediump float;
+	uniform vec4 uColor;
+	varying float fog;
+	uniform vec4 uFogColor;
+	varying vec3 veclight;
+	
+	void main(void) {
+		gl_FragColor = vec4( fog*( veclight + uFogColor.xyz ), 1.0)*uColor + (1.0-fog)*uFogColor;
+		//gl_FragColor = vec4(1.,0.,0.,1.);
+		//gl_FragColor = uColor;
 		gl_FragColor.a =1.0;
 	}
 </script>
@@ -576,6 +593,82 @@
 	}
 </script>
 
+<!-- vertex shader for water. take 2vec position, calc height, wrap around duocylinder (3vec to 4vec)-->
+<script id="shader-texmap-vs-duocylinder-sea" type="x-shader/x-vertex">
+	#define CONST_PI 3.1415926
+
+	attribute vec2 aVertexPosition;
+	uniform mat4 uMVMatrix;
+	uniform mat4 uPMatrix;
+	uniform float uTime;
+	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
+	uniform vec4 uDropLightPos2;
+	uniform vec3 uPlayerLightColor;
+	uniform vec3 uReflectorDiffColor;
+	uniform vec4 uReflectorPos;
+	uniform float uReflectorCos;
+	varying float fog;
+	varying vec3 veclight;
+	
+	//ported from tennisBallLoader.js
+	vec4 get4vecfrom3vec(in vec3 invec){
+		vec2 ang = 2.0*CONST_PI * invec.xy;
+		float cylr = CONST_PI * (0.25+ invec.z);
+		float sr = sin(cylr);	//todo possible to do this in 1 go? special shader cmmd?
+		float cr = cos(cylr);
+		return vec4( cr * sin(ang.x), cr * cos(ang.x), sr * sin(ang.y), sr * cos(ang.y) );
+	}
+	
+	void main(void) {
+		//1 calc height and normal
+		float seaHeight = 0.02+0.02*cos(2.*CONST_PI*(aVertexPosition.x + uTime));	//TODO proper sea height time dependence
+		//float seaHeight = uTime;
+		vec3 inputPosVector = vec3(aVertexPosition,seaHeight);	
+		
+		//2 convert position and normal to 4vec
+		//fake initially to get right vec type
+		//vec4 calculatedVertexPosition = vec4(aVertexPosition, 0.,0.);
+		vec4 calculatedVertexPosition = get4vecfrom3vec(inputPosVector);
+		vec4 calculatedVertexNormal = vec4(1.,0.,0.,0.);
+	
+		//3 use thse values same as in shader-texmap-vs-4vec
+		vec4 transformedCoord = uMVMatrix * calculatedVertexPosition;
+		
+		gl_Position = uPMatrix * transformedCoord;
+		
+		fog = 0.5*(1.0 + transformedCoord.w);
+		
+		vec4 transformedNormal = uMVMatrix * calculatedVertexNormal;
+		vec4 adjustedPos = transformedCoord - uDropLightPos;
+		float light = -dot( normalize(adjustedPos), transformedNormal);
+		light = max(light,0.0);	//unnecessary if camera pos = light pos
+		light/=1.0 + 4.2*dot(adjustedPos,adjustedPos);		//terms higher than other shaders by sqrt(2) because length
+															//of 1,0,0,0 -> 0,1,0,0 (90 deg around world)
+		
+		//TODO can process multiple lights using matrix?
+		vec4 adjustedPos2 = transformedCoord - uDropLightPos2;
+		float light2 = -dot( normalize(adjustedPos2), transformedNormal);
+		light2 = max(light2,0.0);
+		light2/=1.0 + 4.2*dot(adjustedPos2,adjustedPos2);
+		
+		light+=light2;
+		
+		veclight=uPlayerLightColor*light;
+		
+		
+		
+		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
+	
+		//light from portal. TODO pass in a colour for this, more complex lighting (at surface of portal, should be hemispherical light etc)
+		//this is just bodged/guessed to achieve correct behaviour at/across portal. TODO check/correct!
+		float portalLight = dot( uReflectorPos, transformedNormal);
+		portalLight = max(0.5*portalLight +0.5+ posCosDiff,0.0);	//unnecessary if camera pos = light pos
+		//falloff
+		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
+				
+		veclight+=uReflectorDiffColor*portalLight;
+	}
+</script>
 
 <!-- simple cubemap pix shader -->
 <script id="shader-cubemap-fs" type="x-shader/x-fragment">
