@@ -624,13 +624,18 @@
 		float seaHeight = 0.02+0.02*cos(2.*CONST_PI*(aVertexPosition.x + uTime));	//TODO proper sea height time dependence
 		//float seaHeight = uTime;
 		vec3 inputPosVector = vec3(aVertexPosition,seaHeight);	
+		vec3 inputNormal = vec3(0.,0.,1.);
 		
 		//2 convert position and normal to 4vec
 		//fake initially to get right vec type
 		//vec4 calculatedVertexPosition = vec4(aVertexPosition, 0.,0.);
 		vec4 calculatedVertexPosition = get4vecfrom3vec(inputPosVector);
-		vec4 calculatedVertexNormal = vec4(1.,0.,0.,0.);
-	
+		
+		//simple way to calc norms - move a little along normal, subtract this from original value, normalise the result.
+		//probably can express as a derivative wrt normal movment, then normalise result, but this way is easier.
+		vec4 shiftedVertexPosition = get4vecfrom3vec(inputPosVector+.001*inputNormal);
+		vec4 calculatedVertexNormal = normalize(shiftedVertexPosition - calculatedVertexPosition);
+		
 		//3 use thse values same as in shader-texmap-vs-4vec
 		vec4 transformedCoord = uMVMatrix * calculatedVertexPosition;
 		

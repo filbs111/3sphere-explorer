@@ -2,7 +2,7 @@ var gridData=(function generateGridData(){
 	//TODO buffers should be include whether or not they are strip or triangle type. 
 	//initially just do triangles. strip more efficient. for large grid, towards 1 vertex per triangle, rather than 3. (though indexed, so cost quite small)
 
-	var gridSize = 32;
+	var gridSize = 50;
 	var vertices = [];
 	var indices = [];
 	//create vertices first. for 3-sphere grid, loops, so different (here have vertices on opposite sides (and 4 corners) that share z-position
