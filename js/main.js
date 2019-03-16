@@ -731,10 +731,12 @@ function drawWorldScene(frameTime, isCubemapView) {
 	if (!duocylinderObjects[guiParams.duocylinderModel].isSea){
 		activeShaderProgram = shaderProgramTexmap4Vec;
 		gl.useProgram(activeShaderProgram);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
 	}else{
 		activeShaderProgram = shaderProgramDuocylinderSea;
 		gl.useProgram(activeShaderProgram);
 		gl.uniform1fv(activeShaderProgram.uniforms.uTime, [0.00005*((new Date()).getTime() % 20000 )]);	//20s loop
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.0, 0.8, 0.8, 1.0]);
 	}
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
@@ -748,7 +750,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 	gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos2, dropLightPos2);
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
 	
 	var duocylinderObj = duocylinderObjects[guiParams.duocylinderModel];
 	if (guiParams.drawShapes['x*x+y*y=z*z+w*w']){
@@ -1581,7 +1582,7 @@ var guiParams={
 	reflector:{
 		draw:true,
 		mappingType:'vertex projection',
-		scale:0.5,
+		scale:0.3,
 		isPortal:true,
 		moveAway:0.0008
 	}
@@ -1656,7 +1657,7 @@ function init(){
 	var reflectorFolder = gui.addFolder('reflector');
 	reflectorFolder.add(guiParams.reflector, "draw");
 	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection']);
-	reflectorFolder.add(guiParams.reflector, "scale", 0.5,2,0.01);
+	reflectorFolder.add(guiParams.reflector, "scale", 0.2,2,0.01);
 	reflectorFolder.add(guiParams.reflector, "isPortal");
 	reflectorFolder.add(guiParams.reflector, "moveAway", 0,0.001,0.0001);	//value required here is dependent on minimum scale. TODO moveawayvector should be in DIRECTION away from portal, but fixed length.
 
