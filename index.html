@@ -610,6 +610,8 @@
 	varying float fog;
 	varying vec3 veclight;
 	
+	varying vec3 vTextureCoord;
+	
 	void addWaveContribution(in vec2 wavePosIn, inout vec3 wavePosAccum, inout vec3 vDerivativeWRTX, inout vec3 vDerivativeWRTY, float peakiness, vec2 waveCycles){	//waveCycles should be int2
 		//wavecycles - number of waves across repeating square in each direction.
 		//wavevector relates to this...
@@ -729,6 +731,8 @@
 		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
 				
 		veclight+=uReflectorDiffColor*portalLight;
+		
+		vTextureCoord = vec3( aVertexPosition, 1.0 );	//any point in projected tex??
 	}
 </script>
 

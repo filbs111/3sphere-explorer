@@ -51,7 +51,8 @@ function initShaders(){
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 					
-	shaderProgramDuocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-flat-fs",{
+	//shaderProgramDuocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-flat-fs",{
+	shaderProgramDuocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-texmap-fs",{
 					attributes:["aVertexPosition"],
 					uniforms:["uPMatrix","uMVMatrix","uTime","uDropLightPos","uDropLightPos2","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
@@ -731,13 +732,12 @@ function drawWorldScene(frameTime, isCubemapView) {
 	if (!duocylinderObjects[guiParams.duocylinderModel].isSea){
 		activeShaderProgram = shaderProgramTexmap4Vec;
 		gl.useProgram(activeShaderProgram);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
 	}else{
 		activeShaderProgram = shaderProgramDuocylinderSea;
 		gl.useProgram(activeShaderProgram);
 		gl.uniform1fv(activeShaderProgram.uniforms.uTime, [0.00005*((new Date()).getTime() % 20000 )]);	//20s loop
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.0, 0.8, 0.8, 1.0]);
 	}
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 	if (activeShaderProgram.uniforms.uReflectorDiffColor){
@@ -1341,13 +1341,9 @@ function drawTennisBall(duocylinderObj, shader){
 	}
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, duocylinderObj.vertexIndexBuffer);
 	
-	if (!duocylinderObj.isSea){	//todo should tex be switched off?
-		gl.activeTexture(gl.TEXTURE0);
-		gl.bindTexture(gl.TEXTURE_2D, duocylinderObj.tex);
-		gl.uniform1i(shader.uniforms.uSampler, 0);
-	}else{
-		gl.bindTexture(gl.TEXTURE_2D, null);
-	}
+	gl.activeTexture(gl.TEXTURE0);
+	gl.bindTexture(gl.TEXTURE_2D, duocylinderObj.tex);
+	gl.uniform1i(shader.uniforms.uSampler, 0);
 	
 	for (var side=0;side<2;side++){	//TODO should only draw 1 side - work out which side player is on...
 		for (var xg=0;xg<duocylinderObj.divs;xg+=1){		//
@@ -1502,8 +1498,9 @@ function initTexture(){
 	hudTextureX = makeTexture("img/x.png");
 	hudTextureBox = makeTexture("img/box.png");
 	duocylinderObjects.grid.tex = makeTexture("img/grid-omni.png");
-	duocylinderObjects.terrain.tex = makeTexture("data/terrain/turbulent-seamless.png");;
-	duocylinderObjects.sea.tex = null;
+	duocylinderObjects.terrain.tex = makeTexture("data/terrain/turbulent-seamless.png");
+	//duocylinderObjects.sea.tex = null;
+	duocylinderObjects.sea.tex = makeTexture("img/4141.jpg");
 	duocylinderObjects.sea.isSea=true;
 	
 	//texture = makeTexture("img/ash_uvgrid01-grey.tiny.png");	//numbered grid
