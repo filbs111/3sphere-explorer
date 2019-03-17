@@ -728,8 +728,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//console.log("num drawn: " + numDrawn);
 	}
 	
+	var duocylinderModel = (colorsSwitch==0) ? guiParams.duocylinderModel0 : guiParams.duocylinderModel1;	//todo use array
+	
 	//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
-	if (!duocylinderObjects[guiParams.duocylinderModel].isSea){
+	if (!duocylinderObjects[duocylinderModel].isSea){
 		activeShaderProgram = shaderProgramTexmap4Vec;
 		gl.useProgram(activeShaderProgram);
 	}else{
@@ -751,7 +753,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos2, dropLightPos2);
 	
-	var duocylinderObj = duocylinderObjects[guiParams.duocylinderModel];
+	var duocylinderObj = duocylinderObjects[duocylinderModel];
 	if (guiParams.drawShapes['x*x+y*y=z*z+w*w']){
 		mat4.set(invertedWorldCamera, mvMatrix);
 		drawTennisBall(duocylinderObj, activeShaderProgram);
@@ -1533,7 +1535,8 @@ var mouseInfo = {
 var stats;
 
 var guiParams={
-	duocylinderModel:"grid",
+	duocylinderModel0:"grid",
+	duocylinderModel1:"terrain",
 	drawShapes:{
 		'x*x+y*y=z*z+w*w':true,
 		'x*x+z*z=y*y+w*w':false,
@@ -1616,7 +1619,8 @@ function init(){
 		setPlayerLight(color);
 	});
 	var drawShapesFolder = gui.addFolder('drawShapes');
-	drawShapesFolder.add(guiParams, "duocylinderModel", ["grid","terrain","sea"] );
+	drawShapesFolder.add(guiParams, "duocylinderModel0", ["grid","terrain","sea"] );
+	drawShapesFolder.add(guiParams, "duocylinderModel1", ["grid","terrain","sea"] );
 	for (shape in guiParams.drawShapes){
 		console.log(shape);
 		drawShapesFolder.add(guiParams.drawShapes, shape );
