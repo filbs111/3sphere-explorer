@@ -636,7 +636,7 @@
 		float invWavelength = length(waveCycles);
 		
 		//since freq and therefore ang vel proportional to 1/invWavelength
-		float someConstant = 0.8;	//affects speed of animation
+		float someConstant = 0.4;	//affects speed of animation
 		float freq = someConstant*sqrt(invWavelength);	//<--this why pythagorean tribles not working!
 			//unless find triples whose lengths are square! eg 7 24 25, (and 0 1 1, 0 4 4 0 9 9 etc)
 		//presumably there is some distribution of wave amplitude with wavelength. for now just try manual terms. IIRC some ratio (since fluid particles circular path)

@@ -737,7 +737,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	}else{
 		activeShaderProgram = shaderProgramDuocylinderSea;
 		gl.useProgram(activeShaderProgram);
-		gl.uniform1fv(activeShaderProgram.uniforms.uTime, [0.00005*((new Date()).getTime() % 20000 )]);	//20s loop
+		gl.uniform1fv(activeShaderProgram.uniforms.uTime, [0.00005*(frameTime % 20000 )]);	//20s loop
 	}
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
 	
@@ -754,8 +754,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos2, dropLightPos2);
 	
 	var duocylinderObj = duocylinderObjects[duocylinderModel];
+	
 	if (guiParams.drawShapes['x*x+y*y=z*z+w*w']){
 		mat4.set(invertedWorldCamera, mvMatrix);
+		rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
 		drawTennisBall(duocylinderObj, activeShaderProgram);
 	}
 	if (guiParams.drawShapes['x*x+w*w=y*y+z*z']){
@@ -1798,7 +1800,7 @@ for (var ang=0;ang<5;ang++){
 	dodecaDirs.push([[-yValDirection*Math.cos(angRad),xzValDirection, -yValDirection*Math.sin(angRad)], [Math.sin(angRad),0,-Math.cos(angRad)]]);
 }
 
-
+var duocylinderSpin = 0;
 var iterateMechanics = (function iterateMechanics(){
 	var lastTime=(new Date()).getTime();
 	var moveSpeed=0.00015;
@@ -1812,7 +1814,7 @@ var iterateMechanics = (function iterateMechanics(){
 	var timeTracker =0;
 	var timeStep = 10;
 	
-	var thrust = 0.02;	//TODO make keyboard/gamepad fair! currently thrust, moveSpeed config independent!
+	var thrust = 0.01;	//TODO make keyboard/gamepad fair! currently thrust, moveSpeed config independent!
 	
 	//gamepad
 	var activeGp, buttons, axes;
@@ -1877,6 +1879,7 @@ var iterateMechanics = (function iterateMechanics(){
 			gunHeat*=0.995;
 			offsetCam.iterate();
 		}
+		duocylinderSpin+=timeElapsed * 0.0001;	//TODO match spin speed with sea wave speed
 		
 		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
 		
@@ -1923,8 +1926,35 @@ var iterateMechanics = (function iterateMechanics(){
 				rotatePlayer(lastPlayerAngMove);	//TODO add rotational momentum - not direct rotate
 			}
 			
-			playerVelVec=scalarvectorprod(0.996,playerVelVec);
+			playerVelVec=scalarvectorprod(0.997,playerVelVec);
 			playerAngVelVec=scalarvectorprod(0.8,playerAngVelVec);
+			
+			//blend velocity with velocity of rotating duosphere. (todo angular vel to use this too)
+			//matrix entries 12-15 describe position. (remain same when rotate player and don't move)
+			//playerVel is in frame of player though - so apply matrix rotation to this.
+			
+			var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//guess what this is
+			var angVelConst = 0.6667;	//TODO match exactly
+			
+			// 0.0001 (hardcoded rotation per unit time) 
+			// moveSpeed=0.00015
+			
+			// moveSpeed*spinVel = 0.0001  ? 
+			// => spinVel = (0.0001 / 0.00015)  = 0.6666
+			
+			var spinVelWorldCoords = [ angVelConst*playerPos[1],-angVelConst*playerPos[0],0];	
+							
+			var spinVelPlayerCoords = [
+				spinVelWorldCoords[0]*playerCamera[0] + spinVelWorldCoords[1]*playerCamera[1] + spinVelWorldCoords[2]*playerCamera[2],
+				spinVelWorldCoords[0]*playerCamera[4] + spinVelWorldCoords[1]*playerCamera[5] + spinVelWorldCoords[2]*playerCamera[6],
+				spinVelWorldCoords[0]*playerCamera[8] + spinVelWorldCoords[1]*playerCamera[9] + spinVelWorldCoords[2]*playerCamera[10]];
+			
+			//this is in frame of duocylinder. playerVelVec is in frame of player though... ?!! possible to do without matrix mult? by choosing right parts of playerCamera mat?
+			
+			for (var cc=0;cc<3;cc++){
+				playerVelVec[cc]+=0.003*spinVelPlayerCoords[cc];
+			}
+			
 			
 			if (autoFireCountdown>0){
 				autoFireCountdown--;
