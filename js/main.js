@@ -389,10 +389,10 @@ function drawScene(frameTime){
 
 	//direction of flight
 	if (playerVelVec[2] > 0.1){	//??
-		gl.bindTexture(gl.TEXTURE_2D, hudTexturePlus);		//todo texture atlas for all hud 
+		bind2dTextureIfRequired(hudTexturePlus);		//todo texture atlas for all hud 
 		drawTargetDecal(0.001, [0.0, 0.5, 1.0, 0.5], playerVelVec);
 	}
-	gl.bindTexture(gl.TEXTURE_2D, hudTexture);	
+	bind2dTextureIfRequired(hudTexture);	
 	
 	//drawTargetDecal(0.004, [1.0, 1.0, 0.0, 0.5], [0,0,0.01]);	//camera near plane. todo render with transparency
 	if (guiParams["targeting"]!="off"){
@@ -400,10 +400,10 @@ function drawScene(frameTime){
 		drawTargetDecal(0.0037/(1+shiftAmount*playerVelVec[2]), [1.0, 1.0, 0.0, 0.5], [shiftAmount*playerVelVec[0],shiftAmount*playerVelVec[1],1+shiftAmount*playerVelVec[2]]);	//TODO vector add!
 		
 		if (guiParams.target.type!="none" && targetWorldFrame[2]<0){	//if in front of player){
-			gl.bindTexture(gl.TEXTURE_2D, hudTextureBox);				
+			bind2dTextureIfRequired(hudTextureBox);				
 			drawTargetDecal(0.001, [1, 0.1, 0, 0.5], targetWorldFrame);	//direction to target (shows where target is on screen)
 								//TODO put where is on screen, not direction from spaceship (obvious difference in 3rd person)
-			gl.bindTexture(gl.TEXTURE_2D, hudTextureSmallCircles);	
+			bind2dTextureIfRequired(hudTextureSmallCircles);	
 			//drawTargetDecal(0.0008, [1, 0.1, 1, 0.5], selectedTargeting);	//where should shoot in order to hit target (accounting for player velocity)
 				//not required if using shifted gun direction circle
 		
@@ -414,7 +414,7 @@ function drawScene(frameTime){
 	
 	//show where guns will shoot
 	if (fireDirectionVec[2] > 0.1){	//??
-		gl.bindTexture(gl.TEXTURE_2D, hudTextureX);
+		bind2dTextureIfRequired(hudTextureX);
 		drawTargetDecal(0.001, [1.0, 1.0, 0.0, 0.5], fireDirectionVec);
 	}
 	
@@ -1345,7 +1345,7 @@ function drawTennisBall(duocylinderObj, shader){
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, duocylinderObj.vertexIndexBuffer);
 	
 	gl.activeTexture(gl.TEXTURE0);
-	gl.bindTexture(gl.TEXTURE_2D, duocylinderObj.tex);
+	bind2dTextureIfRequired(duocylinderObj.tex);
 	gl.uniform1i(shader.uniforms.uSampler, 0);
 	
 	for (var side=0;side<2;side++){	//TODO should only draw 1 side - work out which side player is on...
@@ -1383,7 +1383,7 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 		gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexTextureCoordBuffer);
 		gl.vertexAttribPointer(shaderProg.attributes.aTextureCoord, bufferObj.vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
 		gl.activeTexture(gl.TEXTURE0);
-		gl.bindTexture(gl.TEXTURE_2D, texture);
+		bind2dTextureIfRequired(texture);
 		gl.uniform1i(shaderProg.uniforms.uSampler, 0);
 	}
 	
@@ -1397,6 +1397,17 @@ function drawObjectFromPreppedBuffers(bufferObj, shaderProg){
 	gl.uniformMatrix4fv(shaderProg.uniforms.uMVMatrix, false, mvMatrix);
 	gl.drawElements(gl.TRIANGLES, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 }
+
+var bind2dTextureIfRequired = (function createBind2dTextureIfRequiredFunction(){
+	var currentlyBoundTexture=null;
+	return function(texToBind){	//todo specify texture index. maybe combine with setting texture index so can automatically keep textures loaded
+								//curently just assuming using tex 0, already set as active texture (is set active texture a fast gl call?)
+		if (texToBind != currentlyBoundTexture){
+			gl.bindTexture(gl.TEXTURE_2D, texToBind);
+			currentlyBoundTexture = texToBind;
+		}
+	}
+})();
 
 //need all of these???
 var moveAwayVec;
@@ -1512,14 +1523,14 @@ function makeTexture(src) {	//to do OO
 	var texture = gl.createTexture();
 	texture.image = new Image();
 	texture.image.onload = function(){
-		gl.bindTexture(gl.TEXTURE_2D, texture);
+		bind2dTextureIfRequired(texture);
 		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
 		//gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 		gl.generateMipmap(gl.TEXTURE_2D);
-		gl.bindTexture(gl.TEXTURE_2D, null);
+		bind2dTextureIfRequired(null);
 	};	
 	texture.image.src = src;
 	return texture;
