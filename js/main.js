@@ -403,7 +403,7 @@ function drawScene(frameTime){
 			bind2dTextureIfRequired(hudTextureBox);				
 			drawTargetDecal(0.001, [1, 0.1, 0, 0.5], targetWorldFrame);	//direction to target (shows where target is on screen)
 								//TODO put where is on screen, not direction from spaceship (obvious difference in 3rd person)
-			bind2dTextureIfRequired(hudTextureSmallCircles);	
+			//bind2dTextureIfRequired(hudTextureSmallCircles);	
 			//drawTargetDecal(0.0008, [1, 0.1, 1, 0.5], selectedTargeting);	//where should shoot in order to hit target (accounting for player velocity)
 				//not required if using shifted gun direction circle
 		
