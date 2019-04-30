@@ -269,7 +269,6 @@ var offsetCam = (function(){
 	}
 })();
 
-
 function drawScene(frameTime){
 	resizecanvas();
 
@@ -1389,9 +1388,7 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 	}
 	
 	if (usesCubeMap){
-		gl.activeTexture(gl.TEXTURE0);
-		gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubemapTexture);
-		gl.uniform1i(shaderProg.uniforms.uSampler, 0);
+		gl.uniform1i(shaderProg.uniforms.uSampler, 1);	//put cubemap in tex 1 always, avoiding bind calls.
 	}
 	
 	gl.uniformMatrix4fv(shaderProg.uniforms.uPMatrix, false, pMatrix);
@@ -1423,7 +1420,7 @@ function setMatrixUniforms(shaderProgram) {
 
 var cubemapFramebuffer;
 var cubemapTexture;
-var cubemapSize = 1024;
+var cubemapSize = 512;
 //cube map code from http://www.humus.name/cubemapviewer.js (slightly modified)
 var cubemapFacelist;
 
@@ -1431,6 +1428,8 @@ function initCubemapFramebuffer(){
 	cubemapFramebuffer = [];
 	
 	cubemapTexture = gl.createTexture();
+	
+	gl.activeTexture(gl.TEXTURE1);	//use texture 1 always for cubemap
 	gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubemapTexture);
 	gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 	gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -1455,11 +1454,9 @@ function initCubemapFramebuffer(){
 		framebuffer.height = cubemapSize;
 		cubemapFramebuffer[i]=framebuffer;
 		
-		gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubemapTexture);	//already bound so can lose probably
 		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 		//gl.texImage2D(face, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
 		gl.texImage2D(face, 0, gl.RGBA, cubemapSize, cubemapSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-		gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
 		
 		var renderbuffer = gl.createRenderbuffer();
 		gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
@@ -1468,9 +1465,10 @@ function initCubemapFramebuffer(){
 		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, face, cubemapTexture, 0);
 		gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, renderbuffer);
 	}
-	gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);	//this gets rid of errors being logged to console. 
+	//gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);	//this gets rid of errors being logged to console. 
 	gl.bindRenderbuffer(gl.RENDERBUFFER, null);
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+	
 }
 
 var randomMats = [];	//some random poses. used for "dust motes". really only positions required, but flexible, can use for random boxes/whatever 
