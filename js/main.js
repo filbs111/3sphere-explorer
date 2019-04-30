@@ -676,12 +676,15 @@ function drawWorldScene(frameTime, isCubemapView) {
 
 	//new draw dodeca stuff...
 	if (guiParams["draw 120-cell"]){
+		prepBuffersForDrawing(dodecaFrameBuffers, shaderProgramTexmap);
 		var cullVal =  dodecaScale*(0.4/0.515);
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [dodecaScale,dodecaScale,dodecaScale]);
 		drawArrayOfModels(
 			cellMatData.d120,
 			(guiParams["culling"] ? cullVal: false),
-			drawDodecaFrame
+			function(){
+				drawObjectFromPreppedBuffers(dodecaFrameBuffers, shaderProgramTexmap);
+			}
 		);
 	}
 	
@@ -790,9 +793,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}else{
 			drawObjectFromBuffers(tetraFrameBuffers, shaderProgramTexmap);
 		}
-	}
-	function drawDodecaFrame(){
-		drawObjectFromBuffers(dodecaFrameBuffers, shaderProgramTexmap);
 	}
 	
 	
