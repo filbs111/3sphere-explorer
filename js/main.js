@@ -363,6 +363,7 @@ function drawScene(frameTime){
 	mainCamFov = guiParams.cameraFov;
 	
 	setProjectionMatrix(pMatrix, mainCamFov, gl.viewportHeight/gl.viewportWidth);	//note mouse code assumes 90 deg fov used. TODO fix.
+														//todo only update pmatrix if input variables have changed
 	frustrumCull = generateCullFunc(pMatrix);
 		
 	mat4.set(offsetPlayerCamera, worldCamera);	//set worldCamera to playerCamera
@@ -613,7 +614,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawArrayOfModels(
 			cellMatData.d8,
 			(guiParams["culling"] ? Math.sqrt(3): false),
-			drawCubeFrame
+			(guiParams["subdiv frames"] ? cubeFrameSubdivBuffers: cubeFrameBuffers)
 		);	
 	}
 	
@@ -630,7 +631,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			//[cellMatData.d16[0]],
 			cellMatData.d16,
 			(guiParams["culling"] ? 1.73: false),
-			drawTetraFrame
+			(guiParams["subdiv frames"]? tetraFrameSubdivBuffers: tetraFrameBuffers)
 		);
 	}
 	
@@ -643,31 +644,20 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawArrayOfModels(
 			cellMatData.d24.cells,
 			(guiParams["culling"] ? 1: false),
-			drawOctoFrame
+			(guiParams["subdiv frames"] ? octoFrameSubdivBuffers : octoFrameBuffers)
 		);	
 	}
 	
 	if (guiParams["draw 5-cell"]){
-		var cellMats = cellMatData.d5;
 		var moveDist = Math.acos(-0.25);
-		modelScale = 2*moveDist;
-
-		var cellColors = [
-			[1.0, 1.0, 1.0, 1.0],	//WHITE
-			[1.0, 0.4, 1.0, 1.0],	//MAGENTA
-			[1.0, 1.0, 0.4, 1.0],	//YELLOW
-			[0.4, 1.0, 0.4, 1.0],	//GREEN
-			[1.0, 0.4, 0.4, 1.0]	//RED
-		];
-						
+		modelScale = 2*moveDist;		
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
-		for (cc in cellMats){
-			gl.uniform4fv(activeShaderProgram.uniforms.uColor, cellColors[cc]);
-			var thisCell = cellMats[cc];
-			mat4.set(invertedWorldCamera, mvMatrix);
-			mat4.multiply(mvMatrix,thisCell);
-			drawTetraFrame();
-		}
+		
+		drawArrayOfModels(
+			cellMatData.d5,
+			false,
+			(guiParams["subdiv frames"] ? tetraFrameSubdivBuffers : tetraFrameBuffers)
+		);
 	}
 	
 	mat4.set(invertedWorldCamera, mvMatrix);
@@ -676,43 +666,39 @@ function drawWorldScene(frameTime, isCubemapView) {
 
 	//new draw dodeca stuff...
 	if (guiParams["draw 120-cell"]){
-		prepBuffersForDrawing(dodecaFrameBuffers, shaderProgramTexmap);
 		var cullVal =  dodecaScale*(0.4/0.515);
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [dodecaScale,dodecaScale,dodecaScale]);
 		drawArrayOfModels(
 			cellMatData.d120,
 			(guiParams["culling"] ? cullVal: false),
-			function(){
-				drawObjectFromPreppedBuffers(dodecaFrameBuffers, shaderProgramTexmap);
-			}
+			dodecaFrameBuffers
 		);
 	}
 	
 	if (guiParams["draw 600-cell"]){		
-		prepBuffersForDrawing(tetraFrameBuffers, shaderProgramTexmap);
 		var myscale=0.385;	//todo use correct scale
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [myscale,myscale,myscale]);
 		
 		drawArrayOfModels(
 			cellMatData.d600,
 			(guiParams["culling"] ? 0.355: false),
-			function(){
-				drawObjectFromPreppedBuffers(tetraFrameBuffers, shaderProgramTexmap);
-			}
+			(guiParams["subdiv frames"]? tetraFrameSubdivBuffers: tetraFrameBuffers)
 		);
 	}
 	
-	function drawArrayOfModels(cellMats, cullRad, drawFunc){
+	//todo this should take buffers, shaders and call prepBuffersForDrawing, drawObjectFromPreppedBuffers
+	function drawArrayOfModels(cellMats, cullRad, buffers){
+		prepBuffersForDrawing(buffers, shaderProgramTexmap);
 		numDrawn = 0;
 		if (!cullRad){
 			drawArrayForFunc(function(){
-				drawFunc();
+				drawObjectFromPreppedBuffers(buffers, shaderProgramTexmap);
 				numDrawn++;
 				});
 		}else{
 			drawArrayForFunc(function(){
 				if (frustrumCull(mvMatrix,cullRad)){
-					drawFunc();
+					drawObjectFromPreppedBuffers(buffers, shaderProgramTexmap);
 					numDrawn++;
 				}
 			});
@@ -772,29 +758,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 		rotate4mat(mvMatrix, 0, 3, Math.PI*0.5);
 		drawTennisBall(duocylinderObj, activeShaderProgram);
 	}
-	
-	function drawCubeFrame(){
-		if (guiParams["subdiv frames"]){
-			drawObjectFromBuffers(cubeFrameSubdivBuffers, shaderProgramTexmap);
-		}else{
-			drawObjectFromBuffers(cubeFrameBuffers, shaderProgramTexmap);
-		}
-	}
-	function drawOctoFrame(){
-		if (guiParams["subdiv frames"]){
-			drawObjectFromBuffers(octoFrameSubdivBuffers, shaderProgramTexmap);
-		}else{
-			drawObjectFromBuffers(octoFrameBuffers, shaderProgramTexmap);
-		}
-	}
-	function drawTetraFrame(){
-		if (guiParams["subdiv frames"]){
-			drawObjectFromBuffers(tetraFrameSubdivBuffers, shaderProgramTexmap);
-		}else{
-			drawObjectFromBuffers(tetraFrameBuffers, shaderProgramTexmap);
-		}
-	}
-	
 	
 	//draw objects without textures
 	
