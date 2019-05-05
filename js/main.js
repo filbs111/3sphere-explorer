@@ -870,8 +870,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawRelativeToSpacehip([gunHoriz,-gunVert,gunFront]);
 		
 		
-		
-		
 		function drawRelativeToSpacehip(vec){
 			var gunMatrixCosmetic = mat4.create();
 			mat4.set(matrix, gunMatrixCosmetic);
@@ -880,7 +878,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 			var gunMatrix = mat4.create();
 			mat4.set(matrixForTargeting, gunMatrix);
 			xyzmove4mat(gunMatrix,vec);
-			
 			
 			if (guiParams.target.type!="none" && guiParams["targeting"]=="individual"){
 				rotvec = getTargetingSolution(gunMatrix, targetMatrix).rotvec;
@@ -917,9 +914,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 			return pointingDir;
 		}
 		
-		function getRotBetweenMats(sourceMat, destMat){
+		function getRotBetweenMats(sourceMat, destMat){	//this func not used now. use of matrix pool untested
 			//actually gets rotation to point sourceMat at destMat
-			var tmpMat = mat4.create();
+			var tmpMat = matPool.create();
 			mat4.set(sourceMat, tmpMat);
 			mat4.transpose(tmpMat);			
 				
@@ -929,7 +926,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 			pointingDir={x:tmpMat[12], y:tmpMat[13], z:tmpMat[14]};
 			
 			pointingDir = capGunPointing(pointingDir);
-									
+			
+			matPool.destroy(tmpMat);
+			
 			return getRotFromPointing(pointingDir);
 		}
 		
@@ -1372,6 +1371,7 @@ var bind2dTextureIfRequired = (function createBind2dTextureIfRequiredFunction(){
 	}
 })();
 
+
 //need all of these???
 var moveAwayVec;
 var mvMatrix = mat4.create();
@@ -1451,7 +1451,7 @@ function setupScene() {
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 	
 	for (var ii=0;ii<1000;ii++){
-		randomMats.push(convert_quats_to_4matrix(random_quat_pair()));
+		randomMats.push(convert_quats_to_4matrix(random_quat_pair(), mat4.create()));
 	}
 	
 	mat4.identity(playerCamera);	//not sure why have 2 matrices here...
@@ -2406,13 +2406,12 @@ function fireGun(){
 			muzzleFlashAmounts[g]+=0.25
 			
 			var gunMatrix = gunMatrices[g];
-			var newBulletMatrix = mat4.create();
+			var newBulletMatrix = mat4.create();	//TODO pooling - bullet pool instead of use matrix pool? 
 			mat4.set(gunMatrix,newBulletMatrix);
-			
 			
 			//work out what fireDirectionVec should be in frame of gun/bullet (rather than player ship body)
 			//this maybe better done alongside targeting code.
-			var relativeMatrix = mat4.create();
+			var relativeMatrix = matPool.create();
 			mat4.set(sshipMatrix,relativeMatrix);
 			mat4.transpose(relativeMatrix);
 			mat4.multiply(relativeMatrix, gunMatrix);
@@ -2427,7 +2426,9 @@ function fireGun(){
 			}			
 			newFireDirectionVec[2]+=muzzleVel;
 			bullets.push({matrix:newBulletMatrix,vel:newFireDirectionVec,active:true});
-																	
+			
+			matPool.destroy(relativeMatrix);
+			
 			//limit number of bullets
 			if (bullets.length>200){
 				bullets.shift();

@@ -1,8 +1,42 @@
 
+//pool for matrices
+var matPool = (function makeMatPool(){
+	var thePool = [];
+	var numSpare = 0;
+	return {
+		create:function(){
+			if (numSpare>0){
+				numSpare--;
+				return thePool[numSpare];
+			}else{
+				var newMat = mat4.create();
+				thePool.push(newMat);
+				return newMat;
+			}
+		},
+		destroy:function(toBeDestroyed){	//might be bug prone since can keep using a matrix after "destroying" it!
+			var theIndex = thePool.indexOf(toBeDestroyed);
+			if (theIndex!=-1){
+				var swap = thePool[theIndex];
+				thePool[theIndex] = thePool[numSpare];
+				thePool[numSpare] = swap;
+				numSpare++;
+				return true;
+			}else{
+				return false;
+			}
+		},
+		getMats:function(){	//just to test
+			return thePool;
+		}
+	}
+})();
+
+
 function xyzmove4mat(mat, movevector){
 	if (mat.qPair){
 		mat.qPair = multiply_qpairs( mat.qPair, makemovequatpair(scalarvectorprod(0.5,movevector)) );
-		mat4.set(convert_quats_to_4matrix(mat.qPair), playerCamera);
+		convert_quats_to_4matrix(mat.qPair, playerCamera);	//this func now sets a matrix passed in to be equivalent to qpair
 		return;
 	}
 	
@@ -10,7 +44,7 @@ function xyzmove4mat(mat, movevector){
 	//rotating x,y,z into w (3rd )
 	
 	//just make a fresh matrix, then multiply the input matrix by that.
-	var newMatrix = mat4.create();
+	var newMatrix = matPool.create();
 	var moveLength = Math.sqrt(movevector[0]*movevector[0] + movevector[1]*movevector[1] + movevector[2]*movevector[2]);
 	var sAng = Math.sin(moveLength);
 	var cAng = Math.cos(moveLength);
@@ -67,10 +101,10 @@ function xyzmove4mat(mat, movevector){
 	newMatrix[8] = newZ[0];		newMatrix[9] = newZ[1];		newMatrix[10] = newZ[2];	newMatrix[11] = newZ[3];
 	newMatrix[12] = newW[0];	newMatrix[13] = newW[1];	newMatrix[14] = newW[2];	newMatrix[15] = newW[3];
 
-
 	
 	mat4.multiply(mat, newMatrix);
 
+	matPool.destroy(newMatrix);
 }
 
 function xmove4mat(mat, angle){
@@ -93,10 +127,12 @@ function xyzrotate4mat(mat, rotatevector){
 	
 	//angle/axis rotation.
 	//just make a fresh matrix, then multiply the input matrix by that.
-	var newMatrix = mat4.identity();
+	var newMatrix = matPool.create();
+	mat4.identity(newMatrix);
 	var rotationMag = Math.sqrt(rotatevector[0]*rotatevector[0] + rotatevector[1]*rotatevector[1] + rotatevector[2]*rotatevector[2]);
 	mat4.rotate(newMatrix, rotationMag, [rotatevector[0]/rotationMag, rotatevector[1]/rotationMag, rotatevector[2]/rotationMag] );
 	mat4.multiply(mat, newMatrix);
+	matPool.destroy(newMatrix);
 }
 
 function rotate4mat(mat, col1, col2, angle){
@@ -204,11 +240,9 @@ function normalise_quat(q){
 	}
 }
 
-function convert_quats_to_4matrix(qpair){
+function convert_quats_to_4matrix(qpair, m){
 	var q1=qpair[0], q2=qpair[1];
-	
-	var m = mat4.create();
-	
+		
 	var a1=q1[0];
     var b1=q1[1];
 	var c1=q1[2];
