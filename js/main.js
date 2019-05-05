@@ -863,6 +863,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 			targetWorldFrame = targetingSolution.targetWorldFrame;
 		}
 		
+		prepBuffersForDrawing(gunBuffers, shaderProgramColored);
+
 		gunMatrices=[];
 		drawRelativeToSpacehip([gunHoriz,gunVert,gunFront]); //left, down, forwards
 		drawRelativeToSpacehip([-gunHoriz,gunVert,gunFront]);
@@ -892,7 +894,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix,gunMatrixCosmetic);
 			
-			drawObjectFromBuffers(gunBuffers, shaderProgramColored);
+			drawObjectFromPreppedBuffers(gunBuffers, shaderProgramColored);
 		}
 		
 		function capGunPointing(pointingDir){
