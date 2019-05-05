@@ -873,17 +873,18 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		
 		function drawRelativeToSpacehip(vec){
-			var gunMatrixCosmetic = mat4.create();
+			var gunMatrixCosmetic = mat4.create();	//todo reuse matrices for gunMatrixCosmetic (fixed array) - not simple to use pool since pushing onto gunMatrices
 			mat4.set(matrix, gunMatrixCosmetic);
 			xyzmove4mat(gunMatrixCosmetic,vec);
 			
-			var gunMatrix = mat4.create();
+			var gunMatrix = matPool.create();
 			mat4.set(matrixForTargeting, gunMatrix);
 			xyzmove4mat(gunMatrix,vec);
 			
 			if (guiParams.target.type!="none" && guiParams["targeting"]=="individual"){
 				rotvec = getTargetingSolution(gunMatrix, targetMatrix).rotvec;
 			}
+			matPool.destroy(gunMatrix);
 			
 			//rotate guns to follow mouse
 			xyzrotate4mat(gunMatrixCosmetic, rotvec);		

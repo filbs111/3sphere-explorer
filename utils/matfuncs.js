@@ -23,11 +23,12 @@ var matPool = (function makeMatPool(){
 				numSpare++;
 				return true;
 			}else{
+				alert("whoops!");
 				return false;
 			}
 		},
 		getMats:function(){	//just to test
-			return thePool;
+			return {pool:thePool,numSpare:numSpare};
 		}
 	}
 })();
