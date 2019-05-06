@@ -391,18 +391,18 @@ function drawScene(frameTime){
 	//direction of flight
 	if (playerVelVec[2] > 0.1){	//??
 		bind2dTextureIfRequired(hudTexturePlus);		//todo texture atlas for all hud 
-		drawTargetDecal(0.001, [0.0, 0.5, 1.0, 0.5], playerVelVec);
+		drawTargetDecal(0.001, colorArrs.hudFlightDir, playerVelVec);
 	}
 	bind2dTextureIfRequired(hudTexture);	
 	
 	//drawTargetDecal(0.004, [1.0, 1.0, 0.0, 0.5], [0,0,0.01]);	//camera near plane. todo render with transparency
 	if (guiParams["targeting"]!="off"){
 		var shiftAmount = 1/muzzleVel;	//shift according to player velocity. 0.1 could be 1, but 
-		drawTargetDecal(0.0037/(1+shiftAmount*playerVelVec[2]), [1.0, 1.0, 0.0, 0.5], [shiftAmount*playerVelVec[0],shiftAmount*playerVelVec[1],1+shiftAmount*playerVelVec[2]]);	//TODO vector add!
+		drawTargetDecal(0.0037/(1+shiftAmount*playerVelVec[2]), colorArrs.hudYellow, [shiftAmount*playerVelVec[0],shiftAmount*playerVelVec[1],1+shiftAmount*playerVelVec[2]]);	//TODO vector add!
 		
 		if (guiParams.target.type!="none" && targetWorldFrame[2]<0){	//if in front of player){
 			bind2dTextureIfRequired(hudTextureBox);				
-			drawTargetDecal(0.001, [1, 0.1, 0, 0.5], targetWorldFrame);	//direction to target (shows where target is on screen)
+			drawTargetDecal(0.001, colorArrs.hudBox, targetWorldFrame);	//direction to target (shows where target is on screen)
 								//TODO put where is on screen, not direction from spaceship (obvious difference in 3rd person)
 			//bind2dTextureIfRequired(hudTextureSmallCircles);	
 			//drawTargetDecal(0.0008, [1, 0.1, 1, 0.5], selectedTargeting);	//where should shoot in order to hit target (accounting for player velocity)
@@ -416,7 +416,7 @@ function drawScene(frameTime){
 	//show where guns will shoot
 	if (fireDirectionVec[2] > 0.1){	//??
 		bind2dTextureIfRequired(hudTextureX);
-		drawTargetDecal(0.001, [1.0, 1.0, 0.0, 0.5], fireDirectionVec);
+		drawTargetDecal(0.001, colorArrs.hudYellow, fireDirectionVec);	//todo check whether this colour already set
 	}
 	
 	function drawTargetDecal(scale, color, pos){
@@ -451,6 +451,27 @@ function setProjectionMatrix(pMatrix, vFov, ratio, polarity){
 
 var usePrecalcCells=true;
 var currentWorld=0;
+
+var colorArrs = {
+	white:[1.0, 1.0, 1.0, 1.0],
+	darkGray:[0.4, 0.4, 0.4, 1.0],
+	veryDarkGray:[0.2, 0.2, 0.2, 1.0],
+	red:[1.0, 0.4, 0.4, 1.0],
+	green:[0.4, 1.0, 0.4, 1.0],
+	blue:[0.4, 0.4, 1.0, 1.0],
+	yellow:[1.0, 1.0, 0.4, 1.0],
+	magenta:[1.0, 0.4, 1.0, 1.0],
+	cyan:[0.4, 1.0, 1.0, 1.0],
+	randBoxes:[0.9, 0.9, 1.0, 0.9],
+	teapot:[0.4, 0.4, 0.8, 1.0],
+	hudFlightDir:[0.0, 0.5, 1.0, 0.5],
+	hudBox:[1, 0.1, 0, 0.5],
+	hudYellow:[1.0, 1.0, 0.0, 0.5],
+	guns:[0.3, 0.3, 0.3, 1.0],
+	target:[1, 0.2, 0.2, 1],
+	
+}
+Object.keys(colorArrs).map(function(key){colorArrs[key]=new Float32Array(colorArrs[key]);});	//maybe more efficient?
 
 function drawWorldScene(frameTime, isCubemapView) {
 		
@@ -530,14 +551,14 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var startAng = Math.PI / numBallsInRing;
 	var angleStep = startAng * 2.0;
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 0.4, 1.0]);	//RED
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.red);	//RED
 	mat4.set(invertedWorldCamera, mvMatrix);
 	//try moving in z first so can see...
 	//zmove4matCols(mvMatrix, -0.5);
 	
 	if (guiParams.drawShapes['boxes y=z=0']){drawRing();}
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.green);	//GREEN
 	mat4.set(invertedWorldCamera, mvMatrix);
 	//try moving in z first so can see...
 	//zmove4matCols(mvMatrix, -0.5);
@@ -545,24 +566,24 @@ function drawWorldScene(frameTime, isCubemapView) {
 	rotate4mat(mvMatrix, 0, 1, Math.PI*0.5);
 	if (guiParams.drawShapes['boxes x=z=0']){drawRing();}
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 1.0, 1.0]);	//BLUE
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.blue);	//BLUE
 	mat4.set(invertedWorldCamera, mvMatrix);
 	rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
 	if (guiParams.drawShapes['boxes x=y=0']){drawRing();}
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.4, 1.0]);	//YELLOW
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.yellow);	//YELLOW
 	mat4.set(invertedWorldCamera, mvMatrix);
 	xmove4mat(mvMatrix, Math.PI*0.5);
 	rotate4mat(mvMatrix, 0, 1, Math.PI*0.5);
 	if (guiParams.drawShapes['boxes z=w=0']){drawRing();}
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 1.0, 1.0]);	//MAGENTA
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.magenta);	//MAGENTA
 	mat4.set(invertedWorldCamera, mvMatrix);
 	xmove4mat(mvMatrix, Math.PI*0.5);
 	rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
 	if (guiParams.drawShapes['boxes y=w=0']){drawRing();}
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 1.0, 1.0]);	//CYAN
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.cyan);	//CYAN
 	mat4.set(invertedWorldCamera, mvMatrix);
 	ymove4mat(mvMatrix, Math.PI*0.5);
 	rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
@@ -583,7 +604,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var numRandomBoxes = guiParams['random boxes'].number;
 	
 	if (numRandomBoxes>0){
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.9, 0.9, 1.0, 0.9]);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.randBoxes);
 		
 		boxSize = guiParams['random boxes'].size;
 		boxRad = boxSize*Math.sqrt(3);
@@ -608,7 +629,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//draw blender object - a csg cube minus sphere. draw 8 cells for tesseract.
 	var modelScale = guiParams["8-cell scale"];
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
 
 	if (guiParams["draw 8-cell"]){
 		drawArrayOfModels(
@@ -662,7 +683,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	mat4.set(invertedWorldCamera, mvMatrix);
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 0.4, 1.0]);	//DARK
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.darkGray);	//DARK
 
 	//new draw dodeca stuff...
 	if (guiParams["draw 120-cell"]){
@@ -727,7 +748,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.useProgram(activeShaderProgram);
 		gl.uniform1fv(activeShaderProgram.uniforms.uTime, [0.00005*(frameTime % 20000 )]);	//20s loop
 	}
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 	if (activeShaderProgram.uniforms.uReflectorDiffColor){
@@ -778,7 +799,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	}
 	//gl.disableVertexAttribArray(1);	//don't need texcoords
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 0.8, 1.0]);	//BLUE
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.teapot);	//BLUE
 	gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0.1,0.3]);	//some emission
 	modelScale = guiParams["teapot scale"];
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
@@ -825,7 +846,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	function drawSpaceship(matrix, matrixForTargeting){
 		modelScale=0.0002;
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.2, 0.2, 0.2, 1.0]);	//DARK
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.veryDarkGray);	//DARK
 		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 		
@@ -837,7 +858,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//draw guns
 		var gunScale = 50*modelScale;
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [gunScale,gunScale,gunScale]);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.3, 0.3, 0.3, 1.0]);	//GREY
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.guns);	//GREY
 		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [gunHeat/15,gunHeat/30,gunHeat/45]);
 														
 		var gunHoriz = 20*modelScale;
@@ -874,6 +895,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		function drawRelativeToSpacehip(vec){
 			var gunMatrixCosmetic = mat4.create();	//todo reuse matrices for gunMatrixCosmetic (fixed array) - not simple to use pool since pushing onto gunMatrices
+													//todo precalc gunmatrices relative to spaceship?
 			mat4.set(matrix, gunMatrixCosmetic);
 			xyzmove4mat(gunMatrixCosmetic,vec);
 			
@@ -1089,7 +1111,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//draw "light" object
 		var sphereRad = 0.04;
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [sphereRad,sphereRad,sphereRad]);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,	matrix);
 		if (frustrumCull(mvMatrix,sphereRad)){
@@ -1118,7 +1140,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 				if (frustrumCull(mvMatrix,targetRad)){	//normally use +ve radius
 											//-ve to make disappear when not entirely inside view frustrum (for testing)
 					gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,targetRad]);
-					gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1, 0.2, 0.2, 1]);
+					gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.target);
 					var emitColor = Math.sin(frameTime*0.01);
 					//emitColor*=emitColor
 					gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [emitColor, emitColor, emitColor/2]);	//YELLOW
@@ -1135,7 +1157,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 					activeShaderProgram = shaderProgramTexmap;
 					gl.useProgram(activeShaderProgram);
 					gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,targetRad]);
-					gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1, 1, 1, 1]);
+					gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
 					drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
 					activeShaderProgram = savedActiveProg;
 					gl.useProgram(activeShaderProgram);
@@ -1160,8 +1182,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.useProgram(activeShaderProgram);
 		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uPosShiftMat, false, reflectorInfo.shaderMatrix);
 		
-		//gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.9, 0.9, 0.9, 1.0]);	//grey
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
 		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 		if (activeShaderProgram.uniforms.uReflectorDiffColor){
 			gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
