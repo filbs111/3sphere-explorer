@@ -46,10 +46,11 @@ function xyzmove4mat(mat, movevector){
 	
 	//just make a fresh matrix, then multiply the input matrix by that.
 	var newMatrix = matPool.create();
-	var moveLength = Math.sqrt(movevector[0]*movevector[0] + movevector[1]*movevector[1] + movevector[2]*movevector[2]);
+	var moveLengthSq=movevector[0]*movevector[0] + movevector[1]*movevector[1] + movevector[2]*movevector[2];
+	var moveLength = Math.sqrt(moveLengthSq);
 	var sAng = Math.sin(moveLength);
 	var cAng = Math.cos(moveLength);
-
+	var cAngMinusOne = cAng-1;
 
 	//basically the matrix rows / columns (which way around )should be a vector for each of the 4 points x=1, y=1, z=1, w=1, rotated.
 	//work these out, then insert into a matrix (try row, column), rotate
@@ -58,28 +59,25 @@ function xyzmove4mat(mat, movevector){
 	var newW= [ -normFactor*movevector[0], -normFactor*movevector[1], -normFactor*movevector[2], cAng];
 	//x starts as [1,0,0,0]. if movevector is along x, becomes [cAng,0,0,sAng]. if movevector perpendicular to x, stays as [1,0,0,0]
 	//let's guess... ( suspect there may be cross terms though)
-	var reducedCircleRad = movevector[0]/moveLength;
-	var reducedNormFactor = sAng*reducedCircleRad;
+
 	//guess at signs - seems like a cross producty kind of thing
-	var newX= [1.0- (1.0-cAng)*reducedCircleRad*reducedCircleRad,
-								-(1.0-cAng)*reducedCircleRad*(movevector[1]/moveLength), 
-													-(1.0-cAng)*reducedCircleRad*(movevector[2]/moveLength),
-																				reducedNormFactor]; //*(movevector[0]/moveLength)];
+	var newX= [1.0 + cAngMinusOne*movevector[0]*movevector[0]/moveLengthSq,
+								cAngMinusOne*movevector[0]*movevector[1]/moveLengthSq, 
+													cAngMinusOne*movevector[0]*movevector[2]/moveLengthSq,
+																				sAng*movevector[0]/moveLength]; //*(movevector[0]/moveLength)];
 	
-	var reducedCircleRad = movevector[1]/moveLength;
-	var reducedNormFactor = sAng*reducedCircleRad;
 	//guess at signs - seems like a cross producty kind of thing
-	var newY= [-(1.0-cAng)*reducedCircleRad*(movevector[0]/moveLength),
-								1.0- (1.0-cAng)*reducedCircleRad*reducedCircleRad,
-														-(1.0-cAng)*reducedCircleRad*(movevector[2]/moveLength),
-																				reducedNormFactor];	//*(movevector[1]/moveLength)];
+	var newY= [cAngMinusOne*movevector[1]*movevector[0]/moveLengthSq,
+								1.0 + cAngMinusOne*movevector[1]*movevector[1]/moveLengthSq,
+														cAngMinusOne*movevector[1]*movevector[2]/moveLengthSq,
+																				sAng*movevector[1]/moveLength];	//*(movevector[1]/moveLength)];
 	
 	var reducedCircleRad = movevector[2]/moveLength;
 	var reducedNormFactor = sAng*reducedCircleRad;
-	var newZ= [-(1.0-cAng)*reducedCircleRad*(movevector[0]/moveLength),
-								-(1.0-cAng)*reducedCircleRad*(movevector[1]/moveLength),
-														1.0- (1.0-cAng)*reducedCircleRad*reducedCircleRad,
-																				reducedNormFactor];
+	var newZ= [cAngMinusOne*movevector[2]*movevector[0]/moveLengthSq,
+								cAngMinusOne*movevector[2]*movevector[1]/moveLengthSq,
+														1.0 + cAngMinusOne*movevector[2]*movevector[2]/moveLengthSq,
+																				sAng*movevector[2]/moveLength];
 
 	//calculate lengths - should be 1
 	//console.log("length squared newX : " + ( newX[0]*newX[0] + newX[1]*newX[1] + newX[2]*newX[2] + newX[3]*newX[3]));
