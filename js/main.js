@@ -1995,248 +1995,252 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		var critValueRandBox = 1/Math.sqrt(1+boxSize*boxSize);
 		
+		//slightly less ridiculous place for this - not declaring functions inside for loop!
+		function checkBulletCollision(bullet){
+			var bulletMatrix=bullet.matrix;
+			var bulletVel=bullet.vel;
+			xyzmove4mat(bulletMatrix,scalarvectorprod(moveAmount,bulletVel));
+			
+			mat4.set(invTargetMat,relativeMat);
+			mat4.multiply(relativeMat, bulletMatrix);
+			
+			switch (guiParams.target.type){
+				case "sphere":
+					if (relativeMat[15]>critValue){
+						detonateBullet(bullet, bulletMatrix);
+					}
+					break;
+				case "box":
+					if (relativeMat[15]>0 && Math.max(Math.abs(relativeMat[12]),
+								Math.abs(relativeMat[13]),
+								Math.abs(relativeMat[14]))<guiParams.target.scale){
+						detonateBullet(bullet, bulletMatrix);
+					}
+					break;
+			}
+			
+			
+			//slow collision detection between bullet and array of boxes.
+			//todo 1 try simple optimisation by matrix/scalar multiplication instead of matrix-matrix
+			//todo 2 another simple optimisation - sphere check by xyzw distance. previous check only if passes
+			//todo 3 heirarchical bounding boxes or gridding system!
+			
+			if (numRandomBoxes>0){
+				
+				for (var ii=0;ii<numRandomBoxes;ii++){
+					if (randomMats[ii][15]>criticalWPos){continue;}	//not drawing boxes too close to portal, so don't collide with them either!
+														//TODO move to setup stage
+					
+					mat4.set(randomMats[ii], relativeMat);
+					mat4.transpose(relativeMat);
+					mat4.multiply(relativeMat, bulletMatrix);
+					
+					if (relativeMat[15]<critValueRandBox){continue;}	//early sphere check
+					
+					if (relativeMat[15]>0 && Math.max(Math.abs(relativeMat[12]),
+								Math.abs(relativeMat[13]),
+								Math.abs(relativeMat[14]))<boxSize*relativeMat[15]){
+						detonateBullet(bullet, bulletMatrix);
+					}
+				}
+			}
+			
+			//similar thing for 8-cell frames
+			var cellSize = guiParams["8-cell scale"];
+			if (guiParams["draw 8-cell"]){
+				for (dd in cellMatData.d8){
+					var thisMat = cellMatData.d8[dd];
+					mat4.set(thisMat, relativeMat);
+					mat4.transpose(relativeMat);
+					mat4.multiply(relativeMat, bulletMatrix);
+											
+					if (relativeMat[15]>0){
+						var projectedPosAbs = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return Math.abs(val)/(cellSize*relativeMat[15]);});
+						if (Math.max(projectedPosAbs[0],projectedPosAbs[1],projectedPosAbs[2])<1){
+							var count=projectedPosAbs.reduce(function (sum,val){return val>0.8?sum+1:sum;},0);
+							if (count>1){
+								detonateBullet(bullet, bulletMatrix);
+							}
+						}
+					}
+				}
+			}
+			
+			
+			
+			//tetrahedron. (16-cell and 600-cell)
+			if (guiParams["draw 16-cell"]){
+				checkTetraCollisionForArray(guiParams["16-cell scale"], cellMatData.d16);
+			}
+			if (guiParams["draw 600-cell"]){
+				checkTetraCollisionForArray(0.385/(4/Math.sqrt(6)), cellMatData.d600);
+			}
+			
+			function checkTetraCollisionForArray(cellScale, matsArr){
+				var critVal = 1/Math.sqrt(1+cellScale*cellScale*3);
+				for (dd in matsArr){
+					var thisMat = matsArr[dd];
+					mat4.set(thisMat, relativeMat);
+					mat4.transpose(relativeMat);
+					mat4.multiply(relativeMat, bulletMatrix);
+						
+					if (relativeMat[15]>0){			
+						if (relativeMat[15]<critVal){continue;}	//early sphere check
+						
+						var projectedPos = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return val/(cellScale*relativeMat[15]);});
+						
+						//initially just find a corner
+						//seems is triangular pyramid, with "top" in 1-axis direction
+						//seems 0 - axis parrallel to one base edge
+						//1 - "up"
+						//2 - other base axis
+						// ie top point = (0,sqrt(3),0)
+						// therefore inside has to be above base ( pos[2] > -0.33*root(3) = 1/root(3)
+													
+						var isInside = true;
+						
+						var selection = -1;
+						var best = 1;
+						
+						//identify which quarter of tetrahedron are in (therefore which outer plane, set of 3 inner planes to check against.
+						for (var ii=0;ii<4;ii++){
+							var toPlane = planeCheck(tetraPlanesToCheck[ii],projectedPos);
+							if (toPlane < best){
+								best = toPlane;
+								selection = ii;
+							}
+						}
+						
+						if (best < -1){
+							isInside = false;
+						}
+						
+						//check is not inside all 3 inner planes for relevant quarter.
+						var innerPlanes = tetraInnerPlanesToCheck[selection];
+						if (planeCheck(innerPlanes[0],projectedPos) >-1 &&
+							planeCheck(innerPlanes[1],projectedPos) >-1 &&
+							planeCheck(innerPlanes[2],projectedPos) >-1){
+								isInside = false;
+						}
+						
+						if (isInside){
+							detonateBullet(bullet, bulletMatrix);
+						}
+						
+						//todo 4th number for comparison value - means can still work if plane thru origin.
+						function planeCheck(planeVec,pos){
+							return pos[0]*planeVec[0] + pos[1]*planeVec[1] +pos[2]*planeVec[2];
+						}
+					}
+				}
+			}
+			
+			//octohedron collision
+			if (guiParams["draw 24-cell"]){
+				var cellSize24 = guiParams["24-cell scale"];
+				
+				for (dd in cellMatData.d24.cells){
+					var thisMat = cellMatData.d24.cells[dd];
+					mat4.set(thisMat, relativeMat);
+					mat4.transpose(relativeMat);
+					mat4.multiply(relativeMat, bulletMatrix);
+											
+					if (relativeMat[15]>0){
+						//todo speed up. division for all vec parts not necessary
+						//change number inside if rhs comparison
+						//also should apply multiplier to 0.8 for inner check.
+						var projectedPosAbs = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return Math.abs(val)/(cellSize24*relativeMat[15]);});
+						if (projectedPosAbs[0]+projectedPosAbs[1]+projectedPosAbs[2] < 1){
+							//inside octohedron. frame is octohedron minus small octohedron extruded.
+							if (projectedPosAbs[0]+projectedPosAbs[1]>2*projectedPosAbs[2]+0.8 ||
+								projectedPosAbs[0]+projectedPosAbs[2]>2*projectedPosAbs[1]+0.8 ||
+								projectedPosAbs[1]+projectedPosAbs[2]>2*projectedPosAbs[0]+0.8){
+								detonateBullet(bullet, bulletMatrix);
+							}
+						}
+					}
+				}
+			}
+			
+			if (guiParams["draw 120-cell"]){
+				//dodecohedron collision. 
+				//initially, sphere check
+				// for convenience, make 1 dodeca, make quite big
+				// then outer dodeca collision (6 abs checks)
+				// then calculate which of abs value along axes is smallest,
+				// apply reflection along some axis depending on sign??
+				// then apply 5 inner thing checks
+				
+				var dodecaScaleFudge = dodecaScale * (0.4/0.505);	//TODO where do numbers come from!!
+												//possibly this is sqrt(0.63) and 0.63 is (1+2/sqrt(5))/3;
+				var critVal = 1/Math.sqrt(1+dodecaScaleFudge*dodecaScaleFudge);
+
+				for (dd in cellMatData.d120){	//single element of array for convenience
+					var thisMat = cellMatData.d120[dd];
+					mat4.set(thisMat, relativeMat);
+					mat4.transpose(relativeMat);
+					mat4.multiply(relativeMat, bulletMatrix);
+											
+					if (relativeMat[15]>0){
+							//if outside bounding sphere
+						if (relativeMat[15]<critVal){continue;}
+						
+						var projectedPos = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return val/(dodecaScale*relativeMat[15]);});
+						
+						var selection = -1;
+						var best = 0;
+						for (var ii in dodecaPlanesToCheck){
+							var toPlane = planeCheck(dodecaPlanesToCheck[ii],projectedPos);
+							if (Math.abs(toPlane) > Math.abs(best)){
+								best = toPlane;
+								selection = ii;
+							}
+						}
+						
+						if (Math.abs(best) > 0.63){
+							continue;
+						}
+						
+						//inner plane check
+						var isInsidePrism = true;
+						var dirsArr = dodecaDirs[selection];
+						var dirA=dirsArr[0];
+						var dirB=dirsArr[1];
+						
+						//dot product of directions with 
+						var dotA = dirA[0]*projectedPos[0] + dirA[1]*projectedPos[1] + dirA[2]*projectedPos[2];  
+						var dotB = dirB[0]*projectedPos[0] + dirB[1]*projectedPos[1] + dirB[2]*projectedPos[2];  
+						
+						dotA = best>0 ? dotA:-dotA;	//????
+						
+						for (var ang=0;ang<5;ang++){	//note doing this in other order (eg 0,2,4,1,5) with early exit could be quicker
+							var angRad = ang*Math.PI/2.5;
+							var myDotP = dotA*Math.cos(angRad) + dotB*Math.sin(angRad);
+							if (myDotP>0.31){isInsidePrism=false;}
+						}
+						if (!isInsidePrism){detonateBullet(bullet, bulletMatrix);}
+						
+						
+						//todo reuse tetra version / general dot product function!
+						function planeCheck(planeVec,pos){
+							return pos[0]*planeVec[0] + pos[1]*planeVec[1] +pos[2]*planeVec[2];
+						}
+					}
+				}
+			}
+		}
+		function detonateBullet(bullet, bulletMatrix){	//TODO what scope does this have? best practice???
+			bullet.vel = [0,0,0];	//if colliding with target, stop bullet.
+			bullet.active=false;
+			var tmp=new Explosion(bulletMatrix);
+			//singleExplosion.life = 100;
+			//singleExplosion.matrix = bulletMatrix;
+		}
+		
 		for (var b in bullets){
 			var bullet = bullets[b];
 			if (bullet.active){	//TODO just delete/unlink removed objects
-				var bulletMatrix=bullet.matrix;
-				var bulletVel=bullet.vel;
-				xyzmove4mat(bulletMatrix,scalarvectorprod(moveAmount,bulletVel));
-				
-				mat4.set(invTargetMat,relativeMat);
-				mat4.multiply(relativeMat, bulletMatrix);
-				
-				switch (guiParams.target.type){
-					case "sphere":
-						if (relativeMat[15]>critValue){
-							detonateBullet();
-						}
-						break;
-					case "box":
-						if (relativeMat[15]>0 && Math.max(Math.abs(relativeMat[12]),
-									Math.abs(relativeMat[13]),
-									Math.abs(relativeMat[14]))<guiParams.target.scale){
-							detonateBullet();
-						}
-						break;
-				}
-				
-				
-				//slow collision detection between bullet and array of boxes.
-				//todo 1 try simple optimisation by matrix/scalar multiplication instead of matrix-matrix
-				//todo 2 another simple optimisation - sphere check by xyzw distance. previous check only if passes
-				//todo 3 heirarchical bounding boxes or gridding system!
-				
-				if (numRandomBoxes>0){
-					
-					for (var ii=0;ii<numRandomBoxes;ii++){
-						if (randomMats[ii][15]>criticalWPos){continue;}	//not drawing boxes too close to portal, so don't collide with them either!
-															//TODO move to setup stage
-						
-						mat4.set(randomMats[ii], relativeMat);
-						mat4.transpose(relativeMat);
-						mat4.multiply(relativeMat, bulletMatrix);
-						
-						if (relativeMat[15]<critValueRandBox){continue;}	//early sphere check
-						
-						if (relativeMat[15]>0 && Math.max(Math.abs(relativeMat[12]),
-									Math.abs(relativeMat[13]),
-									Math.abs(relativeMat[14]))<boxSize*relativeMat[15]){
-							detonateBullet();
-						}
-					}
-				}
-				
-				//similar thing for 8-cell frames
-				var cellSize = guiParams["8-cell scale"];
-				if (guiParams["draw 8-cell"]){
-					for (dd in cellMatData.d8){
-						var thisMat = cellMatData.d8[dd];
-						mat4.set(thisMat, relativeMat);
-						mat4.transpose(relativeMat);
-						mat4.multiply(relativeMat, bulletMatrix);
-												
-						if (relativeMat[15]>0){
-							var projectedPosAbs = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return Math.abs(val)/(cellSize*relativeMat[15]);});
-							if (Math.max(projectedPosAbs[0],projectedPosAbs[1],projectedPosAbs[2])<1){
-								var count=projectedPosAbs.reduce(function (sum,val){return val>0.8?sum+1:sum;},0);
-								if (count>1){
-									detonateBullet();
-								}
-							}
-						}
-					}
-				}
-				
-				
-				
-				//tetrahedron. (16-cell and 600-cell)
-				if (guiParams["draw 16-cell"]){
-					checkTetraCollisionForArray(guiParams["16-cell scale"], cellMatData.d16);
-				}
-				if (guiParams["draw 600-cell"]){
-					checkTetraCollisionForArray(0.385/(4/Math.sqrt(6)), cellMatData.d600);
-				}
-				
-				function checkTetraCollisionForArray(cellScale, matsArr){
-					var critVal = 1/Math.sqrt(1+cellScale*cellScale*3);
-					for (dd in matsArr){
-						var thisMat = matsArr[dd];
-						mat4.set(thisMat, relativeMat);
-						mat4.transpose(relativeMat);
-						mat4.multiply(relativeMat, bulletMatrix);
-							
-						if (relativeMat[15]>0){			
-							if (relativeMat[15]<critVal){continue;}	//early sphere check
-							
-							var projectedPos = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return val/(cellScale*relativeMat[15]);});
-							
-							//initially just find a corner
-							//seems is triangular pyramid, with "top" in 1-axis direction
-							//seems 0 - axis parrallel to one base edge
-							//1 - "up"
-							//2 - other base axis
-							// ie top point = (0,sqrt(3),0)
-							// therefore inside has to be above base ( pos[2] > -0.33*root(3) = 1/root(3)
-														
-							var isInside = true;
-							
-							var selection = -1;
-							var best = 1;
-							
-							//identify which quarter of tetrahedron are in (therefore which outer plane, set of 3 inner planes to check against.
-							for (var ii=0;ii<4;ii++){
-								var toPlane = planeCheck(tetraPlanesToCheck[ii],projectedPos);
-								if (toPlane < best){
-									best = toPlane;
-									selection = ii;
-								}
-							}
-							
-							if (best < -1){
-								isInside = false;
-							}
-							
-							//check is not inside all 3 inner planes for relevant quarter.
-							var innerPlanes = tetraInnerPlanesToCheck[selection];
-							if (planeCheck(innerPlanes[0],projectedPos) >-1 &&
-								planeCheck(innerPlanes[1],projectedPos) >-1 &&
-								planeCheck(innerPlanes[2],projectedPos) >-1){
-									isInside = false;
-							}
-							
-							if (isInside){
-								detonateBullet();
-							}
-							
-							//todo 4th number for comparison value - means can still work if plane thru origin.
-							function planeCheck(planeVec,pos){
-								return pos[0]*planeVec[0] + pos[1]*planeVec[1] +pos[2]*planeVec[2];
-							}
-						}
-					}
-				}
-				
-				//octohedron collision
-				if (guiParams["draw 24-cell"]){
-					var cellSize24 = guiParams["24-cell scale"];
-					
-					for (dd in cellMatData.d24.cells){
-						var thisMat = cellMatData.d24.cells[dd];
-						mat4.set(thisMat, relativeMat);
-						mat4.transpose(relativeMat);
-						mat4.multiply(relativeMat, bulletMatrix);
-												
-						if (relativeMat[15]>0){
-							//todo speed up. division for all vec parts not necessary
-							//change number inside if rhs comparison
-							//also should apply multiplier to 0.8 for inner check.
-							var projectedPosAbs = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return Math.abs(val)/(cellSize24*relativeMat[15]);});
-							if (projectedPosAbs[0]+projectedPosAbs[1]+projectedPosAbs[2] < 1){
-								//inside octohedron. frame is octohedron minus small octohedron extruded.
-								if (projectedPosAbs[0]+projectedPosAbs[1]>2*projectedPosAbs[2]+0.8 ||
-								    projectedPosAbs[0]+projectedPosAbs[2]>2*projectedPosAbs[1]+0.8 ||
-								    projectedPosAbs[1]+projectedPosAbs[2]>2*projectedPosAbs[0]+0.8){
-									detonateBullet();
-								}
-							}
-						}
-					}
-				}
-				
-				if (guiParams["draw 120-cell"]){
-					//dodecohedron collision. 
-					//initially, sphere check
-					// for convenience, make 1 dodeca, make quite big
-					// then outer dodeca collision (6 abs checks)
-					// then calculate which of abs value along axes is smallest,
-					// apply reflection along some axis depending on sign??
-					// then apply 5 inner thing checks
-					
-					var dodecaScaleFudge = dodecaScale * (0.4/0.505);	//TODO where do numbers come from!!
-													//possibly this is sqrt(0.63) and 0.63 is (1+2/sqrt(5))/3;
-					var critVal = 1/Math.sqrt(1+dodecaScaleFudge*dodecaScaleFudge);
-
-					for (dd in cellMatData.d120){	//single element of array for convenience
-						var thisMat = cellMatData.d120[dd];
-						mat4.set(thisMat, relativeMat);
-						mat4.transpose(relativeMat);
-						mat4.multiply(relativeMat, bulletMatrix);
-												
-						if (relativeMat[15]>0){
-								//if outside bounding sphere
-							if (relativeMat[15]<critVal){continue;}
-							
-							var projectedPos = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return val/(dodecaScale*relativeMat[15]);});
-							
-							var selection = -1;
-							var best = 0;
-							for (var ii in dodecaPlanesToCheck){
-								var toPlane = planeCheck(dodecaPlanesToCheck[ii],projectedPos);
-								if (Math.abs(toPlane) > Math.abs(best)){
-									best = toPlane;
-									selection = ii;
-								}
-							}
-							
-							if (Math.abs(best) > 0.63){
-								continue;
-							}
-							
-							//inner plane check
-							var isInsidePrism = true;
-							var dirsArr = dodecaDirs[selection];
-							var dirA=dirsArr[0];
-							var dirB=dirsArr[1];
-							
-							//dot product of directions with 
-							var dotA = dirA[0]*projectedPos[0] + dirA[1]*projectedPos[1] + dirA[2]*projectedPos[2];  
-							var dotB = dirB[0]*projectedPos[0] + dirB[1]*projectedPos[1] + dirB[2]*projectedPos[2];  
-							
-							dotA = best>0 ? dotA:-dotA;	//????
-							
-							for (var ang=0;ang<5;ang++){	//note doing this in other order (eg 0,2,4,1,5) with early exit could be quicker
-								var angRad = ang*Math.PI/2.5;
-								var myDotP = dotA*Math.cos(angRad) + dotB*Math.sin(angRad);
-								if (myDotP>0.31){isInsidePrism=false;}
-							}
-							if (!isInsidePrism){detonateBullet();}
-							
-							
-							//todo reuse tetra version / general dot product function!
-							function planeCheck(planeVec,pos){
-								return pos[0]*planeVec[0] + pos[1]*planeVec[1] +pos[2]*planeVec[2];
-							}
-						}
-					}
-				}
-						
-				function detonateBullet(){	//TODO what scope does this have? best practice???
-					bullet.vel = [0,0,0];	//if colliding with target, stop bullet.
-					bullet.active=false;
-					var tmp=new Explosion(bulletMatrix);
-					//singleExplosion.life = 100;
-					//singleExplosion.matrix = bulletMatrix;
-				}
+				checkBulletCollision(bullet);
 			}
 		}
 		
