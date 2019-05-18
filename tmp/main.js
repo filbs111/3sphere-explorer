@@ -8,7 +8,6 @@ var shaderProgramColored,
 	shaderProgramTexmapPerPixel,
 	shaderProgramTexmapPerPixelDiscard,
 	shaderProgramTexmap4Vec,
-	shaderProgramDuocylinderSea,
 	shaderProgramCubemap,
 	shaderProgramVertprojCubemap,
 	shaderProgramDecal;
@@ -51,12 +50,6 @@ function initShaders(){
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 					
-	//shaderProgramDuocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-flat-fs",{
-	shaderProgramDuocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-texmap-fs",{
-					attributes:["aVertexPosition"],
-					uniforms:["uPMatrix","uMVMatrix","uTime","uDropLightPos","uDropLightPos2","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
-					});
-					
 	shaderProgramCubemap = loadShader( "shader-cubemap-vs", "shader-cubemap-fs",{
 					attributes:["aVertexPosition"],
 					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor","uModelScale", "uPosShiftMat","uPolarity"]
@@ -75,9 +68,7 @@ function initShaders(){
 
 var duocylinderObjects={
 	grid:{divs:4,step:Math.PI/2},
-	terrain:{divs:2,step:Math.PI},
-	//sea:{divs:2,step:Math.PI}
-	sea:{divs:1,step:2*Math.PI}
+	terrain:{divs:2,step:Math.PI}
 	};
 
 var sphereBuffers={};
@@ -96,9 +87,8 @@ var gunBuffers={};
 var icoballBuffers={};
 
 function initBuffers(){
-	loadDuocylinderBufferData(duocylinderObjects.grid, tballGridDataPantheonStyle);
+	loadDuocylinderBufferData(duocylinderObjects.grid, tballGridData);
 	loadDuocylinderBufferData(duocylinderObjects.terrain, terrainData);
-	loadDuocylinderSeaBufferData(duocylinderObjects.sea, gridData);	//for use in a different shader. no precalculation of mapping to 4-verts
 	
 	function loadDuocylinderBufferData(bufferObj, sourceData){
 		bufferObj.vertexPositionBuffer = gl.createBuffer();
@@ -115,29 +105,22 @@ function initBuffers(){
 		bufferObj.vertexIndexBuffer.numItems = sourceData.indices.length;
 	}
 	
-	function loadDuocylinderSeaBufferData(bufferObj, sourceData){
-		bufferObj.vertexPositionBuffer = gl.createBuffer();
-		bufferArrayData(bufferObj.vertexPositionBuffer, sourceData.vertices, 2);
-		bufferObj.vertexIndexBuffer = gl.createBuffer();
-		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
-		//sourceData.indices = [].concat.apply([],sourceData.faces);
-		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(sourceData.indices), gl.STATIC_DRAW);
-		bufferObj.vertexIndexBuffer.itemSize = 3;
-		//bufferObj.vertexIndexBuffer.numItems = sourceData.indices.length/3;	//todo why isn't /3 used in loadDuocylinderBufferData ?
-		bufferObj.vertexIndexBuffer.numItems = sourceData.indices.length;
-	}
-	
 	//load blender object
 	//TODO use XMLHTTPRequest or something
 	//for now have put "var myBlenderObjOrWhatever = " in front of contents of untitled.obj.json, and are referencing this directly as a script (similar to how are doing with shaders)
 	//this part will eventually want to make part of build process (so can load object just containing what need)
 	var cubeFrameBlenderObject = loadBlenderExport(cubeFrameData.meshes[0]);
-	var cubeFrameSubdivObject = loadBlenderExport(cubeFrameSubdivData);
+	//var cubeFrameSubdivObject = loadBlenderExport(cubeFrameSubdivData);
+	var cubeFrameSubdivObject = loadBlenderExportNoOutwardFaces(cubeFrameSubdivData);
 	var octoFrameBlenderObject = loadBlenderExport(octoFrameData.meshes[0]);
-	var octoFrameSubdivObject = loadBlenderExport(octoFrameSubdivData);
-	var tetraFrameBlenderObject = loadBlenderExport(tetraFrameData.meshes[0]);
-	var tetraFrameSubdivObject = loadBlenderExport(tetraFrameSubdivData);
-	var dodecaFrameBlenderObject = loadBlenderExport(dodecaFrameData.meshes[0]);
+	//var octoFrameSubdivObject = loadBlenderExport(octoFrameSubdivData);
+	var octoFrameSubdivObject = loadBlenderExportNoOutwardFaces(octoFrameSubdivData);
+	
+	var tetraFrameBlenderObject = loadBlenderExportNoOutwardFaces(tetraFrameData.meshes[0]);
+	//var tetraFrameBlenderObject = loadBlenderExport(tetraFrameData.meshes[0]);
+	var tetraFrameSubdivObject = loadBlenderExport(tetraFrameSubdivData);	//TODO nooutward faces for this too
+	var dodecaFrameBlenderObject = loadBlenderExportNoOutwardFaces(dodecaFrameData.meshes[0]);
+	//var dodecaFrameBlenderObject = loadBlenderExport(dodecaFrameData.meshes[0]);
 	var teapotObject = loadBlenderExport(teapotData);	//isn't actually a blender export - just a obj json
 	var sshipObject = loadBlenderExport(sshipdata.meshes[0]);		//""
 	var gunObject = loadBlenderExport(guncyldata.meshes[0]);
@@ -193,6 +176,45 @@ function initBuffers(){
 			indices: [].concat.apply([],meshToLoad.faces)	//trick from https://www.youtube.com/watch?v=sM9n73-HiNA t~ 28:30
 		}	
 	};
+	function loadBlenderExportNoOutwardFaces(meshToLoad){
+		var vertices = meshToLoad.vertices;
+		var normals = meshToLoad.normals;
+		var alteredMesh = {
+			vertices: vertices,
+			normals: normals,
+			texturecoords: meshToLoad.texturecoords
+		}
+		var newFaces=[];
+		var faces = meshToLoad.faces;	//assumes array[3] for each index
+		var numInputFaces = faces.length;
+		for (var ii=0;ii<numInputFaces;ii++){
+			var theseIndices = faces[ii];
+		//	var totalVertex = vertices[theseIndices[0]]+ vertices[theseIndices[1]] + vertices[theseIndices[2]];	//(average*3)
+				//bug!!!! - this should be making an array by adding 3 3-vectors. eg theseIndices[0]*3 +0,+1,+2...
+				//			var totalNormal = normals[theseIndices[0]]+ normals[theseIndices[1]] + normals[theseIndices[2]];	//(average*3)
+
+			var totalVertex = [];
+			var totalNormal = [];
+			for (var cc=0;cc<3;cc++){
+				totalVertex[cc] = vertices[theseIndices[0]*3 + cc]+ vertices[theseIndices[1]*3 + cc] + vertices[theseIndices[2]*3+cc];
+				totalNormal[cc] = normals[theseIndices[0]*3 + cc]+ normals[theseIndices[1]*3 + cc] + normals[theseIndices[2]*3+cc];
+			}
+			
+			//normalise total normal
+			var vertexLengthsq = totalVertex[0]*totalVertex[0] + totalVertex[1]*totalVertex[1] + totalVertex[2]*totalVertex[2];
+			var normalLengthsq = totalNormal[0]*totalNormal[0] + totalNormal[1]*totalNormal[1] + totalNormal[2]*totalNormal[2];
+				//above maybe unnecessary if set threshold right
+			var dotProd = totalVertex[0]*totalNormal[0] + totalVertex[1]*totalNormal[1] + totalVertex[2]*totalNormal[2];
+			//if (dotProd*dotProd > 1.1*normalLengthsq*vertexLengthsq){
+			if (dotProd < 0.5*Math.sqrt(normalLengthsq*vertexLengthsq)){
+				//this works. afaik need number as low as this because faces are triangles etc. maybe will want some number close to zero - just chceking sign maybe sufficient (though "between" faces are near zero dot product)..
+				newFaces.push(theseIndices);
+			}			
+				//todo make buffers have inner then outer face index. IIRC some gl func to draw sub-range of faces (therefore can do either with or without outer faces using same buffer)
+		}
+		alteredMesh.faces = newFaces;
+		return loadBlenderExport(alteredMesh);
+	}
 }
 
 var reflectorInfo={
@@ -269,6 +291,7 @@ var offsetCam = (function(){
 	}
 })();
 
+
 function drawScene(frameTime){
 	resizecanvas();
 
@@ -315,7 +338,7 @@ function drawScene(frameTime){
 	//make a pmatrix for hemiphere perspective projection method.
 	
 	frustrumCull = squareFrustrumCull;
-	if (guiParams.reflector.draw){		
+	if (guiParams.reflector.update){		
 		mat4.set(cmapPMatrix, pMatrix);
 		for (var ii=0;ii<6;ii++){
 			var framebuffer = cubemapFramebuffer[ii];
@@ -363,7 +386,6 @@ function drawScene(frameTime){
 	mainCamFov = guiParams.cameraFov;
 	
 	setProjectionMatrix(pMatrix, mainCamFov, gl.viewportHeight/gl.viewportWidth);	//note mouse code assumes 90 deg fov used. TODO fix.
-														//todo only update pmatrix if input variables have changed
 	frustrumCull = generateCullFunc(pMatrix);
 		
 	mat4.set(offsetPlayerCamera, worldCamera);	//set worldCamera to playerCamera
@@ -390,21 +412,21 @@ function drawScene(frameTime){
 
 	//direction of flight
 	if (playerVelVec[2] > 0.1){	//??
-		bind2dTextureIfRequired(hudTexturePlus);		//todo texture atlas for all hud 
-		drawTargetDecal(0.001, colorArrs.hudFlightDir, playerVelVec);
+		gl.bindTexture(gl.TEXTURE_2D, hudTexturePlus);		//todo texture atlas for all hud 
+		drawTargetDecal(0.001, [0.0, 0.5, 1.0, 0.5], playerVelVec);
 	}
-	bind2dTextureIfRequired(hudTexture);	
+	gl.bindTexture(gl.TEXTURE_2D, hudTexture);	
 	
 	//drawTargetDecal(0.004, [1.0, 1.0, 0.0, 0.5], [0,0,0.01]);	//camera near plane. todo render with transparency
 	if (guiParams["targeting"]!="off"){
 		var shiftAmount = 1/muzzleVel;	//shift according to player velocity. 0.1 could be 1, but 
-		drawTargetDecal(0.0037/(1+shiftAmount*playerVelVec[2]), colorArrs.hudYellow, [shiftAmount*playerVelVec[0],shiftAmount*playerVelVec[1],1+shiftAmount*playerVelVec[2]]);	//TODO vector add!
+		drawTargetDecal(0.0037/(1+shiftAmount*playerVelVec[2]), [1.0, 1.0, 0.0, 0.5], [shiftAmount*playerVelVec[0],shiftAmount*playerVelVec[1],1+shiftAmount*playerVelVec[2]]);	//TODO vector add!
 		
 		if (guiParams.target.type!="none" && targetWorldFrame[2]<0){	//if in front of player){
-			bind2dTextureIfRequired(hudTextureBox);				
-			drawTargetDecal(0.001, colorArrs.hudBox, targetWorldFrame);	//direction to target (shows where target is on screen)
+			gl.bindTexture(gl.TEXTURE_2D, hudTextureBox);				
+			drawTargetDecal(0.001, [1, 0.1, 0, 0.5], targetWorldFrame);	//direction to target (shows where target is on screen)
 								//TODO put where is on screen, not direction from spaceship (obvious difference in 3rd person)
-			//bind2dTextureIfRequired(hudTextureSmallCircles);	
+			gl.bindTexture(gl.TEXTURE_2D, hudTextureSmallCircles);	
 			//drawTargetDecal(0.0008, [1, 0.1, 1, 0.5], selectedTargeting);	//where should shoot in order to hit target (accounting for player velocity)
 				//not required if using shifted gun direction circle
 		
@@ -415,8 +437,8 @@ function drawScene(frameTime){
 	
 	//show where guns will shoot
 	if (fireDirectionVec[2] > 0.1){	//??
-		bind2dTextureIfRequired(hudTextureX);
-		drawTargetDecal(0.001, colorArrs.hudYellow, fireDirectionVec);	//todo check whether this colour already set
+		gl.bindTexture(gl.TEXTURE_2D, hudTextureX);
+		drawTargetDecal(0.001, [1.0, 1.0, 0.0, 0.5], fireDirectionVec);
 	}
 	
 	function drawTargetDecal(scale, color, pos){
@@ -449,29 +471,8 @@ function setProjectionMatrix(pMatrix, vFov, ratio, polarity){
 	pMatrix[15] = 0;
 }
 
-var usePrecalcCells=true;
+var usePrecalcCells=true;	//TODO REMOVE ??
 var currentWorld=0;
-
-var colorArrs = {
-	white:[1.0, 1.0, 1.0, 1.0],
-	darkGray:[0.4, 0.4, 0.4, 1.0],
-	veryDarkGray:[0.2, 0.2, 0.2, 1.0],
-	red:[1.0, 0.4, 0.4, 1.0],
-	green:[0.4, 1.0, 0.4, 1.0],
-	blue:[0.4, 0.4, 1.0, 1.0],
-	yellow:[1.0, 1.0, 0.4, 1.0],
-	magenta:[1.0, 0.4, 1.0, 1.0],
-	cyan:[0.4, 1.0, 1.0, 1.0],
-	randBoxes:[0.9, 0.9, 1.0, 0.9],
-	teapot:[0.4, 0.4, 0.8, 1.0],
-	hudFlightDir:[0.0, 0.5, 1.0, 0.5],
-	hudBox:[1, 0.1, 0, 0.5],
-	hudYellow:[1.0, 1.0, 0.0, 0.5],
-	guns:[0.3, 0.3, 0.3, 1.0],
-	target:[1, 0.2, 0.2, 1],
-	
-}
-Object.keys(colorArrs).map(function(key){colorArrs[key]=new Float32Array(colorArrs[key]);});	//maybe more efficient?
 
 function drawWorldScene(frameTime, isCubemapView) {
 		
@@ -551,14 +552,14 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var startAng = Math.PI / numBallsInRing;
 	var angleStep = startAng * 2.0;
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.red);	//RED
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 0.4, 1.0]);	//RED
 	mat4.set(invertedWorldCamera, mvMatrix);
 	//try moving in z first so can see...
 	//zmove4matCols(mvMatrix, -0.5);
 	
 	if (guiParams.drawShapes['boxes y=z=0']){drawRing();}
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.green);	//GREEN
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 0.4, 1.0]);	//GREEN
 	mat4.set(invertedWorldCamera, mvMatrix);
 	//try moving in z first so can see...
 	//zmove4matCols(mvMatrix, -0.5);
@@ -566,24 +567,24 @@ function drawWorldScene(frameTime, isCubemapView) {
 	rotate4mat(mvMatrix, 0, 1, Math.PI*0.5);
 	if (guiParams.drawShapes['boxes x=z=0']){drawRing();}
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.blue);	//BLUE
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 1.0, 1.0]);	//BLUE
 	mat4.set(invertedWorldCamera, mvMatrix);
 	rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
 	if (guiParams.drawShapes['boxes x=y=0']){drawRing();}
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.yellow);	//YELLOW
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 0.4, 1.0]);	//YELLOW
 	mat4.set(invertedWorldCamera, mvMatrix);
 	xmove4mat(mvMatrix, Math.PI*0.5);
 	rotate4mat(mvMatrix, 0, 1, Math.PI*0.5);
 	if (guiParams.drawShapes['boxes z=w=0']){drawRing();}
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.magenta);	//MAGENTA
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 0.4, 1.0, 1.0]);	//MAGENTA
 	mat4.set(invertedWorldCamera, mvMatrix);
 	xmove4mat(mvMatrix, Math.PI*0.5);
 	rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
 	if (guiParams.drawShapes['boxes y=w=0']){drawRing();}
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.cyan);	//CYAN
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 1.0, 1.0, 1.0]);	//CYAN
 	mat4.set(invertedWorldCamera, mvMatrix);
 	ymove4mat(mvMatrix, Math.PI*0.5);
 	rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
@@ -604,7 +605,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var numRandomBoxes = guiParams['random boxes'].number;
 	
 	if (numRandomBoxes>0){
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.randBoxes);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.9, 0.9, 1.0, 0.9]);
 		
 		boxSize = guiParams['random boxes'].size;
 		boxRad = boxSize*Math.sqrt(3);
@@ -629,13 +630,14 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//draw blender object - a csg cube minus sphere. draw 8 cells for tesseract.
 	var modelScale = guiParams["8-cell scale"];
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
 
 	if (guiParams["draw 8-cell"]){
 		drawArrayOfModels(
 			cellMatData.d8,
+			//cellMatDataSortable.d8,
 			(guiParams["culling"] ? Math.sqrt(3): false),
-			(guiParams["subdiv frames"] ? cubeFrameSubdivBuffers: cubeFrameBuffers)
+			drawCubeFrame
 		);	
 	}
 	
@@ -652,7 +654,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			//[cellMatData.d16[0]],
 			cellMatData.d16,
 			(guiParams["culling"] ? 1.73: false),
-			(guiParams["subdiv frames"]? tetraFrameSubdivBuffers: tetraFrameBuffers)
+			drawTetraFrame
 		);
 	}
 	
@@ -665,71 +667,112 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawArrayOfModels(
 			cellMatData.d24.cells,
 			(guiParams["culling"] ? 1: false),
-			(guiParams["subdiv frames"] ? octoFrameSubdivBuffers : octoFrameBuffers)
+			drawOctoFrame
 		);	
 	}
 	
 	if (guiParams["draw 5-cell"]){
+		var cellMats = cellMatData.d5;
 		var moveDist = Math.acos(-0.25);
-		modelScale = 2*moveDist;		
+		modelScale = 2*moveDist;
+
+		var cellColors = [
+			[1.0, 1.0, 1.0, 1.0],	//WHITE
+			[1.0, 0.4, 1.0, 1.0],	//MAGENTA
+			[1.0, 1.0, 0.4, 1.0],	//YELLOW
+			[0.4, 1.0, 0.4, 1.0],	//GREEN
+			[1.0, 0.4, 0.4, 1.0]	//RED
+		];
+						
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
-		
-		drawArrayOfModels(
-			cellMatData.d5,
-			false,
-			(guiParams["subdiv frames"] ? tetraFrameSubdivBuffers : tetraFrameBuffers)
-		);
+		for (cc in cellMats){
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, cellColors[cc]);
+			var thisCell = cellMats[cc];
+			mat4.set(invertedWorldCamera, mvMatrix);
+			mat4.multiply(mvMatrix,thisCell);
+			drawTetraFrame();
+		}
 	}
 	
 	mat4.set(invertedWorldCamera, mvMatrix);
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.darkGray);	//DARK
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 0.4, 1.0]);	//DARK
 
 	//new draw dodeca stuff...
 	if (guiParams["draw 120-cell"]){
+		prepBuffersForDrawing(dodecaFrameBuffers, shaderProgramTexmap);
 		var cullVal =  dodecaScale*(0.4/0.515);
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [dodecaScale,dodecaScale,dodecaScale]);
 		drawArrayOfModels(
 			cellMatData.d120,
+			//cellMatDataSortable.d120,
 			(guiParams["culling"] ? cullVal: false),
-			dodecaFrameBuffers
+			function(){
+				drawObjectFromPreppedBuffers(dodecaFrameBuffers, shaderProgramTexmap);
+			}
 		);
 	}
 	
+	//sort 600-cell or not??
+	//first, check can get distance from camera, use this to set colour of cell.
+	
+	
 	if (guiParams["draw 600-cell"]){		
-		var myscale=0.385;	//todo use correct scale
+		prepBuffersForDrawing(tetraFrameBuffers, shaderProgramTexmap);
+		var myscale=0.3855;	//todo use correct scale
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [myscale,myscale,myscale]);
 		
 		drawArrayOfModels(
 			cellMatData.d600,
 			(guiParams["culling"] ? 0.355: false),
-			(guiParams["subdiv frames"]? tetraFrameSubdivBuffers: tetraFrameBuffers)
+			function(){
+				drawObjectFromPreppedBuffers(tetraFrameBuffers, shaderProgramTexmap);
+			}
 		);
 	}
 	
-	//todo this should take buffers, shaders and call prepBuffersForDrawing, drawObjectFromPreppedBuffers
-	function drawArrayOfModels(cellMats, cullRad, buffers){
-		prepBuffersForDrawing(buffers, shaderProgramTexmap);
+	function drawArrayOfModels(cellMats, cullRad, drawFunc){
 		numDrawn = 0;
 		if (!cullRad){
 			drawArrayForFunc(function(){
-				drawObjectFromPreppedBuffers(buffers, shaderProgramTexmap);
+				drawFunc();
 				numDrawn++;
 				});
 		}else{
 			drawArrayForFunc(function(){
 				if (frustrumCull(mvMatrix,cullRad)){
-					drawObjectFromPreppedBuffers(buffers, shaderProgramTexmap);
+					drawFunc();
 					numDrawn++;
 				}
 			});
 		}
 	
 		function drawArrayForFunc(drawFunc2){
+			var numCells = cellMats.length;
 			for (cc in cellMats){
 				var thisCell = cellMats[cc];
-				mat4.set(invertedWorldCamera, mvMatrix);
+				
+				/*
+				var distance = 0;	//simplest if sum of squares. better might be dot product with camera "position".
+					var camPos = [mvMatrix[12],mvMatrix[13],mvMatrix[14],mvMatrix[15]];
+					var cellPos = [mvMatrix[12],mvMatrix[13],mvMatrix[14],mvMatrix[15]];
+					for (cc=0;cc<4;cc++){
+						distance +=someDirection[cc]*cellMats
+					}
+				*/	
+
+				
+				mat4.set(invertedWorldCamera, mvMatrix);	//TODO don't need to set this if culled.
 				mat4.multiply(mvMatrix,thisCell);
+		
+				//actually might get the "distance" for free here in mvMatrix...
+		//	var sortOfDistance = mvMatrix[15] * 0.5 + 0.5;	//guess index
+			var sortOfDistance =cc/numCells;			//set colour proportional to place in array
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, [sortOfDistance, 1.0-sortOfDistance, sortOfDistance, 1.0]);
+					//TODO use this to sort draw calls 
+		
+				
+		
 				drawFunc2();
 			}
 		}
@@ -737,19 +780,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//console.log("num drawn: " + numDrawn);
 	}
 	
-	var duocylinderModel = (colorsSwitch==0) ? guiParams.duocylinderModel0 : guiParams.duocylinderModel1;	//todo use array
-	
-	//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
-	if (!duocylinderObjects[duocylinderModel].isSea){
-		activeShaderProgram = shaderProgramTexmap4Vec;
-		gl.useProgram(activeShaderProgram);
-	}else{
-		activeShaderProgram = shaderProgramDuocylinderSea;
-		gl.useProgram(activeShaderProgram);
-		gl.uniform1fv(activeShaderProgram.uniforms.uTime, [0.00005*(frameTime % 20000 )]);	//20s loop
-	}
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
-	
+	activeShaderProgram = shaderProgramTexmap4Vec;
+	gl.useProgram(activeShaderProgram);
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 	if (activeShaderProgram.uniforms.uReflectorDiffColor){
 			gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
@@ -761,24 +793,45 @@ function drawWorldScene(frameTime, isCubemapView) {
 	gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos2, dropLightPos2);
-	
-	var duocylinderObj = duocylinderObjects[duocylinderModel];
-	
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
+	var duocylinderObj = duocylinderObjects[guiParams.duocylinderModel];
 	if (guiParams.drawShapes['x*x+y*y=z*z+w*w']){
 		mat4.set(invertedWorldCamera, mvMatrix);
-		rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
-		drawTennisBall(duocylinderObj, activeShaderProgram);
+		drawTennisBall(duocylinderObj);
 	}
 	if (guiParams.drawShapes['x*x+w*w=y*y+z*z']){
 		mat4.set(invertedWorldCamera, mvMatrix);
 		rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
-		drawTennisBall(duocylinderObj, activeShaderProgram);
+		drawTennisBall(duocylinderObj);
 	}
 	if (guiParams.drawShapes['x*x+z*z=y*y+w*w']){
 		mat4.set(invertedWorldCamera, mvMatrix);
 		rotate4mat(mvMatrix, 0, 3, Math.PI*0.5);
-		drawTennisBall(duocylinderObj, activeShaderProgram);
+		drawTennisBall(duocylinderObj);
 	}
+	
+	function drawCubeFrame(){
+		if (guiParams["subdiv frames"]){
+			drawObjectFromBuffers(cubeFrameSubdivBuffers, shaderProgramTexmap);
+		}else{
+			drawObjectFromBuffers(cubeFrameBuffers, shaderProgramTexmap);
+		}
+	}
+	function drawOctoFrame(){
+		if (guiParams["subdiv frames"]){
+			drawObjectFromBuffers(octoFrameSubdivBuffers, shaderProgramTexmap);
+		}else{
+			drawObjectFromBuffers(octoFrameBuffers, shaderProgramTexmap);
+		}
+	}
+	function drawTetraFrame(){
+		if (guiParams["subdiv frames"]){
+			drawObjectFromBuffers(tetraFrameSubdivBuffers, shaderProgramTexmap);
+		}else{
+			drawObjectFromBuffers(tetraFrameBuffers, shaderProgramTexmap);
+		}
+	}
+	
 	
 	//draw objects without textures
 	
@@ -799,7 +852,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	}
 	//gl.disableVertexAttribArray(1);	//don't need texcoords
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.teapot);	//BLUE
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.4, 0.4, 0.8, 1.0]);	//BLUE
 	gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0.1,0.3]);	//some emission
 	modelScale = guiParams["teapot scale"];
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
@@ -811,11 +864,29 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 	//}
 	
+	/*
 	if (guiParams["draw teapot"]){
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,teapotMatrix);		
 		drawObjectFromBuffers(teapotBuffers, shaderProgramColored);
 	}
+	*/
+	
+	if (guiParams["draw teapot"]){		
+		prepBuffersForDrawing(teapotBuffers, shaderProgramColored);
+		var myscale=0.2;	//todo use correct scale
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [myscale,myscale,myscale]);
+		
+		drawArrayOfModels(
+			mvMatrix[15]>0 ? cellMatData.d600 : cellMatData.d600reverse,	//choose better ordering. (camera direction maybe also helpful, but this better than just using distance from portal in all cases. TODO 8 (x+,x-, y+, ... -  4 (x,y,z,y) with reverses) or 16 (++++, +++-, ++-+ etc - 8 with reverses) lists. pick whichever closest to current position.
+			//actually - for cells we can get very good ordering for free! - just determine which cell player object is in, then order bunch of cells about that as origin! (even better to orient for which face of cell closest too, but unimportant 
+			(guiParams["culling"] ? 0.2: false),
+			function(){
+				drawObjectFromPreppedBuffers(teapotBuffers, shaderProgramColored);
+			}
+		);
+	}
+	
 	
 	
 	var drawFunc = guiParams["draw spaceship"]? drawSpaceship : drawBall;
@@ -846,7 +917,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	function drawSpaceship(matrix, matrixForTargeting){
 		modelScale=0.0002;
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.veryDarkGray);	//DARK
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.2, 0.2, 0.2, 1.0]);	//DARK
 		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 		
@@ -858,7 +929,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//draw guns
 		var gunScale = 50*modelScale;
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [gunScale,gunScale,gunScale]);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.guns);	//GREY
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.3, 0.3, 0.3, 1.0]);	//GREY
 		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [gunHeat/15,gunHeat/30,gunHeat/45]);
 														
 		var gunHoriz = 20*modelScale;
@@ -884,8 +955,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 			targetWorldFrame = targetingSolution.targetWorldFrame;
 		}
 		
-		prepBuffersForDrawing(gunBuffers, shaderProgramColored);
-
 		gunMatrices=[];
 		drawRelativeToSpacehip([gunHoriz,gunVert,gunFront]); //left, down, forwards
 		drawRelativeToSpacehip([-gunHoriz,gunVert,gunFront]);
@@ -893,20 +962,21 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawRelativeToSpacehip([gunHoriz,-gunVert,gunFront]);
 		
 		
+		
+		
 		function drawRelativeToSpacehip(vec){
-			var gunMatrixCosmetic = mat4.create();	//todo reuse matrices for gunMatrixCosmetic (fixed array) - not simple to use pool since pushing onto gunMatrices
-													//todo precalc gunmatrices relative to spaceship?
+			var gunMatrixCosmetic = mat4.create();
 			mat4.set(matrix, gunMatrixCosmetic);
 			xyzmove4mat(gunMatrixCosmetic,vec);
 			
-			var gunMatrix = matPool.create();
+			var gunMatrix = mat4.create();
 			mat4.set(matrixForTargeting, gunMatrix);
 			xyzmove4mat(gunMatrix,vec);
+			
 			
 			if (guiParams.target.type!="none" && guiParams["targeting"]=="individual"){
 				rotvec = getTargetingSolution(gunMatrix, targetMatrix).rotvec;
 			}
-			matPool.destroy(gunMatrix);
 			
 			//rotate guns to follow mouse
 			xyzrotate4mat(gunMatrixCosmetic, rotvec);		
@@ -917,7 +987,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix,gunMatrixCosmetic);
 			
-			drawObjectFromPreppedBuffers(gunBuffers, shaderProgramColored);
+			drawObjectFromBuffers(gunBuffers, shaderProgramColored);
 		}
 		
 		function capGunPointing(pointingDir){
@@ -939,9 +1009,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 			return pointingDir;
 		}
 		
-		function getRotBetweenMats(sourceMat, destMat){	//this func not used now. use of matrix pool untested
+		function getRotBetweenMats(sourceMat, destMat){
 			//actually gets rotation to point sourceMat at destMat
-			var tmpMat = matPool.create();
+			var tmpMat = mat4.create();
 			mat4.set(sourceMat, tmpMat);
 			mat4.transpose(tmpMat);			
 				
@@ -951,9 +1021,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			pointingDir={x:tmpMat[12], y:tmpMat[13], z:tmpMat[14]};
 			
 			pointingDir = capGunPointing(pointingDir);
-			
-			matPool.destroy(tmpMat);
-			
+									
 			return getRotFromPointing(pointingDir);
 		}
 		
@@ -1111,7 +1179,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//draw "light" object
 		var sphereRad = 0.04;
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [sphereRad,sphereRad,sphereRad]);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,	matrix);
 		if (frustrumCull(mvMatrix,sphereRad)){
@@ -1140,7 +1208,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 				if (frustrumCull(mvMatrix,targetRad)){	//normally use +ve radius
 											//-ve to make disappear when not entirely inside view frustrum (for testing)
 					gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,targetRad]);
-					gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.target);
+					gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1, 0.2, 0.2, 1]);
 					var emitColor = Math.sin(frameTime*0.01);
 					//emitColor*=emitColor
 					gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [emitColor, emitColor, emitColor/2]);	//YELLOW
@@ -1157,7 +1225,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 					activeShaderProgram = shaderProgramTexmap;
 					gl.useProgram(activeShaderProgram);
 					gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,targetRad]);
-					gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+					gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1, 1, 1, 1]);
 					drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
 					activeShaderProgram = savedActiveProg;
 					gl.useProgram(activeShaderProgram);
@@ -1182,7 +1250,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.useProgram(activeShaderProgram);
 		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uPosShiftMat, false, reflectorInfo.shaderMatrix);
 		
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+		//gl.uniform4fv(activeShaderProgram.uniforms.uColor, [0.9, 0.9, 0.9, 1.0]);	//grey
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, [1.0, 1.0, 1.0, 1.0]);
 		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 		if (activeShaderProgram.uniforms.uReflectorDiffColor){
 			gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
@@ -1314,31 +1383,34 @@ function generateCullFunc(pMat){
 }
 
 
-function drawTennisBall(duocylinderObj, shader){
+function drawTennisBall(duocylinderObj){
 
-	gl.disable(gl.CULL_FACE);
+	//gl.disable(gl.CULL_FACE);
 	gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexPositionBuffer);
-    gl.vertexAttribPointer(shader.attributes.aVertexPosition, duocylinderObj.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+    gl.vertexAttribPointer(shaderProgramTexmap4Vec.attributes.aVertexPosition, duocylinderObj.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	
-	if (duocylinderObj.normalBuffer){	//not used in duocylinder-sea
-		gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.normalBuffer);
-		gl.vertexAttribPointer(shader.attributes.aVertexNormal, duocylinderObj.normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
-	}
-	if (duocylinderObj.vertexTextureCoordBuffer){	//not used in duocylinder-sea
-		gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexTextureCoordBuffer);
-		gl.vertexAttribPointer(shader.attributes.aTextureCoord, duocylinderObj.vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
-	}
+	gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.normalBuffer);
+    gl.vertexAttribPointer(shaderProgramTexmap4Vec.attributes.aVertexNormal, duocylinderObj.normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	
+	gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexTextureCoordBuffer);
+	gl.vertexAttribPointer(shaderProgramTexmap4Vec.attributes.aTextureCoord, duocylinderObj.vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, duocylinderObj.vertexIndexBuffer);
 	
 	gl.activeTexture(gl.TEXTURE0);
-	bind2dTextureIfRequired(duocylinderObj.tex);
-	gl.uniform1i(shader.uniforms.uSampler, 0);
+	gl.bindTexture(gl.TEXTURE_2D, duocylinderObj.tex);
+	gl.uniform1i(shaderProgramTexmap4Vec.uniforms.uSampler, 0);
 	
-	for (var side=0;side<2;side++){	//TODO should only draw 1 side - work out which side player is on...
+	//for (var side=0;side<2;side++){	//TODO should only draw 1 side - work out which side player is on...
+	for (var side=0;side<1;side++){	//TODO should only draw 1 side - work out which side player is on...
 		for (var xg=0;xg<duocylinderObj.divs;xg+=1){		//
 			for (var yg=0;yg<duocylinderObj.divs;yg+=1){	//TODO precalc cells array better than grids here.
-				setMatrixUniforms(shader);
-				gl.drawElements(gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+				//chequerboard
+				if ((xg+yg) % 2){
+				//if (true){
+					setMatrixUniforms(shaderProgramTexmap4Vec);
+					gl.drawElements(gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+				}
 				rotate4mat(mvMatrix, 0, 1, duocylinderObj.step);
 			}
 			rotate4mat(mvMatrix, 2, 3, duocylinderObj.step);
@@ -1354,7 +1426,7 @@ function drawObjectFromBuffers(bufferObj, shaderProg, usesCubeMap){
 	drawObjectFromPreppedBuffers(bufferObj, shaderProg);
 }
 function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
-	gl.enable(gl.CULL_FACE);
+	//gl.enable(gl.CULL_FACE);
 	gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexPositionBuffer);
     gl.vertexAttribPointer(shaderProg.attributes.aVertexPosition, bufferObj.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	
@@ -1369,12 +1441,14 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 		gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexTextureCoordBuffer);
 		gl.vertexAttribPointer(shaderProg.attributes.aTextureCoord, bufferObj.vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
 		gl.activeTexture(gl.TEXTURE0);
-		bind2dTextureIfRequired(texture);
+		gl.bindTexture(gl.TEXTURE_2D, texture);
 		gl.uniform1i(shaderProg.uniforms.uSampler, 0);
 	}
 	
 	if (usesCubeMap){
-		gl.uniform1i(shaderProg.uniforms.uSampler, 1);	//put cubemap in tex 1 always, avoiding bind calls.
+		gl.activeTexture(gl.TEXTURE0);
+		gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubemapTexture);
+		gl.uniform1i(shaderProg.uniforms.uSampler, 0);
 	}
 	
 	gl.uniformMatrix4fv(shaderProg.uniforms.uPMatrix, false, pMatrix);
@@ -1383,18 +1457,6 @@ function drawObjectFromPreppedBuffers(bufferObj, shaderProg){
 	gl.uniformMatrix4fv(shaderProg.uniforms.uMVMatrix, false, mvMatrix);
 	gl.drawElements(gl.TRIANGLES, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 }
-
-var bind2dTextureIfRequired = (function createBind2dTextureIfRequiredFunction(){
-	var currentlyBoundTexture=null;
-	return function(texToBind){	//todo specify texture index. maybe combine with setting texture index so can automatically keep textures loaded
-								//curently just assuming using tex 0, already set as active texture (is set active texture a fast gl call?)
-		if (texToBind != currentlyBoundTexture){
-			gl.bindTexture(gl.TEXTURE_2D, texToBind);
-			currentlyBoundTexture = texToBind;
-		}
-	}
-})();
-
 
 //need all of these???
 var moveAwayVec;
@@ -1426,8 +1488,6 @@ function initCubemapFramebuffer(){
 	cubemapFramebuffer = [];
 	
 	cubemapTexture = gl.createTexture();
-	
-	gl.activeTexture(gl.TEXTURE1);	//use texture 1 always for cubemap
 	gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubemapTexture);
 	gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 	gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -1452,9 +1512,11 @@ function initCubemapFramebuffer(){
 		framebuffer.height = cubemapSize;
 		cubemapFramebuffer[i]=framebuffer;
 		
+		gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubemapTexture);	//already bound so can lose probably
 		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 		//gl.texImage2D(face, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
 		gl.texImage2D(face, 0, gl.RGBA, cubemapSize, cubemapSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+		gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
 		
 		var renderbuffer = gl.createRenderbuffer();
 		gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
@@ -1463,10 +1525,9 @@ function initCubemapFramebuffer(){
 		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, face, cubemapTexture, 0);
 		gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, renderbuffer);
 	}
-	//gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);	//this gets rid of errors being logged to console. 
+	gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);	//this gets rid of errors being logged to console. 
 	gl.bindRenderbuffer(gl.RENDERBUFFER, null);
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-	
 }
 
 var randomMats = [];	//some random poses. used for "dust motes". really only positions required, but flexible, can use for random boxes/whatever 
@@ -1475,7 +1536,7 @@ function setupScene() {
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 	
 	for (var ii=0;ii<1000;ii++){
-		randomMats.push(convert_quats_to_4matrix(random_quat_pair(), mat4.create()));
+		randomMats.push(convert_quats_to_4matrix(random_quat_pair()));
 	}
 	
 	mat4.identity(playerCamera);	//not sure why have 2 matrices here...
@@ -1498,10 +1559,7 @@ function initTexture(){
 	hudTextureX = makeTexture("img/x.png");
 	hudTextureBox = makeTexture("img/box.png");
 	duocylinderObjects.grid.tex = makeTexture("img/grid-omni.png");
-	duocylinderObjects.terrain.tex = makeTexture("data/terrain/turbulent-seamless.png");
-	//duocylinderObjects.sea.tex = null;
-	duocylinderObjects.sea.tex = makeTexture("img/4141.jpg");
-	duocylinderObjects.sea.isSea=true;
+	duocylinderObjects.terrain.tex = makeTexture("data/terrain/turbulent-seamless.png");;
 	
 	//texture = makeTexture("img/ash_uvgrid01-grey.tiny.png");	//numbered grid
 }
@@ -1510,14 +1568,14 @@ function makeTexture(src) {	//to do OO
 	var texture = gl.createTexture();
 	texture.image = new Image();
 	texture.image.onload = function(){
-		bind2dTextureIfRequired(texture);
+		gl.bindTexture(gl.TEXTURE_2D, texture);
 		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
 		//gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 		gl.generateMipmap(gl.TEXTURE_2D);
-		bind2dTextureIfRequired(null);
+		gl.bindTexture(gl.TEXTURE_2D, null);
 	};	
 	texture.image.src = src;
 	return texture;
@@ -1533,10 +1591,9 @@ var mouseInfo = {
 var stats;
 
 var guiParams={
-	duocylinderModel0:"grid",
-	duocylinderModel1:"terrain",
+	duocylinderModel:"grid",
 	drawShapes:{
-		'x*x+y*y=z*z+w*w':true,
+		'x*x+y*y=z*z+w*w':false,
 		'x*x+z*z=y*y+w*w':false,
 		'x*x+w*w=y*y+z*z':false,
 		'boxes y=z=0':false,	//x*x+w*w=1
@@ -1552,14 +1609,14 @@ var guiParams={
 	},
 	"draw 5-cell":false,
 	"subdiv frames":true,
-	"draw 8-cell":false,
-	"8-cell scale":0.3,		//0.5 to tesselate
+	"draw 8-cell":true,
+	"8-cell scale":1.0,		//0.5 to tesselate
 	"draw 16-cell":false,
 	"16-cell scale":1,		//1 to tesselate
 	"draw 24-cell":false,
 	"24-cell scale":1,
 	"draw 120-cell":false,
-	"draw 600-cell":false,
+	"draw 600-cell":false,	//todo something wierd hapens if initially set to draw teapots only (some gl call not set???)
 	"draw teapot":false,
 	"teapot scale":0.7,
 	"draw spaceship":true,
@@ -1571,7 +1628,8 @@ var guiParams={
 	"targeting":"off",
 	"culling":true,
 	"perPixelLighting":true,
-	fogColor0:'#506050',
+	//fogColor0:'#506050',
+	fogColor0:'#ffffff',
 	fogColor1:'#ff8888',
 	playerLight:'#ffffff',
 	onRails:false,
@@ -1579,8 +1637,9 @@ var guiParams={
 	cameraFov:105,
 	reflector:{
 		draw:true,
+		update:true,
 		mappingType:'vertex projection',
-		scale:0.3,
+		scale:0.5,
 		isPortal:true,
 		moveAway:0.0008
 	}
@@ -1617,8 +1676,7 @@ function init(){
 		setPlayerLight(color);
 	});
 	var drawShapesFolder = gui.addFolder('drawShapes');
-	drawShapesFolder.add(guiParams, "duocylinderModel0", ["grid","terrain","sea"] );
-	drawShapesFolder.add(guiParams, "duocylinderModel1", ["grid","terrain","sea"] );
+	drawShapesFolder.add(guiParams, "duocylinderModel", ["grid","terrain"] );
 	for (shape in guiParams.drawShapes){
 		console.log(shape);
 		drawShapesFolder.add(guiParams.drawShapes, shape );
@@ -1655,8 +1713,9 @@ function init(){
 	gui.add(guiParams, "culling");
 	var reflectorFolder = gui.addFolder('reflector');
 	reflectorFolder.add(guiParams.reflector, "draw");
+	reflectorFolder.add(guiParams.reflector, "update");
 	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection']);
-	reflectorFolder.add(guiParams.reflector, "scale", 0.2,2,0.01);
+	reflectorFolder.add(guiParams.reflector, "scale", 0.5,2,0.01);
 	reflectorFolder.add(guiParams.reflector, "isPortal");
 	reflectorFolder.add(guiParams.reflector, "moveAway", 0,0.001,0.0001);	//value required here is dependent on minimum scale. TODO moveawayvector should be in DIRECTION away from portal, but fixed length.
 
@@ -1724,6 +1783,7 @@ function init(){
 	setFog(1,guiParams.fogColor1);
 	setPlayerLight(guiParams.playerLight);
     gl.enable(gl.DEPTH_TEST);
+	gl.enable(gl.CULL_FACE);
 	//gl.disable(gl.DEPTH_TEST);
 	setupScene();
 	requestAnimationFrame(drawScene);
@@ -1796,9 +1856,8 @@ for (var ang=0;ang<5;ang++){
 	dodecaDirs.push([[-yValDirection*Math.cos(angRad),xzValDirection, -yValDirection*Math.sin(angRad)], [Math.sin(angRad),0,-Math.cos(angRad)]]);
 }
 
-var duocylinderSpin = 0;
 var iterateMechanics = (function iterateMechanics(){
-	var lastTime=Date.now();
+	var lastTime=(new Date()).getTime();
 	var moveSpeed=0.00015;
 	var rotateSpeed=-0.0005;
 	var bulletSpeed=0.001;
@@ -1810,7 +1869,7 @@ var iterateMechanics = (function iterateMechanics(){
 	var timeTracker =0;
 	var timeStep = 10;
 	
-	var thrust = 0.01;	//TODO make keyboard/gamepad fair! currently thrust, moveSpeed config independent!
+	var thrust = 0.02;	//TODO make keyboard/gamepad fair! currently thrust, moveSpeed config independent!
 	
 	//gamepad
 	var activeGp, buttons, axes;
@@ -1820,6 +1879,9 @@ var iterateMechanics = (function iterateMechanics(){
 	//var autoFireCountdownStartVal=6;
 	var autoFireCountdownStartVal=1;
 	var lastPlayerAngMove = [0,0,0];	//for interpolation
+	
+	//TODO stick reused functions here???
+	
 	
 	return function(){
 		//GAMEPAD
@@ -1862,7 +1924,7 @@ var iterateMechanics = (function iterateMechanics(){
 		}
 		
 		
-		var nowTime = Date.now();
+		var nowTime = (new Date()).getTime();
 		var timeElapsed = Math.min(nowTime - lastTime, 50);	//ms. 50ms -> slowdown if drop below 20fps 
 		//console.log("time elapsed: " + timeElapsed);
 		lastTime=nowTime;
@@ -1875,7 +1937,6 @@ var iterateMechanics = (function iterateMechanics(){
 			gunHeat*=0.995;
 			offsetCam.iterate();
 		}
-		duocylinderSpin+=timeElapsed * 0.0001;	//TODO match spin speed with sea wave speed
 		
 		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
 		
@@ -1922,35 +1983,8 @@ var iterateMechanics = (function iterateMechanics(){
 				rotatePlayer(lastPlayerAngMove);	//TODO add rotational momentum - not direct rotate
 			}
 			
-			playerVelVec=scalarvectorprod(0.997,playerVelVec);
+			playerVelVec=scalarvectorprod(0.996,playerVelVec);
 			playerAngVelVec=scalarvectorprod(0.8,playerAngVelVec);
-			
-			//blend velocity with velocity of rotating duosphere. (todo angular vel to use this too)
-			//matrix entries 12-15 describe position. (remain same when rotate player and don't move)
-			//playerVel is in frame of player though - so apply matrix rotation to this.
-			
-			var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//guess what this is
-			var angVelConst = 0.6667;	//TODO match exactly
-			
-			// 0.0001 (hardcoded rotation per unit time) 
-			// moveSpeed=0.00015
-			
-			// moveSpeed*spinVel = 0.0001  ? 
-			// => spinVel = (0.0001 / 0.00015)  = 0.6666
-			
-			var spinVelWorldCoords = [ angVelConst*playerPos[1],-angVelConst*playerPos[0],0];	
-							
-			var spinVelPlayerCoords = [
-				spinVelWorldCoords[0]*playerCamera[0] + spinVelWorldCoords[1]*playerCamera[1] + spinVelWorldCoords[2]*playerCamera[2],
-				spinVelWorldCoords[0]*playerCamera[4] + spinVelWorldCoords[1]*playerCamera[5] + spinVelWorldCoords[2]*playerCamera[6],
-				spinVelWorldCoords[0]*playerCamera[8] + spinVelWorldCoords[1]*playerCamera[9] + spinVelWorldCoords[2]*playerCamera[10]];
-			
-			//this is in frame of duocylinder. playerVelVec is in frame of player though... ?!! possible to do without matrix mult? by choosing right parts of playerCamera mat?
-			
-			for (var cc=0;cc<3;cc++){
-				playerVelVec[cc]+=0.003*spinVelPlayerCoords[cc];
-			}
-			
 			
 			if (autoFireCountdown>0){
 				autoFireCountdown--;
@@ -1995,241 +2029,250 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		var critValueRandBox = 1/Math.sqrt(1+boxSize*boxSize);
 		
-		//slightly less ridiculous place for this - not declaring functions inside for loop!
-		function checkBulletCollision(bullet){
-			var bulletMatrix=bullet.matrix;
-			var bulletVel=bullet.vel;
-			xyzmove4mat(bulletMatrix,scalarvectorprod(moveAmount,bulletVel));
-			
-			mat4.set(invTargetMat,relativeMat);
-			mat4.multiply(relativeMat, bulletMatrix);
-			
-			switch (guiParams.target.type){
-				case "sphere":
-					if (relativeMat[15]>critValue){
-						detonateBullet(bullet, bulletMatrix);
-					}
-					break;
-				case "box":
-					if (relativeMat[15]>0 && Math.max(Math.abs(relativeMat[12]),
-								Math.abs(relativeMat[13]),
-								Math.abs(relativeMat[14]))<guiParams.target.scale){
-						detonateBullet(bullet, bulletMatrix);
-					}
-					break;
-			}
-			
-			
-			//slow collision detection between bullet and array of boxes.
-			//todo 1 try simple optimisation by matrix/scalar multiplication instead of matrix-matrix
-			//todo 2 another simple optimisation - sphere check by xyzw distance. previous check only if passes
-			//todo 3 heirarchical bounding boxes or gridding system!
-			
-			if (numRandomBoxes>0){
+		for (var b in bullets){
+			var bullet = bullets[b];
+			if (bullet.active){	//TODO just delete/unlink removed objects
+						
+				var bulletMatrix=bullet.matrix;
+				var bulletVel=bullet.vel;
+				xyzmove4mat(bulletMatrix,scalarvectorprod(moveAmount,bulletVel));
 				
-				for (var ii=0;ii<numRandomBoxes;ii++){
-					if (randomMats[ii][15]>criticalWPos){continue;}	//not drawing boxes too close to portal, so don't collide with them either!
-														//TODO move to setup stage
+				mat4.set(invTargetMat,relativeMat);
+				mat4.multiply(relativeMat, bulletMatrix);
+				
+				switch (guiParams.target.type){
+					case "sphere":
+						if (relativeMat[15]>critValue){
+							detonateBullet(bullet);
+						}
+						break;
+					case "box":
+						if (relativeMat[15]>0 && Math.max(Math.abs(relativeMat[12]),
+									Math.abs(relativeMat[13]),
+									Math.abs(relativeMat[14]))<guiParams.target.scale){
+							detonateBullet(bullet);
+						}
+						break;
+				}
+				
+				
+				//slow collision detection between bullet and array of boxes.
+				//todo 1 try simple optimisation by matrix/scalar multiplication instead of matrix-matrix
+				//todo 2 another simple optimisation - sphere check by xyzw distance. previous check only if passes
+				//todo 3 heirarchical bounding boxes or gridding system!
+				
+				if (numRandomBoxes>0){
 					
-					mat4.set(randomMats[ii], relativeMat);
-					mat4.transpose(relativeMat);
-					mat4.multiply(relativeMat, bulletMatrix);
-					
-					if (relativeMat[15]<critValueRandBox){continue;}	//early sphere check
-					
-					if (relativeMat[15]>0 && Math.max(Math.abs(relativeMat[12]),
-								Math.abs(relativeMat[13]),
-								Math.abs(relativeMat[14]))<boxSize*relativeMat[15]){
-						detonateBullet(bullet, bulletMatrix);
+					for (var ii=0;ii<numRandomBoxes;ii++){
+						if (randomMats[ii][15]>criticalWPos){continue;}	//not drawing boxes too close to portal, so don't collide with them either!
+															//TODO move to setup stage
+						
+						mat4.set(randomMats[ii], relativeMat);
+						mat4.transpose(relativeMat);
+						mat4.multiply(relativeMat, bulletMatrix);
+						
+						if (relativeMat[15]<critValueRandBox){continue;}	//early sphere check
+						
+						if (relativeMat[15]>0 && Math.max(Math.abs(relativeMat[12]),
+									Math.abs(relativeMat[13]),
+									Math.abs(relativeMat[14]))<boxSize*relativeMat[15]){
+							detonateBullet(bullet);
+						}
 					}
 				}
-			}
-			
-			//similar thing for 8-cell frames
-			var cellSize = guiParams["8-cell scale"];
-			if (guiParams["draw 8-cell"]){
-				for (dd in cellMatData.d8){
-					var thisMat = cellMatData.d8[dd];
-					mat4.set(thisMat, relativeMat);
-					mat4.transpose(relativeMat);
-					mat4.multiply(relativeMat, bulletMatrix);
-											
-					if (relativeMat[15]>0){
-						var projectedPosAbs = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return Math.abs(val)/(cellSize*relativeMat[15]);});
-						if (Math.max(projectedPosAbs[0],projectedPosAbs[1],projectedPosAbs[2])<1){
-							var count=projectedPosAbs.reduce(function (sum,val){return val>0.8?sum+1:sum;},0);
-							if (count>1){
-								detonateBullet(bullet, bulletMatrix);
+				
+				//similar thing for 8-cell frames
+				var cellSize = guiParams["8-cell scale"];
+				if (guiParams["draw 8-cell"]){
+					for (dd in cellMatData.d8){
+						var thisMat = cellMatData.d8[dd];
+						mat4.set(thisMat, relativeMat);
+						mat4.transpose(relativeMat);
+						mat4.multiply(relativeMat, bulletMatrix);
+												
+						if (relativeMat[15]>0){
+							var projectedPosAbs = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return Math.abs(val)/(cellSize*relativeMat[15]);});
+							if (Math.max(projectedPosAbs[0],projectedPosAbs[1],projectedPosAbs[2])<1){
+								var count=projectedPosAbs.reduce(function (sum,val){return val>0.8?sum+1:sum;},0);
+								if (count>1){
+									detonateBullet(bullet);
+								}
 							}
 						}
 					}
 				}
-			}
-			
-			
-			
-			//tetrahedron. (16-cell and 600-cell)
-			if (guiParams["draw 16-cell"]){
-				checkTetraCollisionForArray(guiParams["16-cell scale"], cellMatData.d16);
-			}
-			if (guiParams["draw 600-cell"]){
-				checkTetraCollisionForArray(0.385/(4/Math.sqrt(6)), cellMatData.d600);
-			}
-			
-			function checkTetraCollisionForArray(cellScale, matsArr){
-				var critVal = 1/Math.sqrt(1+cellScale*cellScale*3);
-				for (dd in matsArr){
-					var thisMat = matsArr[dd];
-					mat4.set(thisMat, relativeMat);
-					mat4.transpose(relativeMat);
-					mat4.multiply(relativeMat, bulletMatrix);
-						
-					if (relativeMat[15]>0){			
-						if (relativeMat[15]<critVal){continue;}	//early sphere check
-						
-						var projectedPos = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return val/(cellScale*relativeMat[15]);});
-						
-						//initially just find a corner
-						//seems is triangular pyramid, with "top" in 1-axis direction
-						//seems 0 - axis parrallel to one base edge
-						//1 - "up"
-						//2 - other base axis
-						// ie top point = (0,sqrt(3),0)
-						// therefore inside has to be above base ( pos[2] > -0.33*root(3) = 1/root(3)
-													
-						var isInside = true;
-						
-						var selection = -1;
-						var best = 1;
-						
-						//identify which quarter of tetrahedron are in (therefore which outer plane, set of 3 inner planes to check against.
-						for (var ii=0;ii<4;ii++){
-							var toPlane = planeCheck(tetraPlanesToCheck[ii],projectedPos);
-							if (toPlane < best){
-								best = toPlane;
-								selection = ii;
-							}
-						}
-						
-						if (best < -1){
-							isInside = false;
-						}
-						
-						//check is not inside all 3 inner planes for relevant quarter.
-						var innerPlanes = tetraInnerPlanesToCheck[selection];
-						if (planeCheck(innerPlanes[0],projectedPos) >-1 &&
-							planeCheck(innerPlanes[1],projectedPos) >-1 &&
-							planeCheck(innerPlanes[2],projectedPos) >-1){
-								isInside = false;
-						}
-						
-						if (isInside){
-							detonateBullet(bullet, bulletMatrix);
-						}
-						
-						//todo 4th number for comparison value - means can still work if plane thru origin.
-						function planeCheck(planeVec,pos){
-							return pos[0]*planeVec[0] + pos[1]*planeVec[1] +pos[2]*planeVec[2];
-						}
-					}
-				}
-			}
-			
-			//octohedron collision
-			if (guiParams["draw 24-cell"]){
-				var cellSize24 = guiParams["24-cell scale"];
 				
-				for (dd in cellMatData.d24.cells){
-					var thisMat = cellMatData.d24.cells[dd];
-					mat4.set(thisMat, relativeMat);
-					mat4.transpose(relativeMat);
-					mat4.multiply(relativeMat, bulletMatrix);
-											
-					if (relativeMat[15]>0){
-						//todo speed up. division for all vec parts not necessary
-						//change number inside if rhs comparison
-						//also should apply multiplier to 0.8 for inner check.
-						var projectedPosAbs = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return Math.abs(val)/(cellSize24*relativeMat[15]);});
-						if (projectedPosAbs[0]+projectedPosAbs[1]+projectedPosAbs[2] < 1){
-							//inside octohedron. frame is octohedron minus small octohedron extruded.
-							if (projectedPosAbs[0]+projectedPosAbs[1]>2*projectedPosAbs[2]+0.8 ||
-								projectedPosAbs[0]+projectedPosAbs[2]>2*projectedPosAbs[1]+0.8 ||
-								projectedPosAbs[1]+projectedPosAbs[2]>2*projectedPosAbs[0]+0.8){
-								detonateBullet(bullet, bulletMatrix);
+				
+				
+				//tetrahedron. (16-cell and 600-cell)
+				if (guiParams["draw 16-cell"]){
+					checkTetraCollisionForArray(guiParams["16-cell scale"], cellMatData.d16);
+				}
+				if (guiParams["draw 600-cell"]){
+					checkTetraCollisionForArray(0.385/(4/Math.sqrt(6)), cellMatData.d600);
+				}
+				
+				
+				//octohedron collision
+				if (guiParams["draw 24-cell"]){
+					var cellSize24 = guiParams["24-cell scale"];
+					
+					for (dd in cellMatData.d24.cells){
+						var thisMat = cellMatData.d24.cells[dd];
+						mat4.set(thisMat, relativeMat);
+						mat4.transpose(relativeMat);
+						mat4.multiply(relativeMat, bulletMatrix);
+												
+						if (relativeMat[15]>0){
+							//todo speed up. division for all vec parts not necessary
+							//change number inside if rhs comparison
+							//also should apply multiplier to 0.8 for inner check.
+							var projectedPosAbs = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return Math.abs(val)/(cellSize24*relativeMat[15]);});
+							if (projectedPosAbs[0]+projectedPosAbs[1]+projectedPosAbs[2] < 1){
+								//inside octohedron. frame is octohedron minus small octohedron extruded.
+								if (projectedPosAbs[0]+projectedPosAbs[1]>2*projectedPosAbs[2]+0.8 ||
+								    projectedPosAbs[0]+projectedPosAbs[2]>2*projectedPosAbs[1]+0.8 ||
+								    projectedPosAbs[1]+projectedPosAbs[2]>2*projectedPosAbs[0]+0.8){
+									detonateBullet(bullet);
+								}
 							}
 						}
 					}
 				}
-			}
-			
-			if (guiParams["draw 120-cell"]){
-				//dodecohedron collision. 
-				//initially, sphere check
-				// for convenience, make 1 dodeca, make quite big
-				// then outer dodeca collision (6 abs checks)
-				// then calculate which of abs value along axes is smallest,
-				// apply reflection along some axis depending on sign??
-				// then apply 5 inner thing checks
 				
-				var dodecaScaleFudge = dodecaScale * (0.4/0.505);	//TODO where do numbers come from!!
-												//possibly this is sqrt(0.63) and 0.63 is (1+2/sqrt(5))/3;
-				var critVal = 1/Math.sqrt(1+dodecaScaleFudge*dodecaScaleFudge);
+				if (guiParams["draw 120-cell"]){
+					//dodecohedron collision. 
+					//initially, sphere check
+					// for convenience, make 1 dodeca, make quite big
+					// then outer dodeca collision (6 abs checks)
+					// then calculate which of abs value along axes is smallest,
+					// apply reflection along some axis depending on sign??
+					// then apply 5 inner thing checks
+					
+					var dodecaScaleFudge = dodecaScale * (0.4/0.505);	//TODO where do numbers come from!!
+													//possibly this is sqrt(0.63) and 0.63 is (1+2/sqrt(5))/3;
+					var critVal = 1/Math.sqrt(1+dodecaScaleFudge*dodecaScaleFudge);
 
-				for (dd in cellMatData.d120){	//single element of array for convenience
-					var thisMat = cellMatData.d120[dd];
-					mat4.set(thisMat, relativeMat);
-					mat4.transpose(relativeMat);
-					mat4.multiply(relativeMat, bulletMatrix);
-											
-					if (relativeMat[15]>0){
-							//if outside bounding sphere
-						if (relativeMat[15]<critVal){continue;}
-						
-						var projectedPos = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return val/(dodecaScale*relativeMat[15]);});
-						
-						var selection = -1;
-						var best = 0;
-						for (var ii in dodecaPlanesToCheck){
-							var toPlane = planeCheck(dodecaPlanesToCheck[ii],projectedPos);
-							if (Math.abs(toPlane) > Math.abs(best)){
-								best = toPlane;
-								selection = ii;
+					for (dd in cellMatData.d120){	//single element of array for convenience
+						var thisMat = cellMatData.d120[dd];
+						mat4.set(thisMat, relativeMat);
+						mat4.transpose(relativeMat);
+						mat4.multiply(relativeMat, bulletMatrix);
+												
+						if (relativeMat[15]>0){
+								//if outside bounding sphere
+							if (relativeMat[15]<critVal){continue;}
+							
+							var projectedPos = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return val/(dodecaScale*relativeMat[15]);});
+							
+							var selection = -1;
+							var best = 0;
+							for (var ii in dodecaPlanesToCheck){
+								var toPlane = planeCheck(dodecaPlanesToCheck[ii],projectedPos);
+								if (Math.abs(toPlane) > Math.abs(best)){
+									best = toPlane;
+									selection = ii;
+								}
+							}
+							
+							if (Math.abs(best) > 0.63){
+								continue;
+							}
+							
+							//inner plane check
+							var isInsidePrism = true;
+							var dirsArr = dodecaDirs[selection];
+							var dirA=dirsArr[0];
+							var dirB=dirsArr[1];
+							
+							//dot product of directions with 
+							var dotA = dirA[0]*projectedPos[0] + dirA[1]*projectedPos[1] + dirA[2]*projectedPos[2];  
+							var dotB = dirB[0]*projectedPos[0] + dirB[1]*projectedPos[1] + dirB[2]*projectedPos[2];  
+							
+							dotA = best>0 ? dotA:-dotA;	//????
+							
+							for (var ang=0;ang<5;ang++){	//note doing this in other order (eg 0,2,4,1,5) with early exit could be quicker
+								var angRad = ang*Math.PI/2.5;
+								var myDotP = dotA*Math.cos(angRad) + dotB*Math.sin(angRad);
+								if (myDotP>0.31){isInsidePrism=false;}
+							}
+							if (!isInsidePrism){detonateBullet(bullet);}
+							
+							
+							//todo reuse tetra version / general dot product function!
+							function planeCheck(planeVec,pos){
+								return pos[0]*planeVec[0] + pos[1]*planeVec[1] +pos[2]*planeVec[2];
 							}
 						}
+					}
+				}
 						
-						if (Math.abs(best) > 0.63){
-							continue;
+				
+			}
+		}
+		
+		//move functions outside bullets loop for performance
+		
+		function checkTetraCollisionForArray(cellScale, matsArr){
+			var critVal = 1/Math.sqrt(1+cellScale*cellScale*3);
+			for (dd in matsArr){
+				var thisMat = matsArr[dd];
+				mat4.set(thisMat, relativeMat);
+				mat4.transpose(relativeMat);
+				mat4.multiply(relativeMat, bulletMatrix);
+					
+				if (relativeMat[15]>0){			
+					if (relativeMat[15]<critVal){continue;}	//early sphere check
+					
+					var projectedPos = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return val/(cellScale*relativeMat[15]);});
+					
+					//initially just find a corner
+					//seems is triangular pyramid, with "top" in 1-axis direction
+					//seems 0 - axis parrallel to one base edge
+					//1 - "up"
+					//2 - other base axis
+					// ie top point = (0,sqrt(3),0)
+					// therefore inside has to be above base ( pos[2] > -0.33*root(3) = 1/root(3)
+												
+					var isInside = true;
+					
+					var selection = -1;
+					var best = 1;
+					
+					//identify which quarter of tetrahedron are in (therefore which outer plane, set of 3 inner planes to check against.
+					for (var ii=0;ii<4;ii++){
+						var toPlane = planeCheck(tetraPlanesToCheck[ii],projectedPos);
+						if (toPlane < best){
+							best = toPlane;
+							selection = ii;
 						}
-						
-						//inner plane check
-						var isInsidePrism = true;
-						var dirsArr = dodecaDirs[selection];
-						var dirA=dirsArr[0];
-						var dirB=dirsArr[1];
-						
-						//dot product of directions with 
-						var dotA = dirA[0]*projectedPos[0] + dirA[1]*projectedPos[1] + dirA[2]*projectedPos[2];  
-						var dotB = dirB[0]*projectedPos[0] + dirB[1]*projectedPos[1] + dirB[2]*projectedPos[2];  
-						
-						dotA = best>0 ? dotA:-dotA;	//????
-						
-						for (var ang=0;ang<5;ang++){	//note doing this in other order (eg 0,2,4,1,5) with early exit could be quicker
-							var angRad = ang*Math.PI/2.5;
-							var myDotP = dotA*Math.cos(angRad) + dotB*Math.sin(angRad);
-							if (myDotP>0.31){isInsidePrism=false;}
-						}
-						if (!isInsidePrism){detonateBullet(bullet, bulletMatrix);}
-						
-						
-						//todo reuse tetra version / general dot product function!
-						function planeCheck(planeVec,pos){
-							return pos[0]*planeVec[0] + pos[1]*planeVec[1] +pos[2]*planeVec[2];
-						}
+					}
+					
+					if (best < -1){
+						isInside = false;
+					}
+					
+					//check is not inside all 3 inner planes for relevant quarter.
+					var innerPlanes = tetraInnerPlanesToCheck[selection];
+					if (planeCheck(innerPlanes[0],projectedPos) >-1 &&
+						planeCheck(innerPlanes[1],projectedPos) >-1 &&
+						planeCheck(innerPlanes[2],projectedPos) >-1){
+							isInside = false;
+					}
+					
+					if (isInside){
+						detonateBullet(bullet);
+					}
+					
+					//todo 4th number for comparison value - means can still work if plane thru origin.
+					function planeCheck(planeVec,pos){
+						return pos[0]*planeVec[0] + pos[1]*planeVec[1] +pos[2]*planeVec[2];
 					}
 				}
 			}
 		}
-		function detonateBullet(bullet, bulletMatrix){	//TODO what scope does this have? best practice???
+		
+		function detonateBullet(bullet){	//TODO what scope does this have? best practice???
 			bullet.vel = [0,0,0];	//if colliding with target, stop bullet.
 			bullet.active=false;
 			var tmp=new Explosion(bulletMatrix);
@@ -2237,12 +2280,6 @@ var iterateMechanics = (function iterateMechanics(){
 			//singleExplosion.matrix = bulletMatrix;
 		}
 		
-		for (var b in bullets){
-			var bullet = bullets[b];
-			if (bullet.active){	//TODO just delete/unlink removed objects
-				checkBulletCollision(bullet);
-			}
-		}
 		
 		fireDirectionVec = playerVelVec.map(function(val,ii){return (ii==2)? val+muzzleVel:val;});
 			//TODO velocity in frame of bullet? (different if gun aimed off-centre)
@@ -2434,12 +2471,13 @@ function fireGun(){
 			muzzleFlashAmounts[g]+=0.25
 			
 			var gunMatrix = gunMatrices[g];
-			var newBulletMatrix = mat4.create();	//TODO pooling - bullet pool instead of use matrix pool? 
+			var newBulletMatrix = mat4.create();
 			mat4.set(gunMatrix,newBulletMatrix);
+			
 			
 			//work out what fireDirectionVec should be in frame of gun/bullet (rather than player ship body)
 			//this maybe better done alongside targeting code.
-			var relativeMatrix = matPool.create();
+			var relativeMatrix = mat4.create();
 			mat4.set(sshipMatrix,relativeMatrix);
 			mat4.transpose(relativeMatrix);
 			mat4.multiply(relativeMatrix, gunMatrix);
@@ -2454,9 +2492,7 @@ function fireGun(){
 			}			
 			newFireDirectionVec[2]+=muzzleVel;
 			bullets.push({matrix:newBulletMatrix,vel:newFireDirectionVec,active:true});
-			
-			matPool.destroy(relativeMatrix);
-			
+																	
 			//limit number of bullets
 			if (bullets.length>200){
 				bullets.shift();
