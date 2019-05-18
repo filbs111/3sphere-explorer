@@ -1585,8 +1585,8 @@ var guiParams={
 	"draw 24-cell":false,
 	"24-cell scale":1,
 	"draw 120-cell":false,
-	"draw 600-cell":true,
-	"draw teapot":false,
+	"draw 600-cell":false,
+	"draw teapot":true,
 	"teapot scale":0.7,
 	"draw spaceship":true,
 	"drop spaceship":false,
@@ -1754,6 +1754,12 @@ function init(){
 	gl.enable(gl.CULL_FACE);
 	setupScene();
 	requestAnimationFrame(drawScene);
+	
+	//bodge - if initially drawing only objects using shader with fewer attributes than shader with most loaded so far, fails to draw,
+	//logs: Error: WebGL warning: drawElements: Vertex attrib array 2 is enabled but has no buffer bound.
+	//maybe should be using disableVertexAttribArray, but seems that in practice as long as something is bound to the attribute, works, even if active shader not using it
+	//hack is to just prep buffers for a shader that uses the most attributes
+	prepBuffersForDrawing(cubeBuffers, shaderProgramTexmapPerPixel);
 	
 	function setFog(world,color){
 		var r = parseInt(color.substring(1,3),16) /255;
