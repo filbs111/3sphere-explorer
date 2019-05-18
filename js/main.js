@@ -1316,7 +1316,6 @@ function generateCullFunc(pMat){
 
 function drawTennisBall(duocylinderObj, shader){
 
-	gl.disable(gl.CULL_FACE);
 	gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexPositionBuffer);
     gl.vertexAttribPointer(shader.attributes.aVertexPosition, duocylinderObj.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	
@@ -1354,7 +1353,6 @@ function drawObjectFromBuffers(bufferObj, shaderProg, usesCubeMap){
 	drawObjectFromPreppedBuffers(bufferObj, shaderProg);
 }
 function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
-	gl.enable(gl.CULL_FACE);
 	gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexPositionBuffer);
     gl.vertexAttribPointer(shaderProg.attributes.aVertexPosition, bufferObj.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	
@@ -1724,7 +1722,7 @@ function init(){
 	setFog(1,guiParams.fogColor1);
 	setPlayerLight(guiParams.playerLight);
     gl.enable(gl.DEPTH_TEST);
-	//gl.disable(gl.DEPTH_TEST);
+	gl.enable(gl.CULL_FACE);
 	setupScene();
 	requestAnimationFrame(drawScene);
 	

@@ -42,9 +42,9 @@ function loadGridData(toLoad){
 	console.log("tball normals length = " +  gridNormdataLen);
 	
 	for (var vv=0;vv<gridVertdataLen;vv+=3){
-		var xo = verts[vv];
-		var zo = verts[vv+1];	//note switched y,z. TODO sort out sensible export process, check handedness...
-		var yo = verts[vv+2];
+		var yo = verts[vv];
+		var zo = verts[vv+1];
+		var xo = verts[vv+2];
 		
 		var outverts = get4vecfrom3vec(0.25*xo,0.25*yo,0.25*zo);	//scale things down so can use 4x4 grid of these
 		
