@@ -349,7 +349,7 @@ function drawScene(frameTime){
 	//make a pmatrix for hemiphere perspective projection method.
 	
 	frustrumCull = squareFrustrumCull;
-	if (guiParams.reflector.draw){		
+	if (guiParams.reflector.update){		
 		mat4.set(cmapPMatrix, pMatrix);
 		for (var ii=0;ii<6;ii++){
 			var framebuffer = cubemapFramebuffer[ii];
@@ -1605,6 +1605,7 @@ var guiParams={
 	cameraFov:105,
 	reflector:{
 		draw:true,
+		update:true,
 		mappingType:'vertex projection',
 		scale:0.3,
 		isPortal:true,
@@ -1680,6 +1681,7 @@ function init(){
 	gui.add(guiParams, "culling");
 	var reflectorFolder = gui.addFolder('reflector');
 	reflectorFolder.add(guiParams.reflector, "draw");
+	reflectorFolder.add(guiParams.reflector, "update");
 	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection']);
 	reflectorFolder.add(guiParams.reflector, "scale", 0.2,2,0.01);
 	reflectorFolder.add(guiParams.reflector, "isPortal");
