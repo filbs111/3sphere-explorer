@@ -131,13 +131,13 @@ function initBuffers(){
 	//TODO use XMLHTTPRequest or something
 	//for now have put "var myBlenderObjOrWhatever = " in front of contents of untitled.obj.json, and are referencing this directly as a script (similar to how are doing with shaders)
 	//this part will eventually want to make part of build process (so can load object just containing what need)
-	var cubeFrameBlenderObject = loadBlenderExport(cubeFrameData.meshes[0]);
-	var cubeFrameSubdivObject = loadBlenderExport(cubeFrameSubdivData);
-	var octoFrameBlenderObject = loadBlenderExport(octoFrameData.meshes[0]);
-	var octoFrameSubdivObject = loadBlenderExport(octoFrameSubdivData);
-	var tetraFrameBlenderObject = loadBlenderExport(tetraFrameData.meshes[0]);
-	var tetraFrameSubdivObject = loadBlenderExport(tetraFrameSubdivData);
-	var dodecaFrameBlenderObject = loadBlenderExport(dodecaFrameData.meshes[0]);
+	var cubeFrameBlenderObject = loadBlenderExport(cubeFrameData.meshes[0]);	//todo switch to removing outfaces (currently including so can scale smaller)
+	var cubeFrameSubdivObject = loadBlenderExport(cubeFrameSubdivData);			//""
+	var octoFrameBlenderObject = loadBlenderExportNoOutwardFaces(octoFrameData.meshes[0]);
+	var octoFrameSubdivObject = loadBlenderExportNoOutwardFaces(octoFrameSubdivData);
+	var tetraFrameBlenderObject = loadBlenderExportNoOutwardFaces(tetraFrameData.meshes[0]);
+	var tetraFrameSubdivObject = loadBlenderExportNoOutwardFaces(tetraFrameSubdivData);
+	var dodecaFrameBlenderObject = loadBlenderExportNoOutwardFaces(dodecaFrameData.meshes[0]);
 	var teapotObject = loadBlenderExport(teapotData);	//isn't actually a blender export - just a obj json
 	var sshipObject = loadBlenderExport(sshipdata.meshes[0]);		//""
 	var gunObject = loadBlenderExport(guncyldata.meshes[0]);
@@ -193,6 +193,40 @@ function initBuffers(){
 			indices: [].concat.apply([],meshToLoad.faces)	//trick from https://www.youtube.com/watch?v=sM9n73-HiNA t~ 28:30
 		}	
 	};
+	function loadBlenderExportNoOutwardFaces(meshToLoad){
+		var vertices = meshToLoad.vertices;
+		var normals = meshToLoad.normals;
+		var alteredMesh = {
+			vertices: vertices,
+			normals: normals,
+			texturecoords: meshToLoad.texturecoords
+		}
+		var newFaces=[];
+		var faces = meshToLoad.faces;	//assumes array[3] for each index
+		var numInputFaces = faces.length;
+		for (var ii=0;ii<numInputFaces;ii++){
+			var theseIndices = faces[ii];
+			var totalVertex = [];
+			var totalNormal = [];
+			for (var cc=0;cc<3;cc++){
+				totalVertex[cc] = vertices[theseIndices[0]*3 + cc]+ vertices[theseIndices[1]*3 + cc] + vertices[theseIndices[2]*3+cc];
+				totalNormal[cc] = normals[theseIndices[0]*3 + cc]+ normals[theseIndices[1]*3 + cc] + normals[theseIndices[2]*3+cc];
+			}
+			
+			//normalise total normal
+			var vertexLengthsq = totalVertex[0]*totalVertex[0] + totalVertex[1]*totalVertex[1] + totalVertex[2]*totalVertex[2];
+			var normalLengthsq = totalNormal[0]*totalNormal[0] + totalNormal[1]*totalNormal[1] + totalNormal[2]*totalNormal[2];
+				//above maybe unnecessary if set threshold right
+			var dotProd = totalVertex[0]*totalNormal[0] + totalVertex[1]*totalNormal[1] + totalVertex[2]*totalNormal[2];
+			if (dotProd < 0.5*Math.sqrt(normalLengthsq*vertexLengthsq)){
+				//this works. afaik need number as low as this because faces are triangles etc. maybe will want some number close to zero - just checking sign maybe sufficient (though "between" faces are near zero dot product)..
+				newFaces.push(theseIndices);
+			}			
+			//todo make buffers have inner then outer face index. IIRC some gl func to draw sub-range of faces (therefore can do either with or without outer faces using same buffer)
+		}
+		alteredMesh.faces = newFaces;
+		return loadBlenderExport(alteredMesh);
+	}
 }
 
 var reflectorInfo={
@@ -641,15 +675,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	
 	if (guiParams["draw 16-cell"]){
-		var cellScale = 4/Math.sqrt(6);		//in the model, vertices are 0.75*sqrt(2) from the centre, and want to scale to tan(PI/3)=sqrt(3)
-		
-		cellScale*=guiParams["16-cell scale"];
-		
-		//var moveAmount = Math.PI/3;	
+		var cellScale = 4/Math.sqrt(6);		//in the model, vertices are 0.75*sqrt(2) from the centre, and want to scale to tan(PI/3)=sqrt(3)		
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [cellScale,cellScale,cellScale]);
 		
 		drawArrayOfModels(
-			//[cellMatData.d16[0]],
 			cellMatData.d16,
 			(guiParams["culling"] ? 1.73: false),
 			(guiParams["subdiv frames"]? tetraFrameSubdivBuffers: tetraFrameBuffers)
@@ -697,7 +726,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	}
 	
 	if (guiParams["draw 600-cell"]){		
-		var myscale=0.385;	//todo use correct scale
+		var myscale=0.386;	//todo use correct scale
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [myscale,myscale,myscale]);
 		
 		drawArrayOfModels(
@@ -1553,7 +1582,6 @@ var guiParams={
 	"draw 8-cell":false,
 	"8-cell scale":0.3,		//0.5 to tesselate
 	"draw 16-cell":false,
-	"16-cell scale":1,		//1 to tesselate
 	"draw 24-cell":false,
 	"24-cell scale":1,
 	"draw 120-cell":false,
@@ -1630,7 +1658,6 @@ function init(){
 	polytopesFolder.add(guiParams,"draw 8-cell");
 	polytopesFolder.add(guiParams,"8-cell scale",0.05,2.0,0.05);
 	polytopesFolder.add(guiParams,"draw 16-cell");
-	polytopesFolder.add(guiParams,"16-cell scale",0.05,2.0,0.05);
 	polytopesFolder.add(guiParams,"subdiv frames");
 	polytopesFolder.add(guiParams,"draw 24-cell");
 	polytopesFolder.add(guiParams,"24-cell scale",0.05,2.0,0.05);
@@ -2068,10 +2095,10 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			//tetrahedron. (16-cell and 600-cell)
 			if (guiParams["draw 16-cell"]){
-				checkTetraCollisionForArray(guiParams["16-cell scale"], cellMatData.d16);
+				checkTetraCollisionForArray(1, cellMatData.d16);
 			}
 			if (guiParams["draw 600-cell"]){
-				checkTetraCollisionForArray(0.385/(4/Math.sqrt(6)), cellMatData.d600);
+				checkTetraCollisionForArray(0.386/(4/Math.sqrt(6)), cellMatData.d600);
 			}
 			
 			function checkTetraCollisionForArray(cellScale, matsArr){
