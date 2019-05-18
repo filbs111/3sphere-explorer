@@ -358,12 +358,13 @@ function addMatsFromMat(thisMat){
 	}
 }
 	
-	
-	
-	
-	
-	
-	
+	//sort arrays by distance from portal to reduce rendering time
+	returnObj.d600.sort(function(a,b){return a[15]<b[15];});
+	returnObj.d120.sort(function(a,b){return a[15]<b[15];});
+	returnObj.d24.cells.sort(function(a,b){return a[15]<b[15];});	//how are these rendered? in cell order?
+	returnObj.d16.sort(function(a,b){return a[15]<b[15];});
+	returnObj.d8.sort(function(a,b){return a[15]<b[15];});
+	returnObj.d5.sort(function(a,b){return a[15]<b[15];});
 	
 	return returnObj;
 })();

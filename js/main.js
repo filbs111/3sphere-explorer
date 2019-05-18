@@ -1563,7 +1563,7 @@ var guiParams={
 	duocylinderModel0:"grid",
 	duocylinderModel1:"terrain",
 	drawShapes:{
-		'x*x+y*y=z*z+w*w':true,
+		'x*x+y*y=z*z+w*w':false,
 		'x*x+z*z=y*y+w*w':false,
 		'x*x+w*w=y*y+z*z':false,
 		'boxes y=z=0':false,	//x*x+w*w=1
@@ -1585,7 +1585,7 @@ var guiParams={
 	"draw 24-cell":false,
 	"24-cell scale":1,
 	"draw 120-cell":false,
-	"draw 600-cell":false,
+	"draw 600-cell":true,
 	"draw teapot":false,
 	"teapot scale":0.7,
 	"draw spaceship":true,
