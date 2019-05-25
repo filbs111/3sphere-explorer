@@ -741,12 +741,14 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.darkGray);	//DARK
 
+	var sortId = sortIdForMatrix(mvMatrix);	//lookup sort order for cells
+	
 	//new draw dodeca stuff...
 	if (guiParams["draw 120-cell"]){
 		var cullVal =  dodecaScale*(0.4/0.515);
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [dodecaScale,dodecaScale,dodecaScale]);
 		drawArrayOfModels(
-			cellMatData.d120,
+			cellMatData.d120[sortId],
 			(guiParams["culling"] ? cullVal: false),
 			dodecaFrameBuffers
 		);
@@ -757,7 +759,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [myscale,myscale,myscale]);
 		
 		drawArrayOfModels(
-			cellMatData.d600,
+			cellMatData.d600[sortId],
 			(guiParams["culling"] ? 0.355: false),
 			(guiParams["subdiv frames"]? tetraFrameSubdivBuffers: tetraFrameBuffers)
 		);

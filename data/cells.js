@@ -359,12 +359,60 @@ function addMatsFromMat(thisMat){
 }
 	
 	//sort arrays by distance from portal to reduce rendering time
-	returnObj.d600.sort(function(a,b){return a[15]<b[15];});
-	returnObj.d120.sort(function(a,b){return a[15]<b[15];});
 	returnObj.d24.cells.sort(function(a,b){return a[15]<b[15];});	//how are these rendered? in cell order?
 	returnObj.d16.sort(function(a,b){return a[15]<b[15];});
 	returnObj.d8.sort(function(a,b){return a[15]<b[15];});
 	returnObj.d5.sort(function(a,b){return a[15]<b[15];});
 	
+	returnObj.d120=generateSortedArrays(returnObj.d120);
+	returnObj.d600=generateSortedArrays(returnObj.d600);
+	
+	function generateSortedArrays(myArr){
+		var arrayOfSortedArrays = [];
+		for (var ii=0;ii<4;ii++){
+			myArr = myArr.slice(0);	//shallow copy. 1st time is pointless
+			var relevantMatElem = 12+ii;	//might be 3+4*ii, depending on matrix row or column.
+			//var relevantMatElem = 3+ii;		
+			arrayOfSortedArrays.push(myArr.sort(function(a,b){return a[relevantMatElem]<b[relevantMatElem];}));
+			myArr = myArr.slice(0);
+			arrayOfSortedArrays.push(myArr.reverse());
+		}
+		return arrayOfSortedArrays;
+	}
+	
 	return returnObj;
 })();
+
+function sortIdForMatrix(inputMatrix){
+	//only using position in matrix (though might do better with view direction too)
+	
+	//for each set of things to draw, 8 arrays. each lists the same set of matrices describing cell positions, sorted in different orders. ordered by distance from x=1, x=-1, y=1, y=-1, z= .... 
+	//want some method to return either id of cell, or actual cell mat (should cell mat be class or something - would like to autogenerate 8 lists for each set of objects. 
+	
+	//note can get this in neat way for 16-cell 
+	
+	//initially just code logic to find which 8-cell are in
+	//var position = [inputMatrix[12], inputMatrix[13], inputMatrix[14], inputMatrix[15]];	//todo check this - might want column instead of row
+	var position = [inputMatrix[3], inputMatrix[7], inputMatrix[11], inputMatrix[15]];	//todo check this - might want column instead of row
+	var absPosition =position.map(function(coord){return Math.abs(coord);});
+	
+	/*
+	var greatestXY = Math.max(absPosition[0], absPosition[1]);	//(A)
+	var greatestZW = Math.max(absPosition[2], absPosition[3]);	//(B)
+	var greatestXZ = Math.max(absPosition[0], absPosition[2]);	//(C)
+	var greatestYW = Math.max(absPosition[1], absPosition[3]);	//(D)
+	//can do 2 comparisons AvsB, CvsD to determine which element of absPosition is greatest ( ...
+	
+	//above way might be fast or avoid GC but needlessly complex
+	*/
+	
+	var greatestIdx=0;
+	var greatestVal=0;
+	for (var ii=0;ii<4;ii++){
+		if (absPosition[ii]>greatestVal){
+			greatestIdx = ii;
+			greatestVal = absPosition[ii];
+		}
+	}
+	return greatestIdx*2 + (position[greatestIdx] < 0 ? 1 : 0);
+}
