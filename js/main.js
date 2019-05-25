@@ -483,7 +483,6 @@ function setProjectionMatrix(pMatrix, vFov, ratio, polarity){
 	pMatrix[15] = 0;
 }
 
-var usePrecalcCells=true;
 var currentWorld=0;
 
 var colorArrs = {
@@ -659,6 +658,34 @@ function drawWorldScene(frameTime, isCubemapView) {
 			}
 		}
 	}
+	
+	//draw boxes on duocylinder surface.  
+	var duocylinderSurfaceBoxScale = 0.025;
+	var oneGridSquareOffset = Math.PI/14;
+	var fudgeFact = 2/Math.PI;	//maytbe this is correct. seems to be ratio of up move to surface move at surface
+	var hh=0.05;
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
+	prepBuffersForDrawing(cubeBuffers, shaderProgramTexmap);
+	drawPreppedBufferOnDuocylinder(0,0,hh, [0.5, 0.5, 0.5, 1.0], cubeBuffers);
+	drawPreppedBufferOnDuocylinder(oneGridSquareOffset,0,hh, [1.0, 0.4, 0.4, 1.0], cubeBuffers);				//red - around
+	drawPreppedBufferOnDuocylinder(0,oneGridSquareOffset,hh, [0.4, 1.0, 0.4, 1.0], cubeBuffers);				//green - along
+	drawPreppedBufferOnDuocylinder(0,0,oneGridSquareOffset*fudgeFact+hh, [0.4, 0.4, 1.0, 1.0], cubeBuffers);	//blue - up
+
+	function drawPreppedBufferOnDuocylinder(aa, bb, hh, cc, buff){
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, cc);
+		moveToDuocylinderAB(aa,bb,hh);
+		drawObjectFromPreppedBuffers(buff, shaderProgramTexmap);
+	}
+	function moveToDuocylinderAB(aa,bb,hh){	//surf of duocylinder hh=0. aa, bb wrap 2 PI. for side portal is in, aa is around, bb is along.
+											//TODO maybe put multiplications by PI in here so wraps to +/-1 ?
+											//TODO don't use this at runtime.
+											//TODO maybe function to map object onto duocylinder including saddle distortion?
+		mat4.set(invertedWorldCamera, mvMatrix);
+		xyzrotate4mat(mvMatrix, [0,0,aa]);
+		zmove4mat(mvMatrix, bb);
+		xmove4mat(mvMatrix, Math.PI/4 - hh);	//or ymove - should check what way up want models to be. PI/4 is onto surface of duocylinder
+	}
+	
 	
 	//draw blender object - a csg cube minus sphere. draw 8 cells for tesseract.
 	var modelScale = guiParams["8-cell scale"];
