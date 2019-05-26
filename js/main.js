@@ -893,7 +893,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	xyzmove4mat(sshipMatrixShifted, moveAwayVec);
 	
 	drawFunc(sshipMatrixShifted);
-	
+		
 	if (checkWithinReflectorRange(sshipMatrixShifted, Math.tan(Math.atan(reflectorInfo.rad) +0.1))){
 		var portaledMatrix = mat4.create();
 		mat4.set(sshipMatrixShifted, portaledMatrix);
@@ -1168,7 +1168,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 	function drawBall(matrix){
 		//draw "light" object
-		var sphereRad = 0.04;
+		var sphereRad = 0.012;
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [sphereRad,sphereRad,sphereRad]);
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
 		mat4.set(invertedWorldCamera, mvMatrix);
@@ -1597,12 +1597,12 @@ var guiParams={
 		'x*x+y*y=z*z+w*w':false,
 		'x*x+z*z=y*y+w*w':false,
 		'x*x+w*w=y*y+z*z':false,
-		'boxes y=z=0':false,	//x*x+w*w=1
-		'boxes x=z=0':false,	//y*y+w*w=1
-		'boxes x=y=0':false,	//z*z+w*w=1
-		'boxes x=w=0':false,
-		'boxes y=w=0':false,
-		'boxes z=w=0':false
+		'boxes y=z=0':true,	//x*x+w*w=1
+		'boxes x=z=0':true,	//y*y+w*w=1
+		'boxes x=y=0':true,	//z*z+w*w=1
+		'boxes x=w=0':true,
+		'boxes y=w=0':true,
+		'boxes z=w=0':true
 	},
 	'random boxes':{
 		number:0,
@@ -1639,7 +1639,7 @@ var guiParams={
 		update:true,
 		mappingType:'vertex projection',
 		scale:0.3,
-		isPortal:true,
+		isPortal:false,
 		moveAway:0.0008
 	}
 };
@@ -2322,7 +2322,27 @@ var iterateMechanics = (function iterateMechanics(){
 		}
 		playerLight = playerLightUnscaled.map(function(val){return val*flashAmount});
 		
-		portalTest(playerCamera, 0);
+		portalTest(playerCamera, 0);	//TODO switch off portal in reflector mode. requires camera changes too.
+		
+		//bounce off portal if reflector
+		if (!guiParams.reflector.isPortal){
+			var effectiveRange = Math.tan(Math.atan(reflectorInfo.rad)+Math.atan(0.011)); //TODO reformulate more efficiently
+			if (checkWithinReflectorRange(playerCamera, effectiveRange)){					
+				var towardsPortal = [playerCamera[3],playerCamera[7],playerCamera[11],playerCamera[15]]; //in player frame
+				var normalisingFactor=1/Math.sqrt(1-towardsPortal[3]*towardsPortal[3])
+				towardsPortal = towardsPortal.map(function(elem){return elem*normalisingFactor;});
+				//vel toward portal 
+				var velTowardsPortal = ( towardsPortal[0]*playerVelVec[0] + towardsPortal[1]*playerVelVec[1] + towardsPortal[2]*playerVelVec[2]);
+				velTowardsPortal*=1.2;					//multiply by 1+coefficient of restitution
+				if (velTowardsPortal<0){
+					//playerVelVec = playerVelVec.map(function(elem){return -elem;}); //simple reverse velocity
+					for (var cc=0;cc<3;cc++){
+						playerVelVec[cc] -= velTowardsPortal*towardsPortal[cc];
+					}
+				}
+				//currently can closer to sphere if push continuously. TODO move back out to effectiveRange
+			}
+		}
 		
 		//rotate remainder of time for aesthetic. (TODO ensure doesn't cock up frustum culling, hud etc)
 		mat4.set(playerCamera, playerCameraInterp);
