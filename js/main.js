@@ -1592,7 +1592,7 @@ var stats;
 var guiParams={
 	duocylinderModel0:"grid",
 	duocylinderModel1:"terrain",
-	rotateDuocylinder:false,
+	duocylinderRotateSpeed:0,
 	drawShapes:{
 		'x*x+y*y=z*z+w*w':false,
 		'x*x+z*z=y*y+w*w':false,
@@ -1677,7 +1677,7 @@ function init(){
 	var drawShapesFolder = gui.addFolder('drawShapes');
 	drawShapesFolder.add(guiParams, "duocylinderModel0", ["grid","terrain","sea"] );
 	drawShapesFolder.add(guiParams, "duocylinderModel1", ["grid","terrain","sea"] );
-	drawShapesFolder.add(guiParams, "rotateDuocylinder");
+	drawShapesFolder.add(guiParams, "duocylinderRotateSpeed", -2.5,2.5,0.25);
 	for (shape in guiParams.drawShapes){
 		console.log(shape);
 		drawShapesFolder.add(guiParams.drawShapes, shape );
@@ -1864,7 +1864,7 @@ for (var ang=0;ang<5;ang++){
 var duocylinderSpin = 0;
 var iterateMechanics = (function iterateMechanics(){
 	var lastTime=Date.now();
-	var moveSpeed=0.00015;
+	var moveSpeed=0.000075;
 	var rotateSpeed=-0.0005;
 	var bulletSpeed=0.001;
 	
@@ -1885,7 +1885,7 @@ var iterateMechanics = (function iterateMechanics(){
 	//var autoFireCountdownStartVal=6;
 	var autoFireCountdownStartVal=1;
 	var lastPlayerAngMove = [0,0,0];	//for interpolation
-	var duocylinderIsRotating=0;
+	var duoCylinderAngVelConst=0;
 	
 	return function(){
 		//GAMEPAD
@@ -1933,6 +1933,8 @@ var iterateMechanics = (function iterateMechanics(){
 		//console.log("time elapsed: " + timeElapsed);
 		lastTime=nowTime;
 		
+		duoCylinderAngVelConst = guiParams.duocylinderRotateSpeed;
+		
 		timeTracker+=timeElapsed;
 		var numSteps = Math.floor(timeTracker/timeStep);
 		timeTracker-=numSteps*timeStep;
@@ -1941,8 +1943,8 @@ var iterateMechanics = (function iterateMechanics(){
 			gunHeat*=0.995;
 			offsetCam.iterate();
 		}
-		duocylinderIsRotating=guiParams.rotateDuocylinder ? 1 :0;
-		duocylinderSpin+= duocylinderIsRotating * timeElapsed*0.0001;	//TODO match spin speed with sea wave speed
+		
+		duocylinderSpin+= duoCylinderAngVelConst * timeElapsed*moveSpeed;	//TODO match spin speed with sea wave speed
 		
 		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
 		
@@ -1996,29 +1998,22 @@ var iterateMechanics = (function iterateMechanics(){
 			//matrix entries 12-15 describe position. (remain same when rotate player and don't move)
 			//playerVel is in frame of player though - so apply matrix rotation to this.
 			
-			if (duocylinderIsRotating){
-				var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//guess what this is
-				var angVelConst = 0.6667;	//TODO match exactly
-				
-				// 0.0001 (hardcoded rotation per unit time) 
-				// moveSpeed=0.00015
-				
-				// moveSpeed*spinVel = 0.0001  ? 
-				// => spinVel = (0.0001 / 0.00015)  = 0.6666
-				
-				var spinVelWorldCoords = [ angVelConst*playerPos[1],-angVelConst*playerPos[0],0];	
-								
-				var spinVelPlayerCoords = [
-					spinVelWorldCoords[0]*playerCamera[0] + spinVelWorldCoords[1]*playerCamera[1] + spinVelWorldCoords[2]*playerCamera[2],
-					spinVelWorldCoords[0]*playerCamera[4] + spinVelWorldCoords[1]*playerCamera[5] + spinVelWorldCoords[2]*playerCamera[6],
-					spinVelWorldCoords[0]*playerCamera[8] + spinVelWorldCoords[1]*playerCamera[9] + spinVelWorldCoords[2]*playerCamera[10]];
-				
-				//this is in frame of duocylinder. playerVelVec is in frame of player though... ?!! possible to do without matrix mult? by choosing right parts of playerCamera mat?
-				
-				for (var cc=0;cc<3;cc++){
-					playerVelVec[cc]+=0.003*spinVelPlayerCoords[cc];
-				}
+			var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//guess what this is
+			
+			var spinVelWorldCoords = [ duoCylinderAngVelConst*playerPos[1],-duoCylinderAngVelConst*playerPos[0],0];	
+							
+			var spinVelPlayerCoords = [
+				spinVelWorldCoords[0]*playerCamera[0] + spinVelWorldCoords[1]*playerCamera[1] + spinVelWorldCoords[2]*playerCamera[2],
+				spinVelWorldCoords[0]*playerCamera[4] + spinVelWorldCoords[1]*playerCamera[5] + spinVelWorldCoords[2]*playerCamera[6],
+				spinVelWorldCoords[0]*playerCamera[8] + spinVelWorldCoords[1]*playerCamera[9] + spinVelWorldCoords[2]*playerCamera[10]];
+			
+			//this is in frame of duocylinder. playerVelVec is in frame of player though... ?!! possible to do without matrix mult? by choosing right parts of playerCamera mat?
+			
+			for (var cc=0;cc<3;cc++){
+				playerVelVec[cc]+=0.003*spinVelPlayerCoords[cc];
 			}
+			
+			
 			
 			if (autoFireCountdown>0){
 				autoFireCountdown--;
