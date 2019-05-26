@@ -945,6 +945,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		prepBuffersForDrawing(gunBuffers, shaderProgramColored);
 
 		gunMatrices=[];
+		
 		drawRelativeToSpacehip([gunHoriz,gunVert,gunFront]); //left, down, forwards
 		drawRelativeToSpacehip([-gunHoriz,gunVert,gunFront]);
 		drawRelativeToSpacehip([-gunHoriz,-gunVert,gunFront]);
@@ -1884,6 +1885,7 @@ var iterateMechanics = (function iterateMechanics(){
 	//var autoFireCountdownStartVal=6;
 	var autoFireCountdownStartVal=1;
 	var lastPlayerAngMove = [0,0,0];	//for interpolation
+	var duocylinderIsRotating=0;
 	
 	return function(){
 		//GAMEPAD
@@ -1939,7 +1941,8 @@ var iterateMechanics = (function iterateMechanics(){
 			gunHeat*=0.995;
 			offsetCam.iterate();
 		}
-		duocylinderSpin+= guiParams.rotateDuocylinder ? timeElapsed * 0.0001 : 0;	//TODO match spin speed with sea wave speed
+		duocylinderIsRotating=guiParams.rotateDuocylinder ? 1 :0;
+		duocylinderSpin+= duocylinderIsRotating * timeElapsed*0.0001;	//TODO match spin speed with sea wave speed
 		
 		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
 		
@@ -1993,7 +1996,7 @@ var iterateMechanics = (function iterateMechanics(){
 			//matrix entries 12-15 describe position. (remain same when rotate player and don't move)
 			//playerVel is in frame of player though - so apply matrix rotation to this.
 			
-			if (guiParams.rotateDuocylinder){
+			if (duocylinderIsRotating){
 				var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//guess what this is
 				var angVelConst = 0.6667;	//TODO match exactly
 				

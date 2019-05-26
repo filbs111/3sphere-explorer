@@ -44,8 +44,6 @@ function xyzmove4mat(mat, movevector){
 	//movevector is axis*angle
 	//rotating x,y,z into w (3rd )
 	
-	//just make a fresh matrix, then multiply the input matrix by that.
-	var newMatrix = matPool.create();
 	var moveLength = Math.sqrt(movevector[0]*movevector[0] + movevector[1]*movevector[1] + movevector[2]*movevector[2]);
 	var sAng = Math.sin(moveLength);
 	var cAng = Math.cos(moveLength);
@@ -54,6 +52,9 @@ function xyzmove4mat(mat, movevector){
 	//basically the matrix rows / columns (which way around )should be a vector for each of the 4 points x=1, y=1, z=1, w=1, rotated.
 	//work these out, then insert into a matrix (try row, column), rotate
 	if (moveLength == 0){return;}	//avoid division by zero
+	
+	//just make a fresh matrix, then multiply the input matrix by that.
+	var newMatrix = matPool.create();
 	
 	//unknown if changing passed in movevector will cause problems, so make new one
 	movevector = movevector.map(function(val){return val/moveLength;});
