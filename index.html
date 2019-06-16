@@ -52,6 +52,7 @@
 <script type="text/javascript" src="data/grid1.obj.json.min"></script>
 <script type="text/javascript" src="data/terrain/untitled64tri-deduped-wrap.obj.json.min"></script>
 <script type="text/javascript" src="data/gridData.js"></script>
+<script type="text/javascript" src="data/proceduralTerrain.js"></script>
 <script type="text/javascript" src="data/tennisBallLoader.js"></script>
 <script type="text/javascript" src="data/cube-frame-a1-cubeproj.obj.json"></script>
 <script type="text/javascript" src="data/cube-frame-a2-cubeproj.obj.json"></script>
@@ -583,6 +584,7 @@
 		//light from portal. TODO pass in a colour for this, more complex lighting (at surface of portal, should be hemispherical light etc)
 		//this is just bodged/guessed to achieve correct behaviour at/across portal. TODO check/correct!
 		float portalLight = dot( uReflectorPos, transformedNormal);
+		
 		portalLight = max(0.5*portalLight +0.5+ posCosDiff,0.0);	//unnecessary if camera pos = light pos
 		//falloff
 		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
