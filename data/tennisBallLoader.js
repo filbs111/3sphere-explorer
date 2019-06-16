@@ -52,17 +52,18 @@ function loadGridData(toLoad){
 			newverts.push(outverts[cc]);
 		}
 		
-		var nx = norms[vv];
+		var ny = norms[vv];
 		var nz = norms[vv+1];
-		var ny = norms[vv+2];
+		var nx = norms[vv+2];
 		
 		//simple way to calc norms - move a little along normal, subtract this from original value, normalise the result.
 		//probably can express as a derivative wrt normal movment, then normalise result, but this way is easier.
 		
+		var smallOffset = 0.0001;
 		var vertsalong = get4vecfrom3vec(
-			0.25*xo + 0.001*nx,
-			0.25*yo + 0.001*ny,
-			0.25*zo + 0.001*nz
+			0.25*xo + smallOffset*nx,
+			0.25*yo + smallOffset*ny,
+			0.25*zo + smallOffset*nz
 			);
 			
 		//take difference and normalise
