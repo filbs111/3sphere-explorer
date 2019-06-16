@@ -8,6 +8,7 @@ var shaderProgramColored,
 	shaderProgramTexmapPerPixel,
 	shaderProgramTexmapPerPixelDiscard,
 	shaderProgramTexmap4Vec,
+	shaderProgramTexmap4VecMapproject,
 	shaderProgramDuocylinderSea,
 	shaderProgramCubemap,
 	shaderProgramVertprojCubemap,
@@ -47,6 +48,11 @@ function initShaders(){
 					});
 					
 	shaderProgramTexmap4Vec = loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs",{
+					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					});
+					
+	shaderProgramTexmap4VecMapproject = loadShader( "shader-texmap-vs-4vec-mapproject", "shader-texmap-fs-mapproject",{
 					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
@@ -800,7 +806,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
 	if (!duocylinderObjects[duocylinderModel].isSea){
-		activeShaderProgram = shaderProgramTexmap4Vec;
+		activeShaderProgram = duocylinderObjects[duocylinderModel].useMapproject? shaderProgramTexmap4VecMapproject : shaderProgramTexmap4Vec;
 		gl.useProgram(activeShaderProgram);
 	}else{
 		activeShaderProgram = shaderProgramDuocylinderSea;
@@ -1559,6 +1565,7 @@ function initTexture(){
 	duocylinderObjects.grid.tex = makeTexture("img/grid-omni.png");
 	duocylinderObjects.terrain.tex = makeTexture("data/terrain/turbulent-seamless.png");
 	duocylinderObjects.procTerrain.tex = texture;
+	duocylinderObjects.procTerrain.useMapproject = true;
 	
 	//duocylinderObjects.sea.tex = null;
 	duocylinderObjects.sea.tex = makeTexture("img/4141.jpg");

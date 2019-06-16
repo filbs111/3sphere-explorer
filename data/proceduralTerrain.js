@@ -51,26 +51,21 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 	}
 	
 	//TODO strip data, but regular tris data easier.
-	var startIdx=0;
-	var nextRowStartIdx = gridSize;
-	for (var ii=0;ii<gridSize-1;ii++){	//TODO join up. (missing one row and column currently
-		console.log(startIdx);
-		console.log(nextRowStartIdx);
-		for (var jj=0;jj<gridSize-1;jj++){
-			indices.push(startIdx);
-			indices.push(nextRowStartIdx+1);
-			indices.push(nextRowStartIdx);
+	for (var ii=0;ii<gridSize;ii++){	//TODO join up. (missing one row and column currently
+		for (var jj=0;jj<gridSize;jj++){
+			indices.push(lookupIndex(ii,jj));
+			indices.push(lookupIndex(ii+1,jj+1));
+			indices.push(lookupIndex(ii,jj+1));
 			
-			indices.push(startIdx);
-			indices.push(startIdx+1);
-			indices.push(nextRowStartIdx+1);
-			
-			startIdx++;
-			nextRowStartIdx++;
+			indices.push(lookupIndex(ii,jj));
+			indices.push(lookupIndex(ii+1,jj));
+			indices.push(lookupIndex(ii+1,jj+1));
 		}
-		startIdx+=1;
-		nextRowStartIdx+=1;
 	}
 	
+	//this is a inefficient but comprehension more important. should swap to indexed strips anyway.
+	function lookupIndex(xx,yy){
+		return (xx&terrainSizeMinusOne)+gridSize*(yy&terrainSizeMinusOne)
+	}
 	return {vertices:vertices, normals:normals, uvcoords:uvcoords, faces:indices};
 })(256);
