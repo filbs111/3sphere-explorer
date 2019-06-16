@@ -28,6 +28,7 @@ cosCylRadius, sinCylRadius are determined by zo . cylRadius of PI/4 divides in 2
 
 loadGridData(tballGridDataPantheonStyle);
 loadGridData(terrainData);
+loadGridData(proceduralTerrainData);
 
 //map 3d point data to 4d points, wrapping square onto duocylinder
 function loadGridData(toLoad){

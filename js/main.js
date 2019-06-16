@@ -76,7 +76,7 @@ function initShaders(){
 var duocylinderObjects={
 	grid:{divs:4,step:Math.PI/2},
 	terrain:{divs:2,step:Math.PI},
-	//sea:{divs:2,step:Math.PI}
+	procTerrain:{divs:1,step:2*Math.PI},
 	sea:{divs:1,step:2*Math.PI}
 	};
 
@@ -98,6 +98,7 @@ var icoballBuffers={};
 function initBuffers(){
 	loadDuocylinderBufferData(duocylinderObjects.grid, tballGridDataPantheonStyle);
 	loadDuocylinderBufferData(duocylinderObjects.terrain, terrainData);
+	loadDuocylinderBufferData(duocylinderObjects.procTerrain, proceduralTerrainData);
 	loadDuocylinderSeaBufferData(duocylinderObjects.sea, gridData);	//for use in a different shader. no precalculation of mapping to 4-verts
 	
 	function loadDuocylinderBufferData(bufferObj, sourceData){
@@ -904,7 +905,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	function drawSpaceship(matrix, matrixForTargeting){
 		modelScale=0.0002;
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.veryDarkGray);	//DARK
+		//gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.veryDarkGray);	//DARK
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
 		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 		
@@ -1392,7 +1394,7 @@ function drawTennisBall(duocylinderObj, shader){
 	bind2dTextureIfRequired(duocylinderObj.tex);
 	gl.uniform1i(shader.uniforms.uSampler, 0);
 	
-	for (var side=0;side<2;side++){	//TODO should only draw 1 side - work out which side player is on...
+	//for (var side=0;side<2;side++){	//draw 2 sides
 		for (var xg=0;xg<duocylinderObj.divs;xg+=1){		//
 			for (var yg=0;yg<duocylinderObj.divs;yg+=1){	//TODO precalc cells array better than grids here.
 				setMatrixUniforms(shader);
@@ -1401,9 +1403,9 @@ function drawTennisBall(duocylinderObj, shader){
 			}
 			rotate4mat(mvMatrix, 2, 3, duocylinderObj.step);
 		}
-		xmove4mat(mvMatrix, 0.5*Math.PI);			//switch to 
-		rotate4mat(mvMatrix, 1, 2, Math.PI*0.5);	//other side..
-	}
+	//	xmove4mat(mvMatrix, 0.5*Math.PI);			//switch to 
+	//	rotate4mat(mvMatrix, 1, 2, Math.PI*0.5);	//other side..
+	//}
 	
 }
 
@@ -1556,6 +1558,8 @@ function initTexture(){
 	hudTextureBox = makeTexture("img/box.png");
 	duocylinderObjects.grid.tex = makeTexture("img/grid-omni.png");
 	duocylinderObjects.terrain.tex = makeTexture("data/terrain/turbulent-seamless.png");
+	duocylinderObjects.procTerrain.tex = texture;
+	
 	//duocylinderObjects.sea.tex = null;
 	duocylinderObjects.sea.tex = makeTexture("img/4141.jpg");
 	duocylinderObjects.sea.isSea=true;
@@ -1590,11 +1594,11 @@ var mouseInfo = {
 var stats;
 
 var guiParams={
-	duocylinderModel0:"grid",
+	duocylinderModel0:"procTerrain",
 	duocylinderModel1:"terrain",
 	duocylinderRotateSpeed:0,
 	drawShapes:{
-		'x*x+y*y=z*z+w*w':false,
+		'x*x+y*y=z*z+w*w':true,
 		'x*x+z*z=y*y+w*w':false,
 		'x*x+w*w=y*y+z*z':false,
 		'boxes y=z=0':true,	//x*x+w*w=1
@@ -1639,7 +1643,7 @@ var guiParams={
 		update:true,
 		mappingType:'vertex projection',
 		scale:0.3,
-		isPortal:false,
+		isPortal:true,
 		moveAway:0.0008
 	}
 };
@@ -1675,8 +1679,8 @@ function init(){
 		setPlayerLight(color);
 	});
 	var drawShapesFolder = gui.addFolder('drawShapes');
-	drawShapesFolder.add(guiParams, "duocylinderModel0", ["grid","terrain","sea"] );
-	drawShapesFolder.add(guiParams, "duocylinderModel1", ["grid","terrain","sea"] );
+	drawShapesFolder.add(guiParams, "duocylinderModel0", ["grid","terrain","procTerrain","sea"] );
+	drawShapesFolder.add(guiParams, "duocylinderModel1", ["grid","terrain","procTerrain","sea"] );
 	drawShapesFolder.add(guiParams, "duocylinderRotateSpeed", -2.5,2.5,0.25);
 	for (shape in guiParams.drawShapes){
 		console.log(shape);
