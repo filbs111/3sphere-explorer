@@ -356,9 +356,10 @@ function drawScene(frameTime){
 	//make a pmatrix for hemiphere perspective projection method.
 	
 	frustrumCull = squareFrustrumCull;
-	if (guiParams.reflector.update){		
+	if (guiParams.reflector.cmFacesUpdated>0){
+		var numFacesToUpdate = guiParams.reflector.cmFacesUpdated;
 		mat4.set(cmapPMatrix, pMatrix);
-		for (var ii=0;ii<6;ii++){
+		for (var ii=0;ii<numFacesToUpdate;ii++){	//only using currently to check perf impact. could use more "properly" and cycle/alternate.
 			var framebuffer = cubemapFramebuffer[ii];
 			gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
 			gl.viewport(0, 0, framebuffer.width, framebuffer.height);
@@ -1647,7 +1648,7 @@ var guiParams={
 	cameraFov:105,
 	reflector:{
 		draw:true,
-		update:true,
+		cmFacesUpdated:6,
 		mappingType:'vertex projection',
 		scale:0.3,
 		isPortal:true,
@@ -1724,7 +1725,7 @@ function init(){
 	gui.add(guiParams, "culling");
 	var reflectorFolder = gui.addFolder('reflector');
 	reflectorFolder.add(guiParams.reflector, "draw");
-	reflectorFolder.add(guiParams.reflector, "update");
+	reflectorFolder.add(guiParams.reflector, "cmFacesUpdated", 0,6,1);
 	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection']);
 	reflectorFolder.add(guiParams.reflector, "scale", 0.2,2,0.01);
 	reflectorFolder.add(guiParams.reflector, "isPortal");
