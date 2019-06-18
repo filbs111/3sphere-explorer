@@ -13,24 +13,20 @@ var gridData=(function generateGridData(){
 			//vertices.push(Math.random());	//TODO maybe shouldn't have z. z might be used for other stuff though eg water depth.
 		}
 	}
-	//TODO strip data, but regular tris data easier.
+	
+	//tri strip data
 	var startIdx=0;
 	var nextRowStartIdx = gridSize+1;
 	for (var ii=0;ii<gridSize;ii++){
-		for (var jj=0;jj<gridSize;jj++){
-			indices.push(startIdx);
-			indices.push(nextRowStartIdx);
-			indices.push(nextRowStartIdx+1);
-			
-			indices.push(startIdx);
-			indices.push(nextRowStartIdx+1);
-			indices.push(startIdx+1);
-			
-			startIdx++;
-			nextRowStartIdx++;
+		indices.push(startIdx);
+		for (var jj=0;jj<=gridSize;jj++){
+			indices.push(startIdx++);
+			indices.push(nextRowStartIdx++);
 		}
-		startIdx+=1;
-		nextRowStartIdx+=1;
+		indices.push(nextRowStartIdx-1);
 	}
+	indices.pop();
+	indices.shift();
+	
 	return {vertices:vertices, indices:indices};
 })();

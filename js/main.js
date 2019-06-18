@@ -83,7 +83,7 @@ var duocylinderObjects={
 	grid:{divs:4,step:Math.PI/2},
 	terrain:{divs:2,step:Math.PI},
 	procTerrain:{divs:1,step:2*Math.PI,isStrips:true},
-	sea:{divs:1,step:2*Math.PI}
+	sea:{divs:1,step:2*Math.PI,isStrips:true}
 	};
 
 var sphereBuffers={};
