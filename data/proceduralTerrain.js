@@ -50,14 +50,12 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 		}
 	}
 	
-	//triange strip data
+	//triangle strip data
 	for (var ii=0;ii<gridSize;ii++){
 		indices.push(lookupIndex(ii,0));	//duplicate vert at start of strip
-		for (var jj=0;jj<gridSize;jj++){
+		for (var jj=0;jj<=gridSize;jj++){
 			indices.push(lookupIndex(ii,jj));
 			indices.push(lookupIndex(ii+1,jj));
-			indices.push(lookupIndex(ii,jj+1));
-			indices.push(lookupIndex(ii+1,jj+1));
 		}
 		indices.push(indices[indices.length-1]);
 	}
