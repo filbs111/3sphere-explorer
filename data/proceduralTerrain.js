@@ -50,18 +50,20 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 		}
 	}
 	
-	//TODO strip data, but regular tris data easier.
-	for (var ii=0;ii<gridSize;ii++){	//TODO join up. (missing one row and column currently
+	//triange strip data
+	for (var ii=0;ii<gridSize;ii++){
+		indices.push(lookupIndex(ii,0));	//duplicate vert at start of strip
 		for (var jj=0;jj<gridSize;jj++){
 			indices.push(lookupIndex(ii,jj));
-			indices.push(lookupIndex(ii+1,jj+1));
-			indices.push(lookupIndex(ii,jj+1));
-			
-			indices.push(lookupIndex(ii,jj));
 			indices.push(lookupIndex(ii+1,jj));
+			indices.push(lookupIndex(ii,jj+1));
 			indices.push(lookupIndex(ii+1,jj+1));
 		}
+		indices.push(indices[indices.length-1]);
 	}
+	//remove 1st, last index
+	indices.pop();
+	indices.shift();
 	
 	//this is a inefficient but comprehension more important. should swap to indexed strips anyway.
 	function lookupIndex(xx,yy){

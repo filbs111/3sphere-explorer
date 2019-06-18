@@ -82,7 +82,7 @@ function initShaders(){
 var duocylinderObjects={
 	grid:{divs:4,step:Math.PI/2},
 	terrain:{divs:2,step:Math.PI},
-	procTerrain:{divs:1,step:2*Math.PI},
+	procTerrain:{divs:1,step:2*Math.PI,isStrips:true},
 	sea:{divs:1,step:2*Math.PI}
 	};
 
@@ -1404,7 +1404,7 @@ function drawTennisBall(duocylinderObj, shader){
 		for (var xg=0;xg<duocylinderObj.divs;xg+=1){		//
 			for (var yg=0;yg<duocylinderObj.divs;yg+=1){	//TODO precalc cells array better than grids here.
 				setMatrixUniforms(shader);
-				gl.drawElements(gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+				gl.drawElements(duocylinderObj.isStrips? gl.TRIANGLE_STRIP : gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 				rotate4mat(mvMatrix, 0, 1, duocylinderObj.step);
 			}
 			rotate4mat(mvMatrix, 2, 3, duocylinderObj.step);
