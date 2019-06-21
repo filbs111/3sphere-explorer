@@ -396,6 +396,7 @@ function drawScene(frameTime){
 			
 			drawWorldScene(frameTime, true);	//TODO skip reflector draw
 		}
+		
 	}
 	
 	//setup for drawing to screen
@@ -847,7 +848,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 	}
 	
 	//draw objects without textures
-	
 	activeShaderProgram = shaderProgramColored;
 	gl.useProgram(activeShaderProgram);
 	
@@ -1891,7 +1891,6 @@ var iterateMechanics = (function iterateMechanics(){
 	
 	//gamepad
 	var activeGp, buttons, axes;
-	var deadZone = 0.15;	//for thumbsticks
 	
 	var autoFireCountdown=0;
 	//var autoFireCountdownStartVal=6;
@@ -1970,34 +1969,37 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			if (activeGp){
 				//TODO move calculation of total input from keys/gamepad outside this loop
-				var gpMove=[];
-				gpMove[0] = Math.abs(axes[0])>deadZone ? -moveSpeed*axes[0] : 0; //lateral
-				gpMove[1] = Math.abs(axes[1])>deadZone ? moveSpeed*axes[1] : 0; //vertical
-				gpMove[2] = moveSpeed*(buttons[7].value-buttons[6].value); //fwd/back	//note Firefox at least fails to support analog triggers https://bugzilla.mozilla.org/show_bug.cgi?id=1434408
+				if (gpSettings.moveEnabled){
+					var gpMove=[];
+					
+					gpMove[0] = Math.abs(axes[0])>gpSettings.deadZone ? -moveSpeed*axes[0] : 0; //lateral
+					gpMove[1] = Math.abs(axes[1])>gpSettings.deadZone ? moveSpeed*axes[1] : 0; //vertical
+					gpMove[2] = moveSpeed*(buttons[7].value-buttons[6].value); //fwd/back	//note Firefox at least fails to support analog triggers https://bugzilla.mozilla.org/show_bug.cgi?id=1434408
+					
+					var magsq = gpMove.reduce(function(total, val){return total+ val*val;}, 0);
+					gpMove = scalarvectorprod(10000000000*magsq,gpMove);
+					
+					//testInfo=[axes,buttons,gpMove,magsq];
+					
+					//note doing cube bodge to both thrust and to adding velocity to position (see key controls code)
+					//maybe better to pick one! (probably should apply cube logic to acc'n for exponential smoothed binary key input, do something "realistic" for drag forces
+					
+					playerVelVec[0]+=gpMove[0];	//todo either write vector addition func or use glmatrix vectors
+					playerVelVec[1]+=gpMove[1];
+					playerVelVec[2]+=gpMove[2];
+				}
 				
-				var magsq = gpMove.reduce(function(total, val){return total+ val*val;}, 0);
-				gpMove = scalarvectorprod(10000000000*magsq,gpMove);
-				
-				//testInfo=[axes,buttons,gpMove,magsq];
-				
-				//note doing cube bodge to both thrust and to adding velocity to position (see key controls code)
-				//maybe better to pick one! (probably should apply cube logic to acc'n for exponential smoothed binary key input, do something "realistic" for drag forces
-				
-				playerVelVec[0]+=gpMove[0];	//todo either write vector addition func or use glmatrix vectors
-				playerVelVec[1]+=gpMove[1];
-				playerVelVec[2]+=gpMove[2];
-				
-				playerAngVelVec[2]+=(buttons[15].value-buttons[14].value); //roll -dpad left/right
+				playerAngVelVec[2]+=gpSettings.roll(activeGp); //roll
 				
 				//other rotation
 				var gpRotate=[];
 				var fixedRotateAmount = 10*rotateSpeed;
-				gpRotate[0] = Math.abs(axes[3])>deadZone ? fixedRotateAmount*axes[3] : 0; //pitch
-				gpRotate[1] = Math.abs(axes[2])>deadZone ? fixedRotateAmount*axes[2] : 0; //turn
+				gpRotate[0] = Math.abs(axes[gpSettings.pitchAxis])>gpSettings.deadZone ? fixedRotateAmount*gpSettings.pitchMultiplier*axes[gpSettings.pitchAxis] : 0; //pitch
+				gpRotate[1] = Math.abs(axes[gpSettings.turnAxis])>gpSettings.deadZone ? fixedRotateAmount*gpSettings.turnMultiplier*axes[gpSettings.turnAxis] : 0; //turn
 				gpRotate[2] = 0;	//moved to code above
 					
 				magsq = gpRotate.reduce(function(total, val){return total+ val*val;}, 0);
-				var magpow = Math.pow(50*magsq,1.5);
+				var magpow = Math.pow(50*magsq,1.5);	//TODO handle fact that max values separately maxed out, so currently turns faster in diagonal direction.
 				
 				lastPlayerAngMove = scalarvectorprod(100000*magpow,gpRotate);
 				rotatePlayer(lastPlayerAngMove);	//TODO add rotational momentum - not direct rotate
@@ -2030,7 +2032,7 @@ var iterateMechanics = (function iterateMechanics(){
 			if (autoFireCountdown>0){
 				autoFireCountdown--;
 			}else{
-				if (keyThing.keystate(71) ||( activeGp && activeGp.buttons[5].value)){	//G key or R1 button
+				if (keyThing.keystate(71) ||( activeGp && activeGp.buttons[gpSettings.fireButton].value)){	//G key or joypad button
 					fireGun();
 					autoFireCountdown=autoFireCountdownStartVal;
 				}
