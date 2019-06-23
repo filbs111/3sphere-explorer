@@ -11,11 +11,16 @@ function terrainGetHeightFor4VecPos(vec){
 	var b = Math.atan2(vec[1],-vec[0]);
 	
 	//TODO interpolation across polygon. initially just reuse equation used to generate terrain grid data.
-	var aa=multiplier*a;
-	var bb=multiplier*((b + duocylinderSpin)%(2*Math.PI));
+	var aa=multiplier*decentMod(a,2*Math.PI);
+	var bb=multiplier*decentMod(b + duocylinderSpin,2*Math.PI);
 	
 //	console.log("height : " + terrainGetHeight(aa,bb));
 	return {a:a, b:-b , h:terrainGetHeight((256-aa)%256,(bb+256+128+64)%256)};	//64 = rotation by PI/2 . todo make this tidier. ( modify moveToDuocylinderAB ?)
+}
+
+function decentMod(num,toModBy){	//handle crappy nature of mod function (gives -ve if -ve)
+	var returnnum = num%toModBy;
+	return returnnum>0? returnnum : returnnum+toModBy;
 }
 
 function terrainGetHeight(ii,jj){
