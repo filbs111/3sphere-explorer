@@ -836,19 +836,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	var duocylinderObj = duocylinderObjects[duocylinderModel];
 	
-	if (guiParams.drawShapes['x*x+y*y=z*z+w*w']){
+	if (guiParams.drawShapes['duoCylinder']){	//x*x+y*y=z*z+w*w
 		mat4.set(invertedWorldCamera, mvMatrix);
 		rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
-		drawTennisBall(duocylinderObj, activeShaderProgram);
-	}
-	if (guiParams.drawShapes['x*x+w*w=y*y+z*z']){
-		mat4.set(invertedWorldCamera, mvMatrix);
-		rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
-		drawTennisBall(duocylinderObj, activeShaderProgram);
-	}
-	if (guiParams.drawShapes['x*x+z*z=y*y+w*w']){
-		mat4.set(invertedWorldCamera, mvMatrix);
-		rotate4mat(mvMatrix, 0, 3, Math.PI*0.5);
 		drawTennisBall(duocylinderObj, activeShaderProgram);
 	}
 	
@@ -1611,9 +1601,7 @@ var guiParams={
 	duocylinderModel1:"terrain",
 	duocylinderRotateSpeed:0,
 	drawShapes:{
-		'x*x+y*y=z*z+w*w':true,
-		'x*x+z*z=y*y+w*w':false,
-		'x*x+w*w=y*y+z*z':false,
+		'duoCylinder':true,	//x*x+y*y=z*z+w*w
 		'boxes y=z=0':true,	//x*x+w*w=1
 		'boxes x=z=0':true,	//y*y+w*w=1
 		'boxes x=y=0':true,	//z*z+w*w=1
