@@ -682,6 +682,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 
 	lookupTerrainForPlayerPos();	//TODO in position update (not rendering)
 	
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.003,0.003,0.003]);
 	drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
 	
 	
@@ -2088,6 +2089,10 @@ var iterateMechanics = (function iterateMechanics(){
 					}
 					break;
 			}
+			
+			//collision with duocylinder procedural terrain
+			var bulletPos = [bulletMatrix[12],bulletMatrix[13],bulletMatrix[14],bulletMatrix[15]];	//todo use this elsewhere?
+			if (getHeightAboveTerrainFor4VecPos(bulletPos)<0){detonateBullet(bullet, bulletMatrix);}
 			
 			
 			//slow collision detection between bullet and array of boxes.

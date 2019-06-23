@@ -16,7 +16,23 @@ function terrainGetHeightFor4VecPos(vec){
 	var bb=multiplier*decentMod(b + duocylinderSpin,2*Math.PI);
 	
 //	console.log("height : " + terrainGetHeight(aa,bb));
-	return {a:-a, b:Math.PI*1.5 -b , h:terrainGetHeight(aa,bb)};
+	return {a:-a, b:Math.PI*1.5 -b , h:terrainGetHeight(aa,bb)};	//position such that will draw on landscape
+	//return {a:-a, b:Math.PI*1.5 -b , h: -0.5*Math.asin( (vec[0]*vec[0] + vec[1]*vec[1]) - (vec[2]*vec[2] + vec[3]*vec[3]))};	//position such that will draw at input 4vec position
+}
+
+function getHeightAboveTerrainFor4VecPos(vec){
+	var multiplier = procTerrainSize/(2*Math.PI);	//TODO don't require enter same number here and elsewhere (gridSize)
+	var a = Math.atan2(vec[2],vec[3]);
+	var b = Math.atan2(vec[0],vec[1]);
+	
+	var c = -0.5*Math.asin( (vec[0]*vec[0] + vec[1]*vec[1]) - (vec[2]*vec[2] + vec[3]*vec[3]));	//this height of 4vec that can be compared to landscape height
+	
+	//TODO interpolation across polygon. initially just reuse equation used to generate terrain grid data.
+	var aa=multiplier*decentMod(a,2*Math.PI);
+	var bb=multiplier*decentMod(b + duocylinderSpin,2*Math.PI);
+	var h = terrainGetHeight(aa,bb);
+	
+	return c-h;
 }
 
 function decentMod(num,toModBy){	//handle crappy nature of mod function (gives -ve if -ve)
