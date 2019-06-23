@@ -16,7 +16,7 @@ function terrainGetHeightFor4VecPos(vec){
 	var bb=multiplier*decentMod(b + duocylinderSpin,2*Math.PI);
 	
 //	console.log("height : " + terrainGetHeight(aa,bb));
-	return {a:Math.PI*2 - a, b:Math.PI*1.5 - b , h:terrainGetHeight(aa,bb)};	//64 = rotation by PI/2 . todo make this tidier. ( modify moveToDuocylinderAB ?)
+	return {a:-a, b:Math.PI*1.5 -b , h:terrainGetHeight(aa,bb)};
 }
 
 function decentMod(num,toModBy){	//handle crappy nature of mod function (gives -ve if -ve)
