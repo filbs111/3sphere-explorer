@@ -11,8 +11,8 @@ function terrainGetHeightFor4VecPos(vec){
 	var b = Math.atan2(vec[1],-vec[0]);
 	
 	//TODO interpolation across polygon. initially just reuse equation used to generate terrain grid data.
-	var aa=(multiplier*a);
-	var bb=(multiplier*b);
+	var aa=multiplier*a;
+	var bb=multiplier*(b + duocylinderSpin);
 	
 //	console.log("height : " + terrainGetHeight(aa,bb));
 	return {a:a, b:-b , h:terrainGetHeight((256-aa)%256,(bb+256+128+64)%256)};	//64 = rotation by PI/2 . todo make this tidier. ( modify moveToDuocylinderAB ?)
@@ -22,9 +22,9 @@ function terrainGetHeight(ii,jj){
 	var gridSize = 256;	//TODO generate these funcs in more sensible way...
 	//egg box
 	var tmpsf = 2*Math.PI*10/gridSize;
-	var height = 0.02*Math.sin(ii*tmpsf)*Math.sin(jj*tmpsf);
+	//var height = 0.02*Math.sin(ii*tmpsf)*Math.sin(jj*tmpsf);
 	//var height = 0.02*Math.sin(jj*jj*tmpsf*0.005);		//sorted out for ii. todo jj. test terrain patterns?
-	//var height = 0.000004*((ii*ii)%10000);
+	var height = 0.000004*((jj*ii)%10000);
 		
 	height = 2*Math.max(height,-0.1);	//raise deep parts to "sea" level
 	return height;
