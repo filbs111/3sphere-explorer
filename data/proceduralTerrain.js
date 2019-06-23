@@ -1,3 +1,35 @@
+var terrainCollisionTestBoxPos={a:0,b:0,h:0};
+
+function lookupTerrainForPlayerPos(){
+	var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//copied from elsewhere
+	terrainCollisionTestBoxPos = terrainGetHeightFor4VecPos(playerPos);	
+}
+
+function terrainGetHeightFor4VecPos(vec){
+	var multiplier = 256/(2*Math.PI);	//TODO don't require enter same number here and elsewhere (gridSize)
+	var a = -Math.atan2(vec[2],vec[3]);
+	var b = Math.atan2(vec[1],-vec[0]);
+	
+	//TODO interpolation across polygon. initially just reuse equation used to generate terrain grid data.
+	var aa=(multiplier*a);
+	var bb=(multiplier*b);
+	
+//	console.log("height : " + terrainGetHeight(aa,bb));
+	return {a:a, b:-b , h:terrainGetHeight((256-aa)%256,(bb+256+128+64)%256)};	//64 = rotation by PI/2 . todo make this tidier. ( modify moveToDuocylinderAB ?)
+}
+
+function terrainGetHeight(ii,jj){
+	var gridSize = 256;	//TODO generate these funcs in more sensible way...
+	//egg box
+	var tmpsf = 2*Math.PI*10/gridSize;
+	var height = 0.02*Math.sin(ii*tmpsf)*Math.sin(jj*tmpsf);
+	//var height = 0.02*Math.sin(jj*jj*tmpsf*0.005);		//sorted out for ii. todo jj. test terrain patterns?
+	//var height = 0.000004*((ii*ii)%10000);
+		
+	height = 2*Math.max(height,-0.1);	//raise deep parts to "sea" level
+	return height;
+}
+
 var proceduralTerrainData = (function generateGridData(gridSize){
 	var terrainSizeMinusOne=gridSize-1;
 	//TODO buffers should be include whether or not they are strip or triangle type. 
@@ -16,12 +48,7 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 		for (var jj=0;jj<gridSize;jj++){
 			vertices.push(4*ii/gridSize);			//TODO how to push multiple things onto an array? 
 			
-			//egg box
-			var tmpsf = 2*Math.PI*10/gridSize;
-			var height = 0.07*Math.sin(ii*tmpsf)*Math.sin(jj*tmpsf);
-			//var height = 0.02*Math.sin(jj*tmpsf);
-			
-			height = 2*Math.max(height,-0.1);	//raise deep parts to "sea" level
+			var height = terrainGetHeight(ii,jj);
 			thisLine.push(height);
 			
 			vertices.push(height);	

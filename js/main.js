@@ -680,6 +680,11 @@ function drawWorldScene(frameTime, isCubemapView) {
 	drawPreppedBufferOnDuocylinder(0,oneGridSquareOffset,hh, [0.4, 1.0, 0.4, 1.0], cubeBuffers);				//green - along
 	drawPreppedBufferOnDuocylinder(0,0,oneGridSquareOffset*fudgeFact+hh, [0.4, 0.4, 1.0, 1.0], cubeBuffers);	//blue - up
 
+	lookupTerrainForPlayerPos();	//TODO in position update (not rendering)
+	
+	drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
+	
+	
 	function drawPreppedBufferOnDuocylinder(aa, bb, hh, cc, buff){
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, cc);
 		moveToDuocylinderAB(aa,bb,hh);
