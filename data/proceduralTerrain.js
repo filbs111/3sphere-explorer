@@ -1,4 +1,5 @@
 var terrainCollisionTestBoxPos={a:0,b:0,h:0};
+var procTerrainSize=256;
 
 function lookupTerrainForPlayerPos(){
 	var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//copied from elsewhere
@@ -6,16 +7,16 @@ function lookupTerrainForPlayerPos(){
 }
 
 function terrainGetHeightFor4VecPos(vec){
-	var multiplier = 256/(2*Math.PI);	//TODO don't require enter same number here and elsewhere (gridSize)
-	var a = -Math.atan2(vec[2],vec[3]);
-	var b = Math.atan2(vec[1],-vec[0]);
+	var multiplier = procTerrainSize/(2*Math.PI);	//TODO don't require enter same number here and elsewhere (gridSize)
+	var a = Math.atan2(vec[2],vec[3]);
+	var b = Math.atan2(vec[0],vec[1]);
 	
 	//TODO interpolation across polygon. initially just reuse equation used to generate terrain grid data.
 	var aa=multiplier*decentMod(a,2*Math.PI);
 	var bb=multiplier*decentMod(b + duocylinderSpin,2*Math.PI);
 	
 //	console.log("height : " + terrainGetHeight(aa,bb));
-	return {a:a, b:-b , h:terrainGetHeight((256-aa)%256,(bb+256+128+64)%256)};	//64 = rotation by PI/2 . todo make this tidier. ( modify moveToDuocylinderAB ?)
+	return {a:Math.PI*2 - a, b:Math.PI*1.5 - b , h:terrainGetHeight(aa,bb)};	//64 = rotation by PI/2 . todo make this tidier. ( modify moveToDuocylinderAB ?)
 }
 
 function decentMod(num,toModBy){	//handle crappy nature of mod function (gives -ve if -ve)
@@ -24,9 +25,8 @@ function decentMod(num,toModBy){	//handle crappy nature of mod function (gives -
 }
 
 function terrainGetHeight(ii,jj){
-	var gridSize = 256;	//TODO generate these funcs in more sensible way...
 	//egg box
-	var tmpsf = 2*Math.PI*10/gridSize;
+	var tmpsf = 2*Math.PI*10/procTerrainSize;
 	//var height = 0.02*Math.sin(ii*tmpsf)*Math.sin(jj*tmpsf);
 	//var height = 0.02*Math.sin(jj*jj*tmpsf*0.005);		//sorted out for ii. todo jj. test terrain patterns?
 	var height = 0.000004*((jj*ii)%10000);
@@ -100,4 +100,4 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 		return (xx&terrainSizeMinusOne)+gridSize*(yy&terrainSizeMinusOne)
 	}
 	return {vertices:vertices, normals:normals, uvcoords:uvcoords, faces:indices};
-})(256);
+})(procTerrainSize);
