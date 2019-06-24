@@ -289,7 +289,7 @@ var offsetCam = (function(){
 	var targetForType = {
 		"near 3rd person":[0,-0.0075,-0.005],
 		"far 3rd person":[0,-0.02,-0.03],
-		"cockpit":offsetVec = [0,0,0.001]
+		"cockpit":[0,0,0.001]
 	}
 	offsetVecTarget = targetForType["far 3rd person"];
 	offsetVec = offsetVecTarget;	
@@ -357,6 +357,7 @@ function drawScene(frameTime){
 	
 	frustrumCull = squareFrustrumCull;
 	if (guiParams.reflector.cmFacesUpdated>0){
+		gl.cullFace(gl.BACK);	//because might have set to front for mirror reversing/landing camera.
 		var numFacesToUpdate = guiParams.reflector.cmFacesUpdated;
 		mat4.set(cmapPMatrix, pMatrix);
 		for (var ii=0;ii<numFacesToUpdate;ii++){	//only using currently to check perf impact. could use more "properly" and cycle/alternate.
@@ -407,11 +408,23 @@ function drawScene(frameTime){
 	
 	setProjectionMatrix(pMatrix, mainCamFov, gl.viewportHeight/gl.viewportWidth);	//note mouse code assumes 90 deg fov used. TODO fix.
 														//todo only update pmatrix if input variables have changed
+	
+	if (reverseCamera){
+		gl.cullFace(gl.FRONT);	//todo revert for drawing cubemap faces. or : for PIP camera, render to texture, flip when texture to screen (and if fullscreen reversing camera, use same cullface setting when drawing them (if switching cullface is a slow gl call)
+		pMatrix[0]=-pMatrix[0];
+	}else{
+		gl.cullFace(gl.BACK);
+	}
+														
 	frustrumCull = generateCullFunc(pMatrix);
 		
 	mat4.set(offsetPlayerCamera, worldCamera);	//set worldCamera to playerCamera
 	//xyzmove4mat(worldCamera,[0,-0.01,-0.015]);	//3rd person camera
 	//xyzmove4mat(worldCamera,[0,0,0.005]);	//forward camera
+	
+	if (reverseCamera){
+		xyzrotate4mat(worldCamera,[Math.PI,0,0]);	//flip 180
+	}
 	
 	
 	drawWorldScene(frameTime, false);
@@ -1868,6 +1881,7 @@ for (var ang=0;ang<5;ang++){
 }
 
 var duocylinderSpin = 0;
+var reverseCamera=false;
 var iterateMechanics = (function iterateMechanics(){
 	var lastTime=Date.now();
 	var moveSpeed=0.000075;
@@ -1893,6 +1907,9 @@ var iterateMechanics = (function iterateMechanics(){
 	var duoCylinderAngVelConst=0;
 	
 	return function(){
+		
+		reverseCamera=keyThing.keystate(82);	// || (mouseInfo.buttons & 4); 	//R or middle mouse click - mouse click not working - maybe needs pointer lock?
+		
 		//GAMEPAD
 		activeGp=false;
 		//basic gamepad support
@@ -1912,7 +1929,7 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 		}
 		//TODO handle choosing one of multiple gamepads and keeping that gamepad selected.
-		
+				
 		if (activeGp){	
 			buttons = activeGp.buttons;
 			//buttons 0 to 15, on xbox controller are:
@@ -1930,6 +1947,10 @@ var iterateMechanics = (function iterateMechanics(){
 			//left thumbstick up(-1) to down(+1)
 			//right thumbstick left(-1) to right(+1)
 			//right thumbstick up(-1) to down(+1)
+			
+			if (buttons[10].pressed){	//L3
+				reverseCamera=true;
+			}
 		}
 		
 		
@@ -1950,7 +1971,7 @@ var iterateMechanics = (function iterateMechanics(){
 		}
 		
 		duocylinderSpin+= duoCylinderAngVelConst * timeElapsed*moveSpeed;	//TODO match spin speed with sea wave speed
-		
+			
 		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
 		
 			playerVelVec[0]+=thrust*(keyThing.keystate(65)-keyThing.keystate(68)); //lateral
