@@ -28,7 +28,7 @@ function terrainGetHeightFor4VecPos(vec){
 	
 //	console.log("height : " + terrainGetHeight(aa,bb));
 	//return {a:-a, b:Math.PI*1.5 -b , h:terrainGetHeight(aa,bb)};	//position such that will draw on landscape
-	return {a:-a, b:Math.PI*1.5 -b , h:interpolatedHeight};
+	return {a:-a, b:Math.PI*1.5 -b , h:(Math.PI/4)*interpolatedHeight};
 	//return {a:-a, b:Math.PI*1.5 -b , h: -0.5*Math.asin( (vec[0]*vec[0] + vec[1]*vec[1]) - (vec[2]*vec[2] + vec[3]*vec[3]))};	//position such that will draw at input 4vec position
 }
 
@@ -42,7 +42,7 @@ function getHeightAboveTerrainFor4VecPos(vec){
 	//TODO interpolation across polygon. initially just reuse equation used to generate terrain grid data.
 	var aa=multiplier*decentMod(a,2*Math.PI);
 	var bb=multiplier*decentMod(b + duocylinderSpin,2*Math.PI);
-	var h = terrainGetHeight(aa,bb);
+	var h = (Math.PI/4)*terrainGetHeight(aa,bb);	//TODO interpolate
 	
 	return c-h;
 }
@@ -58,7 +58,7 @@ function terrainGetHeight(ii,jj){
 	//var height = 0.02*Math.sin(ii*tmpsf)*Math.sin(jj*tmpsf);
 	//var height = 0.02*Math.sin(jj*jj*tmpsf*0.005);		//sorted out for ii. todo jj. test terrain patterns?
 	var height = 0.000004*((jj*ii)%10000);
-		
+	
 	height = 2*Math.max(height,-0.1);	//raise deep parts to "sea" level
 	return height;
 }
