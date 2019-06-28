@@ -2579,6 +2579,9 @@ function fireGun(){
 			muzzleFlashAmounts[g]+=0.25
 			
 			var gunMatrix = gunMatrices[g];
+			
+			xyzrotate4mat(gunMatrix,[0.02*(Math.random()-0.5),0.02*(Math.random()-0.5),0]);	//random spread TODO gaussian
+			
 			var newBulletMatrix = mat4.create();	//TODO pooling - bullet pool instead of use matrix pool? 
 			mat4.set(gunMatrix,newBulletMatrix);
 			
