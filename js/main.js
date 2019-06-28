@@ -1610,6 +1610,7 @@ var mouseInfo = {
 };
 var stats;
 
+var pointerLocked=false;
 var guiParams={
 	duocylinderModel0:"procTerrain",
 	duocylinderModel1:"terrain",
@@ -1682,6 +1683,11 @@ function init(){
 	stats = new Stats();
 	stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
 	document.body.appendChild( stats.dom );
+
+	guiParams.lockPointer = function(){
+		canvas.requestPointerLock();
+		gui.close();
+	}
 	
 	var gui = new dat.GUI();
 	gui.addColor(guiParams, 'fogColor0').onChange(function(color){
@@ -1727,6 +1733,7 @@ function init(){
 	
 	var controlFolder = gui.addFolder('control');	//control and movement
 	controlFolder.add(guiParams, "onRails");
+	controlFolder.add(guiParams, 'lockPointer');
 	
 	var displayFolder = gui.addFolder('display');	//control and movement
 	displayFolder.add(guiParams, "cameraType", ["cockpit", "near 3rd person", "far 3rd person"]);
@@ -1760,6 +1767,17 @@ function init(){
 	})
 
 	canvas = document.getElementById("mycanvas");
+	
+	document.addEventListener('pointerlockchange', function lockChangeCb() {
+	  if (document.pointerLockElement === canvas ) {
+			console.log('The pointer lock status is now locked');
+			pointerLocked=true;
+		} else {
+			console.log('The pointer lock status is now unlocked');  
+			pointerLocked=false;
+	  }
+	}, false);
+	
 	canvas.addEventListener("mousedown", function(evt){
 		mouseInfo.x = evt.offsetX;
 		mouseInfo.y = evt.offsetY;
@@ -1794,6 +1812,9 @@ function init(){
 			var rotateAmt = [crossProd.x / crossProd.w, -crossProd.y / crossProd.w, -crossProd.z / crossProd.w];
 			rotatePlayer(rotateAmt);
 			
+		}
+		if (pointerLocked){
+			rotatePlayer([ -0.001* evt.movementY, -0.001* evt.movementX, 0]);	//TODO screen resolution dependent sensitivity.
 		}
 	});
 	
@@ -2055,7 +2076,7 @@ var iterateMechanics = (function iterateMechanics(){
 			if (autoFireCountdown>0){
 				autoFireCountdown--;
 			}else{
-				if (keyThing.keystate(71) ||( activeGp && activeGp.buttons[gpSettings.fireButton].value)){	//G key or joypad button
+				if (keyThing.keystate(71) ||( activeGp && activeGp.buttons[gpSettings.fireButton].value) || (pointerLocked && mouseInfo.buttons&1)){	//G key or joypad button or LMB (pointer locked)
 					fireGun();
 					autoFireCountdown=autoFireCountdownStartVal;
 				}
