@@ -1682,7 +1682,7 @@ function init(){
 	stats = new Stats();
 	stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
 	document.body.appendChild( stats.dom );
-
+	
 	var gui = new dat.GUI();
 	gui.addColor(guiParams, 'fogColor0').onChange(function(color){
 		setFog(0,color);
@@ -1723,13 +1723,17 @@ function init(){
 	var targetFolder = gui.addFolder('target');
 	targetFolder.add(guiParams.target, "type",["none", "sphere","box"]);
 	targetFolder.add(guiParams.target, "scale",0.005,0.1,0.005);
+	targetFolder.add(guiParams, "targeting", ["off","simple","individual"]);
 	
-	gui.add(guiParams, "targeting", ["off","simple","individual"]);
-	gui.add(guiParams, "onRails");
-	gui.add(guiParams, "cameraType", ["cockpit", "near 3rd person", "far 3rd person"]);
-	gui.add(guiParams, "cameraFov", 60,120,5);
-	gui.add(guiParams, "perPixelLighting");
-	gui.add(guiParams, "culling");
+	var controlFolder = gui.addFolder('control');	//control and movement
+	controlFolder.add(guiParams, "onRails");
+	
+	var displayFolder = gui.addFolder('display');	//control and movement
+	displayFolder.add(guiParams, "cameraType", ["cockpit", "near 3rd person", "far 3rd person"]);
+	displayFolder.add(guiParams, "cameraFov", 60,120,5);
+	displayFolder.add(guiParams, "perPixelLighting");
+	displayFolder.add(guiParams, "culling");
+	
 	var reflectorFolder = gui.addFolder('reflector');
 	reflectorFolder.add(guiParams.reflector, "draw");
 	reflectorFolder.add(guiParams.reflector, "cmFacesUpdated", 0,6,1);
@@ -1759,14 +1763,18 @@ function init(){
 	canvas.addEventListener("mousedown", function(evt){
 		mouseInfo.x = evt.offsetX;
 		mouseInfo.y = evt.offsetY;
-		mouseInfo.dragging = true;
+		mouseInfo.dragging = evt.buttons & 1;
 		mouseInfo.lastPointingDir = getPointingDirectionFromScreenCoordinate({x:mouseInfo.x, y: mouseInfo.y});
+		mouseInfo.buttons = evt.buttons;
+		evt.preventDefault();
 	});
 	canvas.addEventListener("mouseup", function(evt){
-		mouseInfo.dragging = false;
+		mouseInfo.dragging = evt.buttons & 1;
+		mouseInfo.buttons = evt.buttons;
 	});
 	canvas.addEventListener("mouseout", function(evt){
 		mouseInfo.dragging = false;
+		mouseInfo.buttons = 0;
 	});
 	canvas.addEventListener("mousemove", function(evt){
 		mouseInfo.currentPointingDir = getPointingDirectionFromScreenCoordinate({x:evt.offsetX, y: evt.offsetY});
@@ -1908,7 +1916,7 @@ var iterateMechanics = (function iterateMechanics(){
 	
 	return function(){
 		
-		reverseCamera=keyThing.keystate(82);	// || (mouseInfo.buttons & 4); 	//R or middle mouse click - mouse click not working - maybe needs pointer lock?
+		reverseCamera=keyThing.keystate(82) || (mouseInfo.buttons & 4); 	//R or middle mouse click
 		
 		//GAMEPAD
 		activeGp=false;
@@ -1971,9 +1979,9 @@ var iterateMechanics = (function iterateMechanics(){
 		}
 		
 		duocylinderSpin+= duoCylinderAngVelConst * timeElapsed*moveSpeed;	//TODO match spin speed with sea wave speed
-			
-		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
 		
+		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
+			
 			playerVelVec[0]+=thrust*(keyThing.keystate(65)-keyThing.keystate(68)); //lateral
 			playerVelVec[1]+=thrust*(keyThing.keystate(32)-keyThing.keystate(220)); //vertical
 			playerVelVec[2]+=thrust*(keyThing.keystate(87)-keyThing.keystate(83)); //fwd/back
