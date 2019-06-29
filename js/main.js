@@ -2074,10 +2074,12 @@ var iterateMechanics = (function iterateMechanics(){
 		numRandomBoxes = Math.min(randomMats.length, numRandomBoxes);	//TODO check this doesn't happen/ make obvious error!
 		
 		var boxSize = guiParams['random boxes'].size;
+		var ringBoxSize = 0.1;
 		var boxRad = boxSize*Math.sqrt(3);
 		var criticalWPos = Math.cos(Math.atan(guiParams.reflector.scale) + Math.atan(boxRad));
 		
-		var critValueRandBox = 1/Math.sqrt(1+boxSize*boxSize);
+		var critValueRandBox = 1/Math.sqrt(1+3*boxSize*boxSize);
+		var critValueRingBox = 1/Math.sqrt(1+3*ringBoxSize*ringBoxSize);
 		
 		//slightly less ridiculous place for this - not declaring functions inside for loop!
 		function checkBulletCollision(bullet){
@@ -2118,24 +2120,44 @@ var iterateMechanics = (function iterateMechanics(){
 			//todo 2 another simple optimisation - sphere check by xyzw distance. previous check only if passes
 			//todo 3 heirarchical bounding boxes or gridding system!
 			
+			//box rings
+			if (guiParams.drawShapes['boxes y=z=0']){checkCollisionForBoxRing(ringCells[0]);}
+			if (guiParams.drawShapes['boxes x=z=0']){checkCollisionForBoxRing(ringCells[1]);}
+			if (guiParams.drawShapes['boxes x=y=0']){checkCollisionForBoxRing(ringCells[2]);}
+			if (guiParams.drawShapes['boxes z=w=0']){checkCollisionForBoxRing(ringCells[3]);}
+			if (guiParams.drawShapes['boxes y=w=0']){checkCollisionForBoxRing(ringCells[4]);}
+			if (guiParams.drawShapes['boxes x=w=0']){checkCollisionForBoxRing(ringCells[5]);}
+			
+			function checkCollisionForBoxRing(ringCellMats){	//todo combine with below (random boxes)
+				for (var ii=0;ii<ringCellMats.length;ii++){
+					boxCollideCheck(ringCellMats[ii],ringBoxSize,critValueRingBox);
+				}
+			}
+			
+			
 			if (numRandomBoxes>0){
-				
 				for (var ii=0;ii<numRandomBoxes;ii++){
-					if (randomMats[ii][15]>criticalWPos){continue;}	//not drawing boxes too close to portal, so don't collide with them either!
-														//TODO move to setup stage
+					boxCollideCheck(randomMats[ii],boxSize,critValueRandBox);
+				}
+			}
+			
+			function boxCollideCheck(cellMat,thisBoxSize,boxCritValue){
+				if (cellMat[15]>criticalWPos){return;}	//not drawing boxes too close to portal, so don't collide with them either!
+														//also breaks ring box collision now (when box near portal)
+														//TODO move to setup stage 
 					
 					mat4.set(bulletMatrixTransposed, relativeMat);
-					mat4.multiply(relativeMat, randomMats[ii]);
+					mat4.multiply(relativeMat, cellMat);
 					
-					if (relativeMat[15]<critValueRandBox){continue;}	//early sphere check
+					if (relativeMat[15]<boxCritValue){return;}	//early sphere check
 					
 					if (relativeMat[15]>0 && Math.max(Math.abs(relativeMat[3]),
 								Math.abs(relativeMat[7]),
-								Math.abs(relativeMat[11]))<boxSize*relativeMat[15]){
+								Math.abs(relativeMat[11]))<thisBoxSize*relativeMat[15]){
 						detonateBullet(bullet, bulletMatrix);
-					}
 				}
 			}
+			
 			
 			//similar thing for 8-cell frames
 			var cellSize = guiParams["8-cell scale"];
