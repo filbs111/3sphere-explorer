@@ -2119,6 +2119,11 @@ var iterateMechanics = (function iterateMechanics(){
 		//slightly less ridiculous place for this - not declaring functions inside for loop!
 		function checkBulletCollision(bullet){
 			var bulletMatrix=bullet.matrix;
+			
+			var bulletMatrixTransposed = mat4.create();	//instead of transposing matrices describing possible colliding objects orientation.
+			mat4.set(bulletMatrix,bulletMatrixTransposed);	//alternatively might store transposed other objects orientation permanently
+			mat4.transpose(bulletMatrixTransposed);
+			
 			var bulletVel=bullet.vel;
 			xyzmove4mat(bulletMatrix,scalarvectorprod(moveAmount,bulletVel));
 			
@@ -2156,15 +2161,14 @@ var iterateMechanics = (function iterateMechanics(){
 					if (randomMats[ii][15]>criticalWPos){continue;}	//not drawing boxes too close to portal, so don't collide with them either!
 														//TODO move to setup stage
 					
-					mat4.set(randomMats[ii], relativeMat);
-					mat4.transpose(relativeMat);
-					mat4.multiply(relativeMat, bulletMatrix);
+					mat4.set(bulletMatrixTransposed, relativeMat);
+					mat4.multiply(relativeMat, randomMats[ii]);
 					
 					if (relativeMat[15]<critValueRandBox){continue;}	//early sphere check
 					
-					if (relativeMat[15]>0 && Math.max(Math.abs(relativeMat[12]),
-								Math.abs(relativeMat[13]),
-								Math.abs(relativeMat[14]))<boxSize*relativeMat[15]){
+					if (relativeMat[15]>0 && Math.max(Math.abs(relativeMat[3]),
+								Math.abs(relativeMat[7]),
+								Math.abs(relativeMat[11]))<boxSize*relativeMat[15]){
 						detonateBullet(bullet, bulletMatrix);
 					}
 				}
@@ -2174,13 +2178,10 @@ var iterateMechanics = (function iterateMechanics(){
 			var cellSize = guiParams["8-cell scale"];
 			if (guiParams["draw 8-cell"]){
 				for (dd in cellMatData.d8){
-					var thisMat = cellMatData.d8[dd];
-					mat4.set(thisMat, relativeMat);
-					mat4.transpose(relativeMat);
-					mat4.multiply(relativeMat, bulletMatrix);
-											
+					mat4.set(bulletMatrixTransposed, relativeMat);
+					mat4.multiply(relativeMat, cellMatData.d8[dd]);											
 					if (relativeMat[15]>0){
-						var projectedPosAbs = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return Math.abs(val)/(cellSize*relativeMat[15]);});
+						var projectedPosAbs = [relativeMat[3],relativeMat[7],relativeMat[11]].map(function(val){return Math.abs(val)/(cellSize*relativeMat[15]);});
 						if (Math.max(projectedPosAbs[0],projectedPosAbs[1],projectedPosAbs[2])<1){
 							var count=projectedPosAbs.reduce(function (sum,val){return val>0.8?sum+1:sum;},0);
 							if (count>1){
@@ -2204,15 +2205,13 @@ var iterateMechanics = (function iterateMechanics(){
 			function checkTetraCollisionForArray(cellScale, matsArr){
 				var critVal = 1/Math.sqrt(1+cellScale*cellScale*3);
 				for (dd in matsArr){
-					var thisMat = matsArr[dd];
-					mat4.set(thisMat, relativeMat);
-					mat4.transpose(relativeMat);
-					mat4.multiply(relativeMat, bulletMatrix);
+					mat4.set(bulletMatrixTransposed, relativeMat);
+					mat4.multiply(relativeMat, matsArr[dd]);
 						
 					if (relativeMat[15]>0){			
 						if (relativeMat[15]<critVal){continue;}	//early sphere check
 						
-						var projectedPos = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return val/(cellScale*relativeMat[15]);});
+						var projectedPos = [relativeMat[3],relativeMat[7],relativeMat[11]].map(function(val){return val/(cellScale*relativeMat[15]);});
 						
 						//initially just find a corner
 						//seems is triangular pyramid, with "top" in 1-axis direction
@@ -2265,16 +2264,14 @@ var iterateMechanics = (function iterateMechanics(){
 				var cellSize24 = guiParams["24-cell scale"];
 				
 				for (dd in cellMatData.d24.cells){
-					var thisMat = cellMatData.d24.cells[dd];
-					mat4.set(thisMat, relativeMat);
-					mat4.transpose(relativeMat);
-					mat4.multiply(relativeMat, bulletMatrix);
+					mat4.set(bulletMatrixTransposed, relativeMat);
+					mat4.multiply(relativeMat, cellMatData.d24.cells[dd]);
 											
 					if (relativeMat[15]>0){
 						//todo speed up. division for all vec parts not necessary
 						//change number inside if rhs comparison
 						//also should apply multiplier to 0.8 for inner check.
-						var projectedPosAbs = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return Math.abs(val)/(cellSize24*relativeMat[15]);});
+						var projectedPosAbs = [relativeMat[3],relativeMat[7],relativeMat[11]].map(function(val){return Math.abs(val)/(cellSize24*relativeMat[15]);});
 						if (projectedPosAbs[0]+projectedPosAbs[1]+projectedPosAbs[2] < 1){
 							//inside octohedron. frame is octohedron minus small octohedron extruded.
 							if (projectedPosAbs[0]+projectedPosAbs[1]>2*projectedPosAbs[2]+0.8 ||
@@ -2299,20 +2296,18 @@ var iterateMechanics = (function iterateMechanics(){
 				var dodecaScaleFudge = dodecaScale * (0.4/0.505);	//TODO where do numbers come from!!
 												//possibly this is sqrt(0.63) and 0.63 is (1+2/sqrt(5))/3;
 				var critVal = 1/Math.sqrt(1+dodecaScaleFudge*dodecaScaleFudge);
-
+				
 				var cellMats=cellMatData.d120[0];	//some sort index
 				
 				for (dd in cellMats){	//single element of array for convenience
-					var thisMat = cellMats[dd];
-					mat4.set(thisMat, relativeMat);
-					mat4.transpose(relativeMat);
-					mat4.multiply(relativeMat, bulletMatrix);
+					mat4.set(bulletMatrixTransposed, relativeMat);
+					mat4.multiply(relativeMat, cellMats[dd]);
 											
 					if (relativeMat[15]>0){
 							//if outside bounding sphere
 						if (relativeMat[15]<critVal){continue;}
 						
-						var projectedPos = [relativeMat[12],relativeMat[13],relativeMat[14]].map(function(val){return val/(dodecaScale*relativeMat[15]);});
+						var projectedPos = [relativeMat[3],relativeMat[7],relativeMat[11]].map(function(val){return val/(dodecaScale*relativeMat[15]);});
 						
 						var selection = -1;
 						var best = 0;
