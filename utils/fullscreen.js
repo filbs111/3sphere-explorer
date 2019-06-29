@@ -1,6 +1,6 @@
 function goFullscreen(elem){
 	if (elem.requestFullscreen) {
-	i.requestFullscreen();
+		elem.requestFullscreen();
 	} else if (elem.webkitRequestFullscreen) {
 		elem.webkitRequestFullscreen();
 	} else if (elem.mozRequestFullScreen) {

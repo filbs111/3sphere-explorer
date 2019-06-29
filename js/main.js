@@ -2198,7 +2198,7 @@ var iterateMechanics = (function iterateMechanics(){
 				checkTetraCollisionForArray(1, cellMatData.d16);
 			}
 			if (guiParams["draw 600-cell"]){
-				checkTetraCollisionForArray(0.386/(4/Math.sqrt(6)), cellMatData.d600);
+				checkTetraCollisionForArray(0.386/(4/Math.sqrt(6)), cellMatData.d600[0]);
 			}
 			
 			function checkTetraCollisionForArray(cellScale, matsArr){
@@ -2300,8 +2300,10 @@ var iterateMechanics = (function iterateMechanics(){
 												//possibly this is sqrt(0.63) and 0.63 is (1+2/sqrt(5))/3;
 				var critVal = 1/Math.sqrt(1+dodecaScaleFudge*dodecaScaleFudge);
 
-				for (dd in cellMatData.d120){	//single element of array for convenience
-					var thisMat = cellMatData.d120[dd];
+				var cellMats=cellMatData.d120[0];	//some sort index
+				
+				for (dd in cellMats){	//single element of array for convenience
+					var thisMat = cellMats[dd];
 					mat4.set(thisMat, relativeMat);
 					mat4.transpose(relativeMat);
 					mat4.multiply(relativeMat, bulletMatrix);
