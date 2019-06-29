@@ -602,59 +602,22 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos2, dropLightPos2);
 	}
 	
-	var numBallsInRing = 16;
-	var startAng = Math.PI / numBallsInRing;
-	var angleStep = startAng * 2.0;
+	if (guiParams.drawShapes['boxes y=z=0']){drawBoxRing(ringCells[0],colorArrs.red);}
+	if (guiParams.drawShapes['boxes x=z=0']){drawBoxRing(ringCells[1],colorArrs.green);}
+	if (guiParams.drawShapes['boxes x=y=0']){drawBoxRing(ringCells[2],colorArrs.blue);}
+	if (guiParams.drawShapes['boxes z=w=0']){drawBoxRing(ringCells[3],colorArrs.yellow);}
+	if (guiParams.drawShapes['boxes y=w=0']){drawBoxRing(ringCells[4],colorArrs.magenta);}
+	if (guiParams.drawShapes['boxes x=w=0']){drawBoxRing(ringCells[5],colorArrs.cyan);}
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.red);	//RED
-	mat4.set(invertedWorldCamera, mvMatrix);
-	//try moving in z first so can see...
-	//zmove4matCols(mvMatrix, -0.5);
-	
-	if (guiParams.drawShapes['boxes y=z=0']){drawRing();}
-	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.green);	//GREEN
-	mat4.set(invertedWorldCamera, mvMatrix);
-	//try moving in z first so can see...
-	//zmove4matCols(mvMatrix, -0.5);
-	
-	rotate4mat(mvMatrix, 0, 1, Math.PI*0.5);
-	if (guiParams.drawShapes['boxes x=z=0']){drawRing();}
-	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.blue);	//BLUE
-	mat4.set(invertedWorldCamera, mvMatrix);
-	rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
-	if (guiParams.drawShapes['boxes x=y=0']){drawRing();}
-	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.yellow);	//YELLOW
-	mat4.set(invertedWorldCamera, mvMatrix);
-	xmove4mat(mvMatrix, Math.PI*0.5);
-	rotate4mat(mvMatrix, 0, 1, Math.PI*0.5);
-	if (guiParams.drawShapes['boxes z=w=0']){drawRing();}
-	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.magenta);	//MAGENTA
-	mat4.set(invertedWorldCamera, mvMatrix);
-	xmove4mat(mvMatrix, Math.PI*0.5);
-	rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
-	if (guiParams.drawShapes['boxes y=w=0']){drawRing();}
-	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.cyan);	//CYAN
-	mat4.set(invertedWorldCamera, mvMatrix);
-	ymove4mat(mvMatrix, Math.PI*0.5);
-	rotate4mat(mvMatrix, 0, 2, Math.PI*0.5);
-	if (guiParams.drawShapes['boxes x=w=0']){drawRing();}
-	
-	
-	function drawRing(){
-		prepBuffersForDrawing(cubeBuffers, shaderProgramTexmap);
-		xmove4mat(mvMatrix, startAng);
-		for (var ii=0;ii<numBallsInRing;ii++){
-			xmove4mat(mvMatrix, angleStep);
-			if (frustrumCull(mvMatrix,boxRad)){
-				drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
-			}
-		}
+	function drawBoxRing(ringCellMatData,color){
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, color);
+		drawArrayOfModels(
+			ringCellMatData,
+			(guiParams["culling"] ? boxRad: false),
+			cubeBuffers
+		);
 	}
+	
 	
 	var numRandomBoxes = guiParams['random boxes'].number;
 	
