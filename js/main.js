@@ -286,26 +286,36 @@ var gunHeat = 0;
 
 var offsetCam = (function(){
 	var offsetVec;
+	var offsetVecReverse;
 	var targetForType = {
 		"near 3rd person":[0,-0.0075,-0.005],
 		"far 3rd person":[0,-0.02,-0.03],
 		"cockpit":[0,0,0.001]
 	}
-	offsetVecTarget = targetForType["far 3rd person"];
-	offsetVec = offsetVecTarget;	
+	var targetForTypeReverse = {
+		"near 3rd person":[0,-0.0075,0.005],
+		"far 3rd person":[0,-0.02,0.03],
+		"cockpit":[0,0,-0.01]
+	}
+	var offsetVecTarget = targetForType["far 3rd person"];
+	var offsetVecTargetReverse = targetForTypeReverse["far 3rd person"];
+	offsetVec = offsetVecTarget;
+	offsetVecReverse = offsetVecTargetReverse;
 
 	var mult1=0.95;
 	var mult2=1-mult1;
 	
 	return {
 		getVec: function (){
-			return offsetVec;
+			return reverseCamera ? offsetVecReverse : offsetVec;
 		},
 		setType: function(type){
 			offsetVecTarget = targetForType[type];
+			offsetVecTargetReverse = targetForTypeReverse[type];
 		},
 		iterate: function(){
 			offsetVec = offsetVec.map(function(val,ii){return val*mult1+offsetVecTarget[ii]*mult2;})
+			offsetVecReverse = offsetVecReverse.map(function(val,ii){return val*mult1+offsetVecTargetReverse[ii]*mult2;})
 		}
 	}
 })();
@@ -1727,7 +1737,7 @@ function init(){
 				break;
 		}
 		if (willPreventDefault){evt.preventDefault()};
-	})
+	});
 
 	canvas = document.getElementById("mycanvas");
 	
