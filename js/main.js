@@ -1289,12 +1289,11 @@ function drawWorldScene(frameTime, isCubemapView) {
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,singleExplosion.matrix);
 		//var radius = singleExplosion.life*0.0002;
-		var radius = (100-singleExplosion.life)*0.0003;
-		//var radius = (100-singleExplosion.life)*0.00005; //small for collision detection testing
+		var radius = (100-singleExplosion.life)*singleExplosion.size;
 		var opac = 0.01*singleExplosion.life;
 		if (frustrumCull(mvMatrix,radius)){	
 				//TODO check is draw order independent transparency
-			gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [opac, opac/2, opac/4]);
+			gl.uniform3fv(transpShadProg.uniforms.uEmitColor, singleExplosion.color.map(function(val){return val*opac;}));
 			gl.uniform3fv(transpShadProg.uniforms.uModelScale, [radius,radius,radius]);
 			drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
 		}
@@ -1334,8 +1333,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 var explosions ={};		//todo how to contain this? eg should constructor be eg explosions.construct()? what's good practice?
 var Explosion=function(){
 	var nextExplId = 0;
-	return function(matrix){
+	return function(matrix, size, color){
 		this.matrix = matrix;
+		this.size = size;
+		this.color = color;
 		this.life=100;
 		explosions[nextExplId]=this;
 		nextExplId+=1;
@@ -2349,7 +2350,7 @@ var iterateMechanics = (function iterateMechanics(){
 		function detonateBullet(bullet, bulletMatrix){	//TODO what scope does this have? best practice???
 			bullet.vel = [0,0,0];	//if colliding with target, stop bullet.
 			bullet.active=false;
-			var tmp=new Explosion(bulletMatrix);
+			var tmp=new Explosion(bulletMatrix, 0.0003, [1,0.5,0.25]);
 			//singleExplosion.life = 100;
 			//singleExplosion.matrix = bulletMatrix;
 		}
@@ -2594,6 +2595,9 @@ function fireGun(){
 			}			
 			newFireDirectionVec[2]+=muzzleVel;
 			bullets.push({matrix:newBulletMatrix,vel:newFireDirectionVec,active:true});
+			
+			new Explosion(gunMatrix, 0.00005, [0.06,0.06,0.06]);	//smoke/steam fx.
+															//TODO emit from hot gun (continue after firing), lighting for smoke (don't see in dark) ...
 			
 			matPool.destroy(relativeMatrix);
 			
