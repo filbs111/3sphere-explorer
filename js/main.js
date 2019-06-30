@@ -1298,11 +1298,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniform3fv(transpShadProg.uniforms.uModelScale, [radius,radius,radius]);
 			drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
 		}
-		singleExplosion.life-=0.1;
-		//singleExplosion.life-=0.01;	//slow for collision detection testing
-		if (singleExplosion.life<1){
-			delete explosions[ee];
-		}
 	}
 	
 	//muzzle flash? 
@@ -1972,6 +1967,14 @@ var iterateMechanics = (function iterateMechanics(){
 			stepSpeed();
 			gunHeat*=0.995;
 			offsetCam.iterate();
+		}
+		
+		for (var ee in explosions){
+			var singleExplosion = explosions[ee];
+			singleExplosion.life-=0.6*numSteps;
+			if (singleExplosion.life<1){
+				delete explosions[ee];
+			}
 		}
 		
 		duocylinderSpin+= duoCylinderAngVelConst * timeElapsed*moveSpeed;	//TODO match spin speed with sea wave speed
