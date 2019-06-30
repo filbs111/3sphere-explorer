@@ -116,7 +116,8 @@ function initBuffers(){
 		bufferArrayData(bufferObj.vertexTextureCoordBuffer, sourceData.uvcoords || sourceData.texturecoords[0], 2);	//handle inconsistent formats
 		bufferObj.vertexIndexBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
-		sourceData.indices = [].concat.apply([],sourceData.faces);
+		//sourceData.indices = [].concat.apply([],sourceData.faces);	//this causes "Maximum call stack size exceeded" for Chrome when 256x256 procTerrain
+		sourceData.indices = sourceData.faces;
 		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(sourceData.indices), gl.STATIC_DRAW);
 		bufferObj.vertexIndexBuffer.itemSize = 3;
 		bufferObj.vertexIndexBuffer.numItems = sourceData.indices.length;
