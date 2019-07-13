@@ -102,6 +102,7 @@ var gunBuffers={};
 var icoballBuffers={};
 
 var sshipModelScale=0.0002;
+var duocylinderSurfaceBoxScale = 0.025;
 
 function initBuffers(){
 	loadDuocylinderBufferData(duocylinderObjects.grid, tballGridDataPantheonStyle);
@@ -906,9 +907,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}
 	}
 	
-	//draw boxes on duocylinder surface.  
-	var duocylinderSurfaceBoxScale = 0.025;
-	
+	//draw boxes on duocylinder surface.  	
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
 	prepBuffersForDrawing(cubeBuffers, shaderProgramTexmap);
 	
@@ -2131,6 +2130,7 @@ var iterateMechanics = (function iterateMechanics(){
 		var criticalWPos = Math.cos(Math.atan(guiParams.reflector.scale) + Math.atan(boxRad));
 		
 		var critValueRandBox = 1/Math.sqrt(1+3*boxSize*boxSize);
+		var critValueDCBox = 1/Math.sqrt(1+3*duocylinderSurfaceBoxScale*duocylinderSurfaceBoxScale);
 		var critValueRingBox = 1/Math.sqrt(1+3*ringBoxSize*ringBoxSize);
 		
 		//slightly less ridiculous place for this - not declaring functions inside for loop!
@@ -2192,6 +2192,11 @@ var iterateMechanics = (function iterateMechanics(){
 					boxCollideCheck(randomMats[ii],boxSize,critValueRandBox);
 				}
 			}
+			
+			for (var bb of duocylinderBoxInfo){
+				boxCollideCheck(bb.matrix,duocylinderSurfaceBoxScale,critValueDCBox);
+			}
+						
 			
 			function boxCollideCheck(cellMat,thisBoxSize,boxCritValue){
 				//if (cellMat[15]>criticalWPos){return;}	//not drawing boxes too close to portal, so don't collide with them either!

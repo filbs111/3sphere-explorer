@@ -20,3 +20,5 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 	
 	return boxInfo;
 })();
+
+duocylinderBoxCells = duocylinderBoxInfo.map(function(val){return val.matrix;});
