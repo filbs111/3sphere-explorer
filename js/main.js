@@ -908,21 +908,25 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	//draw boxes on duocylinder surface.  
 	var duocylinderSurfaceBoxScale = 0.025;
-	var oneGridSquareOffset = Math.PI/14;
-	var fudgeFact = 2/Math.PI;	//maytbe this is correct. seems to be ratio of up move to surface move at surface
-	var hh=0.05;
+	
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
 	prepBuffersForDrawing(cubeBuffers, shaderProgramTexmap);
-	drawPreppedBufferOnDuocylinder(0,0,hh, [0.5, 0.5, 0.5, 1.0], cubeBuffers);
-	drawPreppedBufferOnDuocylinder(oneGridSquareOffset,0,hh, [1.0, 0.4, 0.4, 1.0], cubeBuffers);				//red - around
-	drawPreppedBufferOnDuocylinder(0,oneGridSquareOffset,hh, [0.4, 1.0, 0.4, 1.0], cubeBuffers);				//green - along
-	drawPreppedBufferOnDuocylinder(0,0,oneGridSquareOffset*fudgeFact+hh, [0.4, 0.4, 1.0, 1.0], cubeBuffers);	//blue - up
+	
+	for (var bb of duocylinderBoxInfo){
+		drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram);
+	}
 
 	lookupTerrainForPlayerPos();	//TODO in position update (not rendering)
-	
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.003,0.003,0.003]);
 	drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
 	
+	
+	function drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram){
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, bb.color);
+		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.multiply(mvMatrix, bb.matrix);
+		drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+	}
 	
 	function drawPreppedBufferOnDuocylinder(aa, bb, hh, cc, buff){
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, cc);
