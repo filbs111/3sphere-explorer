@@ -2373,10 +2373,10 @@ var iterateMechanics = (function iterateMechanics(){
 		fireDirectionVec = playerVelVec.map(function(val,ii){return (ii==2)? val+muzzleVel:val;});
 			//TODO velocity in frame of bullet? (different if gun aimed off-centre)
 		
-		var flashAmount = 0.03;
+		var flashAmount = 0.1;	//default "player light" when not firing
 		for (var gg in muzzleFlashAmounts){
-			muzzleFlashAmounts[gg]*=0.9;
-			flashAmount+= muzzleFlashAmounts[gg]+0.03;	//some default lighting when no firing	
+			muzzleFlashAmounts[gg]*=Math.pow(0.8, numSteps);
+			flashAmount+= muzzleFlashAmounts[gg];	
 		}
 		playerLight = playerLightUnscaled.map(function(val){return val*flashAmount});
 		
