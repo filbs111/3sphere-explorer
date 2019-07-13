@@ -2145,6 +2145,9 @@ var iterateMechanics = (function iterateMechanics(){
 			mat4.set(bulletMatrix,bulletMatrixTransposed);	//alternatively might store transposed other objects orientation permanently
 			mat4.transpose(bulletMatrixTransposed);
 			
+			var bulletMatrixTransposedDCRefFrame=mat4.create(bulletMatrixTransposed);	//in frame of duocylinder
+			rotate4mat(bulletMatrixTransposedDCRefFrame, 0, 1, duocylinderSpin);
+			
 			var bulletVel=bullet.vel;
 			xyzmove4mat(bulletMatrix,scalarvectorprod(moveAmount,bulletVel));
 			
@@ -2198,16 +2201,17 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 			
 			for (var bb of duocylinderBoxInfo){
-				boxCollideCheck(bb.matrix,duocylinderSurfaceBoxScale,critValueDCBox);
+				boxCollideCheck(bb.matrix,duocylinderSurfaceBoxScale,critValueDCBox, bulletMatrixTransposedDCRefFrame);
 			}
 						
 			
-			function boxCollideCheck(cellMat,thisBoxSize,boxCritValue){
+			function boxCollideCheck(cellMat,thisBoxSize,boxCritValue, bulletMatrixTransposedForRefFrame){
+					var bulletMatrixTransposedForRefFrame = bulletMatrixTransposedForRefFrame || bulletMatrixTransposed;
 				//if (cellMat[15]>criticalWPos){return;}	//not drawing boxes too close to portal, so don't collide with them either!
 														//also breaks ring box collision now (when box near portal)
 														//TODO move to setup stage 
 					
-					mat4.set(bulletMatrixTransposed, relativeMat);
+					mat4.set(bulletMatrixTransposedForRefFrame, relativeMat);
 					mat4.multiply(relativeMat, cellMat);
 					
 					if (relativeMat[15]<boxCritValue){return;}	//early sphere check
