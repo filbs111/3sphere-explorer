@@ -807,7 +807,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 	mat4.set(worldCamera, invertedWorldCamera);
 	mat4.transpose(invertedWorldCamera);
 	
-	
+	//equivalent for frame of duocylinder, to reduce complexity of drawing, collision checks etc
+	var invertedWorldCameraDuocylinderFrame = mat4.create(invertedWorldCamera);
+	rotate4mat(invertedWorldCameraDuocylinderFrame, 0, 1, duocylinderSpin);
+
 	//calculate stuff for discard shaders
 	//position of reflector in frame of camera (after MVMatrix transformation)
 	var reflectorPosTransformed = [worldCamera[3],worldCamera[7],worldCamera[11],worldCamera[15]];
@@ -912,7 +915,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	prepBuffersForDrawing(cubeBuffers, shaderProgramTexmap);
 	
 	for (var bb of duocylinderBoxInfo){
-		drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram);
+		drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, invertedWorldCameraDuocylinderFrame);
 	}
 
 	lookupTerrainForPlayerPos();	//TODO in position update (not rendering)
@@ -920,9 +923,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 	drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
 	
 	
-	function drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram){
+	function drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, invertedCamera){
+		var invertedCamera = invertedCamera || invertedWorldCamera;
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, bb.color);
-		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.set(invertedCamera, mvMatrix);
 		mat4.multiply(mvMatrix, bb.matrix);
 		drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
 	}
