@@ -890,7 +890,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		boxRad = boxSize*Math.sqrt(3);
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
 		
-		var criticalWPos = Math.cos(Math.atan(guiParams.reflector.scale) + Math.atan(boxRad));
+	//	var criticalWPos = Math.cos(Math.atan(guiParams.reflector.scale) + Math.atan(boxRad));
 		
 		numRandomBoxes = Math.min(randomMats.length, numRandomBoxes);	//TODO check this doesn't happen/ make obvious error!
 		
@@ -899,7 +899,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			var thisMat = randomMats[ii];
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix, thisMat);
-			if (thisMat[15]>criticalWPos){continue;}	//don't draw boxes too close to portal
+		//	if (thisMat[15]>criticalWPos){continue;}	//don't draw boxes too close to portal
 			if (frustrumCull(mvMatrix,boxRad)){
 				drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
 			}
@@ -2190,7 +2190,7 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 			
 			function boxCollideCheck(cellMat,thisBoxSize,boxCritValue){
-				if (cellMat[15]>criticalWPos){return;}	//not drawing boxes too close to portal, so don't collide with them either!
+				//if (cellMat[15]>criticalWPos){return;}	//not drawing boxes too close to portal, so don't collide with them either!
 														//also breaks ring box collision now (when box near portal)
 														//TODO move to setup stage 
 					
