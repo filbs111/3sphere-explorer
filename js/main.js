@@ -942,15 +942,18 @@ function drawWorldScene(frameTime, isCubemapView) {
 
 		gunMatrices=[];
 		
-		drawRelativeToSpacehip([gunHoriz,gunVert,gunFront]); //left, down, forwards
-		drawRelativeToSpacehip([-gunHoriz,gunVert,gunFront]);
-		drawRelativeToSpacehip([-gunHoriz,-gunVert,gunFront]);
-		drawRelativeToSpacehip([gunHoriz,-gunVert,gunFront]);
+		pushGunMatrixRelativeToSpacehip([gunHoriz,gunVert,gunFront]); //left, down, forwards
+		pushGunMatrixRelativeToSpacehip([-gunHoriz,gunVert,gunFront]);
+		pushGunMatrixRelativeToSpacehip([-gunHoriz,-gunVert,gunFront]);
+		pushGunMatrixRelativeToSpacehip([gunHoriz,-gunVert,gunFront]);
 		
+		for (var mm of gunMatrices){
+			drawGun(mm);
+		}
 		
-		function drawRelativeToSpacehip(vec){
-			var gunMatrixCosmetic = mat4.create();	//todo reuse matrices for gunMatrixCosmetic (fixed array) - not simple to use pool since pushing onto gunMatrices
+		function pushGunMatrixRelativeToSpacehip(vec){	//todo reuse matrices for gunMatrixCosmetic (fixed array) - not simple to use pool since pushing onto gunMatrices
 													//todo precalc gunmatrices relative to spaceship?
+			var gunMatrixCosmetic = mat4.create();
 			mat4.set(matrix, gunMatrixCosmetic);
 			xyzmove4mat(gunMatrixCosmetic,vec);
 			
@@ -968,10 +971,12 @@ function drawWorldScene(frameTime, isCubemapView) {
 				
 			xyzmove4mat(gunMatrixCosmetic,[0,0,25*modelScale]);	//move forwards
 			gunMatrices.push(gunMatrixCosmetic);
+		}		
 		
+		
+		function drawGun(gunMatrixCosmetic){
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix,gunMatrixCosmetic);
-			
 			drawObjectFromPreppedBuffers(gunBuffers, shaderProgramColored);
 		}
 		
