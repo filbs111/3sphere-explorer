@@ -545,6 +545,250 @@ var colorArrs = {
 }
 Object.keys(colorArrs).map(function(key){colorArrs[key]=new Float32Array(colorArrs[key]);});	//maybe more efficient?
 
+
+function updateGunTargeting(matrix){
+	var modelScale = sshipModelScale;
+	var matrixForTargeting = matrix;
+	
+	var gunHoriz = 20*sshipModelScale;
+	var gunVert = 10*sshipModelScale;
+	var gunFront = 5*sshipModelScale;
+	
+	var gunAngRangeRad = 0.35;
+	
+	//default (no targeting) - guns unrotated, point straight ahead.
+	rotvec = [0,0,0];
+			
+	if (guiParams.target.type!="none" && guiParams["targeting"]!="off"){
+		//rotvec = getRotBetweenMats(matrixForTargeting, targetMatrix);	//target in frame of spaceship.
+		var targetingSolution = getTargetingSolution(matrixForTargeting, targetMatrix);
+		rotvec = targetingSolution.rotvec;
+		targetingResultOne = targetingSolution.results[0];
+		targetingResultTwo = targetingSolution.results[1];
+		selectedTargeting = targetingSolution.selected;
+		targetWorldFrame = targetingSolution.targetWorldFrame;
+	}
+	
+	gunMatrices=[];	//todo reuse instead of clear and push
+	
+	pushGunMatrixRelativeToSpacehip([gunHoriz,gunVert,gunFront]); //left, down, forwards
+	pushGunMatrixRelativeToSpacehip([-gunHoriz,gunVert,gunFront]);
+	pushGunMatrixRelativeToSpacehip([-gunHoriz,-gunVert,gunFront]);
+	pushGunMatrixRelativeToSpacehip([gunHoriz,-gunVert,gunFront]);
+	
+	function pushGunMatrixRelativeToSpacehip(vec){	//todo reuse matrices for gunMatrixCosmetic (fixed array) - not simple to use pool since pushing onto gunMatrices //todo precalc gunmatrices relative to spaceship?
+		var gunMatrixCosmetic = mat4.create();
+		mat4.set(matrix, gunMatrixCosmetic);
+		xyzmove4mat(gunMatrixCosmetic,vec);
+		
+		var gunMatrix = matPool.create();
+		mat4.set(matrixForTargeting, gunMatrix);
+		xyzmove4mat(gunMatrix,vec);
+		
+		if (guiParams.target.type!="none" && guiParams["targeting"]=="individual"){
+			rotvec = getTargetingSolution(gunMatrix, targetMatrix).rotvec;
+		}
+		matPool.destroy(gunMatrix);
+		
+		//rotate guns to follow mouse
+		xyzrotate4mat(gunMatrixCosmetic, rotvec);		
+			
+		xyzmove4mat(gunMatrixCosmetic,[0,0,25*modelScale]);	//move forwards
+		gunMatrices.push(gunMatrixCosmetic);
+	}
+	
+	
+	function capGunPointing(pointingDir){
+		//scale such that z=1 - then can cap angle, ensures guns point forward. (TODO handle case that z=0)
+		pointingDir={x:-pointingDir.x/pointingDir.z, 
+				y:-pointingDir.y/pointingDir.z, z:1
+			}
+		
+		var sqDist = pointingDir.x*pointingDir.x + pointingDir.y*pointingDir.y;
+		if (sqDist>gunAngRangeRad*gunAngRangeRad){
+			pointingDir.z = Math.sqrt(sqDist)/gunAngRangeRad;
+		}
+		
+		//shouldn't need, but seems like z value unused / assumed to be 1
+		//TODO neater
+		pointingDir={x:pointingDir.x/pointingDir.z, 
+				y:pointingDir.y/pointingDir.z, z:1
+			};
+		return pointingDir;
+	}
+	
+	function getRotBetweenMats(sourceMat, destMat){	//this func not used now. use of matrix pool untested
+		//actually gets rotation to point sourceMat at destMat
+		var tmpMat = matPool.create();
+		mat4.set(sourceMat, tmpMat);
+		mat4.transpose(tmpMat);			
+			
+		mat4.multiply(tmpMat, destMat);	//object described by destMat in frame of object described by sourceMat.
+			
+		//[mat[12],mat[13],mat[14],mat[15] is 4vec co-ords
+		pointingDir={x:tmpMat[12], y:tmpMat[13], z:tmpMat[14]};
+		
+		pointingDir = capGunPointing(pointingDir);
+		
+		matPool.destroy(tmpMat);
+		
+		return getRotFromPointing(pointingDir);
+	}
+	
+	function getRotFromPointing(pointingDir){
+		//get rotation to go from pointing straight ahead, to pointingDir
+		
+		pointingDir.w=Math.sqrt(pointingDir.x*pointingDir.x+		//assumes that input pointingdir z=1
+								pointingDir.y*pointingDir.y +1);
+		
+		var crossProd = crossProductHomgenous({x:0,y:0,z:1,w:1}, pointingDir);
+			//note the 4vec passed in here has w*w = x*x+y*y+z*z ie different to point on 4vec.	
+		
+		var rotvec = [-crossProd.x / crossProd.w, -crossProd.y / crossProd.w, -crossProd.z / crossProd.w];	
+			
+		//note that rotation code likely generates sin(ang) anyway, so this likely inefficient!
+		var rotMag = Math.sqrt(rotvec[0]*rotvec[0] + rotvec[1]*rotvec[1] + rotvec[2]*rotvec[2]);
+		if (rotMag>0){
+			var rotHack = Math.asin(rotMag)/rotMag;
+			rotvec[0]*=rotHack;
+			rotvec[1]*=rotHack;
+			rotvec[2]*=rotHack;
+		}
+		return rotvec;
+	}
+	
+	
+	function getTargetingSolution(matrixForTargeting, targetMatrix, logStuff){
+
+		//TODO not use globals for these. need to hook up with rendering code
+		var targetWorldFrame=[];
+		var targetingResultOne=[];
+		var targetingResultTwo=[];
+		var selectedTargeting="none";
+
+		var rotvec=[0,0,0];
+
+		//solve accounting for launch velocity
+		//get position of target in frame of player. can then plot this on screen.
+		//unit vector of this is "targetWorldFrame"
+		//then the gun velocity (in frame of player) should be (see paper calculations, 2018-07-25)
+		// t = targetWorldFrame
+		// v= playervel
+		// m= muzzle speed
+		// g= muzzle velocity
+		
+		// g = t (t.v (+/-) sqrt(v.v - (t.v)^2 + m*m )) - v
+		//should confirm that |g| = m
+		//depending if part in sqrt is +ve or -ve, have 2 or 0 solutions (for the +/- bit in the sqrt).
+			//+ve has greater velocity, so gets there quicker
+		//should pick 1st if guns can rotate to that direction, else 2nd if guns can get there, else no solution.
+		
+		//first get target direction in frame of screen.
+		var targetPos = [targetMatrix[12],targetMatrix[13],targetMatrix[14],targetMatrix[15]];
+		for (var ii=0;ii<4;ii++){
+			var total=0;
+			for (var jj=0;jj<4;jj++){
+				total+=matrixForTargeting[ii*4+jj]*targetPos[jj];
+			}
+			targetWorldFrame[ii]=total;
+		}
+		//normalise x,y,z parts of to target vector.
+		var length = Math.sqrt(1-targetWorldFrame[3]*targetWorldFrame[3]);	//TODO ensure not 0. can combo with range check.
+		
+		targetWorldFrame = targetWorldFrame.map(function(val){return val/length;});	//FWIW last value unneeded
+		
+		//confirm tWF length 1? 
+		var lensqtwf=0;
+		for (var ii=0;ii<3;ii++){
+			lensqtwf += targetWorldFrame[ii]*targetWorldFrame[ii];
+		}
+		
+		var playerVelVecMagsq = playerVelVec.reduce(function(total, val){return total+ val*val;}, 0);	//v.v
+					//todo reuse code or result (copied from elsewhere)
+		var tDotV = playerVelVec.reduce(function(total, val, ii){return total+ val*targetWorldFrame[ii];}, 0);
+		var inSqrtBracket =  tDotV*tDotV + muzzleVel*muzzleVel -playerVelVecMagsq;
+		
+		//console.log(inSqrtBracket);
+		
+		var sqrtResult = inSqrtBracket>0 ? Math.sqrt(inSqrtBracket): 0;	//TODO something else for 0 (no solution)
+		//console.log(sqrtResult);
+		
+		for (var ii=0;ii<3;ii++){
+			targetingResultOne[ii] = targetWorldFrame[ii]*(tDotV + sqrtResult) - playerVelVec[ii];
+			targetingResultTwo[ii] = targetWorldFrame[ii]*(tDotV - sqrtResult) - playerVelVec[ii];
+		}
+		//check lengths of these = muzzle vel sq
+		var targetingResultOneLengthSq = targetingResultOne.reduce(function(total, val){return total+ val*val;}, 0);
+		var targetingResultTwoLengthSq = targetingResultTwo.reduce(function(total, val){return total+ val*val;}, 0);
+
+		//select a result.
+		//appears to in practice pick solution 2, which seems to be correct result
+		//todo find if can just dump solution 1. 
+		var selectedTargetingString;
+		if (targetingResultOne[2]>0){
+			selectedTargeting = targetingResultOne;
+			selectedTargetingString = "ONE";
+		}else if(targetingResultTwo[2]>0){
+			selectedTargeting = targetingResultTwo;
+			selectedTargetingString = "TWO";
+		}else{
+			selectedTargeting = "none";
+			selectedTargetingString = "NONE";
+		}
+		//TODO check that angle isn't too extreme.
+		
+		//if (targetWorldFrame[2] > 0){	//behind player
+		if (targetWorldFrame[2] > -0.85 ||	//appears to check that within a cone in front of player. works because this vector is was normalised 
+											//is direction towards target)
+			targetWorldFrame[3] < -0.5){	//exclude beyond some distance (w=1 close, w=-1 opposite side of 3-sphere)								
+				selectedTargeting = "none";
+				selectedTargetingString = "NONE";
+		}
+		
+		if (logStuff){
+			//console.log(targetingResultOneLengthSq);
+			document.getElementById("info2").innerHTML = "lensqtwf: " + lensqtwf + "<br/>" +
+											"targetWorldFrame[3]: " + targetWorldFrame[3] + "<br/>" +
+											"sqrtResult: " + sqrtResult + "<br/>" +
+											"targetingResultOneLengthSq: " + targetingResultOneLengthSq + "<br/>" +
+											"targetingResultTwoLengthSq: " + targetingResultTwoLengthSq + "<br/>" +
+											"selectedTargeting: " + selectedTargetingString;
+		}
+		
+		//override original gun rotation code (todo delete previous/ option to disable/enable this correction)
+		if (selectedTargeting!="none"){
+			if (guiParams.target.type!="none" && guiParams["targeting"]!="off"){
+				//rotvec = getRotBetweenMats(matrixForTargeting, targetMatrix);	//target in frame of spaceship.
+				var pointingDir={x:selectedTargeting[0],y:selectedTargeting[1],z:selectedTargeting[2]};
+				pointingDir = capGunPointing(pointingDir);					
+				rotvec=getRotFromPointing(pointingDir);
+				
+				//override fireDirectionVec for hud purposes
+				fireDirectionVec = [-pointingDir.x,-pointingDir.y,pointingDir.z].map(function(val){return val*muzzleVel;}); 
+					//todo pointingdir simple vector!( not .x, .y, ,z)
+				
+					//redo adding player velocity (todo maybe combine with where do this elsewhere..)
+					//ie guntargetingvec
+					//todo solve targeting in mechanics loop - currently doing when drawing !!!!!!!!!!!!!!!!!!! stupid!
+				fireDirectionVec = fireDirectionVec.map(function(val,ii){return val+playerVelVec[ii];});
+					
+			}
+		}
+		
+		return {
+			results:[targetingResultOne, targetingResultTwo],
+			selected: selectedTargeting,
+			rotvec:rotvec,
+			targetWorldFrame:targetWorldFrame
+		};
+	}
+	
+}
+
+
+
+
+
 function drawWorldScene(frameTime, isCubemapView) {
 		
 	var colorsSwitch = ((isCubemapView && guiParams.reflector.isPortal)?1:0)^currentWorld;
@@ -575,8 +819,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var dropLightPos;
 	var dropLightPos2;	//reflected light
 	if (!guiParams["drop spaceship"]){
-		dropSpaceship();	//note this is a bit poorly named and inefficient - when spaceship attached to camera,
-	}						//in drawspaceship, are just doing invertedWorldCamera*worldCamera = identity
+		mat4.set(playerCameraInterp,sshipMatrix);	//copy current player 4-rotation matrix to the spaceship object
+	}
+	
 	//get light pos in frame of camera. light is at spaceship
 	var lightMat = mat4.create();	//TODO mat*mat is unnecessary - only need to do dropLightPos = sshipMatrix*lightPosInWorld 
 	mat4.set(invertedWorldCamera, lightMat);
@@ -872,8 +1117,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawObjectFromBuffers(teapotBuffers, shaderProgramColored);
 	}
 	
-
-	updateGunTargeting(sshipMatrix);	//todo put in mechanics update, but messed up by currently needing shift to be consistent with spaceship
 	
 	var drawFunc = guiParams["draw spaceship"]? drawSpaceship : drawBall;
 	
@@ -902,245 +1145,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 	}	
 	
 	
-	function updateGunTargeting(matrix){
-		var modelScale = sshipModelScale;
-		var matrixForTargeting = matrix;
-		
-		var gunHoriz = 20*sshipModelScale;
-		var gunVert = 10*sshipModelScale;
-		var gunFront = 5*sshipModelScale;
-		
-		var gunAngRangeRad = 0.35;
-		
-		//default (no targeting) - guns unrotated, point straight ahead.
-		rotvec = [0,0,0];
-				
-		if (guiParams.target.type!="none" && guiParams["targeting"]!="off"){
-			//rotvec = getRotBetweenMats(matrixForTargeting, targetMatrix);	//target in frame of spaceship.
-			var targetingSolution = getTargetingSolution(matrixForTargeting, targetMatrix);
-			rotvec = targetingSolution.rotvec;
-			targetingResultOne = targetingSolution.results[0];
-			targetingResultTwo = targetingSolution.results[1];
-			selectedTargeting = targetingSolution.selected;
-			targetWorldFrame = targetingSolution.targetWorldFrame;
-		}
-		
-		gunMatrices=[];
-		
-		pushGunMatrixRelativeToSpacehip([gunHoriz,gunVert,gunFront]); //left, down, forwards
-		pushGunMatrixRelativeToSpacehip([-gunHoriz,gunVert,gunFront]);
-		pushGunMatrixRelativeToSpacehip([-gunHoriz,-gunVert,gunFront]);
-		pushGunMatrixRelativeToSpacehip([gunHoriz,-gunVert,gunFront]);
-		
-		function pushGunMatrixRelativeToSpacehip(vec){	//todo reuse matrices for gunMatrixCosmetic (fixed array) - not simple to use pool since pushing onto gunMatrices //todo precalc gunmatrices relative to spaceship?
-			var gunMatrixCosmetic = mat4.create();
-			mat4.set(matrix, gunMatrixCosmetic);
-			xyzmove4mat(gunMatrixCosmetic,vec);
-			
-			var gunMatrix = matPool.create();
-			mat4.set(matrixForTargeting, gunMatrix);
-			xyzmove4mat(gunMatrix,vec);
-			
-			if (guiParams.target.type!="none" && guiParams["targeting"]=="individual"){
-				rotvec = getTargetingSolution(gunMatrix, targetMatrix).rotvec;
-			}
-			matPool.destroy(gunMatrix);
-			
-			//rotate guns to follow mouse
-			xyzrotate4mat(gunMatrixCosmetic, rotvec);		
-				
-			xyzmove4mat(gunMatrixCosmetic,[0,0,25*modelScale]);	//move forwards
-			gunMatrices.push(gunMatrixCosmetic);
-		}
-		
-		
-		function capGunPointing(pointingDir){
-			//scale such that z=1 - then can cap angle, ensures guns point forward. (TODO handle case that z=0)
-			pointingDir={x:-pointingDir.x/pointingDir.z, 
-					y:-pointingDir.y/pointingDir.z, z:1
-				}
-			
-			var sqDist = pointingDir.x*pointingDir.x + pointingDir.y*pointingDir.y;
-			if (sqDist>gunAngRangeRad*gunAngRangeRad){
-				pointingDir.z = Math.sqrt(sqDist)/gunAngRangeRad;
-			}
-			
-			//shouldn't need, but seems like z value unused / assumed to be 1
-			//TODO neater
-			pointingDir={x:pointingDir.x/pointingDir.z, 
-					y:pointingDir.y/pointingDir.z, z:1
-				};
-			return pointingDir;
-		}
-		
-		function getRotBetweenMats(sourceMat, destMat){	//this func not used now. use of matrix pool untested
-			//actually gets rotation to point sourceMat at destMat
-			var tmpMat = matPool.create();
-			mat4.set(sourceMat, tmpMat);
-			mat4.transpose(tmpMat);			
-				
-			mat4.multiply(tmpMat, destMat);	//object described by destMat in frame of object described by sourceMat.
-				
-			//[mat[12],mat[13],mat[14],mat[15] is 4vec co-ords
-			pointingDir={x:tmpMat[12], y:tmpMat[13], z:tmpMat[14]};
-			
-			pointingDir = capGunPointing(pointingDir);
-			
-			matPool.destroy(tmpMat);
-			
-			return getRotFromPointing(pointingDir);
-		}
-		
-		function getRotFromPointing(pointingDir){
-			//get rotation to go from pointing straight ahead, to pointingDir
-			
-			pointingDir.w=Math.sqrt(pointingDir.x*pointingDir.x+		//assumes that input pointingdir z=1
-									pointingDir.y*pointingDir.y +1);
-			
-			var crossProd = crossProductHomgenous({x:0,y:0,z:1,w:1}, pointingDir);
-				//note the 4vec passed in here has w*w = x*x+y*y+z*z ie different to point on 4vec.	
-			
-			var rotvec = [-crossProd.x / crossProd.w, -crossProd.y / crossProd.w, -crossProd.z / crossProd.w];	
-				
-			//note that rotation code likely generates sin(ang) anyway, so this likely inefficient!
-			var rotMag = Math.sqrt(rotvec[0]*rotvec[0] + rotvec[1]*rotvec[1] + rotvec[2]*rotvec[2]);
-			if (rotMag>0){
-				var rotHack = Math.asin(rotMag)/rotMag;
-				rotvec[0]*=rotHack;
-				rotvec[1]*=rotHack;
-				rotvec[2]*=rotHack;
-			}
-			return rotvec;
-		}
-		
-		
-		function getTargetingSolution(matrixForTargeting, targetMatrix, logStuff){
-
-			//TODO not use globals for these. need to hook up with rendering code
-			var targetWorldFrame=[];
-			var targetingResultOne=[];
-			var targetingResultTwo=[];
-			var selectedTargeting="none";
-
-			var rotvec=[0,0,0];
-
-			//solve accounting for launch velocity
-			//get position of target in frame of player. can then plot this on screen.
-			//unit vector of this is "targetWorldFrame"
-			//then the gun velocity (in frame of player) should be (see paper calculations, 2018-07-25)
-			// t = targetWorldFrame
-			// v= playervel
-			// m= muzzle speed
-			// g= muzzle velocity
-			
-			// g = t (t.v (+/-) sqrt(v.v - (t.v)^2 + m*m )) - v
-			//should confirm that |g| = m
-			//depending if part in sqrt is +ve or -ve, have 2 or 0 solutions (for the +/- bit in the sqrt).
-				//+ve has greater velocity, so gets there quicker
-			//should pick 1st if guns can rotate to that direction, else 2nd if guns can get there, else no solution.
-			
-			//first get target direction in frame of screen.
-			var targetPos = [targetMatrix[12],targetMatrix[13],targetMatrix[14],targetMatrix[15]];
-			for (var ii=0;ii<4;ii++){
-				var total=0;
-				for (var jj=0;jj<4;jj++){
-					total+=matrixForTargeting[ii*4+jj]*targetPos[jj];
-				}
-				targetWorldFrame[ii]=total;
-			}
-			//normalise x,y,z parts of to target vector.
-			var length = Math.sqrt(1-targetWorldFrame[3]*targetWorldFrame[3]);	//TODO ensure not 0. can combo with range check.
-			
-			targetWorldFrame = targetWorldFrame.map(function(val){return val/length;});	//FWIW last value unneeded
-			
-			//confirm tWF length 1? 
-			var lensqtwf=0;
-			for (var ii=0;ii<3;ii++){
-				lensqtwf += targetWorldFrame[ii]*targetWorldFrame[ii];
-			}
-			
-			var playerVelVecMagsq = playerVelVec.reduce(function(total, val){return total+ val*val;}, 0);	//v.v
-						//todo reuse code or result (copied from elsewhere)
-			var tDotV = playerVelVec.reduce(function(total, val, ii){return total+ val*targetWorldFrame[ii];}, 0);
-			var inSqrtBracket =  tDotV*tDotV + muzzleVel*muzzleVel -playerVelVecMagsq;
-			
-			//console.log(inSqrtBracket);
-			
-			var sqrtResult = inSqrtBracket>0 ? Math.sqrt(inSqrtBracket): 0;	//TODO something else for 0 (no solution)
-			//console.log(sqrtResult);
-			
-			for (var ii=0;ii<3;ii++){
-				targetingResultOne[ii] = targetWorldFrame[ii]*(tDotV + sqrtResult) - playerVelVec[ii];
-				targetingResultTwo[ii] = targetWorldFrame[ii]*(tDotV - sqrtResult) - playerVelVec[ii];
-			}
-			//check lengths of these = muzzle vel sq
-			var targetingResultOneLengthSq = targetingResultOne.reduce(function(total, val){return total+ val*val;}, 0);
-			var targetingResultTwoLengthSq = targetingResultTwo.reduce(function(total, val){return total+ val*val;}, 0);
-
-			//select a result.
-			//appears to in practice pick solution 2, which seems to be correct result
-			//todo find if can just dump solution 1. 
-			var selectedTargetingString;
-			if (targetingResultOne[2]>0){
-				selectedTargeting = targetingResultOne;
-				selectedTargetingString = "ONE";
-			}else if(targetingResultTwo[2]>0){
-				selectedTargeting = targetingResultTwo;
-				selectedTargetingString = "TWO";
-			}else{
-				selectedTargeting = "none";
-				selectedTargetingString = "NONE";
-			}
-			//TODO check that angle isn't too extreme.
-			
-			//if (targetWorldFrame[2] > 0){	//behind player
-			if (targetWorldFrame[2] > -0.85 ||	//appears to check that within a cone in front of player. works because this vector is was normalised 
-												//is direction towards target)
-				targetWorldFrame[3] < -0.5){	//exclude beyond some distance (w=1 close, w=-1 opposite side of 3-sphere)								
-					selectedTargeting = "none";
-					selectedTargetingString = "NONE";
-			}
-			
-			if (logStuff){
-				//console.log(targetingResultOneLengthSq);
-				document.getElementById("info2").innerHTML = "lensqtwf: " + lensqtwf + "<br/>" +
-												"targetWorldFrame[3]: " + targetWorldFrame[3] + "<br/>" +
-												"sqrtResult: " + sqrtResult + "<br/>" +
-												"targetingResultOneLengthSq: " + targetingResultOneLengthSq + "<br/>" +
-												"targetingResultTwoLengthSq: " + targetingResultTwoLengthSq + "<br/>" +
-												"selectedTargeting: " + selectedTargetingString;
-			}
-			
-			//override original gun rotation code (todo delete previous/ option to disable/enable this correction)
-			if (selectedTargeting!="none"){
-				if (guiParams.target.type!="none" && guiParams["targeting"]!="off"){
-					//rotvec = getRotBetweenMats(matrixForTargeting, targetMatrix);	//target in frame of spaceship.
-					var pointingDir={x:selectedTargeting[0],y:selectedTargeting[1],z:selectedTargeting[2]};
-					pointingDir = capGunPointing(pointingDir);					
-					rotvec=getRotFromPointing(pointingDir);
-					
-					//override fireDirectionVec for hud purposes
-					fireDirectionVec = [-pointingDir.x,-pointingDir.y,pointingDir.z].map(function(val){return val*muzzleVel;}); 
-						//todo pointingdir simple vector!( not .x, .y, ,z)
-					
-						//redo adding player velocity (todo maybe combine with where do this elsewhere..)
-						//ie guntargetingvec
-						//todo solve targeting in mechanics loop - currently doing when drawing !!!!!!!!!!!!!!!!!!! stupid!
-					fireDirectionVec = fireDirectionVec.map(function(val,ii){return val+playerVelVec[ii];});
-						
-				}
-			}
-			
-			return {
-				results:[targetingResultOne, targetingResultTwo],
-				selected: selectedTargeting,
-				rotvec:rotvec,
-				targetWorldFrame:targetWorldFrame
-			};
-		}
-		
-	}
-	
 	function drawSpaceship(matrix){
 		modelScale=sshipModelScale;
 		//gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.veryDarkGray);	//DARK
@@ -1161,7 +1165,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 														
 		prepBuffersForDrawing(gunBuffers, shaderProgramColored);
 		
-		var inverseSshipMat = mat4.create(sshipMatrix); //todo persist this matrix/ store inverseSshipMat*gunMatrix
+		var inverseSshipMat = mat4.create(sshipMatrixNoInterp); //todo persist this matrix/ store inverseSshipMat*gunMatrix
 		mat4.transpose(inverseSshipMat);
 					
 		for (var mm of gunMatrices){
@@ -1668,6 +1672,7 @@ var muzzleFlashAmounts=[0,0,0,0];
 var teapotMatrix=mat4.create();mat4.identity(teapotMatrix);
 xyzmove4mat(teapotMatrix,[0,1.85,0]);
 var sshipMatrix=mat4.create();mat4.identity(sshipMatrix);
+var sshipMatrixNoInterp=mat4.create();mat4.identity(sshipMatrixNoInterp);
 var targetMatrix=mat4.create();mat4.identity(targetMatrix);
 var targetWorldFrame=[];
 var targetingResultOne=[];
@@ -2426,6 +2431,11 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 		}
 		
+		if (!guiParams["drop spaceship"]){
+			mat4.set(playerCamera,sshipMatrixNoInterp);	//todo store gun matrices in player frame instead
+		}
+		updateGunTargeting(sshipMatrixNoInterp);
+
 		//rotate remainder of time for aesthetic. (TODO ensure doesn't cock up frustum culling, hud etc)
 		mat4.set(playerCamera, playerCameraInterp);
 		xyzrotate4mat(playerCameraInterp, scalarvectorprod(timeTracker/timeStep -1,lastPlayerAngMove));
@@ -2593,9 +2603,7 @@ function copyTouch(touch) {
 function log(info){		//can to enable/disable logging globally
 	//console.log(info);
 }
-function dropSpaceship(){
-	mat4.set(playerCameraInterp,sshipMatrix);	//copy current player 4-rotation matrix to the spaceship object
-}
+
 var gunEven=1;
 function fireGun(){
 	gunEven = 1-gunEven;
