@@ -101,6 +101,8 @@ var sshipBuffers={};
 var gunBuffers={};
 var icoballBuffers={};
 
+var sshipModelScale=0.0002;
+
 function initBuffers(){
 	loadDuocylinderBufferData(duocylinderObjects.grid, tballGridDataPantheonStyle);
 	loadDuocylinderBufferData(duocylinderObjects.terrain, terrainData);
@@ -870,12 +872,14 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawObjectFromBuffers(teapotBuffers, shaderProgramColored);
 	}
 	
+
+	updateGunTargeting(sshipMatrix);	//todo put in mechanics update, but messed up by currently needing shift to be consistent with spaceship
 	
 	var drawFunc = guiParams["draw spaceship"]? drawSpaceship : drawBall;
 	
 	//TODO permanent
 	var sshipMatrixShifted = mat4.create();
-	mat4.set(sshipMatrix, sshipMatrixShifted)
+	mat4.set(sshipMatrix, sshipMatrixShifted);
 	
 	//MOVE MODEL AWAY FROM PORTAL.
 	//in order to jump camera across portal to avoid too close rendering issues (z-buffer)
@@ -893,41 +897,24 @@ function drawWorldScene(frameTime, isCubemapView) {
 		var portaledMatrix = mat4.create();
 		mat4.set(sshipMatrixShifted, portaledMatrix);
 		moveMatrixThruPortal(portaledMatrix, reflectorInfo.rad, 1);
-	
-		drawFunc(portaledMatrix, sshipMatrixShifted);
+		
+		drawFunc(portaledMatrix);
 	}	
 	
-	function drawSpaceship(matrix, matrixForTargeting){
-		modelScale=0.0002;
-		//gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.veryDarkGray);	//DARK
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
-		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+	
+	function updateGunTargeting(matrix){
+		var modelScale = sshipModelScale;
+		var matrixForTargeting = matrix;
 		
-		mat4.set(invertedWorldCamera, mvMatrix);
-		
-		mat4.multiply(mvMatrix,matrix);		
-		drawObjectFromBuffers(sshipBuffers, shaderProgramColored);
-		
-		//draw guns
-		var gunScale = 50*modelScale;
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [gunScale,gunScale,gunScale]);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.guns);	//GREY
-		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [gunHeat/15,gunHeat/30,gunHeat/45]);
-														
-		var gunHoriz = 20*modelScale;
-		var gunVert = 10*modelScale;
-		var gunFront = 5*modelScale;
-
-		var mousP=mouseInfo.currentPointingDir;
+		var gunHoriz = 20*sshipModelScale;
+		var gunVert = 10*sshipModelScale;
+		var gunFront = 5*sshipModelScale;
 		
 		var gunAngRangeRad = 0.35;
 		
 		//default (no targeting) - guns unrotated, point straight ahead.
 		rotvec = [0,0,0];
-		
-		matrixForTargeting = matrixForTargeting || matrix;
-		
+				
 		if (guiParams.target.type!="none" && guiParams["targeting"]!="off"){
 			//rotvec = getRotBetweenMats(matrixForTargeting, targetMatrix);	//target in frame of spaceship.
 			var targetingSolution = getTargetingSolution(matrixForTargeting, targetMatrix);
@@ -938,8 +925,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 			targetWorldFrame = targetingSolution.targetWorldFrame;
 		}
 		
-		prepBuffersForDrawing(gunBuffers, shaderProgramColored);
-
 		gunMatrices=[];
 		
 		pushGunMatrixRelativeToSpacehip([gunHoriz,gunVert,gunFront]); //left, down, forwards
@@ -947,12 +932,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		pushGunMatrixRelativeToSpacehip([-gunHoriz,-gunVert,gunFront]);
 		pushGunMatrixRelativeToSpacehip([gunHoriz,-gunVert,gunFront]);
 		
-		for (var mm of gunMatrices){
-			drawGun(mm);
-		}
-		
-		function pushGunMatrixRelativeToSpacehip(vec){	//todo reuse matrices for gunMatrixCosmetic (fixed array) - not simple to use pool since pushing onto gunMatrices
-													//todo precalc gunmatrices relative to spaceship?
+		function pushGunMatrixRelativeToSpacehip(vec){	//todo reuse matrices for gunMatrixCosmetic (fixed array) - not simple to use pool since pushing onto gunMatrices //todo precalc gunmatrices relative to spaceship?
 			var gunMatrixCosmetic = mat4.create();
 			mat4.set(matrix, gunMatrixCosmetic);
 			xyzmove4mat(gunMatrixCosmetic,vec);
@@ -971,14 +951,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 				
 			xyzmove4mat(gunMatrixCosmetic,[0,0,25*modelScale]);	//move forwards
 			gunMatrices.push(gunMatrixCosmetic);
-		}		
-		
-		
-		function drawGun(gunMatrixCosmetic){
-			mat4.set(invertedWorldCamera, mvMatrix);
-			mat4.multiply(mvMatrix,gunMatrixCosmetic);
-			drawObjectFromPreppedBuffers(gunBuffers, shaderProgramColored);
 		}
+		
 		
 		function capGunPointing(pointingDir){
 			//scale such that z=1 - then can cap angle, ensures guns point forward. (TODO handle case that z=0)
@@ -1165,6 +1139,51 @@ function drawWorldScene(frameTime, isCubemapView) {
 			};
 		}
 		
+	}
+	
+	function drawSpaceship(matrix){
+		modelScale=sshipModelScale;
+		//gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.veryDarkGray);	//DARK
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+		
+		mat4.set(invertedWorldCamera, mvMatrix);
+		
+		mat4.multiply(mvMatrix,matrix);		
+		drawObjectFromBuffers(sshipBuffers, shaderProgramColored);
+		
+		//draw guns
+		var gunScale = 50*modelScale;
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [gunScale,gunScale,gunScale]);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.guns);	//GREY
+		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [gunHeat/15,gunHeat/30,gunHeat/45]);
+														
+		prepBuffersForDrawing(gunBuffers, shaderProgramColored);
+		
+		var inverseSshipMat = mat4.create(sshipMatrix); //todo persist this matrix/ store inverseSshipMat*gunMatrix
+		mat4.transpose(inverseSshipMat);
+					
+		for (var mm of gunMatrices){
+			drawGun(mm);
+		}
+		
+		function drawGun(gunMatrix){
+			var inverseGunMat = mat4.create(gunMatrix);
+			mat4.transpose(inverseGunMat);
+
+			//taking the gun matrix rotation relative to the spaceship matrix, then applying this to the cosmetic spaceship matrix (therefore including rendering hack position shift, and version reflected in portal)
+			mat4.identity(mvMatrix);
+			mat4.multiply(mvMatrix, invertedWorldCamera);
+			mat4.multiply(mvMatrix, matrix);
+			mat4.multiply(mvMatrix, inverseSshipMat);
+			mat4.multiply(mvMatrix, gunMatrix);
+			
+			//mat4.set(invertedWorldCamera, mvMatrix);
+			//mat4.multiply(mvMatrix,gunMatrixCosmetic);
+			
+			drawObjectFromPreppedBuffers(gunBuffers, shaderProgramColored);
+		}
 	}
 		
 	function drawBall(matrix){
