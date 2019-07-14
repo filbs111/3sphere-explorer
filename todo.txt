@@ -1,0 +1,22 @@
+speed on laptop
+ vert shader complexity? (comment out player light?)
+ switching buffers? does switching thru cubemap faces to draw duocylinder help?
+ cut landscape sections and cull? gl option to draw subset of indices instead of separate meshes? for some min/max level of heightmap, and some radius of reflector, which parts can never be seen through portal?
+terrain poly collision (tris)
+teapot collision (aribtrary mesh line collision with surface)
+player collision with terrain. 
+player collision with boxes
+landing (landing legs?)
+landing camera. picture in picture?
+*** move explosions with air (eg on duocylinder). what is best way to do this? put explosions in frame of object exploding on?
+***	atmosphere shader + drag
+buildings on duocylinder. seastead for sea! inspiration? virus, zeewolf, gravity force! cooling towers, landing pad
+make virus/zarch style landscape/spaceship
+option to fly virus ship, rocket, character (unity capsule style character), tank, boat... ? winged ship/plane?
+better sea - frag shader waves? LOD mesh projected such that denser nearer player?
+frag lighting?
+make scale much bigger.
+caves, tunnels?
+nested duocylinder world. duocylinders with holes in?
+gravity consistent with wave speed
+faster portal rendering. single camera?
