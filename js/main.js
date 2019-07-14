@@ -26,7 +26,7 @@ function initShaders(){
 					*/	//unused shader
 	shaderProgramColoredPerPixelDiscard = loadShader( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs",{
 					attributes:["aVertexPosition","aVertexNormal"],
-					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uColor","uEmitColor","uFogColor", "uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uColor","uEmitColor","uFogColor", "uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 
 	shaderProgramColoredPerPixelTransparentDiscard = loadShader( "shader-perpixel-transparent-discard-vs", "shader-perpixel-transparent-discard-fs",{
@@ -38,29 +38,31 @@ function initShaders(){
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uModelScale"]
 					});
+					/*
 	shaderProgramTexmapPerPixel = loadShader( "shader-texmap-perpixel-vs", "shader-texmap-perpixel-fs",{
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uModelScale"]
 					});
+					*/
 	shaderProgramTexmapPerPixelDiscard = loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs",{
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
-					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uSampler","uColor","uFogColor","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 					
 	shaderProgramTexmap4Vec = loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs",{
 					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
-					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 					
 	shaderProgramTexmap4VecMapproject = loadShader( "shader-texmap-vs-4vec-mapproject", "shader-texmap-fs-mapproject",{
 					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
-					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uDropLightPos2","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 					
 	//shaderProgramDuocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-flat-fs",{
 	shaderProgramDuocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-texmap-fs",{
 					attributes:["aVertexPosition"],
-					uniforms:["uPMatrix","uMVMatrix","uTime","uDropLightPos","uDropLightPos2","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					uniforms:["uPMatrix","uMVMatrix","uTime","uDropLightPos","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 					
 	shaderProgramCubemap = loadShader( "shader-cubemap-vs", "shader-cubemap-fs",{
@@ -445,7 +447,7 @@ function drawScene(frameTime){
 	}
 	
 	
-	drawWorldScene(frameTime, false);
+	drawWorldScene(frameTime, false, saveWorld);
 	
 	//draw target box ?
 	//var activeShaderProgram = shaderProgramColored;
@@ -524,6 +526,7 @@ function setProjectionMatrix(pMatrix, vFov, ratio, polarity){
 }
 
 var currentWorld=0;
+var sshipWorld=0;	//used for player light
 
 var colorArrs = {
 	white:[1.0, 1.0, 1.0, 1.0],
@@ -839,10 +842,15 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	mat4.set(invertedWorldCamera, lightMat);
 	
-	var dropLightReflectionInfo={};
-	calcReflectionInfo(sshipMatrixShifted,dropLightReflectionInfo);
-	mat4.multiply(lightMat, dropLightReflectionInfo.shaderMatrix2);
-	dropLightPos2 = [lightMat[12], lightMat[13], lightMat[14], lightMat[15]];
+	//only use 1 drop light. should be standard pos'n if drawing same world as light, and reflected pos'n if different
+	//if dropLight in the space that are currently drawing, move it through portal.
+	//TODO /note that 2nd light is relevant if sphere is reflector instead of portal.
+	if (colorsSwitch^sshipWorld){		//TODO also stop drawing spacehip in both worlds (2 copies)
+		var dropLightReflectionInfo={};
+		calcReflectionInfo(sshipMatrixShifted,dropLightReflectionInfo);
+		mat4.multiply(lightMat, dropLightReflectionInfo.shaderMatrix2);
+		dropLightPos = [lightMat[12], lightMat[13], lightMat[14], lightMat[15]];	//todo make light dimmer/directional when "coming out of" portal
+	}
 	
 	//var activeShaderProgram = shaderProgramColored;	//draw spheres
 	var activeShaderProgram = shaderProgramTexmap;	//draw cubes
@@ -864,9 +872,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var boxRad = boxSize*Math.sqrt(3);
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
-	if (activeShaderProgram.uniforms.uDropLightPos2){
-		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos2, dropLightPos2);
-	}
 	
 	if (guiParams.drawShapes['boxes y=z=0']){drawBoxRing(ringCells[0],colorArrs.red);}
 	if (guiParams.drawShapes['boxes x=z=0']){drawBoxRing(ringCells[1],colorArrs.green);}
@@ -1078,7 +1083,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 	gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
 	gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
-	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos2, dropLightPos2);
 	
 	var duocylinderObj = duocylinderObjects[duocylinderModel];
 	
@@ -1101,9 +1105,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 	}
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
-	if (activeShaderProgram.uniforms.uDropLightPos2){
-		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos2, dropLightPos2);
-	}
+
 	//gl.disableVertexAttribArray(1);	//don't need texcoords
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.teapot);	//BLUE
@@ -1202,6 +1204,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		var sphereRad = 0.012;
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [sphereRad,sphereRad,sphereRad]);
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,	matrix);
 		if (frustrumCull(mvMatrix,sphereRad)){
@@ -1849,7 +1852,7 @@ function init(){
 	//logs: Error: WebGL warning: drawElements: Vertex attrib array 2 is enabled but has no buffer bound.
 	//maybe should be using disableVertexAttribArray, but seems that in practice as long as something is bound to the attribute, works, even if active shader not using it
 	//hack is to just prep buffers for a shader that uses the most attributes
-	prepBuffersForDrawing(cubeBuffers, shaderProgramTexmapPerPixel);
+	prepBuffersForDrawing(cubeBuffers, shaderProgramTexmapPerPixelDiscard);
 	
 	function setFog(world,color){
 		var r = parseInt(color.substring(1,3),16) /255;
@@ -2450,6 +2453,7 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		if (!guiParams["drop spaceship"]){
 			mat4.set(playerCamera,sshipMatrixNoInterp);	//todo store gun matrices in player frame instead
+			sshipWorld = currentWorld;
 		}
 		updateGunTargeting(sshipMatrixNoInterp);
 
