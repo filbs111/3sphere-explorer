@@ -845,7 +845,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//only use 1 drop light. should be standard pos'n if drawing same world as light, and reflected pos'n if different
 	//if dropLight in the space that are currently drawing, move it through portal.
 	//TODO /note that 2nd light is relevant if sphere is reflector instead of portal.
-	if (colorsSwitch^sshipWorld){		//TODO also stop drawing spacehip in both worlds (2 copies)
+	if (colorsSwitch^sshipWorld){
 		var dropLightReflectionInfo={};
 		calcReflectionInfo(sshipMatrixShifted,dropLightReflectionInfo);
 		mat4.multiply(lightMat, dropLightReflectionInfo.shaderMatrix2);
@@ -1143,15 +1143,17 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	xyzmove4mat(sshipMatrixShifted, moveAwayVec);
 	
-	drawFunc(sshipMatrixShifted);
-		
-	if (checkWithinReflectorRange(sshipMatrixShifted, Math.tan(Math.atan(reflectorInfo.rad) +0.1))){
-		var portaledMatrix = mat4.create();
-		mat4.set(sshipMatrixShifted, portaledMatrix);
-		moveMatrixThruPortal(portaledMatrix, reflectorInfo.rad, 1);
-		
-		drawFunc(portaledMatrix);
-	}	
+	if (sshipWorld == colorsSwitch){ //only draw spaceship if it's in the world that currently drawing. (TODO this for other objects eg shots)
+		drawFunc(sshipMatrixShifted);
+	}else{
+		if (checkWithinReflectorRange(sshipMatrixShifted, Math.tan(Math.atan(reflectorInfo.rad) +0.1))){
+			var portaledMatrix = mat4.create();
+			mat4.set(sshipMatrixShifted, portaledMatrix);
+			moveMatrixThruPortal(portaledMatrix, reflectorInfo.rad, 1);
+			
+			drawFunc(portaledMatrix);
+		}	
+	}
 	
 	
 	function drawSpaceship(matrix){
