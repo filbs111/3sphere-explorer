@@ -2143,7 +2143,7 @@ var iterateMechanics = (function iterateMechanics(){
 		var critValueRingBox = 1/Math.sqrt(1+3*ringBoxSize*ringBoxSize);
 		
 		//slightly less ridiculous place for this - not declaring functions inside for loop!
-		function checkBulletCollision(bullet){
+		function checkBulletCollision(bullet, bulletMoveAmount){
 			var bulletMatrix=bullet.matrix;
 			
 			var bulletMatrixTransposed = mat4.create();	//instead of transposing matrices describing possible colliding objects orientation.
@@ -2154,7 +2154,7 @@ var iterateMechanics = (function iterateMechanics(){
 			rotate4mat(bulletMatrixTransposedDCRefFrame, 0, 1, duocylinderSpin);
 			
 			var bulletVel=bullet.vel;
-			xyzmove4mat(bulletMatrix,scalarvectorprod(moveAmount,bulletVel));
+			xyzmove4mat(bulletMatrix,scalarvectorprod(bulletMoveAmount,bulletVel));
 			
 			mat4.set(invTargetMat,relativeMat);
 			mat4.multiply(relativeMat, bulletMatrix);
@@ -2414,10 +2414,15 @@ var iterateMechanics = (function iterateMechanics(){
 			//singleExplosion.matrix = bulletMatrix;
 		}
 		
-		for (var b in bullets){
-			var bullet = bullets[b];
-			if (bullet.active){	//TODO just delete/unlink removed objects
-				checkBulletCollision(bullet);
+		var singleStepMove = timeStep*moveSpeed;
+		if (numSteps>0){
+			for (var ii=0;ii<numSteps;ii++){	//TODO make more performant
+				for (var b in bullets){
+					var bullet = bullets[b];
+					if (bullet.active){	//TODO just delete/unlink removed objects
+						checkBulletCollision(bullet, singleStepMove);
+					}
+				}
 			}
 		}
 		
