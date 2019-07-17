@@ -1318,7 +1318,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	gl.depthMask(false);
 	
 	for (var b in bullets){
-		if (bullets[b].active){
+		if (bullets[b].active && bullets[b].world == colorsSwitch){
 			var bulletMatrix=bullets[b].matrix;
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix,bulletMatrix);
@@ -2174,10 +2174,13 @@ var iterateMechanics = (function iterateMechanics(){
 					break;
 			}
 			
-			//collision with duocylinder procedural terrain
-			var bulletPos = [bulletMatrix[12],bulletMatrix[13],bulletMatrix[14],bulletMatrix[15]];	//todo use this elsewhere?
-			if (getHeightAboveTerrainFor4VecPos(bulletPos)<0){detonateBullet(bullet, bulletMatrix);}
-			
+			var terrainModel = (bullet.world==0) ? guiParams.duocylinderModel0 : guiParams.duocylinderModel1;	//todo use array
+					//todo keep bullets in 2 lists/arrays so can check this once per world
+			if (terrainModel == "procTerrain"){
+				//collision with duocylinder procedural terrain
+				var bulletPos = [bulletMatrix[12],bulletMatrix[13],bulletMatrix[14],bulletMatrix[15]];	//todo use this elsewhere?
+				if (getHeightAboveTerrainFor4VecPos(bulletPos)<0){detonateBullet(bullet, bulletMatrix);}
+			}
 			
 			//slow collision detection between bullet and array of boxes.
 			//todo 1 try simple optimisation by matrix/scalar multiplication instead of matrix-matrix
@@ -2662,7 +2665,7 @@ function fireGun(){
 				newFireDirectionVec.push(sum);
 			}			
 			newFireDirectionVec[2]+=muzzleVel;
-			bullets.push({matrix:newBulletMatrix,vel:newFireDirectionVec,active:true});
+			bullets.push({matrix:newBulletMatrix,vel:newFireDirectionVec,world:currentWorld,active:true});
 			
 			new Explosion(gunMatrix, 0.00005, [0.06,0.06,0.06]);	//smoke/steam fx.
 															//TODO emit from hot gun (continue after firing), lighting for smoke (don't see in dark) ...
