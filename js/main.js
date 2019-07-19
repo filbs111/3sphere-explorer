@@ -342,8 +342,7 @@ function drawScene(frameTime){
 	
 	reflectorInfo.rad = guiParams.reflector.scale;
 	
-	
-	var saveWorld = currentWorld;
+	offsetCameraContainer.world = playerContainer.world;
 	
 	mat4.set(playerCameraInterp, offsetPlayerCamera);	
 	//mat4.set(playerCamera, offsetPlayerCamera);	
@@ -352,10 +351,10 @@ function drawScene(frameTime){
 
 	var offsetSteps = 100;
 	var offsetVecStep = offsetCam.getVec().map(function(item){return item/offsetSteps;});
-	portalTest(offsetPlayerCamera,0);
+	portalTest(offsetCameraContainer,0);
 	for (var ii=0;ii<100;ii++){	//TODO more efficient. if insufficient subdivision, transition stepped.
 		xyzmove4mat(offsetPlayerCamera,offsetVecStep);	
-		portalTest(offsetPlayerCamera,0);
+		portalTest(offsetCameraContainer,0);
 	}
 	
 	//move camera away from portal (todo ensure player model movement references offsetPlayerCamera BEFORE this move!
@@ -447,7 +446,7 @@ function drawScene(frameTime){
 	}
 	
 	
-	drawWorldScene(frameTime, false, saveWorld);
+	drawWorldScene(frameTime, false, offsetCameraContainer.world);
 	
 	//draw target box ?
 	//var activeShaderProgram = shaderProgramColored;
@@ -507,8 +506,6 @@ function drawScene(frameTime){
 	
 	gl.disable(gl.BLEND);
 	gl.enable(gl.DEPTH_TEST);
-	
-	currentWorld = saveWorld;
 }
 
 var mainCamFov = 105;	//degrees.
@@ -525,7 +522,6 @@ function setProjectionMatrix(pMatrix, vFov, ratio, polarity){
 	pMatrix[15] = 0;
 }
 
-var currentWorld=0;
 var sshipWorld=0;	//used for player light
 
 var colorArrs = {
@@ -795,7 +791,7 @@ function updateGunTargeting(matrix){
 
 function drawWorldScene(frameTime, isCubemapView) {
 		
-	var colorsSwitch = ((isCubemapView && guiParams.reflector.isPortal)?1:0)^currentWorld;
+	var colorsSwitch = ((isCubemapView && guiParams.reflector.isPortal)?1:0)^offsetCameraContainer.world;
 	
 	var localVecFogColor = worldColors[colorsSwitch];
 	var localVecReflectorColor = guiParams.reflector.isPortal? worldColors[1-colorsSwitch]: worldColors[colorsSwitch];
@@ -1492,6 +1488,8 @@ var pMatrix = mat4.create();
 var playerCamera = mat4.create();
 var playerCameraInterp = mat4.create();
 var offsetPlayerCamera = mat4.create();
+var playerContainer = {matrix:playerCamera, world:0}
+var offsetCameraContainer = {matrix:offsetPlayerCamera, world:0}
 
 var worldCamera = mat4.create();
 
@@ -2439,7 +2437,7 @@ var iterateMechanics = (function iterateMechanics(){
 		}
 		playerLight = playerLightUnscaled.map(function(val){return val*flashAmount});
 		
-		portalTest(playerCamera, 0);	//TODO switch off portal in reflector mode. requires camera changes too.
+		portalTest(playerContainer, 0);	//TODO switch off portal in reflector mode. requires camera changes too.
 		
 		//bounce off portal if reflector
 		if (!guiParams.reflector.isPortal){
@@ -2463,7 +2461,7 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		if (!guiParams["drop spaceship"]){
 			mat4.set(playerCamera,sshipMatrixNoInterp);	//todo store gun matrices in player frame instead
-			sshipWorld = currentWorld;
+			sshipWorld = playerContainer.world;
 		}
 		updateGunTargeting(sshipMatrixNoInterp);
 
@@ -2488,12 +2486,14 @@ function rotateVelVec(velVec,rotateVec){
 	//maybe best is keep a vel quat, and multiply by a thrust quat.
 }
 
-function portalTest(mat, amount){
+function portalTest(obj, amount){
+	var mat = obj.matrix;
+	var world = obj.world;
 	var adjustedRad = reflectorInfo.rad + amount;	//avoid issues with rendering very close to surface
 	if (checkWithinReflectorRange(mat, adjustedRad)){	
 		moveMatrixThruPortal(mat, adjustedRad, 1.00000001);
-		currentWorld=1-currentWorld;
-		console.log("currentWorld now = " + currentWorld);
+		obj.world=1-obj.world;
+		console.log("currentWorld now = " + obj.world);
 	}
 }
 
@@ -2665,7 +2665,7 @@ function fireGun(){
 				newFireDirectionVec.push(sum);
 			}			
 			newFireDirectionVec[2]+=muzzleVel;
-			bullets.push({matrix:newBulletMatrix,vel:newFireDirectionVec,world:currentWorld,active:true});
+			bullets.push({matrix:newBulletMatrix,vel:newFireDirectionVec,world:sshipWorld,active:true});
 			
 			new Explosion(gunMatrix, 0.00005, [0.06,0.06,0.06]);	//smoke/steam fx.
 															//TODO emit from hot gun (continue after firing), lighting for smoke (don't see in dark) ...
