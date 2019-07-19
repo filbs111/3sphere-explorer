@@ -2422,6 +2422,7 @@ var iterateMechanics = (function iterateMechanics(){
 					var bullet = bullets[b];
 					if (bullet.active){	//TODO just delete/unlink removed objects
 						checkBulletCollision(bullet, singleStepMove);
+						portalTest(bullet, 0);
 					}
 				}
 			}
