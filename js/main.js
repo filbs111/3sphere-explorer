@@ -48,6 +48,10 @@ function initShaders(){
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
+	shaderProgramTexmapPerPixelDiscardAtmos = loadShader( "shader-texmap-perpixel-discard-atmos-vs", "shader-texmap-perpixel-discard-fs",{
+					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					});
 					
 	shaderProgramTexmap4Vec = loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs",{
 					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
@@ -815,12 +819,13 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var reflectorPosTransformed = [worldCamera[3],worldCamera[7],worldCamera[11],worldCamera[15]];
 	var cosReflector = 1.0/Math.sqrt(1+reflectorInfo.rad*reflectorInfo.rad);
 	
+	var relevantTexmapShader = guiParams["atmosShader"]?shaderProgramTexmapPerPixelDiscardAtmos:shaderProgramTexmapPerPixelDiscard;
+	
 	shaderProgramColored = guiParams["perPixelLighting"]?shaderProgramColoredPerPixelDiscard:shaderProgramColoredPerVertex;
-	shaderProgramTexmap = guiParams["perPixelLighting"]?shaderProgramTexmapPerPixelDiscard:shaderProgramTexmapPerVertex;
+	shaderProgramTexmap = guiParams["perPixelLighting"]?relevantTexmapShader:shaderProgramTexmapPerVertex;
 	
 	
 	var dropLightPos;
-	var dropLightPos2;	//reflected light
 	if (!guiParams["drop spaceship"]){
 		mat4.set(playerCameraInterp,sshipMatrix);	//copy current player 4-rotation matrix to the spaceship object
 	}
@@ -929,6 +934,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, bb.color);
 		mat4.set(invertedCamera, mvMatrix);
 		mat4.multiply(mvMatrix, bb.matrix);
+		mat4.set(bb.matrix, mMatrix);
 		drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
 	}
 	
@@ -1466,6 +1472,7 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 }
 function drawObjectFromPreppedBuffers(bufferObj, shaderProg){
 	gl.uniformMatrix4fv(shaderProg.uniforms.uMVMatrix, false, mvMatrix);
+	if (shaderProg.uniforms.uMMatrix){gl.uniformMatrix4fv(shaderProg.uniforms.uMMatrix, false, mMatrix);}
 	gl.drawElements(gl.TRIANGLES, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 }
 
@@ -1483,6 +1490,7 @@ var bind2dTextureIfRequired = (function createBind2dTextureIfRequiredFunction(){
 
 //need all of these???
 var moveAwayVec;
+var mMatrix = mat4.create();
 var mvMatrix = mat4.create();
 var pMatrix = mat4.create();
 var playerCamera = mat4.create();
@@ -1501,6 +1509,7 @@ var squareFrustrumCull = generateCullFunc(cmapPMatrix);
 function setMatrixUniforms(shaderProgram) {
     gl.uniformMatrix4fv(shaderProgram.uniforms.uPMatrix, false, pMatrix);
     gl.uniformMatrix4fv(shaderProgram.uniforms.uMVMatrix, false, mvMatrix);
+	if (shaderProgram.uniforms.uMMatrix){gl.uniformMatrix4fv(shaderProgram.uniforms.uMMatrix, false, mMatrix);}
 }
 
 var cubemapFramebuffer;
@@ -1660,7 +1669,8 @@ var guiParams={
 	"targeting":"off",
 	"culling":true,
 	"perPixelLighting":true,
-	fogColor0:'#506050',
+	"atmosShader":true,
+	fogColor0:'#b2dede',
 	fogColor1:'#ff8888',
 	playerLight:'#ffffff',
 	onRails:false,
@@ -1752,6 +1762,7 @@ function init(){
 	displayFolder.add(guiParams, "cameraType", ["cockpit", "near 3rd person", "far 3rd person"]);
 	displayFolder.add(guiParams, "cameraFov", 60,120,5);
 	displayFolder.add(guiParams, "perPixelLighting");
+	displayFolder.add(guiParams, "atmosShader");
 	displayFolder.add(guiParams, "culling");
 	
 	var reflectorFolder = gui.addFolder('reflector');
@@ -2681,4 +2692,7 @@ function fireGun(){
 	}
 	myAudioPlayer.playGunSound(0);	//todo use delay param to play at exact time.
 	gunHeat+=0.1;
+	
+//	var gunJerkAmount = 0.004;
+//	rotatePlayer([(Math.random()-0.5)*gunJerkAmount, (Math.random()-0.5)*gunJerkAmount,0]);
 }
