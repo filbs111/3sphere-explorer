@@ -858,6 +858,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//gl.enableVertexAttribArray(1);	//do need tex coords
 
 	gl.useProgram(activeShaderProgram);
+	
+	if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
+		gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
+	}
 		
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 	if (activeShaderProgram.uniforms.uReflectorDiffColor){
@@ -1055,6 +1059,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 				var thisCell = cellMats[cc];
 				mat4.set(invertedWorldCamera, mvMatrix);
 				mat4.multiply(mvMatrix,thisCell);
+				mat4.set(thisCell, mMatrix);	//not needed in all shaders
 				drawFunc2();
 			}
 		}

@@ -549,6 +549,8 @@
 
 
 <script id="shader-texmap-perpixel-discard-atmos-vs" type="x-shader/x-vertex">
+	#define CONST_ITERS 10.0
+
 	attribute vec3 aVertexPosition;
 	attribute vec3 aVertexNormal;
 	attribute vec2 aTextureCoord;
@@ -574,12 +576,26 @@
 		transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
 		adjustedPos = transformedCoord - uDropLightPos;
 		
-		fog = 0.5*(1.0 + transformedCoord.w);
-
+		//fog = 0.5*(1.0 + transformedCoord.w);
 		//note 1.0 = no fog, 0 = total fog.
 		//more complex fog calculation. show that can have radial dependence. not anything like physically correct!
-		float airDensityAtObj = exp(-dot(worldCoord.xy,worldCoord.xy));
-		fog*=airDensityAtObj; 
+		//float airDensityAtObj = exp(-dot(worldCoord.xy,worldCoord.xy));
+		//fog*=airDensityAtObj; 
+		
+		float dotProd = dot(uCameraWorldPos,worldCoord);
+		float maxAng = acos(dotProd);	//angle from camera to object
+		float maxAngOverIters = maxAng/CONST_ITERS;
+		
+		vec4 normalDirection = normalize(worldCoord - dotProd*uCameraWorldPos);	//point 90 deg around world from camera, in direction of worldCoord
+		float totalTransmit=1.0;
+		float currentAngle;
+		vec4 currentPos;
+		for (float aa=0.0;aa<CONST_ITERS;aa++){
+			currentAngle=maxAngOverIters*aa;
+			currentPos = uCameraWorldPos*cos(currentAngle)+normalDirection*sin(currentAngle);
+			totalTransmit*=1.0-0.01*maxAng*exp(4.0*dot(currentPos.xy,currentPos.xy));	//dependence is unexpected/undesired - fog appear maximal on duocylinder surf, goes back to zero on other side!
+		}
+		fog=totalTransmit;
 		
 		float myZ = aVertexPositionNormalized.w;
 		vTextureCoord = vec3( aTextureCoord.st*myZ, myZ );
