@@ -927,11 +927,12 @@ function drawWorldScene(frameTime, isCubemapView) {
 	for (var bb of duocylinderBoxInfo){
 		drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, invertedWorldCameraDuocylinderFrame);
 	}
-
-	lookupTerrainForPlayerPos();	//TODO in position update (not rendering)
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.003,0.003,0.003]);
-	drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
 	
+	if (guiParams.drawShapes.duoCylinder){	//TODO check procTerrain selected for world that player in
+		lookupTerrainForPlayerPos();	//TODO in position update (not rendering)
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.003,0.003,0.003]);
+		drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
+	}
 	
 	function drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, invertedCamera){
 		var invertedCamera = invertedCamera || invertedWorldCamera;
@@ -2202,7 +2203,7 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			var terrainModel = (bullet.world==0) ? guiParams.duocylinderModel0 : guiParams.duocylinderModel1;	//todo use array
 					//todo keep bullets in 2 lists/arrays so can check this once per world
-			if (terrainModel == "procTerrain"){
+			if (terrainModel == "procTerrain" && guiParams.drawShapes.duoCylinder){
 				//collision with duocylinder procedural terrain
 				var bulletPos = [bulletMatrix[12],bulletMatrix[13],bulletMatrix[14],bulletMatrix[15]];	//todo use this elsewhere?
 				if (getHeightAboveTerrainFor4VecPos(bulletPos)<0){detonateBullet(bullet, bulletMatrix);}
