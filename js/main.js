@@ -951,10 +951,13 @@ function drawWorldScene(frameTime, isCubemapView) {
 											//TODO maybe put multiplications by PI in here so wraps to +/-1 ?
 											//TODO don't use this at runtime.
 											//TODO maybe function to map object onto duocylinder including saddle distortion?
+		mat4.identity(mMatrix);
+		xyzrotate4mat(mMatrix, [0,0,aa]);
+		zmove4mat(mMatrix, bb);
+		xmove4mat(mMatrix, Math.PI/4 - hh);	//or ymove - should check what way up want models to be. PI/4 is onto surface of duocylinder
+		
 		mat4.set(invertedWorldCamera, mvMatrix);
-		xyzrotate4mat(mvMatrix, [0,0,aa]);
-		zmove4mat(mvMatrix, bb);
-		xmove4mat(mvMatrix, Math.PI/4 - hh);	//or ymove - should check what way up want models to be. PI/4 is onto surface of duocylinder
+		mat4.multiply(mvMatrix,mMatrix);
 	}
 	
 	
