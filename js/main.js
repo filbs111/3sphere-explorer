@@ -55,12 +55,12 @@ function initShaders(){
 					
 	shaderProgramTexmap4Vec = loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs",{
 					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
-					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 					
 	shaderProgramTexmap4VecMapproject = loadShader( "shader-texmap-vs-4vec-mapproject", "shader-texmap-fs-mapproject",{
 					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
-					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 					
 	//shaderProgramDuocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-flat-fs",{
