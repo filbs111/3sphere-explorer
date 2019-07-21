@@ -549,7 +549,7 @@
 
 
 <script id="shader-texmap-perpixel-discard-atmos-vs" type="x-shader/x-vertex">
-	#define CONST_ITERS 10.0
+	#define CONST_ITERS 8.0
 
 	attribute vec3 aVertexPosition;
 	attribute vec3 aVertexNormal;
@@ -596,7 +596,7 @@
 			currentPos = uCameraWorldPos*cos(currentAngle)+normalDirection*sin(currentAngle);
 			totalPath+=exp(5.0*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
 		}
-		fog=exp(-0.02*totalPath*maxAng);
+		fog=exp(-0.2*totalPath*maxAngOverIters);
 		
 		float myZ = aVertexPositionNormalized.w;
 		vTextureCoord = vec3( aTextureCoord.st*myZ, myZ );
@@ -657,7 +657,7 @@
 
 <!-- vertex shader with tex coords and 4vector input positions (instead of projected 3vectors.)-->
 <script id="shader-texmap-vs-4vec-mapproject" type="x-shader/x-vertex">
-	#define CONST_ITERS 10.0
+	#define CONST_ITERS 8.0
 
 	attribute vec4 aVertexPosition;
 	attribute vec4 aVertexNormal;
@@ -704,7 +704,7 @@
 			currentPos = uCameraWorldPos*cos(currentAngle)+normalDirection*sin(currentAngle);
 			totalPath+=exp(5.0*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
 		}
-		fog=exp(-0.02*totalPath*maxAng);
+		fog=exp(-0.2*totalPath*maxAngOverIters);
 		
 		//vec4 transformedNormal = uMVMatrix * aVertexNormal;	//normals code is buggy
 		vec4 transformedNormal = uMVMatrix * aVertexNormal;	
