@@ -905,12 +905,13 @@ function drawWorldScene(frameTime, isCubemapView) {
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 	
-	if (guiParams.drawShapes['boxes y=z=0']){drawBoxRing(ringCells[0],colorArrs.red);}
-	if (guiParams.drawShapes['boxes x=z=0']){drawBoxRing(ringCells[1],colorArrs.green);}
-	if (guiParams.drawShapes['boxes x=y=0']){drawBoxRing(ringCells[2],colorArrs.blue);}
-	if (guiParams.drawShapes['boxes z=w=0']){drawBoxRing(ringCells[3],colorArrs.yellow);}
-	if (guiParams.drawShapes['boxes y=w=0']){drawBoxRing(ringCells[4],colorArrs.magenta);}
-	if (guiParams.drawShapes['boxes x=w=0']){drawBoxRing(ringCells[5],colorArrs.cyan);}
+	var guiBoxes = guiParams.drawShapes.boxes;
+	if (guiBoxes['y=z=0']){drawBoxRing(ringCells[0],colorArrs.red);}
+	if (guiBoxes['x=z=0']){drawBoxRing(ringCells[1],colorArrs.green);}
+	if (guiBoxes['x=y=0']){drawBoxRing(ringCells[2],colorArrs.blue);}
+	if (guiBoxes['z=w=0']){drawBoxRing(ringCells[3],colorArrs.yellow);}
+	if (guiBoxes['y=w=0']){drawBoxRing(ringCells[4],colorArrs.magenta);}
+	if (guiBoxes['x=w=0']){drawBoxRing(ringCells[5],colorArrs.cyan);}
 	
 	function drawBoxRing(ringCellMatData,color){
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, color);
@@ -1156,7 +1157,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.teapot);	//BLUE
 	gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0.1,0.3]);	//some emission
-	modelScale = guiParams["teapot scale"];
+	modelScale = guiParams.drawShapes["teapot scale"];
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 
 	
@@ -1166,7 +1167,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 	//}
 	
-	if (guiParams["draw teapot"]){
+	if (guiParams.drawShapes["draw teapot"]){
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,teapotMatrix);		
 		drawObjectFromBuffers(teapotBuffers, shaderProgramColored);
@@ -1706,12 +1707,16 @@ var guiParams={
 	duocylinderModel1:"terrain",
 	duocylinderRotateSpeed:0,
 	drawShapes:{
-		'boxes y=z=0':true,	//x*x+w*w=1
-		'boxes x=z=0':true,	//y*y+w*w=1
-		'boxes x=y=0':true,	//z*z+w*w=1
-		'boxes x=w=0':true,
-		'boxes y=w=0':true,
-		'boxes z=w=0':true
+		boxes:{
+		'y=z=0':true,	//x*x+w*w=1
+		'x=z=0':true,	//y*y+w*w=1
+		'x=y=0':true,	//z*z+w*w=1
+		'x=w=0':true,
+		'y=w=0':true,
+		'z=w=0':true
+		},
+		"draw teapot":true,
+		"teapot scale":0.7
 	},
 	'random boxes':{
 		number:0,
@@ -1726,8 +1731,6 @@ var guiParams={
 	"24-cell scale":1,
 	"draw 120-cell":false,
 	"draw 600-cell":false,
-	"draw teapot":true,
-	"teapot scale":0.7,
 	"draw spaceship":true,
 	"drop spaceship":false,
 	target:{
@@ -1796,13 +1799,16 @@ function init(){
 	drawShapesFolder.add(guiParams, "duocylinderModel0", ["grid","terrain","procTerrain","sea",'none'] );
 	drawShapesFolder.add(guiParams, "duocylinderModel1", ["grid","terrain","procTerrain","sea",'none'] );
 	drawShapesFolder.add(guiParams, "duocylinderRotateSpeed", -2.5,2.5,0.25);
-	for (shape in guiParams.drawShapes){
+	var boxesFolder = drawShapesFolder.addFolder('boxes');
+	for (shape in guiParams.drawShapes.boxes){
 		console.log(shape);
-		drawShapesFolder.add(guiParams.drawShapes, shape );
+		boxesFolder.add(guiParams.drawShapes.boxes, shape );
 	}
 	var randBoxesFolder = drawShapesFolder.addFolder("random boxes");
 	randBoxesFolder.add(guiParams["random boxes"],"number",0,1000,50);
 	randBoxesFolder.add(guiParams["random boxes"],"size",0.01,0.05,0.01);
+	drawShapesFolder.add(guiParams.drawShapes,"draw teapot");
+	drawShapesFolder.add(guiParams.drawShapes,"teapot scale",0.2,2.0,0.05);
 	
 	var polytopesFolder = gui.addFolder('polytopes');
 	polytopesFolder.add(guiParams,"draw 5-cell");
@@ -1814,8 +1820,6 @@ function init(){
 	polytopesFolder.add(guiParams,"24-cell scale",0.05,2.0,0.05);
 	polytopesFolder.add(guiParams,"draw 120-cell");
 	polytopesFolder.add(guiParams,"draw 600-cell");
-	gui.add(guiParams,"draw teapot");
-	gui.add(guiParams,"teapot scale",0.2,2.0,0.05);
 	gui.add(guiParams,"draw spaceship",true);
 	gui.add(guiParams, "drop spaceship",false);
 	
@@ -2269,12 +2273,13 @@ var iterateMechanics = (function iterateMechanics(){
 			//todo 3 heirarchical bounding boxes or gridding system!
 			
 			//box rings
-			if (guiParams.drawShapes['boxes y=z=0']){checkCollisionForBoxRing(ringCells[0]);}
-			if (guiParams.drawShapes['boxes x=z=0']){checkCollisionForBoxRing(ringCells[1]);}
-			if (guiParams.drawShapes['boxes x=y=0']){checkCollisionForBoxRing(ringCells[2]);}
-			if (guiParams.drawShapes['boxes z=w=0']){checkCollisionForBoxRing(ringCells[3]);}
-			if (guiParams.drawShapes['boxes y=w=0']){checkCollisionForBoxRing(ringCells[4]);}
-			if (guiParams.drawShapes['boxes x=w=0']){checkCollisionForBoxRing(ringCells[5]);}
+			var guiBoxes= guiParams.drawShapes.boxes;
+			if (guiBoxes['y=z=0']){checkCollisionForBoxRing(ringCells[0]);}
+			if (guiBoxes['x=z=0']){checkCollisionForBoxRing(ringCells[1]);}
+			if (guiBoxes['x=y=0']){checkCollisionForBoxRing(ringCells[2]);}
+			if (guiBoxes['z=w=0']){checkCollisionForBoxRing(ringCells[3]);}
+			if (guiBoxes['y=w=0']){checkCollisionForBoxRing(ringCells[4]);}
+			if (guiBoxes['x=w=0']){checkCollisionForBoxRing(ringCells[5]);}
 			
 			function checkCollisionForBoxRing(ringCellMats){	//todo combine with below (random boxes)
 				for (var ii=0;ii<ringCellMats.length;ii++){
