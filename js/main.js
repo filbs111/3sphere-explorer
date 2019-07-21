@@ -474,7 +474,7 @@ function drawScene(frameTime){
 	//xyzmove4mat(worldCamera,[0,0,0.005]);	//forward camera
 	
 	if (reverseCamera){
-		xyzrotate4mat(worldCamera,[Math.PI,0,0]);	//flip 180
+		xyzrotate4mat(worldCamera, (guiParams.flipReverseCamera? [Math.PI,0,0]:[0,Math.PI,0] ));	//flip 180
 	}
 	
 	
@@ -1750,6 +1750,7 @@ var guiParams={
 	spinCorrection:true,
 	cameraType:"near 3rd person",
 	cameraFov:105,
+	flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
 	reflector:{
 		draw:true,
 		cmFacesUpdated:6,
@@ -1837,6 +1838,7 @@ function init(){
 	var displayFolder = gui.addFolder('display');	//control and movement
 	displayFolder.add(guiParams, "cameraType", ["cockpit", "near 3rd person", "far 3rd person", "side"]);
 	displayFolder.add(guiParams, "cameraFov", 60,120,5);
+	displayFolder.add(guiParams, "flipReverseCamera");
 	displayFolder.add(guiParams, "perPixelLighting");
 	displayFolder.add(guiParams, "atmosShader");
 	displayFolder.add(guiParams, "atmosThickness", 0,0.5,0.05);
