@@ -473,50 +473,56 @@ function drawScene(frameTime){
 	
 	drawWorldScene(frameTime, false, offsetCameraContainer.world);
 	
-	//draw target box ?
-	//var activeShaderProgram = shaderProgramColored;
-	var activeShaderProgram = shaderProgramDecal;
-	gl.useProgram(activeShaderProgram);
-	
-	gl.disable(gl.DEPTH_TEST);	
-	
-	prepBuffersForDrawing(quadBuffers, activeShaderProgram);
-	
-	gl.activeTexture(gl.TEXTURE0);		//TODO put inside other function (prepbuffers) to avoid assigning then reassigning texture. should
-										//retain texture info with other object info. also can avoid setting when unchanged.
-	
-	gl.enable(gl.BLEND);
-	gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);	
+	if (!guiParams["drop spaceship"]){	//only draw hud if haven't dropped spaceship
+		
+		//draw target box ?
+		//var activeShaderProgram = shaderProgramColored;
+		var activeShaderProgram = shaderProgramDecal;
+		gl.useProgram(activeShaderProgram);
+		
+		gl.disable(gl.DEPTH_TEST);	
+		
+		prepBuffersForDrawing(quadBuffers, activeShaderProgram);
+		
+		gl.activeTexture(gl.TEXTURE0);		//TODO put inside other function (prepbuffers) to avoid assigning then reassigning texture. should
+											//retain texture info with other object info. also can avoid setting when unchanged.
+		
+		gl.enable(gl.BLEND);
+		gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);	
 
-	//direction of flight
-	if (playerVelVec[2] > 0.1){	//??
-		bind2dTextureIfRequired(hudTexturePlus);		//todo texture atlas for all hud 
-		drawTargetDecal(0.001, colorArrs.hudFlightDir, playerVelVec);
-	}
-	bind2dTextureIfRequired(hudTexture);	
-	
-	//drawTargetDecal(0.004, [1.0, 1.0, 0.0, 0.5], [0,0,0.01]);	//camera near plane. todo render with transparency
-	if (guiParams["targeting"]!="off"){
-		var shiftAmount = 1/muzzleVel;	//shift according to player velocity. 0.1 could be 1, but 
-		drawTargetDecal(0.0037/(1+shiftAmount*playerVelVec[2]), colorArrs.hudYellow, [shiftAmount*playerVelVec[0],shiftAmount*playerVelVec[1],1+shiftAmount*playerVelVec[2]]);	//TODO vector add!
-		
-		if (guiParams.target.type!="none" && targetWorldFrame[2]<0){	//if in front of player){
-			bind2dTextureIfRequired(hudTextureBox);				
-			drawTargetDecal(0.001, colorArrs.hudBox, targetWorldFrame);	//direction to target (shows where target is on screen)
-								//TODO put where is on screen, not direction from spaceship (obvious difference in 3rd person)
-			//bind2dTextureIfRequired(hudTextureSmallCircles);	
-			//drawTargetDecal(0.0008, [1, 0.1, 1, 0.5], selectedTargeting);	//where should shoot in order to hit target (accounting for player velocity)
-				//not required if using shifted gun direction circle
-		
-			//drawTargetDecal(0.0006, [1, 1, 1, 1], targetingResultOne);
-			//drawTargetDecal(0.0006, [0, 0, 0, 1], targetingResultTwo);
+		//direction of flight
+		if (playerVelVec[2] > 0.1){	//??
+			bind2dTextureIfRequired(hudTexturePlus);		//todo texture atlas for all hud 
+			drawTargetDecal(0.001, colorArrs.hudFlightDir, playerVelVec);
 		}
-	}
-	
-	//show where guns will shoot
-	if (fireDirectionVec[2] > 0.1){	//??
-		bind2dTextureIfRequired(hudTextureX);
-		drawTargetDecal(0.001, colorArrs.hudYellow, fireDirectionVec);	//todo check whether this colour already set
+		bind2dTextureIfRequired(hudTexture);	
+		
+		//drawTargetDecal(0.004, [1.0, 1.0, 0.0, 0.5], [0,0,0.01]);	//camera near plane. todo render with transparency
+		if (guiParams["targeting"]!="off"){
+			var shiftAmount = 1/muzzleVel;	//shift according to player velocity. 0.1 could be 1, but 
+			drawTargetDecal(0.0037/(1+shiftAmount*playerVelVec[2]), colorArrs.hudYellow, [shiftAmount*playerVelVec[0],shiftAmount*playerVelVec[1],1+shiftAmount*playerVelVec[2]]);	//TODO vector add!
+			
+			if (guiParams.target.type!="none" && targetWorldFrame[2]<0){	//if in front of player){
+				bind2dTextureIfRequired(hudTextureBox);				
+				drawTargetDecal(0.001, colorArrs.hudBox, targetWorldFrame);	//direction to target (shows where target is on screen)
+									//TODO put where is on screen, not direction from spaceship (obvious difference in 3rd person)
+				//bind2dTextureIfRequired(hudTextureSmallCircles);	
+				//drawTargetDecal(0.0008, [1, 0.1, 1, 0.5], selectedTargeting);	//where should shoot in order to hit target (accounting for player velocity)
+					//not required if using shifted gun direction circle
+			
+				//drawTargetDecal(0.0006, [1, 1, 1, 1], targetingResultOne);
+				//drawTargetDecal(0.0006, [0, 0, 0, 1], targetingResultTwo);
+			}
+		}
+		
+		//show where guns will shoot
+		if (fireDirectionVec[2] > 0.1){	//??
+			bind2dTextureIfRequired(hudTextureX);
+			drawTargetDecal(0.001, colorArrs.hudYellow, fireDirectionVec);	//todo check whether this colour already set
+		}
+		
+		gl.disable(gl.BLEND);
+		gl.enable(gl.DEPTH_TEST);
 	}
 	
 	function drawTargetDecal(scale, color, pos){
@@ -528,9 +534,6 @@ function drawScene(frameTime){
 			drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
 	}
 	
-	
-	gl.disable(gl.BLEND);
-	gl.enable(gl.DEPTH_TEST);
 }
 
 var mainCamFov = 105;	//degrees.
