@@ -1100,34 +1100,35 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	var duocylinderModel = (colorsSwitch==0) ? guiParams.duocylinderModel0 : guiParams.duocylinderModel1;	//todo use array
 	
-	//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
-	if (!duocylinderObjects[duocylinderModel].isSea){
-		activeShaderProgram = duocylinderObjects[duocylinderModel].useMapproject? (guiParams["atmosShader"]?shaderProgramTexmap4VecMapprojectAtmos:shaderProgramTexmap4VecMapproject) : (guiParams["atmosShader"]?shaderProgramTexmap4VecAtmos:shaderProgramTexmap4Vec);
-		gl.useProgram(activeShaderProgram);
-	}else{
-		activeShaderProgram = guiParams["atmosShader"]?shaderProgramDuocylinderSeaAtmos:shaderProgramDuocylinderSea;
-		gl.useProgram(activeShaderProgram);
-		gl.uniform1fv(activeShaderProgram.uniforms.uTime, [0.00005*(frameTime % 20000 )]);	//20s loop
-	}
-	if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
-		gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
-	}
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+	if (duocylinderModel!='none'){	//x*x+y*y=z*z+w*w
+		
+		//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
+		if (!duocylinderObjects[duocylinderModel].isSea){
+			activeShaderProgram = duocylinderObjects[duocylinderModel].useMapproject? (guiParams["atmosShader"]?shaderProgramTexmap4VecMapprojectAtmos:shaderProgramTexmap4VecMapproject) : (guiParams["atmosShader"]?shaderProgramTexmap4VecAtmos:shaderProgramTexmap4Vec);
+			gl.useProgram(activeShaderProgram);
+		}else{
+			activeShaderProgram = guiParams["atmosShader"]?shaderProgramDuocylinderSeaAtmos:shaderProgramDuocylinderSea;
+			gl.useProgram(activeShaderProgram);
+			gl.uniform1fv(activeShaderProgram.uniforms.uTime, [0.00005*(frameTime % 20000 )]);	//20s loop
+		}
+		if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
+			gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
+		}
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+		
+		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
+		if (activeShaderProgram.uniforms.uReflectorDiffColor){
+				gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
+		}
+		if (activeShaderProgram.uniforms.uPlayerLightColor){
+			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
+		}
+		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
+		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
+		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
+		
+		var duocylinderObj = duocylinderObjects[duocylinderModel];
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
-	if (activeShaderProgram.uniforms.uReflectorDiffColor){
-			gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
-	}
-	if (activeShaderProgram.uniforms.uPlayerLightColor){
-		gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
-	}
-	gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
-	gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
-	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
-	
-	var duocylinderObj = duocylinderObjects[duocylinderModel];
-	
-	if (guiParams.drawShapes['duoCylinder']){	//x*x+y*y=z*z+w*w
 		mat4.set(invertedWorldCamera, mvMatrix);
 		rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
 		
@@ -1705,7 +1706,6 @@ var guiParams={
 	duocylinderModel1:"terrain",
 	duocylinderRotateSpeed:0,
 	drawShapes:{
-		'duoCylinder':true,	//x*x+y*y=z*z+w*w
 		'boxes y=z=0':true,	//x*x+w*w=1
 		'boxes x=z=0':true,	//y*y+w*w=1
 		'boxes x=y=0':true,	//z*z+w*w=1
@@ -1793,8 +1793,8 @@ function init(){
 		setPlayerLight(color);
 	});
 	var drawShapesFolder = gui.addFolder('drawShapes');
-	drawShapesFolder.add(guiParams, "duocylinderModel0", ["grid","terrain","procTerrain","sea"] );
-	drawShapesFolder.add(guiParams, "duocylinderModel1", ["grid","terrain","procTerrain","sea"] );
+	drawShapesFolder.add(guiParams, "duocylinderModel0", ["grid","terrain","procTerrain","sea",'none'] );
+	drawShapesFolder.add(guiParams, "duocylinderModel1", ["grid","terrain","procTerrain","sea",'none'] );
 	drawShapesFolder.add(guiParams, "duocylinderRotateSpeed", -2.5,2.5,0.25);
 	for (shape in guiParams.drawShapes){
 		console.log(shape);
@@ -2257,7 +2257,7 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			var terrainModel = (bullet.world==0) ? guiParams.duocylinderModel0 : guiParams.duocylinderModel1;	//todo use array
 					//todo keep bullets in 2 lists/arrays so can check this once per world
-			if (terrainModel == "procTerrain" && guiParams.drawShapes.duoCylinder){
+			if (terrainModel == "procTerrain"){
 				//collision with duocylinder procedural terrain
 				var bulletPos = [bulletMatrix[12],bulletMatrix[13],bulletMatrix[14],bulletMatrix[15]];	//todo use this elsewhere?
 				if (getHeightAboveTerrainFor4VecPos(bulletPos)<0){detonateBullet(bullet, bulletMatrix);}
