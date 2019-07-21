@@ -13,6 +13,7 @@ var shaderProgramColored,
 	shaderProgramTexmap4VecMapproject,
 	shaderProgramTexmap4VecMapprojectAtmos,
 	shaderProgramDuocylinderSea,
+	shaderProgramDuocylinderSeaAtmos,
 	shaderProgramCubemap,
 	shaderProgramVertprojCubemap,
 	shaderProgramDecal;
@@ -78,6 +79,10 @@ function initShaders(){
 	shaderProgramDuocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-texmap-fs",{
 					attributes:["aVertexPosition"],
 					uniforms:["uPMatrix","uMVMatrix","uTime","uDropLightPos","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					});
+	shaderProgramDuocylinderSeaAtmos = loadShader( "shader-texmap-vs-duocylinder-sea-atmos", "shader-texmap-fs",{
+					attributes:["aVertexPosition"],
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uTime","uDropLightPos","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 					
 	shaderProgramCubemap = loadShader( "shader-cubemap-vs", "shader-cubemap-fs",{
@@ -1083,14 +1088,13 @@ function drawWorldScene(frameTime, isCubemapView) {
 	if (!duocylinderObjects[duocylinderModel].isSea){
 		activeShaderProgram = duocylinderObjects[duocylinderModel].useMapproject? (guiParams["atmosShader"]?shaderProgramTexmap4VecMapprojectAtmos:shaderProgramTexmap4VecMapproject) : (guiParams["atmosShader"]?shaderProgramTexmap4VecAtmos:shaderProgramTexmap4Vec);
 		gl.useProgram(activeShaderProgram);
-		
-		if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
-			gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
-		}
 	}else{
-		activeShaderProgram = shaderProgramDuocylinderSea;
+		activeShaderProgram = guiParams["atmosShader"]?shaderProgramDuocylinderSeaAtmos:shaderProgramDuocylinderSea;
 		gl.useProgram(activeShaderProgram);
 		gl.uniform1fv(activeShaderProgram.uniforms.uTime, [0.00005*(frameTime % 20000 )]);	//20s loop
+	}
+	if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
+		gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
 	}
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
 	
