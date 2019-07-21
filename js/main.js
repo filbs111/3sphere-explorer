@@ -1738,7 +1738,7 @@ var guiParams={
 	"culling":true,
 	"perPixelLighting":true,
 	"atmosShader":true,
-	"atmosThickness":1.0,
+	"atmosThickness":0.2,
 	"atmosContrast":5.0,
 	fogColor0:'#b2dede',
 	fogColor1:'#ff8888',
@@ -1833,7 +1833,7 @@ function init(){
 	displayFolder.add(guiParams, "cameraFov", 60,120,5);
 	displayFolder.add(guiParams, "perPixelLighting");
 	displayFolder.add(guiParams, "atmosShader");
-	displayFolder.add(guiParams, "atmosThickness", 0,2,0.1);
+	displayFolder.add(guiParams, "atmosThickness", 0,0.5,0.05);
 	displayFolder.add(guiParams, "atmosContrast", -10,10,0.5);
 	displayFolder.add(guiParams, "culling");
 	
