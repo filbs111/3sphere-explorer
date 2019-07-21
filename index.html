@@ -1290,6 +1290,64 @@
 </script>
 
 
+<script id="shader-cubemap-vertproj-vs-atmos" type="x-shader/x-vertex">
+	#define CONST_ITERS 8.0
+	
+	attribute vec3 aVertexPosition;
+	uniform mat4 uMMatrix;
+	uniform mat4 uMVMatrix;
+	uniform mat4 uPMatrix;
+	uniform vec4 uCameraWorldPos;
+	varying vec3 vPos;
+	varying float fog;	//TODO remove (fog should be applied at cubemap generation (unless fog is exponential decay)
+	uniform vec3 uModelScale;
+	uniform mat4 uPosShiftMat;
+	uniform vec3 uCentrePosScaled;	//this is position of cubemap centre point in unprojected model space
+	uniform float uPolarity;
+	
+	void main(void) {
+		float csq = dot(uCentrePosScaled,uCentrePosScaled);
+		float cdotp = dot(uCentrePosScaled, -aVertexPosition);
+		float a = pow((1.0-csq)+cdotp*cdotp, 0.5) - cdotp;
+		vec3 scaledVertexPosition = aVertexPosition*a;
+	
+		vec4 aVertexPositionNormalized = normalize(vec4( uModelScale*(scaledVertexPosition-uCentrePosScaled), 1.0));	
+		
+		vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
+		vec4 worldCoord = uMMatrix * aVertexPositionNormalized;
+
+		/*
+		fog = 0.5*(1.0 + transformedCoord.w);
+		//note 1.0 = no fog, 0 = total fog.
+		//more complex fog calculation. show that can have radial dependence. not anything like physically correct!
+		float airDensityAtObj = exp(-dot(worldCoord.xy,worldCoord.xy));
+		fog*=airDensityAtObj; 
+		*/
+		
+		//although this is used for "per pixel" version, currently calculating fog per vertex.
+		
+		float dotProd = dot(uCameraWorldPos,worldCoord);
+		float maxAng = acos(dotProd);	//angle from camera to object
+		float maxAngOverIters = maxAng/CONST_ITERS;
+		
+		vec4 normalDirection = normalize(worldCoord - dotProd*uCameraWorldPos);	//point 90 deg around world from camera, in direction of worldCoord
+		float totalPath=0.0;
+		float currentAngle;
+		vec4 currentPos;
+		for (float aa=0.0;aa<CONST_ITERS;aa++){
+			currentAngle=maxAngOverIters*aa;
+			currentPos = uCameraWorldPos*cos(currentAngle)+normalDirection*sin(currentAngle);
+			totalPath+=exp(5.0*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
+		}
+		fog=exp(-0.2*totalPath*maxAngOverIters);
+	
+		gl_Position = uPMatrix * transformedCoord;
+		
+		vPos = uPolarity * (uPosShiftMat*aVertexPositionNormalized).xyz;
+	}
+</script>
+
+
 
 
 <script type="text/javascript" src="js/main.js"></script>

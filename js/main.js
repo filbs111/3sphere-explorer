@@ -17,6 +17,7 @@ var shaderProgramColored,
 	shaderProgramDuocylinderSeaAtmos,
 	shaderProgramCubemap,
 	shaderProgramVertprojCubemap,
+	shaderProgramVertprojCubemapAtmos,
 	shaderProgramDecal;
 function initShaders(){				
 	shaderProgramColoredPerVertex = loadShader( "shader-simple-vs", "shader-simple-fs",{
@@ -98,6 +99,10 @@ function initShaders(){
 	shaderProgramVertprojCubemap = loadShader( "shader-cubemap-vertproj-vs", "shader-cubemap-fs",{
 					attributes:["aVertexPosition"],
 					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor","uModelScale", "uPosShiftMat","uCentrePosScaled","uPolarity"]
+					});
+	shaderProgramVertprojCubemapAtmos = loadShader( "shader-cubemap-vertproj-vs-atmos", "shader-cubemap-fs",{
+					attributes:["aVertexPosition"],
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uSampler","uColor","uFogColor","uModelScale", "uPosShiftMat","uCentrePosScaled","uPolarity"]
 					});
 					
 	shaderProgramDecal = loadShader( "shader-decal-vs", "shader-decal-fs",{
@@ -1310,7 +1315,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			activeShaderProgram = shaderProgramCubemap;
 			break;
 			case 'vertex projection':
-			activeShaderProgram = shaderProgramVertprojCubemap;
+			activeShaderProgram = guiParams["atmosShader"]?shaderProgramVertprojCubemapAtmos:shaderProgramVertprojCubemap;
 			break;
 		}
 		gl.useProgram(activeShaderProgram);
