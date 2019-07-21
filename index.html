@@ -650,10 +650,83 @@
 	
 	void main(void) {
 		vec4 transformedCoord = uMVMatrix * aVertexPosition;
-		
 		gl_Position = uPMatrix * transformedCoord;
 		
 		fog = 0.5*(1.0 + transformedCoord.w);
+		
+		vec4 transformedNormal = uMVMatrix * aVertexNormal;
+		vec4 adjustedPos = transformedCoord - uDropLightPos;
+		float light = -dot( normalize(adjustedPos), transformedNormal);
+		light = max(light,0.0);	//unnecessary if camera pos = light pos
+		light/=1.0 + 4.2*dot(adjustedPos,adjustedPos);		//terms higher than other shaders by sqrt(2) because length
+															//of 1,0,0,0 -> 0,1,0,0 (90 deg around world)
+		//TODO can process multiple lights using matrix?
+		
+		veclight=uPlayerLightColor*light;
+		
+		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
+	
+		//light from portal. TODO pass in a colour for this, more complex lighting (at surface of portal, should be hemispherical light etc)
+		//this is just bodged/guessed to achieve correct behaviour at/across portal. TODO check/correct!
+		float portalLight = dot( uReflectorPos, transformedNormal);
+		
+		portalLight = max(0.5*portalLight +0.5+ posCosDiff,0.0);	//unnecessary if camera pos = light pos
+		//falloff
+		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
+				
+		veclight+=uReflectorDiffColor*portalLight;
+				
+		vTextureCoord = vec3( aTextureCoord.st, 1.0 );
+	}
+</script>
+
+<script id="shader-texmap-vs-4vec-atmos" type="x-shader/x-vertex">
+	#define CONST_ITERS 8.0
+
+	attribute vec4 aVertexPosition;
+	attribute vec4 aVertexNormal;
+	attribute vec2 aTextureCoord;
+	varying vec3 vTextureCoord;
+	uniform mat4 uMMatrix;
+	uniform mat4 uMVMatrix;
+	uniform mat4 uPMatrix;
+	uniform vec4 uCameraWorldPos;
+	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
+	uniform vec3 uPlayerLightColor;
+	uniform vec3 uReflectorDiffColor;
+	uniform vec4 uReflectorPos;
+	uniform float uReflectorCos;
+	varying float fog;
+	varying vec3 veclight;
+	
+	void main(void) {
+		vec4 transformedCoord = uMVMatrix * aVertexPosition;
+		vec4 worldCoord = uMMatrix * aVertexPosition;
+		gl_Position = uPMatrix * transformedCoord;
+		
+		/*
+		fog = 0.5*(1.0 + transformedCoord.w);
+		//note 1.0 = no fog, 0 = total fog.
+		//more complex fog calculation. show that can have radial dependence. not anything like physically correct!
+		float airDensityAtObj = exp(-dot(worldCoord.xy,worldCoord.xy));
+		fog*=airDensityAtObj; 
+		*/
+		
+		float dotProd = dot(uCameraWorldPos,worldCoord);
+		float maxAng = acos(dotProd);	//angle from camera to object
+		float maxAngOverIters = maxAng/CONST_ITERS;
+		
+		vec4 normalDirection = normalize(worldCoord - dotProd*uCameraWorldPos);	//point 90 deg around world from camera, in direction of worldCoord
+		float totalPath=0.0;
+		float currentAngle;
+		vec4 currentPos;
+		for (float aa=0.0;aa<CONST_ITERS;aa++){
+			currentAngle=maxAngOverIters*aa;
+			currentPos = uCameraWorldPos*cos(currentAngle)+normalDirection*sin(currentAngle);
+			totalPath+=exp(5.0*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
+		}
+		fog=exp(-0.2*totalPath*maxAngOverIters);
+		
 		
 		vec4 transformedNormal = uMVMatrix * aVertexNormal;
 		vec4 adjustedPos = transformedCoord - uDropLightPos;

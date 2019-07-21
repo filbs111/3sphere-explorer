@@ -9,6 +9,7 @@ var shaderProgramColored,
 	shaderProgramTexmapPerPixelDiscard,
 	shaderProgramTexmapPerPixelDiscardAtmos,
 	shaderProgramTexmap4Vec,
+	shaderProgramTexmap4VecAtmos,
 	shaderProgramTexmap4VecMapproject,
 	shaderProgramTexmap4VecMapprojectAtmos,
 	shaderProgramDuocylinderSea,
@@ -58,6 +59,10 @@ function initShaders(){
 	shaderProgramTexmap4Vec = loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs",{
 					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					});
+	shaderProgramTexmap4VecAtmos = loadShader( "shader-texmap-vs-4vec-atmos", "shader-texmap-fs",{
+					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 					
 	shaderProgramTexmap4VecMapproject = loadShader( "shader-texmap-vs-4vec-mapproject", "shader-texmap-fs-mapproject",{
@@ -1076,7 +1081,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
 	if (!duocylinderObjects[duocylinderModel].isSea){
-		activeShaderProgram = duocylinderObjects[duocylinderModel].useMapproject? (guiParams["atmosShader"]?shaderProgramTexmap4VecMapprojectAtmos:shaderProgramTexmap4VecMapproject) : shaderProgramTexmap4Vec;
+		activeShaderProgram = duocylinderObjects[duocylinderModel].useMapproject? (guiParams["atmosShader"]?shaderProgramTexmap4VecMapprojectAtmos:shaderProgramTexmap4VecMapproject) : (guiParams["atmosShader"]?shaderProgramTexmap4VecAtmos:shaderProgramTexmap4Vec);
 		gl.useProgram(activeShaderProgram);
 		
 		if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
@@ -1451,8 +1456,10 @@ function drawTennisBall(duocylinderObj, shader){
 				setMatrixUniforms(shader);
 				gl.drawElements(duocylinderObj.isStrips? gl.TRIANGLE_STRIP : gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 				rotate4mat(mvMatrix, 0, 1, duocylinderObj.step);
+				rotate4mat(mMatrix, 0, 1, duocylinderObj.step);
 			}
 			rotate4mat(mvMatrix, 2, 3, duocylinderObj.step);
+			rotate4mat(mMatrix, 2, 3, duocylinderObj.step);
 		}
 	//	xmove4mat(mvMatrix, 0.5*Math.PI);			//switch to 
 	//	rotate4mat(mvMatrix, 1, 2, Math.PI*0.5);	//other side..
