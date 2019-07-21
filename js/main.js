@@ -55,7 +55,7 @@ function initShaders(){
 					
 	shaderProgramTexmap4Vec = loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs",{
 					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
-					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 					
 	shaderProgramTexmap4VecMapproject = loadShader( "shader-texmap-vs-4vec-mapproject", "shader-texmap-fs-mapproject",{
@@ -1073,6 +1073,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 	if (!duocylinderObjects[duocylinderModel].isSea){
 		activeShaderProgram = duocylinderObjects[duocylinderModel].useMapproject? shaderProgramTexmap4VecMapproject : shaderProgramTexmap4Vec;
 		gl.useProgram(activeShaderProgram);
+		
+		if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
+			gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
+		}
 	}else{
 		activeShaderProgram = shaderProgramDuocylinderSea;
 		gl.useProgram(activeShaderProgram);
@@ -1096,6 +1100,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 	if (guiParams.drawShapes['duoCylinder']){	//x*x+y*y=z*z+w*w
 		mat4.set(invertedWorldCamera, mvMatrix);
 		rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
+		
+		mat4.identity(mMatrix);							//better to set M, V matrices and leave MV for shader?
+		rotate4mat(mMatrix, 0, 1, duocylinderSpin);
+		
 		drawTennisBall(duocylinderObj, activeShaderProgram);
 	}
 	
@@ -1601,6 +1609,7 @@ function initTexture(){
 	duocylinderObjects.grid.tex = makeTexture("img/grid-omni.png");
 	duocylinderObjects.terrain.tex = makeTexture("data/terrain/turbulent-seamless.png");
 	duocylinderObjects.procTerrain.tex = texture;
+
 	duocylinderObjects.procTerrain.useMapproject = true;
 	
 	//duocylinderObjects.sea.tex = null;
