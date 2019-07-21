@@ -15,7 +15,7 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 	for (var ii=0;ii<4;ii++){
 		for (var jj=0;jj<4;jj++){
 			for (var hi=-1;hi<8;hi++){
-				addBoxData(ii*0.4 +1,jj*0.4 -1,hi*0.05, [0.3, 0.3, 0.3, 1.0]);
+				addBoxData(ii*0.4 +1,jj*0.4 -1,hi*0.05, [0.5, 0.5, 0.5, 1.0]);
 			}
 		}
 	}

@@ -7,8 +7,10 @@ var shaderProgramColored,
 	shaderProgramTexmapPerVertex,
 	shaderProgramTexmapPerPixel,
 	shaderProgramTexmapPerPixelDiscard,
+	shaderProgramTexmapPerPixelDiscardAtmos,
 	shaderProgramTexmap4Vec,
 	shaderProgramTexmap4VecMapproject,
+	shaderProgramTexmap4VecMapprojectAtmos,
 	shaderProgramDuocylinderSea,
 	shaderProgramCubemap,
 	shaderProgramVertprojCubemap,
@@ -59,6 +61,10 @@ function initShaders(){
 					});
 					
 	shaderProgramTexmap4VecMapproject = loadShader( "shader-texmap-vs-4vec-mapproject", "shader-texmap-fs-mapproject",{
+					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					});
+	shaderProgramTexmap4VecMapprojectAtmos = loadShader( "shader-texmap-vs-4vec-mapproject-atmos", "shader-texmap-fs-mapproject",{
 					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
 					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
@@ -822,8 +828,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var relevantTexmapShader = guiParams["atmosShader"]?shaderProgramTexmapPerPixelDiscardAtmos:shaderProgramTexmapPerPixelDiscard;
 	
 	shaderProgramColored = guiParams["perPixelLighting"]?shaderProgramColoredPerPixelDiscard:shaderProgramColoredPerVertex;
-	shaderProgramTexmap = guiParams["perPixelLighting"]?relevantTexmapShader:shaderProgramTexmapPerVertex;
-	
+	shaderProgramTexmap = guiParams["perPixelLighting"]?relevantTexmapShader:shaderProgramTexmapPerVertex;	
 	
 	var dropLightPos;
 	if (!guiParams["drop spaceship"]){
@@ -1075,7 +1080,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
 	if (!duocylinderObjects[duocylinderModel].isSea){
-		activeShaderProgram = duocylinderObjects[duocylinderModel].useMapproject? shaderProgramTexmap4VecMapproject : shaderProgramTexmap4Vec;
+		activeShaderProgram = duocylinderObjects[duocylinderModel].useMapproject? (guiParams["atmosShader"]?shaderProgramTexmap4VecMapprojectAtmos:shaderProgramTexmap4VecMapproject) : shaderProgramTexmap4Vec;
 		gl.useProgram(activeShaderProgram);
 		
 		if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader

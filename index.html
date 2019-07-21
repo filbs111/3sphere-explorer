@@ -657,6 +657,68 @@
 
 <!-- vertex shader with tex coords and 4vector input positions (instead of projected 3vectors.)-->
 <script id="shader-texmap-vs-4vec-mapproject" type="x-shader/x-vertex">
+	attribute vec4 aVertexPosition;
+	attribute vec4 aVertexNormal;
+	attribute vec2 aTextureCoord;
+	varying vec3 vTextureCoord;
+	uniform mat4 uMVMatrix;
+	uniform mat4 uPMatrix;
+	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
+	uniform vec3 uPlayerLightColor;
+	uniform vec3 uReflectorDiffColor;
+	uniform vec4 uReflectorPos;
+	uniform float uReflectorCos;
+	varying float fog;
+	varying vec3 veclight;
+	varying vec4 vVertexPos;
+	
+	void main(void) {
+		vVertexPos = aVertexPosition;	//pass through for atan tex mapping (overriding uv)
+	
+		vec4 transformedCoord = uMVMatrix * aVertexPosition;
+		gl_Position = uPMatrix * transformedCoord;
+		
+		fog = 0.5*(1.0 + transformedCoord.w);
+		
+		//vec4 transformedNormal = uMVMatrix * aVertexNormal;	//normals code is buggy
+		vec4 transformedNormal = uMVMatrix * aVertexNormal;	
+		
+		vec4 adjustedPos = transformedCoord - uDropLightPos;
+		
+		float light = -dot( normalize(adjustedPos), transformedNormal);
+		//float light = 1.0;
+		
+		light = max(light,0.0);	//unnecessary if camera pos = light pos
+		light/=1.0 + 4.2*dot(adjustedPos,adjustedPos);		//terms higher than other shaders by sqrt(2) because length
+															//of 1,0,0,0 -> 0,1,0,0 (90 deg around world)
+		
+		veclight=uPlayerLightColor*light;
+		
+		
+		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
+	
+		//light from portal. TODO pass in a colour for this, more complex lighting (at surface of portal, should be hemispherical light etc)
+		//this is just bodged/guessed to achieve correct behaviour at/across portal. TODO check/correct!
+		
+		
+		float portalLight = dot( uReflectorPos, transformedNormal);
+		
+		//float portalLight = dot( normalize(uReflectorPos - transformedCoord) , transformedNormal);	//does this make more sense?
+		//float portalLight = dot( uReflectorPos - transformedCoord , transformedNormal);
+		
+		portalLight = max(0.5*portalLight +0.5+ posCosDiff,0.0);	//unnecessary if camera pos = light pos
+		//falloff
+		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
+				
+		veclight+=uReflectorDiffColor*portalLight;
+				
+		vTextureCoord = vec3( aTextureCoord.st, 1.0 );
+	}
+</script>
+
+
+<!-- vertex shader with tex coords and 4vector input positions (instead of projected 3vectors.)-->
+<script id="shader-texmap-vs-4vec-mapproject-atmos" type="x-shader/x-vertex">
 	#define CONST_ITERS 8.0
 
 	attribute vec4 aVertexPosition;
@@ -741,6 +803,7 @@
 		vTextureCoord = vec3( aTextureCoord.st, 1.0 );
 	}
 </script>
+
 
 
 
