@@ -339,6 +339,7 @@
 
 	attribute vec3 aVertexPosition;
 	attribute vec3 aVertexNormal;
+	uniform float uAtmosThickness;
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
@@ -383,7 +384,7 @@
 			currentPos = uCameraWorldPos*cos(currentAngle)+normalDirection*sin(currentAngle);
 			totalPath+=exp(uAtmosContrast*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
 		}
-		fog=exp(-0.2*totalPath*maxAngOverIters);
+		fog=exp(-0.2*totalPath*uAtmosThickness*maxAngOverIters);
 	}
 </script>
 
@@ -607,6 +608,7 @@
 	attribute vec3 aVertexNormal;
 	attribute vec2 aTextureCoord;
 	varying vec3 vTextureCoord;
+	uniform float uAtmosThickness;
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
@@ -649,7 +651,7 @@
 			currentPos = uCameraWorldPos*cos(currentAngle)+normalDirection*sin(currentAngle);
 			totalPath+=exp(uAtmosContrast*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
 		}
-		fog=exp(-0.2*totalPath*maxAngOverIters);
+		fog=exp(-0.2*totalPath*uAtmosThickness*maxAngOverIters);
 		
 		float myZ = aVertexPositionNormalized.w;
 		vTextureCoord = vec3( aTextureCoord.st*myZ, myZ );
@@ -712,6 +714,7 @@
 	attribute vec4 aVertexNormal;
 	attribute vec2 aTextureCoord;
 	varying vec3 vTextureCoord;
+	uniform float uAtmosThickness;
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
@@ -751,7 +754,7 @@
 			currentPos = uCameraWorldPos*cos(currentAngle)+normalDirection*sin(currentAngle);
 			totalPath+=exp(uAtmosContrast*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
 		}
-		fog=exp(-0.2*totalPath*maxAngOverIters);
+		fog=exp(-0.2*totalPath*uAtmosThickness*maxAngOverIters);
 		
 		
 		vec4 transformedNormal = uMVMatrix * aVertexNormal;
@@ -852,6 +855,7 @@
 	attribute vec4 aVertexNormal;
 	attribute vec2 aTextureCoord;
 	varying vec3 vTextureCoord;
+	uniform float uAtmosThickness;
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
@@ -894,7 +898,7 @@
 			currentPos = uCameraWorldPos*cos(currentAngle)+normalDirection*sin(currentAngle);
 			totalPath+=exp(uAtmosContrast*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
 		}
-		fog=exp(-0.2*totalPath*maxAngOverIters);
+		fog=exp(-0.2*totalPath*uAtmosThickness*maxAngOverIters);
 		
 		//vec4 transformedNormal = uMVMatrix * aVertexNormal;	//normals code is buggy
 		vec4 transformedNormal = uMVMatrix * aVertexNormal;	
@@ -1075,6 +1079,7 @@
 	#define CONST_ITERS 8.0
 
 	attribute vec2 aVertexPosition;
+	uniform float uAtmosThickness;
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
@@ -1200,7 +1205,7 @@
 			currentPos = uCameraWorldPos*cos(currentAngle)+normalDirection*sin(currentAngle);
 			totalPath+=exp(uAtmosContrast*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
 		}
-		fog=exp(-0.2*totalPath*maxAngOverIters);
+		fog=exp(-0.2*totalPath*uAtmosThickness*maxAngOverIters);
 		
 		
 		vec4 transformedNormal = uMVMatrix * calculatedVertexNormal;
@@ -1299,6 +1304,7 @@
 	#define CONST_ITERS 8.0
 	
 	attribute vec3 aVertexPosition;
+	uniform float uAtmosThickness;
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
@@ -1345,7 +1351,7 @@
 			currentPos = uCameraWorldPos*cos(currentAngle)+normalDirection*sin(currentAngle);
 			totalPath+=exp(uAtmosContrast*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
 		}
-		fog=exp(-0.2*totalPath*maxAngOverIters);
+		fog=exp(-0.2*totalPath*uAtmosThickness*maxAngOverIters);
 	
 		gl_Position = uPMatrix * transformedCoord;
 		
