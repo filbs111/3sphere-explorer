@@ -1330,11 +1330,16 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 		}
 
+		if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
+			gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
+		}
+
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [reflectorInfo.rad,reflectorInfo.rad, reflectorInfo.rad]);
 	
 		gl.uniform1f(activeShaderProgram.uniforms.uPolarity, reflectorInfo.polarity);
 		
 		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.identity(mMatrix);
 		
 		if (frustrumCull(mvMatrix,reflectorInfo.rad)){
 			if(guiParams.reflector.mappingType == 'vertex projection'){
