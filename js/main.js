@@ -370,7 +370,7 @@ function drawScene(frameTime){
 	stats.begin();
 	
 	
-	reflectorInfo.rad = guiParams.reflector.scale;
+	reflectorInfo.rad = guiParams.reflector.draw? guiParams.reflector.scale : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
 	
 	offsetCameraContainer.world = playerContainer.world;
 	
@@ -2194,7 +2194,7 @@ var iterateMechanics = (function iterateMechanics(){
 		var boxSize = guiParams['random boxes'].size;
 		var ringBoxSize = 0.1;
 		var boxRad = boxSize*Math.sqrt(3);
-		var criticalWPos = Math.cos(Math.atan(guiParams.reflector.scale) + Math.atan(boxRad));
+		//var criticalWPos = Math.cos(Math.atan(guiParams.reflector.scale) + Math.atan(boxRad));
 		
 		var critValueRandBox = 1/Math.sqrt(1+3*boxSize*boxSize);
 		var critValueDCBox = 1/Math.sqrt(1+3*duocylinderSurfaceBoxScale*duocylinderSurfaceBoxScale);
