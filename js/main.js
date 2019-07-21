@@ -36,7 +36,7 @@ function initShaders(){
 					});
 	shaderProgramColoredPerPixelDiscardAtmos = loadShader( "shader-perpixel-discard-vs-atmos", "shader-perpixel-discard-fs",{
 					attributes:["aVertexPosition","aVertexNormal"],
-					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uColor","uEmitColor","uFogColor", "uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uColor","uEmitColor","uFogColor","uAtmosContrast","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 
 	shaderProgramColoredPerPixelTransparentDiscard = loadShader( "shader-perpixel-transparent-discard-vs", "shader-perpixel-transparent-discard-fs",{
@@ -60,7 +60,7 @@ function initShaders(){
 					});
 	shaderProgramTexmapPerPixelDiscardAtmos = loadShader( "shader-texmap-perpixel-discard-atmos-vs", "shader-texmap-perpixel-discard-fs",{
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
-					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uAtmosContrast","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 					
 	shaderProgramTexmap4Vec = loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs",{
@@ -69,7 +69,7 @@ function initShaders(){
 					});
 	shaderProgramTexmap4VecAtmos = loadShader( "shader-texmap-vs-4vec-atmos", "shader-texmap-fs",{
 					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
-					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uAtmosContrast","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 					
 	shaderProgramTexmap4VecMapproject = loadShader( "shader-texmap-vs-4vec-mapproject", "shader-texmap-fs-mapproject",{
@@ -78,7 +78,7 @@ function initShaders(){
 					});
 	shaderProgramTexmap4VecMapprojectAtmos = loadShader( "shader-texmap-vs-4vec-mapproject-atmos", "shader-texmap-fs-mapproject",{
 					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
-					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uAtmosContrast","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 					
 	//shaderProgramDuocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-flat-fs",{
@@ -88,7 +88,7 @@ function initShaders(){
 					});
 	shaderProgramDuocylinderSeaAtmos = loadShader( "shader-texmap-vs-duocylinder-sea-atmos", "shader-texmap-fs",{
 					attributes:["aVertexPosition"],
-					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uTime","uDropLightPos","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uTime","uDropLightPos","uColor","uFogColor","uAtmosContrast","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 					
 	shaderProgramCubemap = loadShader( "shader-cubemap-vs", "shader-cubemap-fs",{
@@ -102,7 +102,7 @@ function initShaders(){
 					});
 	shaderProgramVertprojCubemapAtmos = loadShader( "shader-cubemap-vertproj-vs-atmos", "shader-cubemap-fs",{
 					attributes:["aVertexPosition"],
-					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uSampler","uColor","uFogColor","uModelScale", "uPosShiftMat","uCentrePosScaled","uPolarity"]
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uSampler","uColor","uFogColor","uAtmosContrast","uModelScale", "uPosShiftMat","uCentrePosScaled","uPolarity"]
 					});
 					
 	shaderProgramDecal = loadShader( "shader-decal-vs", "shader-decal-fs",{
@@ -1329,7 +1329,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 		if (activeShaderProgram.uniforms.uPlayerLightColor){
 			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 		}
-
 		if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
 			gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
 		}
@@ -1520,6 +1519,9 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 	if (shaderProg.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader. TODO do less ofteen (move camera less often than switch buffers)
 		gl.uniform4fv(shaderProg.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
 	}
+	if (shaderProg.uniforms.uAtmosContrast){	//todo do less often (at least query ui less often)
+		gl.uniform1f(shaderProg.uniforms.uAtmosContrast, guiParams.atmosContrast);
+	}
 	
 	gl.uniformMatrix4fv(shaderProg.uniforms.uPMatrix, false, pMatrix);
 }
@@ -1563,6 +1565,9 @@ function setMatrixUniforms(shaderProgram) {
     gl.uniformMatrix4fv(shaderProgram.uniforms.uPMatrix, false, pMatrix);
     gl.uniformMatrix4fv(shaderProgram.uniforms.uMVMatrix, false, mvMatrix);
 	if (shaderProgram.uniforms.uMMatrix){gl.uniformMatrix4fv(shaderProgram.uniforms.uMMatrix, false, mMatrix);}
+	if (shaderProgram.uniforms.uAtmosContrast){	//todo do less often (at least query ui less often)
+		gl.uniform1f(shaderProgram.uniforms.uAtmosContrast, guiParams.atmosContrast);
+	}
 }
 
 var cubemapFramebuffer;
@@ -1724,6 +1729,7 @@ var guiParams={
 	"culling":true,
 	"perPixelLighting":true,
 	"atmosShader":true,
+	"atmosContrast":5.0,
 	fogColor0:'#b2dede',
 	fogColor1:'#ff8888',
 	playerLight:'#ffffff',
@@ -1817,6 +1823,7 @@ function init(){
 	displayFolder.add(guiParams, "cameraFov", 60,120,5);
 	displayFolder.add(guiParams, "perPixelLighting");
 	displayFolder.add(guiParams, "atmosShader");
+	displayFolder.add(guiParams, "atmosContrast", -10,10,0.5);
 	displayFolder.add(guiParams, "culling");
 	
 	var reflectorFolder = gui.addFolder('reflector');

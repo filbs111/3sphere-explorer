@@ -339,6 +339,7 @@
 
 	attribute vec3 aVertexPosition;
 	attribute vec3 aVertexNormal;
+	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
@@ -380,7 +381,7 @@
 		for (float aa=0.0;aa<CONST_ITERS;aa++){
 			currentAngle=maxAngOverIters*aa;
 			currentPos = uCameraWorldPos*cos(currentAngle)+normalDirection*sin(currentAngle);
-			totalPath+=exp(5.0*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
+			totalPath+=exp(uAtmosContrast*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
 		}
 		fog=exp(-0.2*totalPath*maxAngOverIters);
 	}
@@ -606,6 +607,7 @@
 	attribute vec3 aVertexNormal;
 	attribute vec2 aTextureCoord;
 	varying vec3 vTextureCoord;
+	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
@@ -645,7 +647,7 @@
 		for (float aa=0.0;aa<CONST_ITERS;aa++){
 			currentAngle=maxAngOverIters*aa;
 			currentPos = uCameraWorldPos*cos(currentAngle)+normalDirection*sin(currentAngle);
-			totalPath+=exp(5.0*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
+			totalPath+=exp(uAtmosContrast*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
 		}
 		fog=exp(-0.2*totalPath*maxAngOverIters);
 		
@@ -710,6 +712,7 @@
 	attribute vec4 aVertexNormal;
 	attribute vec2 aTextureCoord;
 	varying vec3 vTextureCoord;
+	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
@@ -746,7 +749,7 @@
 		for (float aa=0.0;aa<CONST_ITERS;aa++){
 			currentAngle=maxAngOverIters*aa;
 			currentPos = uCameraWorldPos*cos(currentAngle)+normalDirection*sin(currentAngle);
-			totalPath+=exp(5.0*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
+			totalPath+=exp(uAtmosContrast*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
 		}
 		fog=exp(-0.2*totalPath*maxAngOverIters);
 		
@@ -849,6 +852,7 @@
 	attribute vec4 aVertexNormal;
 	attribute vec2 aTextureCoord;
 	varying vec3 vTextureCoord;
+	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
@@ -888,7 +892,7 @@
 		for (float aa=0.0;aa<CONST_ITERS;aa++){
 			currentAngle=maxAngOverIters*aa;
 			currentPos = uCameraWorldPos*cos(currentAngle)+normalDirection*sin(currentAngle);
-			totalPath+=exp(5.0*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
+			totalPath+=exp(uAtmosContrast*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
 		}
 		fog=exp(-0.2*totalPath*maxAngOverIters);
 		
@@ -1071,6 +1075,7 @@
 	#define CONST_ITERS 8.0
 
 	attribute vec2 aVertexPosition;
+	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
@@ -1193,7 +1198,7 @@
 		for (float aa=0.0;aa<CONST_ITERS;aa++){
 			currentAngle=maxAngOverIters*aa;
 			currentPos = uCameraWorldPos*cos(currentAngle)+normalDirection*sin(currentAngle);
-			totalPath+=exp(5.0*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
+			totalPath+=exp(uAtmosContrast*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
 		}
 		fog=exp(-0.2*totalPath*maxAngOverIters);
 		
@@ -1294,6 +1299,7 @@
 	#define CONST_ITERS 8.0
 	
 	attribute vec3 aVertexPosition;
+	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
@@ -1337,7 +1343,7 @@
 		for (float aa=0.0;aa<CONST_ITERS;aa++){
 			currentAngle=maxAngOverIters*aa;
 			currentPos = uCameraWorldPos*cos(currentAngle)+normalDirection*sin(currentAngle);
-			totalPath+=exp(5.0*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
+			totalPath+=exp(uAtmosContrast*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
 		}
 		fog=exp(-0.2*totalPath*maxAngOverIters);
 	
