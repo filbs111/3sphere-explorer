@@ -177,7 +177,7 @@
 <!-- tex mapped pix shader -->
 <script id="shader-texmap-fs-mapproject" type="x-shader/x-fragment">
 	#define CONST_TAU 6.2831853
-	#define CONST_REPS 64.0
+	#define CONST_REPS 16.0
 	
 	precision mediump float;
 	varying vec3 vTextureCoord;
@@ -312,6 +312,29 @@
 	}
 </script>
 <script id="shader-perpixel-discard-vs" type="x-shader/x-vertex">
+	attribute vec3 aVertexPosition;
+	attribute vec3 aVertexNormal;
+	uniform mat4 uMVMatrix;
+	uniform mat4 uPMatrix;
+	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
+	uniform vec3 uModelScale;
+	varying float fog;
+	varying vec4 adjustedPos;
+	varying vec4 transformedNormal;
+	varying vec4 transformedCoord;
+	
+	void main(void) {	
+		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
+		transformedCoord = uMVMatrix * aVertexPositionNormalized;
+		gl_Position = uPMatrix * transformedCoord;
+
+		transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
+		adjustedPos = transformedCoord - uDropLightPos;
+		
+		fog = 0.5*(1.0 + transformedCoord.w);
+	}
+</script>
+<script id="shader-perpixel-discard-vs-atmos" type="x-shader/x-vertex">
 	#define CONST_ITERS 8.0
 
 	attribute vec3 aVertexPosition;

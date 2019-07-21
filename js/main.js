@@ -2,6 +2,7 @@ var shaderProgramColored,
 	shaderProgramColoredPerVertex,
 	shaderProgramColoredPerPixel,
 	shaderProgramColoredPerPixelDiscard,
+	shaderProgramColoredPerPixelDiscardAtmos,
 	shaderProgramColoredPerPixelTransparentDiscard,
 	shaderProgramTexmap,
 	shaderProgramTexmapPerVertex,
@@ -29,6 +30,10 @@ function initShaders(){
 					});
 					*/	//unused shader
 	shaderProgramColoredPerPixelDiscard = loadShader( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs",{
+					attributes:["aVertexPosition","aVertexNormal"],
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uColor","uEmitColor","uFogColor", "uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					});
+	shaderProgramColoredPerPixelDiscardAtmos = loadShader( "shader-perpixel-discard-vs-atmos", "shader-perpixel-discard-fs",{
 					attributes:["aVertexPosition","aVertexNormal"],
 					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uColor","uEmitColor","uFogColor", "uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
@@ -835,9 +840,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var reflectorPosTransformed = [worldCamera[3],worldCamera[7],worldCamera[11],worldCamera[15]];
 	var cosReflector = 1.0/Math.sqrt(1+reflectorInfo.rad*reflectorInfo.rad);
 	
+	var relevantColorShader = guiParams["atmosShader"]?shaderProgramColoredPerPixelDiscardAtmos:shaderProgramColoredPerPixelDiscard;
 	var relevantTexmapShader = guiParams["atmosShader"]?shaderProgramTexmapPerPixelDiscardAtmos:shaderProgramTexmapPerPixelDiscard;
 	
-	shaderProgramColored = guiParams["perPixelLighting"]?shaderProgramColoredPerPixelDiscard:shaderProgramColoredPerVertex;
+	shaderProgramColored = guiParams["perPixelLighting"]?relevantColorShader:shaderProgramColoredPerVertex;
 	shaderProgramTexmap = guiParams["perPixelLighting"]?relevantTexmapShader:shaderProgramTexmapPerVertex;	
 	
 	var dropLightPos;
