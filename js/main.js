@@ -1655,7 +1655,8 @@ function initTexture(){
 	hudTextureBox = makeTexture("img/box.png");
 	duocylinderObjects.grid.tex = makeTexture("img/grid-omni.png");
 	duocylinderObjects.terrain.tex = makeTexture("data/terrain/turbulent-seamless.png");
-	duocylinderObjects.procTerrain.tex = texture;
+	//duocylinderObjects.procTerrain.tex = texture;
+	duocylinderObjects.procTerrain.tex = makeTexture("img/14131-diffuse.jpg");  //sand
 
 	duocylinderObjects.procTerrain.useMapproject = true;
 	
