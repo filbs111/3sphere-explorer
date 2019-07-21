@@ -1339,7 +1339,7 @@
 		//although this is used for "per pixel" version, currently calculating fog per vertex.
 		
 		float dotProd = dot(uCameraWorldPos,worldCoord);
-		float maxAng = acos(dotProd);	//angle from camera to object
+		float maxAng = acos(dotProd*0.999);	//angle from camera to object
 		float maxAngOverIters = maxAng/CONST_ITERS;
 		
 		vec4 normalDirection = normalize(worldCoord - dotProd*uCameraWorldPos);	//point 90 deg around world from camera, in direction of worldCoord
