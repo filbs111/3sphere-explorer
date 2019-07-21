@@ -1747,6 +1747,7 @@ var guiParams={
 	fogColor1:'#ff8888',
 	playerLight:'#ffffff',
 	onRails:false,
+	spinCorrection:true,
 	cameraType:"near 3rd person",
 	cameraFov:105,
 	reflector:{
@@ -1830,6 +1831,7 @@ function init(){
 	
 	var controlFolder = gui.addFolder('control');	//control and movement
 	controlFolder.add(guiParams, "onRails");
+	controlFolder.add(guiParams, "spinCorrection");
 	controlFolder.add(guiParams, 'lockPointer');
 	
 	var displayFolder = gui.addFolder('display');	//control and movement
@@ -2107,7 +2109,27 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 		}
 		
-		duocylinderSpin+= duoCylinderAngVelConst * timeElapsed*moveSpeed;	//TODO match spin speed with sea wave speed
+		var duocylinderRotate = duoCylinderAngVelConst * timeElapsed*moveSpeed;
+		
+		duocylinderSpin+=duocylinderRotate; 	//TODO match spin speed with sea wave speed
+		
+		
+		if (guiParams.spinCorrection){
+			//rotate player in this frame (maybe better to drag towards this angular velocity, with drag prop to atmos density)
+			//what is direction along duocylinder in frame of player?
+			
+			//take a leaf out of other code calculating spinVelWorldCoords, spinVelPlayerCoords
+			//todo combine these
+			//todo account for rotation while moving wrt duocylinder ? 
+			
+			var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//guess what this is	
+			var axisDirWorldCoords = [ 0,0,playerCamera[15],-playerCamera[14]];						
+			var axisDirPlayerCoords = [
+				axisDirWorldCoords[2]*playerCamera[2] + axisDirWorldCoords[3]*playerCamera[3],
+				axisDirWorldCoords[2]*playerCamera[6] + axisDirWorldCoords[3]*playerCamera[7],
+				axisDirWorldCoords[2]*playerCamera[10] + axisDirWorldCoords[3]*playerCamera[11]];
+			rotatePlayer(scalarvectorprod(duocylinderRotate,axisDirPlayerCoords));	
+		}
 		
 		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
 			
@@ -2166,12 +2188,12 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//guess what this is
 			
-			var spinVelWorldCoords = [ duoCylinderAngVelConst*playerPos[1],-duoCylinderAngVelConst*playerPos[0],0];	
+			var spinVelWorldCoords = [ duoCylinderAngVelConst*playerPos[1],-duoCylinderAngVelConst*playerPos[0],0,0];	
 							
 			var spinVelPlayerCoords = [
-				spinVelWorldCoords[0]*playerCamera[0] + spinVelWorldCoords[1]*playerCamera[1] + spinVelWorldCoords[2]*playerCamera[2],
-				spinVelWorldCoords[0]*playerCamera[4] + spinVelWorldCoords[1]*playerCamera[5] + spinVelWorldCoords[2]*playerCamera[6],
-				spinVelWorldCoords[0]*playerCamera[8] + spinVelWorldCoords[1]*playerCamera[9] + spinVelWorldCoords[2]*playerCamera[10]];
+				spinVelWorldCoords[0]*playerCamera[0] + spinVelWorldCoords[1]*playerCamera[1],
+				spinVelWorldCoords[0]*playerCamera[4] + spinVelWorldCoords[1]*playerCamera[5],
+				spinVelWorldCoords[0]*playerCamera[8] + spinVelWorldCoords[1]*playerCamera[9]];
 			
 			//this is in frame of duocylinder. playerVelVec is in frame of player though... ?!! possible to do without matrix mult? by choosing right parts of playerCamera mat?
 			
