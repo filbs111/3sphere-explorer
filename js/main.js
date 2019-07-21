@@ -330,12 +330,14 @@ var offsetCam = (function(){
 	var targetForType = {
 		"near 3rd person":[0,-0.0075,-0.005],
 		"far 3rd person":[0,-0.02,-0.03],
-		"cockpit":[0,0,0.001]
+		"cockpit":[0,0,0.001],
+		"side":[0.006,0,0.0025]
 	}
 	var targetForTypeReverse = {
 		"near 3rd person":[0,-0.0075,0.005],
 		"far 3rd person":[0,-0.02,0.03],
-		"cockpit":[0,0,-0.01]
+		"cockpit":[0,0,-0.01],
+		"side":[0.006,0,0.0025]
 	}
 	var offsetVecTarget = targetForType["far 3rd person"];
 	var offsetVecTargetReverse = targetForTypeReverse["far 3rd person"];
@@ -1819,7 +1821,7 @@ function init(){
 	controlFolder.add(guiParams, 'lockPointer');
 	
 	var displayFolder = gui.addFolder('display');	//control and movement
-	displayFolder.add(guiParams, "cameraType", ["cockpit", "near 3rd person", "far 3rd person"]);
+	displayFolder.add(guiParams, "cameraType", ["cockpit", "near 3rd person", "far 3rd person", "side"]);
 	displayFolder.add(guiParams, "cameraFov", 60,120,5);
 	displayFolder.add(guiParams, "perPixelLighting");
 	displayFolder.add(guiParams, "atmosShader");
