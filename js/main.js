@@ -28,7 +28,7 @@ function initShaders(){
 					*/	//unused shader
 	shaderProgramColoredPerPixelDiscard = loadShader( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs",{
 					attributes:["aVertexPosition","aVertexNormal"],
-					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uColor","uEmitColor","uFogColor", "uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uColor","uEmitColor","uFogColor", "uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 
 	shaderProgramColoredPerPixelTransparentDiscard = loadShader( "shader-perpixel-transparent-discard-vs", "shader-perpixel-transparent-discard-fs",{
@@ -863,10 +863,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//gl.enableVertexAttribArray(1);	//do need tex coords
 
 	gl.useProgram(activeShaderProgram);
-	
-	if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
-		gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
-	}
 		
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 	if (activeShaderProgram.uniforms.uReflectorDiffColor){
@@ -1182,14 +1178,15 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	function drawSpaceship(matrix){
 		modelScale=sshipModelScale;
-		//gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.veryDarkGray);	//DARK
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.veryDarkGray);	//DARK
+		//gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
 		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 		
 		mat4.set(invertedWorldCamera, mvMatrix);
 		
-		mat4.multiply(mvMatrix,matrix);		
+		mat4.multiply(mvMatrix,matrix);
+		mat4.set(matrix, mMatrix);
 		drawObjectFromBuffers(sshipBuffers, shaderProgramColored);
 		
 		//draw guns
@@ -1488,6 +1485,10 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 	
 	if (usesCubeMap){
 		gl.uniform1i(shaderProg.uniforms.uSampler, 1);	//put cubemap in tex 1 always, avoiding bind calls.
+	}
+	
+	if (shaderProg.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader. TODO do less ofteen (move camera less often than switch buffers)
+		gl.uniform4fv(shaderProg.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
 	}
 	
 	gl.uniformMatrix4fv(shaderProg.uniforms.uPMatrix, false, pMatrix);
