@@ -9,6 +9,7 @@ var shaderProgramColored,
 	shaderProgramTexmapPerPixel,
 	shaderProgramTexmapPerPixelDiscard,
 	shaderProgramTexmapPerPixelDiscardAtmos,
+	shaderProgramTexmapPerPixelDiscardAtmosV2,
 	shaderProgramTexmap4Vec,
 	shaderProgramTexmap4VecAtmos,
 	shaderProgramTexmap4VecMapproject,
@@ -59,6 +60,10 @@ function initShaders(){
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 	shaderProgramTexmapPerPixelDiscardAtmos = loadShader( "shader-texmap-perpixel-discard-atmos-vs", "shader-texmap-perpixel-discard-fs",{
+					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					});
+	shaderProgramTexmapPerPixelDiscardAtmosV2 = loadShader( "shader-texmap-perpixel-discard-atmos-v2-vs", "shader-texmap-perpixel-discard-fs",{
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
 					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
@@ -851,7 +856,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var cosReflector = 1.0/Math.sqrt(1+reflectorInfo.rad*reflectorInfo.rad);
 	
 	var relevantColorShader = guiParams["atmosShader"]?shaderProgramColoredPerPixelDiscardAtmos:shaderProgramColoredPerPixelDiscard;
-	var relevantTexmapShader = guiParams["atmosShader"]?shaderProgramTexmapPerPixelDiscardAtmos:shaderProgramTexmapPerPixelDiscard;
+	//var relevantTexmapShader = guiParams["atmosShader"]?shaderProgramTexmapPerPixelDiscardAtmos:shaderProgramTexmapPerPixelDiscard;
+	
+	var relevantTexmapShader = guiParams["atmosShader"]?(guiParams["altAtmosShader"]?shaderProgramTexmapPerPixelDiscardAtmosV2:shaderProgramTexmapPerPixelDiscardAtmos):shaderProgramTexmapPerPixelDiscard;
 	
 	shaderProgramColored = guiParams["perPixelLighting"]?relevantColorShader:shaderProgramColoredPerVertex;
 	shaderProgramTexmap = guiParams["perPixelLighting"]?relevantTexmapShader:shaderProgramTexmapPerVertex;	
@@ -1741,6 +1748,7 @@ var guiParams={
 	"culling":true,
 	"perPixelLighting":true,
 	"atmosShader":true,
+	"altAtmosShader":true,
 	"atmosThickness":0.2,
 	"atmosContrast":5.0,
 	fogColor0:'#b2dede',
@@ -1841,6 +1849,7 @@ function init(){
 	displayFolder.add(guiParams, "flipReverseCamera");
 	displayFolder.add(guiParams, "perPixelLighting");
 	displayFolder.add(guiParams, "atmosShader");
+	displayFolder.add(guiParams, "altAtmosShader");
 	displayFolder.add(guiParams, "atmosThickness", 0,0.5,0.05);
 	displayFolder.add(guiParams, "atmosContrast", -10,10,0.5);
 	displayFolder.add(guiParams, "culling");

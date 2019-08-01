@@ -658,6 +658,75 @@
 	}
 </script>
 
+<script id="shader-texmap-perpixel-discard-atmos-v2-vs" type="x-shader/x-vertex">
+	#define CONST_ITERS 8.0
+
+	attribute vec3 aVertexPosition;
+	attribute vec3 aVertexNormal;
+	attribute vec2 aTextureCoord;
+	varying vec3 vTextureCoord;
+	uniform float uAtmosThickness;
+	uniform float uAtmosContrast;
+	uniform mat4 uMMatrix;
+	uniform mat4 uMVMatrix;
+	uniform mat4 uPMatrix;
+	uniform vec4 uCameraWorldPos;
+	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
+	varying float fog;
+	uniform vec3 uModelScale;
+	varying vec4 adjustedPos;
+	varying vec4 transformedNormal;	
+	varying vec4 transformedCoord;
+	
+	void main(void) {
+		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
+		vec4 worldCoord = uMMatrix * aVertexPositionNormalized;
+		transformedCoord = uMVMatrix * aVertexPositionNormalized;
+		
+		gl_Position = uPMatrix * transformedCoord;
+
+		transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
+		adjustedPos = transformedCoord - uDropLightPos;
+		/*
+		fog = 0.5*(1.0 + transformedCoord.w);
+		//note 1.0 = no fog, 0 = total fog.
+		//more complex fog calculation. show that can have radial dependence. not anything like physically correct!
+		float airDensityAtObj = exp(-dot(worldCoord.xy,worldCoord.xy));
+		fog*=airDensityAtObj; 
+		*/
+		
+		
+		float dotProd = dot(uCameraWorldPos,worldCoord);
+		
+		vec4 normalDirection = normalize(worldCoord - dotProd*uCameraWorldPos);	//point 90 deg around world from camera, in direction of worldCoord
+		
+		float partOne = dot(uCameraWorldPos.xy, uCameraWorldPos.xy);
+		float partTwo = dot(normalDirection.xy, normalDirection.xy);
+		float constTerm = (partOne+partTwo)/2.0;
+		float cos2Term = (partOne-partTwo)/2.0;
+		float sin2Term = dot(uCameraWorldPos.xy, normalDirection.xy);
+		float shiftAngle = atan(cos2Term,sin2Term);
+		
+		float maxDoubleAng = 2.0*acos(dotProd);
+		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
+		
+		//float magTerm = sqrt(cos2Term*cos2Term+sin2Term*sin2Term);
+		float magTerm = length(vec2(cos2Term, sin2Term));
+		
+		float total=0.0;
+		for (float aa=0.0;aa<CONST_ITERS;aa++){
+			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
+			total+= exp(uAtmosContrast*rsq);
+		}
+		total*= maxDoubleAngOverIters*exp(uAtmosContrast*(constTerm));	
+		fog = exp(-uAtmosThickness*total/2.0);
+		
+		
+		float myZ = aVertexPositionNormalized.w;
+		vTextureCoord = vec3( aTextureCoord.st*myZ, myZ );
+	}
+</script>
+
 
 <!-- vertex shader with tex coords and 4vector input positions (instead of projected 3vectors.)-->
 <script id="shader-texmap-vs-4vec" type="x-shader/x-vertex">
