@@ -3,6 +3,7 @@ var shaderProgramColored,
 	shaderProgramColoredPerPixel,
 	shaderProgramColoredPerPixelDiscard,
 	shaderProgramColoredPerPixelDiscardAtmos,
+	shaderProgramColoredPerPixelDiscardAtmosV2,
 	shaderProgramColoredPerPixelTransparentDiscard,
 	shaderProgramTexmap,
 	shaderProgramTexmapPerVertex,
@@ -12,13 +13,17 @@ var shaderProgramColored,
 	shaderProgramTexmapPerPixelDiscardAtmosV2,
 	shaderProgramTexmap4Vec,
 	shaderProgramTexmap4VecAtmos,
+	shaderProgramTexmap4VecAtmosV2,
 	shaderProgramTexmap4VecMapproject,
 	shaderProgramTexmap4VecMapprojectAtmos,
+	shaderProgramTexmap4VecMapprojectAtmosV2,
 	shaderProgramDuocylinderSea,
 	shaderProgramDuocylinderSeaAtmos,
+	shaderProgramDuocylinderSeaAtmosV2,
 	shaderProgramCubemap,
 	shaderProgramVertprojCubemap,
 	shaderProgramVertprojCubemapAtmos,
+	shaderProgramVertprojCubemapAtmosV2,
 	shaderProgramDecal;
 function initShaders(){				
 	shaderProgramColoredPerVertex = loadShader( "shader-simple-vs", "shader-simple-fs",{
@@ -36,6 +41,10 @@ function initShaders(){
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uColor","uEmitColor","uFogColor", "uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 	shaderProgramColoredPerPixelDiscardAtmos = loadShader( "shader-perpixel-discard-vs-atmos", "shader-perpixel-discard-fs",{
+					attributes:["aVertexPosition","aVertexNormal"],
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uColor","uEmitColor","uFogColor","uAtmosThickness","uAtmosContrast","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					});
+	shaderProgramColoredPerPixelDiscardAtmosV2 = loadShader( "shader-perpixel-discard-vs-atmos-v2", "shader-perpixel-discard-fs",{
 					attributes:["aVertexPosition","aVertexNormal"],
 					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uColor","uEmitColor","uFogColor","uAtmosThickness","uAtmosContrast","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
@@ -76,12 +85,20 @@ function initShaders(){
 					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
 					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
+	shaderProgramTexmap4VecAtmosV2 = loadShader( "shader-texmap-vs-4vec-atmos-v2", "shader-texmap-fs",{
+					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					});
 					
 	shaderProgramTexmap4VecMapproject = loadShader( "shader-texmap-vs-4vec-mapproject", "shader-texmap-fs-mapproject",{
 					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 	shaderProgramTexmap4VecMapprojectAtmos = loadShader( "shader-texmap-vs-4vec-mapproject-atmos", "shader-texmap-fs-mapproject",{
+					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					});
+	shaderProgramTexmap4VecMapprojectAtmosV2 = loadShader( "shader-texmap-vs-4vec-mapproject-atmos-v2", "shader-texmap-fs-mapproject",{
 					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
 					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
@@ -92,6 +109,10 @@ function initShaders(){
 					uniforms:["uPMatrix","uMVMatrix","uTime","uDropLightPos","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 	shaderProgramDuocylinderSeaAtmos = loadShader( "shader-texmap-vs-duocylinder-sea-atmos", "shader-texmap-fs",{
+					attributes:["aVertexPosition"],
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uTime","uDropLightPos","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					});
+	shaderProgramDuocylinderSeaAtmosV2 = loadShader( "shader-texmap-vs-duocylinder-sea-atmos-v2", "shader-texmap-fs",{
 					attributes:["aVertexPosition"],
 					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uTime","uDropLightPos","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
@@ -106,6 +127,10 @@ function initShaders(){
 					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor","uFogColor","uModelScale", "uPosShiftMat","uCentrePosScaled","uPolarity"]
 					});
 	shaderProgramVertprojCubemapAtmos = loadShader( "shader-cubemap-vertproj-vs-atmos", "shader-cubemap-fs",{
+					attributes:["aVertexPosition"],
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uSampler","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uModelScale", "uPosShiftMat","uCentrePosScaled","uPolarity"]
+					});
+	shaderProgramVertprojCubemapAtmosV2 = loadShader( "shader-cubemap-vertproj-vs-atmos-v2", "shader-cubemap-fs",{
 					attributes:["aVertexPosition"],
 					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uSampler","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uModelScale", "uPosShiftMat","uCentrePosScaled","uPolarity"]
 					});
@@ -855,7 +880,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var reflectorPosTransformed = [worldCamera[3],worldCamera[7],worldCamera[11],worldCamera[15]];
 	var cosReflector = 1.0/Math.sqrt(1+reflectorInfo.rad*reflectorInfo.rad);
 	
-	var relevantColorShader = guiParams["atmosShader"]?shaderProgramColoredPerPixelDiscardAtmos:shaderProgramColoredPerPixelDiscard;
+	var relevantColorShader = guiParams["atmosShader"]?(guiParams["altAtmosShader"]?shaderProgramColoredPerPixelDiscardAtmosV2:shaderProgramColoredPerPixelDiscardAtmos):shaderProgramColoredPerPixelDiscard;
 	//var relevantTexmapShader = guiParams["atmosShader"]?shaderProgramTexmapPerPixelDiscardAtmos:shaderProgramTexmapPerPixelDiscard;
 	
 	var relevantTexmapShader = guiParams["atmosShader"]?(guiParams["altAtmosShader"]?shaderProgramTexmapPerPixelDiscardAtmosV2:shaderProgramTexmapPerPixelDiscardAtmos):shaderProgramTexmapPerPixelDiscard;
@@ -1112,10 +1137,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
 		if (!duocylinderObjects[duocylinderModel].isSea){
-			activeShaderProgram = duocylinderObjects[duocylinderModel].useMapproject? (guiParams["atmosShader"]?shaderProgramTexmap4VecMapprojectAtmos:shaderProgramTexmap4VecMapproject) : (guiParams["atmosShader"]?shaderProgramTexmap4VecAtmos:shaderProgramTexmap4Vec);
+			activeShaderProgram = duocylinderObjects[duocylinderModel].useMapproject? (guiParams["atmosShader"]?(guiParams["altAtmosShader"]?shaderProgramTexmap4VecMapprojectAtmosV2:shaderProgramTexmap4VecMapprojectAtmos):shaderProgramTexmap4VecMapproject) : (guiParams["atmosShader"]?(guiParams["altAtmosShader"]?shaderProgramTexmap4VecAtmosV2:shaderProgramTexmap4VecAtmos):shaderProgramTexmap4Vec);
 			gl.useProgram(activeShaderProgram);
 		}else{
-			activeShaderProgram = guiParams["atmosShader"]?shaderProgramDuocylinderSeaAtmos:shaderProgramDuocylinderSea;
+			activeShaderProgram = guiParams["atmosShader"]? (guiParams["altAtmosShader"]?shaderProgramDuocylinderSeaAtmosV2:shaderProgramDuocylinderSeaAtmos):shaderProgramDuocylinderSea;
 			gl.useProgram(activeShaderProgram);
 			gl.uniform1fv(activeShaderProgram.uniforms.uTime, [0.00005*(frameTime % 20000 )]);	//20s loop
 		}
@@ -1326,7 +1351,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			activeShaderProgram = shaderProgramCubemap;
 			break;
 			case 'vertex projection':
-			activeShaderProgram = guiParams["atmosShader"]?shaderProgramVertprojCubemapAtmos:shaderProgramVertprojCubemap;
+			activeShaderProgram = guiParams["atmosShader"]?(guiParams["altAtmosShader"]?shaderProgramVertprojCubemapAtmosV2:shaderProgramVertprojCubemapAtmos):shaderProgramVertprojCubemap;
 			break;
 		}
 		gl.useProgram(activeShaderProgram);
