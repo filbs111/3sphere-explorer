@@ -629,7 +629,7 @@
 
 
 <script id="shader-texmap-perpixel-discard-atmos-vs" type="x-shader/x-vertex">
-	#define CONST_ITERS 8.0
+	#define CONST_ITERS 80.0
 
 	attribute vec3 aVertexPosition;
 	attribute vec3 aVertexNormal;
@@ -714,9 +714,8 @@
 	}
 </script>
 
-<script id="shader-texmap-perpixel-discard-atmos-v2-vs" type="x-shader/x-vertex">
-	#define CONST_ITERS 8.0
 
+<script id="shader-texmap-perpixel-discard-atmos-v2-vs" type="x-shader/x-vertex">
 	attribute vec3 aVertexPosition;
 	attribute vec3 aVertexNormal;
 	attribute vec2 aTextureCoord;
@@ -764,19 +763,31 @@
 		float shiftAngle = atan(cos2Term,sin2Term);
 		
 		float maxDoubleAng = 2.0*acos(dotProd);
-		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
 		
 		//float magTerm = sqrt(cos2Term*cos2Term+sin2Term*sin2Term);
 		float magTerm = length(vec2(cos2Term, sin2Term));
 		
-		float total=0.0;
-		for (float aa=0.0;aa<CONST_ITERS;aa++){
-			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
-			total+= exp(uAtmosContrast*rsq);
-		}
-		total*= maxDoubleAngOverIters*exp(uAtmosContrast*(constTerm));	
-		fog = exp(-uAtmosThickness*total/2.0);
+		float kk = magTerm * uAtmosContrast;
+		float ksq = kk*kk;
+
+		float max = maxDoubleAng+shiftAngle;
+
+		float kcxa = kk*cos(max);
+		float kcxb = kk*cos(shiftAngle);
+		float ksxa = kk*sin(max);
+		float ksxb = kk*sin(shiftAngle);
+		float kcxasq=kcxa*kcxa;
+		float kcxbsq=kcxb*kcxb;
 		
+		float integral=(1.0+ksq/4.0 + ksq*ksq/64.0)*(max -shiftAngle);
+		integral-= (1.0+ksq/8.0)*(kcxa-kcxb);
+		integral-=(ksq/48.0+0.25)*(kcxa*ksxa - kcxb*ksxb);
+		integral+=(kcxa*kcxasq - kcxb*kcxbsq)*(4.0/72.0);
+		integral-=ksq*(kcxa -kcxb)*(3.0/72.0);
+		integral+=(4.0/768.0)*((2.0*kcxasq-ksq)*kcxa*ksxa -(2.0*kcxbsq-ksq)*kcxb*ksxb);
+
+		float total=integral*exp(uAtmosContrast*constTerm);
+		fog = exp(-uAtmosThickness*total/2.0);	
 		
 		float myZ = aVertexPositionNormalized.w;
 		vTextureCoord = vec3( aTextureCoord.st*myZ, myZ );
