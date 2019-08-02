@@ -371,6 +371,7 @@
 		
 		//although this is used for "per pixel" version, currently calculating fog per vertex.
 		
+		/*
 		float dotProd = dot(uCameraWorldPos,worldCoord);
 		float maxAng = acos(dotProd);	//angle from camera to object
 		float maxAngOverIters = maxAng/CONST_ITERS;
@@ -385,6 +386,32 @@
 			totalPath+=exp(uAtmosContrast*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
 		}
 		fog=exp(-totalPath*uAtmosThickness*maxAngOverIters);
+		*/
+		
+		float dotProd = dot(uCameraWorldPos,worldCoord);
+		
+		vec4 normalDirection = normalize(worldCoord - dotProd*uCameraWorldPos);	//point 90 deg around world from camera, in direction of worldCoord
+		
+		float partOne = dot(uCameraWorldPos.xy, uCameraWorldPos.xy);
+		float partTwo = dot(normalDirection.xy, normalDirection.xy);
+		float constTerm = (partOne+partTwo)/2.0;
+		float cos2Term = (partOne-partTwo)/2.0;
+		float sin2Term = dot(uCameraWorldPos.xy, normalDirection.xy);
+		float shiftAngle = atan(cos2Term,sin2Term);
+		
+		float maxDoubleAng = 2.0*acos(dotProd);
+		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
+		
+		//float magTerm = sqrt(cos2Term*cos2Term+sin2Term*sin2Term);
+		float magTerm = length(vec2(cos2Term, sin2Term));
+		
+		float total=0.0;
+		for (float aa=0.0;aa<CONST_ITERS;aa++){
+			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
+			total+= exp(uAtmosContrast*rsq);
+		}
+		total*= maxDoubleAngOverIters*exp(uAtmosContrast*(constTerm));	
+		fog = exp(-uAtmosThickness*total/2.0);
 	}
 </script>
 
@@ -638,6 +665,7 @@
 		fog*=airDensityAtObj; 
 		*/
 		
+		/*
 		float dotProd = dot(uCameraWorldPos,worldCoord);
 		float maxAng = acos(dotProd);	//angle from camera to object
 		float maxAngOverIters = maxAng/CONST_ITERS;
@@ -652,6 +680,34 @@
 			totalPath+=exp(uAtmosContrast*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
 		}
 		fog=exp(-totalPath*uAtmosThickness*maxAngOverIters);
+		*/
+		
+		
+		float dotProd = dot(uCameraWorldPos,worldCoord);
+		
+		vec4 normalDirection = normalize(worldCoord - dotProd*uCameraWorldPos);	//point 90 deg around world from camera, in direction of worldCoord
+		
+		float partOne = dot(uCameraWorldPos.xy, uCameraWorldPos.xy);
+		float partTwo = dot(normalDirection.xy, normalDirection.xy);
+		float constTerm = (partOne+partTwo)/2.0;
+		float cos2Term = (partOne-partTwo)/2.0;
+		float sin2Term = dot(uCameraWorldPos.xy, normalDirection.xy);
+		float shiftAngle = atan(cos2Term,sin2Term);
+		
+		float maxDoubleAng = 2.0*acos(dotProd);
+		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
+		
+		//float magTerm = sqrt(cos2Term*cos2Term+sin2Term*sin2Term);
+		float magTerm = length(vec2(cos2Term, sin2Term));
+		
+		float total=0.0;
+		for (float aa=0.0;aa<CONST_ITERS;aa++){
+			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
+			total+= exp(uAtmosContrast*rsq);
+		}
+		total*= maxDoubleAngOverIters*exp(uAtmosContrast*(constTerm));	
+		fog = exp(-uAtmosThickness*total/2.0);
+		
 		
 		float myZ = aVertexPositionNormalized.w;
 		vTextureCoord = vec3( aTextureCoord.st*myZ, myZ );
@@ -810,6 +866,7 @@
 		fog*=airDensityAtObj; 
 		*/
 		
+		/*
 		float dotProd = dot(uCameraWorldPos,worldCoord);
 		float maxAng = acos(dotProd);	//angle from camera to object
 		float maxAngOverIters = maxAng/CONST_ITERS;
@@ -824,6 +881,33 @@
 			totalPath+=exp(uAtmosContrast*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
 		}
 		fog=exp(-totalPath*uAtmosThickness*maxAngOverIters);
+		*/
+		
+		float dotProd = dot(uCameraWorldPos,worldCoord);
+		
+		vec4 normalDirection = normalize(worldCoord - dotProd*uCameraWorldPos);	//point 90 deg around world from camera, in direction of worldCoord
+		
+		float partOne = dot(uCameraWorldPos.xy, uCameraWorldPos.xy);
+		float partTwo = dot(normalDirection.xy, normalDirection.xy);
+		float constTerm = (partOne+partTwo)/2.0;
+		float cos2Term = (partOne-partTwo)/2.0;
+		float sin2Term = dot(uCameraWorldPos.xy, normalDirection.xy);
+		float shiftAngle = atan(cos2Term,sin2Term);
+		
+		float maxDoubleAng = 2.0*acos(dotProd);
+		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
+		
+		//float magTerm = sqrt(cos2Term*cos2Term+sin2Term*sin2Term);
+		float magTerm = length(vec2(cos2Term, sin2Term));
+		
+		float total=0.0;
+		for (float aa=0.0;aa<CONST_ITERS;aa++){
+			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
+			total+= exp(uAtmosContrast*rsq);
+		}
+		total*= maxDoubleAngOverIters*exp(uAtmosContrast*(constTerm));	
+		fog = exp(-uAtmosThickness*total/2.0);
+		
 		
 		
 		vec4 transformedNormal = uMVMatrix * aVertexNormal;
@@ -954,6 +1038,7 @@
 		fog*=airDensityAtObj; 
 		*/
 		
+		/*
 		float dotProd = dot(uCameraWorldPos,worldCoord);
 		float maxAng = acos(dotProd);	//angle from camera to object
 		float maxAngOverIters = maxAng/CONST_ITERS;
@@ -968,6 +1053,33 @@
 			totalPath+=exp(uAtmosContrast*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
 		}
 		fog=exp(-totalPath*uAtmosThickness*maxAngOverIters);
+		*/
+		
+		float dotProd = dot(uCameraWorldPos,worldCoord);
+		
+		vec4 normalDirection = normalize(worldCoord - dotProd*uCameraWorldPos);	//point 90 deg around world from camera, in direction of worldCoord
+		
+		float partOne = dot(uCameraWorldPos.xy, uCameraWorldPos.xy);
+		float partTwo = dot(normalDirection.xy, normalDirection.xy);
+		float constTerm = (partOne+partTwo)/2.0;
+		float cos2Term = (partOne-partTwo)/2.0;
+		float sin2Term = dot(uCameraWorldPos.xy, normalDirection.xy);
+		float shiftAngle = atan(cos2Term,sin2Term);
+		
+		float maxDoubleAng = 2.0*acos(dotProd);
+		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
+		
+		//float magTerm = sqrt(cos2Term*cos2Term+sin2Term*sin2Term);
+		float magTerm = length(vec2(cos2Term, sin2Term));
+		
+		float total=0.0;
+		for (float aa=0.0;aa<CONST_ITERS;aa++){
+			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
+			total+= exp(uAtmosContrast*rsq);
+		}
+		total*= maxDoubleAngOverIters*exp(uAtmosContrast*(constTerm));	
+		fog = exp(-uAtmosThickness*total/2.0);
+		
 		
 		//vec4 transformedNormal = uMVMatrix * aVertexNormal;	//normals code is buggy
 		vec4 transformedNormal = uMVMatrix * aVertexNormal;	
@@ -1261,6 +1373,7 @@
 		fog*=airDensityAtObj; 
 		*/
 		
+		/*
 		float dotProd = dot(uCameraWorldPos,worldCoord);
 		float maxAng = acos(dotProd);	//angle from camera to object
 		float maxAngOverIters = maxAng/CONST_ITERS;
@@ -1275,6 +1388,32 @@
 			totalPath+=exp(uAtmosContrast*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
 		}
 		fog=exp(-totalPath*uAtmosThickness*maxAngOverIters);
+		*/
+		
+		float dotProd = dot(uCameraWorldPos,worldCoord);
+		
+		vec4 normalDirection = normalize(worldCoord - dotProd*uCameraWorldPos);	//point 90 deg around world from camera, in direction of worldCoord
+		
+		float partOne = dot(uCameraWorldPos.xy, uCameraWorldPos.xy);
+		float partTwo = dot(normalDirection.xy, normalDirection.xy);
+		float constTerm = (partOne+partTwo)/2.0;
+		float cos2Term = (partOne-partTwo)/2.0;
+		float sin2Term = dot(uCameraWorldPos.xy, normalDirection.xy);
+		float shiftAngle = atan(cos2Term,sin2Term);
+		
+		float maxDoubleAng = 2.0*acos(dotProd);
+		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
+		
+		//float magTerm = sqrt(cos2Term*cos2Term+sin2Term*sin2Term);
+		float magTerm = length(vec2(cos2Term, sin2Term));
+		
+		float total=0.0;
+		for (float aa=0.0;aa<CONST_ITERS;aa++){
+			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
+			total+= exp(uAtmosContrast*rsq);
+		}
+		total*= maxDoubleAngOverIters*exp(uAtmosContrast*(constTerm));	
+		fog = exp(-uAtmosThickness*total/2.0);
 		
 		
 		vec4 transformedNormal = uMVMatrix * calculatedVertexNormal;
@@ -1407,6 +1546,7 @@
 		
 		//although this is used for "per pixel" version, currently calculating fog per vertex.
 		
+		/*
 		float dotProd = dot(uCameraWorldPos,worldCoord);
 		float maxAng = acos(dotProd*0.999);	//angle from camera to object
 		float maxAngOverIters = maxAng/CONST_ITERS;
@@ -1421,6 +1561,32 @@
 			totalPath+=exp(uAtmosContrast*dot(currentPos.xy,currentPos.xy));	//number here affects how different atmos pressure is between extremes
 		}
 		fog=exp(-totalPath*uAtmosThickness*maxAngOverIters);
+		*/
+	
+		float dotProd = dot(uCameraWorldPos,worldCoord);
+		
+		vec4 normalDirection = normalize(worldCoord - dotProd*uCameraWorldPos);	//point 90 deg around world from camera, in direction of worldCoord
+		
+		float partOne = dot(uCameraWorldPos.xy, uCameraWorldPos.xy);
+		float partTwo = dot(normalDirection.xy, normalDirection.xy);
+		float constTerm = (partOne+partTwo)/2.0;
+		float cos2Term = (partOne-partTwo)/2.0;
+		float sin2Term = dot(uCameraWorldPos.xy, normalDirection.xy);
+		float shiftAngle = atan(cos2Term,sin2Term);
+		
+		float maxDoubleAng = 2.0*acos(dotProd);
+		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
+		
+		//float magTerm = sqrt(cos2Term*cos2Term+sin2Term*sin2Term);
+		float magTerm = length(vec2(cos2Term, sin2Term));
+		
+		float total=0.0;
+		for (float aa=0.0;aa<CONST_ITERS;aa++){
+			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
+			total+= exp(uAtmosContrast*rsq);
+		}
+		total*= maxDoubleAngOverIters*exp(uAtmosContrast*(constTerm));	
+		fog = exp(-uAtmosThickness*total/2.0);
 	
 		gl_Position = uPMatrix * transformedCoord;
 		
