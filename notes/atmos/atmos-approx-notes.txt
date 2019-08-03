@@ -1,0 +1,10 @@
+atmospheric rendering for rotating duocylinder
+
+from previous calculations, expect something like density ~ something^(x*x+y*y)
+integrating density along a great circle, didn't find an analytic solution
+
+might use series expansion of exponential to approximate density, and this approximation maybe integrable.
+TODO investigate accuracy of approximation.
+simplest accuracy measure: within some % of true value. this then shows that integrated result over any path is within this % of true value
+more complex accuracy measure? absolute value within some range. then can see that absolute value over some path within some range of true value. this maybe better, since can look for 1 rgb shade increment...
+

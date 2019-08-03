@@ -1,0 +1,479 @@
+<html>
+<head>
+</head>
+
+<body>
+<script type="text/javascript">
+
+var const_e=2.7182;
+
+//var baseNumber = const_e;	//->atmos density ranges from 1/e thru 1 to e
+var baseNumber =6.25;
+//this is how density in centre compares to surface. if assume constant thrust, 1/4 drag means double terminal speed.
+
+var logBaseNumber = Math.log(baseNumber);
+
+function calcAtmosDensity(pos){
+	//TODO normalise?
+	var squaredComponents = pos.map(function(val){return val*val;});
+	var squaresDiff = squaredComponents[0] +squaredComponents[1] -squaredComponents[2] -squaredComponents[3];	//could simplify since sum of squares =1
+	
+	return Math.pow(baseNumber, squaresDiff);
+}
+
+
+function calcApproxAtmosDensity(pos){
+	var squaredComponents = pos.map(function(val){return val*val;});
+	var squaresDiff = squaredComponents[0] +squaredComponents[1] -squaredComponents[2] -squaredComponents[3];	//could simplify since sum of squares =1
+	
+	squaresDiff*=logBaseNumber;
+	
+	//return approximateExp(squaresDiff,9);
+	return approximateExpShifted(squaresDiff,6,-1);
+	//return (1+squaresDiff*(1+squaresDiff*(1/2)*(1+squaresDiff*(1/3)*(1+squaresDiff*(1/4)*(1+squaresDiff*(1/5))))) );
+}
+
+function approximateExp(input,numTerms){
+	var total=1;
+	for (var ii=numTerms;ii>0;ii--){
+		total*=input/ii;
+		total+=1;
+	}
+	return total;
+		//todo might be faster calculation if precalc input*input, do in pairs etc
+}
+
+//basenumber 9 works ok with ~6 terms
+//with shift -1, ok with ~5
+
+//basenumber 16 works ok with ~9 terms
+//with shift -1, ok with ~7
+
+function approximateExpShifted(input,numTerms,shift){	//shift sweet spot
+	input-=shift;
+
+	var total=1;
+	for (var ii=numTerms;ii>0;ii--){
+		total*=input/ii;
+		total+=1;
+	}
+	return total * Math.pow(const_e,shift);
+		//todo might be faster calculation if precalc input*input, do in pairs etc
+}
+
+function testAtDifferentPositions(){
+	var invroot2= Math.sqrt(0.5);
+	testDensity([1,0,0,0]);
+	testDensity([invroot2,0,invroot2,0]);
+	testDensity([0,0,1,0]);
+}
+function testDensity(pos){
+	console.log(pos);
+	var trueVal = calcAtmosDensity(pos);
+	var approxVal = calcApproxAtmosDensity(pos);
+	console.log(trueVal);
+	console.log(approxVal);
+	console.log(trueVal/approxVal);
+}
+
+
+function numericalPathDensityIntegral(startPoint,endPoint){
+	//for shortest path between these points, sum along path. possibly output exponent of this (absorption)
+	//maybe easier : graph between known orthogonal points
+	
+	//try : norm(B-A(A.B)) - this might be 90 deg around world from A in direction of B. might then work out angle to B from A...
+	
+	var returnObj=getNormalPointAndAngle(startPoint,endPoint);
+	var difference = returnObj.difference;
+	var maxang = returnObj.maxang;
+	
+	console.log("angle:" + maxang);
+	
+	//TODO evenly space from 0 to angle, position = cos(angle)*startPoint + sin(angle)*difference (print points checked to confirm have right way around...) 
+	
+	console.log(sumPath(calcApproxAtmosDensity, startPoint,difference,maxang,0.1));
+	console.log(sumPath(calcAtmosDensity, startPoint,difference,maxang,0.1));
+	console.log(sumPath(calcApproxAtmosDensity, startPoint,difference,maxang,0.01));
+	console.log(sumPath(calcAtmosDensity, startPoint,difference,maxang,0.01));
+	console.log(sumPath(calcApproxAtmosDensity, startPoint,difference,maxang,0.0001));
+//	console.log(sumPath(calcAtmosDensity, startPoint,difference,maxang,0.0001));
+//	console.log(sumPath(calcApproxAtmosDensity, startPoint,difference,maxang,0.000001));	//smaller step->closer to true value
+//	console.log(sumPath(calcAtmosDensity, startPoint,difference,maxang,0.000001));
+	
+	
+}
+function getNormalPointAndAngle(startPoint,endPoint){
+	var dotProd = 0;
+	for (var cc=0;cc<4;cc++){
+		dotProd+=startPoint[cc]*endPoint[cc];
+	}
+	var difference = [];
+	var sumsq=0;
+	for (var cc=0;cc<4;cc++){
+		difference[cc]=endPoint[cc]-startPoint[cc]*dotProd;
+		sumsq+=difference[cc]*difference[cc];
+	}
+	var invsum = 1/Math.sqrt(sumsq);
+	difference = difference.map(function(value){return value*invsum;});
+	console.log(difference);
+	var maxang=Math.acos(dotProd);
+	
+	return {difference:difference, maxang:maxang};
+}
+function sumPath(dFunc,vecA,vecB,max,step){
+	var total=0;
+	var pos=[];
+	var ca,sa;
+	var count=0;
+	for (var aa=0;aa<max;aa+=step){
+		ca=Math.cos(aa);
+		sa=Math.sin(aa);
+		for (var cc=0;cc<4;cc++){
+			pos[cc]=ca*vecA[cc]+sa*vecB[cc];
+		}
+		total+= dFunc(pos);
+		count++;
+	}
+	console.log("num steps: " + count);
+	return total*step;
+}
+
+function analyticIntegralExactDensity(startPoint,endPoint){
+
+	var returnObj=getNormalPointAndAngle(startPoint,endPoint);
+	var difference = returnObj.difference;
+	var maxang = returnObj.maxang;
+	
+	//basically have to combine
+	// 			pos[cc]=ca*vecA[cc]+sa*vecB[cc]; ... (from sumPath())
+	//with 		approximateExpShifted() / approximateExp()
+	
+	//to integrate, get an expression for density as function of angle, and check that this produces same result as existing numericalPathDensityIntegral func.
+	//then can integrate over angle.
+
+	//the position components are const1*sin(ang) + const2*cos(ang). therefore squared components (to get eg x*x+y*y)
+	//will have form const3*sin^2(ang) + const4*sin(ang)*cos(ang) + const5*cos^2(ang)
+	//guess something like : const6 + const7*sin(ang+const8) ?????
+	
+	//A=startPoint , B=difference, ct=cos(t), st=sin(t)
+	//r^2 (t) = (A[0]*ct + B[0]*st)^2 + (A[1]*cos(t) + B[1]*sin(t))^2
+	// 			= A[0]*A[0] * ct^2 + B[0]*B[0]*st^2 + 2*A[0]*B[0]*ct*st + A[1]*A[1] * ct^2 + B[1]*B[1]*st^2 + 2*A[1]*B[1]*ct*st
+	
+	//collect terms together..		=ct^2 (A[0]*A[0] + A[1]*A[1]) + st^2(B[0]*B[0] + B[1]*B[1]) + 2ctst ( A[0]*B[0] + A[1]*B[1] )					// (1)
+	// if we can select angle such that Ax,Ay=0, all bar sin term disappear. or if Bx,By=0, all bar cos term go away
+	// however, intuitively, can't always do this.
+	
+	//can use double angle formula etc
+	//2ctst = sin(2t)
+	//ct^2 + st^2 = 1
+	//st^2 =(1-c2t)/2
+	//ct^2 = (1+c2t)/2
+
+	// {(1+cos(2t))/2 * ( A[0]*A[0] + A[1]*A[1] - B[0]*B[0] + B[1]*B[1] )} + (B[0]*B[0] + B[1]*B[1]) + sin(2t)*( A[0]*B[0] + A[1]*B[1] )
+	// = (A[0]*A[0] + A[1]*A[1] - B[0]*B[0] + B[1]*B[1])/2 + (B[0]*B[0] + B[1]*B[1])   + cos(2t)*(( A[0]*A[0] + A[1]*A[1] - B[0]*B[0] + B[1]*B[1] )/2) +sin(2t)*( A[0]*B[0] + A[1]*B[1] )
+	// = (A[0]*A[0] + A[1]*A[1] + B[0]*B[0] + B[1]*B[1])/2   +cos(2t)*(( A[0]*A[0] + A[1]*A[1] - B[0]*B[0] + B[1]*B[1] )/2) +sin(2t)*( A[0]*B[0] + A[1]*B[1] )
+	
+	//seems asymmetric - missed a factor of 2???
+	
+	//try again from (1)
+	// (A[0]*A[0] + A[1]*A[1]) *ct^2 + (1-ct^2)* ((B[0]*B[0] + B[1]*B[1]) )  
+				// = ct^2 *(A[0]*A[0] + A[1]*A[1] - B[0]*B[0] - B[1]*B[1]) + 1*( (B[0]*B[0] + B[1]*B[1]) )
+				// = (1+c2t)/2 * ...
+				// = (A[0]*A[0] + A[1]*A[1] - B[0]*B[0] - B[1]*B[1])/2 + B[0]*B[0] + B[1]*B[1]     + c2t/2 * (A[0]*A[0] + A[1]*A[1] - B[0]*B[0] - B[1]*B[1])
+	//=> 1 = 
+	// ... seems to be coming out the same..
+	
+	//after that, use atan2 on cos(2t), sin(2t) components to get to cos(2t+const) or sin(2t+const)
+	
+	var partOne = startPoint[0]*startPoint[0] +startPoint[1]*startPoint[1];
+	var partTwo = difference[0]*difference[0] +difference[1]*difference[1];
+	var constTerm = (partOne+partTwo)/2;
+	var cos2Term = (partOne-partTwo)/2;
+	var sin2Term = startPoint[0]*difference[0] + startPoint[1]*difference[1];
+	
+	console.log("constTerm: " + constTerm);
+	
+	var step = 0.01;
+	var doubleStep = step*2;
+	var max = 2*maxang;
+	var count=0;
+	var total=0;
+	for (var aa=0;aa<max;aa+=doubleStep){
+		var rsq = cos2Term*Math.cos(aa) + sin2Term*Math.sin(aa);
+			//rsq here is x*x+y*y. elsewhere are using x*x+y*y-z*z-z*z , =2*(x*x+y*y) - 1
+		total+= Math.pow(baseNumber, rsq*2 -1);	//if wanted to make this faster, could just precalc baseNumber^2, multiply up by baseNumber at end...
+		count++;
+	}
+	total=total*step *Math.pow(baseNumber, 2*constTerm);
+	console.log("alternateMethodIntegralExactDensity : " + total);
+	console.log("num steps: " +count);
+		
+		//^^ above isn't analytic, but does show that 1st part works as expected. (ie rsq(t) is sinusoid)
+	
+	//TODO series approximation using this method (should get same as before)
+	//TODO adjustment of angle so can remove a term.
+	
+	//eg 
+	// 0.1*Math.cos(0.1) + 0.5*Math.sin(0.1) = 0.14941712485121666
+	// Math.atan2(0.5,0.1)  = 1.373400766945016
+	// Math.sqrt(0.01+0.25)*Math.cos(0.1-Math.atan2(0.5,0.1))  = 0.14941712485121666
+	// Math.sqrt(0.01+0.25)*Math.sin(0.1+Math.atan2(0.1,0.5))  =0.14941712485121664
+
+	//suspect that :
+	// Acost + Bsint = sqrt(A*A+B*B) * cos(t-atan2(B,A))
+	// Acost + Bsint = sqrt(A*A+B*B) * sin(t+atan2(A,B))
+	
+	var shiftAngle = Math.atan2(cos2Term,sin2Term);
+	var magTerm =Math.sqrt(cos2Term*cos2Term+sin2Term*sin2Term);
+	max+=shiftAngle;
+	count=0;
+	total=0;
+	for (var aa=shiftAngle;aa<max;aa+=doubleStep){
+		var rsq = magTerm*Math.sin(aa);
+			//rsq here is x*x+y*y. elsewhere are using x*x+y*y-z*z-z*z , =2*(x*x+y*y) - 1
+		total+= Math.pow(baseNumber, rsq*2 -1);	//if wanted to make this faster, could just precalc baseNumber^2, multiply up by baseNumber at end...
+		count++;
+	}
+	total=total*step *Math.pow(baseNumber, 2*constTerm);
+	console.log("alternateMethodIntegralExactDensity : " + total);
+	console.log("num steps: " +count);
+	
+	//series approximation 
+	//decerase doubleStep -see if more accurate
+	//seems this is different to other method result - guess effectively "shifted" a different amount
+	doubleStep/=1000;
+	step/=1000;
+	
+	count=0;
+	total=0;
+	for (var aa=shiftAngle;aa<max;aa+=doubleStep){
+		var rsq = magTerm*Math.sin(aa);
+			//rsq here is x*x+y*y. elsewhere are using x*x+y*y-z*z-z*z , =2*(x*x+y*y) - 1
+		total+= approximateExpShifted(logBaseNumber*(rsq*2 -1) ,6,-1);	//if wanted to make this faster, could just precalc baseNumber^2, multiply up by baseNumber at end...
+		//total+= approximateExpShifted((rsq*2 -1) ,20,-1);	//if wanted to make this faster, could just precalc baseNumber^2, multiply up by baseNumber at end...
+		count++;
+	}
+	//total=total*step;
+	total=total*step *Math.pow(baseNumber, 2*constTerm);
+	console.log("alternateMethodIntegralApproxDensity : " + total);
+	console.log("num steps: " +count);
+	//gets approx right number as number of terms -> inf
+	
+	
+	//use non-shifted approximateExp
+	count=0;
+	total=0;
+	for (var aa=shiftAngle;aa<max;aa+=doubleStep){
+		var rsq = magTerm*Math.sin(aa);
+			//rsq here is x*x+y*y. elsewhere are using x*x+y*y-z*z-z*z , =2*(x*x+y*y) - 1
+		total+= approximateExp(logBaseNumber*(rsq*2 -1) +1 ,6);	//if wanted to make this faster, could just precalc baseNumber^2, multiply up by baseNumber at end...
+		count++;
+	}
+	//total=total*step;
+	total=total*step *Math.pow(baseNumber, 2*constTerm)/ const_e;
+	console.log("alternateMethodIntegralApproxDensity2 : " + total);
+	console.log("num steps: " +count);
+	
+	//get a version about same, reducing complexity inside approximateExp 
+	count=0;
+	total=0;
+	for (var aa=shiftAngle;aa<max;aa+=doubleStep){
+		var rsq = magTerm*Math.sin(aa);
+			//rsq here is x*x+y*y. elsewhere are using x*x+y*y-z*z-z*z , =2*(x*x+y*y) - 1
+		total+= approximateExp(logBaseNumber*(rsq*2) +1 ,6);	//if wanted to make this faster, could just precalc baseNumber^2, multiply up by baseNumber at end...
+		count++;
+	}
+	//total=total*step;
+	total=total*step *Math.pow(baseNumber, 2*constTerm -1)/ const_e;
+	console.log("alternateMethodIntegralApproxDensity2 : " + total);
+	console.log("num steps: " +count);
+	
+	//again about same
+	count=0;
+	total=0;
+	for (var aa=shiftAngle;aa<max;aa+=doubleStep){
+		var rsq = magTerm*Math.sin(aa);
+			//rsq here is x*x+y*y. elsewhere are using x*x+y*y-z*z-z*z , =2*(x*x+y*y) - 1
+		total+= approximateExp(logBaseNumber*(rsq*2) ,6);	//if wanted to make this faster, could just precalc baseNumber^2, multiply up by baseNumber at end...
+		count++;
+	}
+	//total=total*step;
+	total=total*step *Math.pow(baseNumber, 2*constTerm -1);
+	console.log("alternateMethodIntegralApproxDensity2 : " + total);
+	console.log("num steps: " +count);
+	
+	
+	//reduce num terms (2)
+	count=0;
+	total=0;
+	for (var aa=shiftAngle;aa<max;aa+=doubleStep){
+		var rsq = magTerm*Math.sin(aa);
+			//rsq here is x*x+y*y. elsewhere are using x*x+y*y-z*z-z*z , =2*(x*x+y*y) - 1
+		total+= approximateExp(logBaseNumber*(rsq*2) ,2);	//if wanted to make this faster, could just precalc baseNumber^2, multiply up by baseNumber at end...
+		count++;
+	}
+	//total=total*step;
+	total=total*step *Math.pow(baseNumber, 2*constTerm -1);
+	console.log("reduced num terms (2) : " + total);
+	console.log("num steps: " +count);
+	
+	//exact integral version (2)
+//https://www.wolframalpha.com/input/?i=1+%2B+k*sin(x)+%2B+(k*sin(x))%5E2%2F2
+	var kk = magTerm * 2 * logBaseNumber;
+	var ksq = kk*kk;
+	// x + kcosx - k^2sin(2x)/8 + k^2 x /4
+	var integral= (1+0.25*ksq)*(max -shiftAngle);
+	integral-=kk*(Math.cos(max)-Math.cos(shiftAngle));
+	integral-=0.125*ksq*(Math.sin(2*max)-Math.sin(2*shiftAngle));
+	
+	total=integral*Math.pow(baseNumber, 2*constTerm -1);
+	//console.log("integral version: " + total);
+	console.log("integral version halved: " + total/2);	//seems bang on (same as same # terms, step->0). errant/missing 2 somewhere?? (step vs doublestep...)
+	
+	//convert to version using double angle formulae?
+	//sin(2x) = 2sinxcosx
+	integral = (1+0.25*ksq)*(max -shiftAngle);
+	var kcxa = kk*Math.cos(max);
+	var kcxb = kk*Math.cos(shiftAngle);
+	var ksxa = kk*Math.sin(max);
+	var ksxb = kk*Math.sin(shiftAngle);
+	integral-=kcxa-kcxb;
+	integral-=0.25*(kcxa*ksxa-kcxb*ksxb);
+	console.log("integral version halved: " + total/2);
+	
+	//reduced num terms (3)
+	count=0;
+	total=0;
+	for (var aa=shiftAngle;aa<max;aa+=doubleStep){
+		var rsq = magTerm*Math.sin(aa);
+			//rsq here is x*x+y*y. elsewhere are using x*x+y*y-z*z-z*z , =2*(x*x+y*y) - 1
+		total+= approximateExp(logBaseNumber*(rsq*2) ,3);	//if wanted to make this faster, could just precalc baseNumber^2, multiply up by baseNumber at end...
+		count++;
+	}
+	//total=total*step;
+	total=total*step *Math.pow(baseNumber, 2*constTerm -1);
+	console.log("reduced num terms (3) : " + total);
+	console.log("num steps: " +count);
+	
+	//exact integral version (3)
+	//3 terms https://www.wolframalpha.com/input/?i=1+%2B+k*sin(x)+%2B+(k*sin(x))%5E2%2F2+%2B+(k*sin(x))%5E3%2F6
+	
+	integral= (1+0.25*ksq)*(max -shiftAngle);
+	integral-= 0.125*(ksq+8)*kk*(Math.cos(max)-Math.cos(shiftAngle));
+	integral-= 0.125*ksq*(Math.sin(2*max) - Math.sin(2*shiftAngle));
+	integral+= (1/72)*ksq*kk*(Math.cos(3*max)-Math.cos(3*shiftAngle));
+	total=integral*Math.pow(baseNumber, 2*constTerm -1);
+	console.log("integral version halved: " + total/2);	
+
+	//convert to version using double angle formulae?
+	//sin(2x) = 2sinxcosx
+	//cos(3x) = 4cos^3x - 3cosx = cos^3x-3cosxsin^2x
+	//if calculating trig things is slower than powers etc, here instead of  (cosx, sin2x, cos3x), do (cosx, sinx) , some powers.  
+	integral= (1+0.25*ksq)*(max -shiftAngle);
+	var kcxasq=kcxa*kcxa;
+	var kcxbsq=kcxb*kcxb;
+	
+	integral-= (1+ksq/6)*(kcxa-kcxb);
+	integral-= (ksxa*kcxa - ksxb*kcxb)/4;
+	integral+= (kcxasq*kcxa - kcxbsq*kcxb)/18;
+	total=integral*Math.pow(baseNumber, 2*constTerm -1);
+	console.log("integral version halved: " + total/2);	
+	
+	//reduced num terms (4)
+	count=0;
+	total=0;
+	for (var aa=shiftAngle;aa<max;aa+=doubleStep){
+		var rsq = magTerm*Math.sin(aa);
+			//rsq here is x*x+y*y. elsewhere are using x*x+y*y-z*z-z*z , =2*(x*x+y*y) - 1
+		total+= approximateExp(logBaseNumber*(rsq*2) ,4);	//if wanted to make this faster, could just precalc baseNumber^2, multiply up by baseNumber at end...
+		count++;
+	}
+	//total=total*step;
+	total=total*step *Math.pow(baseNumber, 2*constTerm -1);
+	console.log("reduced num terms (4) : " + total);
+	console.log("num steps: " +count);
+	
+	integral=(1+ksq/4 + ksq*ksq/64)*(max -shiftAngle);
+	integral-= (1+ksq/8)*(kcxa-kcxb);
+	integral-=(ksq/48+0.25)*(kcxa*ksxa - kcxb*ksxb);
+	integral+=(kcxa*kcxasq - kcxb*kcxbsq)*(4/72);
+	integral-=ksq*(kcxa -kcxb)*(3/72);
+	integral+=(4/768)*((2*kcxasq-ksq)*kcxa*ksxa -(2*kcxbsq-ksq)*kcxb*ksxb);
+	
+	//sin(2x) = 2sinxcosx
+	//=> sin(4x) = 2sin(2x)*cos(2x) = 4sinxcosx*(2cos^2x - 1)
+	
+	total=integral*Math.pow(baseNumber, 2*constTerm -1);
+	console.log("integral version halved: " + total/2);	
+	
+	//adjust above to form that can apply series expansion to?
+	//total+= approximateExp( logBaseNumber*magTerm*2*Math.sin(aa) - logBaseNumber , ...
+	// ie want the integral for exp(ksin(t))
+	// we use the expansion for exp(x) , where x=ksin(t) 
+	// expansion is: 
+	// 1+ x + x^2/2 + x^3/6 ... 
+	// 1 + ksin(t) + (ksin(t))^2 / 2 + .....
+	//https://www.wolframalpha.com/input/?i=1+%2B+k*sin(x)+%2B+(k%5E2)*sin%5E2(x)%2F2+%2B+(k%5E3)*sin%5E3(x)%2F6+%2B+(k%5E4)*sin%5E4(x)%2F24%2B(k%5E5)*sin%5E5(x)%2F120+%2B+(k%5E6)*sin%5E6(x)%2F720
+	
+	//can do this by just doing indefinite integral for parts.
+	//result has a lot of terms!
+	//to check basic idea works, try with small number of terms: 1 + ksin(t) + (ksin(t))^2 / 2
+	//first calc by existing method
+	
+	//version with large num terms - should repro "exact" version
+	count=0;
+	total=0;
+	for (var aa=shiftAngle;aa<max;aa+=doubleStep){
+		var rsq = magTerm*Math.sin(aa);
+			//rsq here is x*x+y*y. elsewhere are using x*x+y*y-z*z-z*z , =2*(x*x+y*y) - 1
+		total+= approximateExp(logBaseNumber*(rsq*2 -1) +1 ,30);	//if wanted to make this faster, could just precalc baseNumber^2, multiply up by baseNumber at end...
+		count++;
+	}
+	//total=total*step;
+	total=total*step *Math.pow(baseNumber, 2*constTerm)/ const_e;
+	console.log("alternateMethodIntegralApproxDensity2 : " + total);
+	console.log("num steps: " +count);
+	
+	
+	
+	
+	
+	//can now do an analytic integral for the series approximation, that should acheive the same result (for small step size)
+	
+	//analytic integral of series approximation
+	//suppose 5 terms : 
+	// 1 + sin(x) + sin2(x)/2+ sin3(x)/6 + sin4(x)/24 + sin5(x)/120
+	//according to https://www.wolframalpha.com/input/?i=1+%2B+sin(x)+%2B+sin%5E2(x)%2F2+%2B+sin%5E3(x)%2F6+%2B+sin%5E4(x)%2F24%2Bsin%5E5(x)%2F120 ,
+	//integrates to
+	// 1.265625*x + 0.13541666*sin(2x) + 0.00130208333*sin(4x) + 1.1302083333*cos(x) + 0.014756944444*cos(3x) - 1.041666e-4 *cos(5x)
+	
+	//guess can make quicker to cal using double angle etc. 4 terms easier to manage?
+	// https://www.wolframalpha.com/input/?i=1+%2B+sin(x)+%2B+sin%5E2(x)%2F2+%2B+sin%5E3(x)%2F6+%2B+sin%5E4(x)%2F24
+	// 1.265625*x + 0.135416666*sin(2x) + 0.00130208333*sin(4x) + 1.125*cos(x) + 0.013888*cos(3x)
+	
+	
+	//for fixed scale sin curve in rsq, if know integral, can move up and down by fixed amount and integral will scale by some amount 
+	//therefore can do a 2d lookup table angle vs scale of sine curve.
+	//table can contain transmittance, so don't have issue with very large integrated path density for thick part etc. when do 2 lookups, multiply transmittance. if have different
+	// colour values of transmittance (eg mean free path of blue light is less), raise transmittance to some power. eg r=t, g=t^2, g=t^3 . might produce coloured atmosphere. maybe not realistic since atmos colour maybe more to do with scattering angle, but maybe looks fine with simple model
+	//would need 2 lookups per path (start, end angles)
+	//maybe can be done by vert shader - find position from which to do lookup in the vert shader, use varying, look up in pix shader (AFAIK vert shader cant access texture)
+	//or use series approximation in vert shader. probably many options. try many, check for speed, accuracy (vs small step manual integration)
+}
+
+
+testAtDifferentPositions();
+//seems to be much better approximation for large density side (as fraction of true). 
+
+//var fromPoint = [1,0,0,0];
+var fromPoint = [0.6,0,0.8,0];
+
+var toPoint = [Math.sqrt(0.5),Math.sqrt(0.5),0,0];
+numericalPathDensityIntegral(fromPoint,toPoint);
+analyticIntegralExactDensity(fromPoint,toPoint);
+
+</script>
+
+
+</body>
+</html>
