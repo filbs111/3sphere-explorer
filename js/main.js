@@ -2215,7 +2215,6 @@ var iterateMechanics = (function iterateMechanics(){
 				rotatePlayer(lastPlayerAngMove);	//TODO add rotational momentum - not direct rotate
 			}
 			
-			playerVelVec=scalarvectorprod(0.997,playerVelVec);
 			playerAngVelVec=scalarvectorprod(0.8,playerAngVelVec);
 			
 			//blend velocity with velocity of rotating duosphere. (todo angular vel to use this too)
@@ -2233,11 +2232,19 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			//this is in frame of duocylinder. playerVelVec is in frame of player though... ?!! possible to do without matrix mult? by choosing right parts of playerCamera mat?
 			
-			for (var cc=0;cc<3;cc++){
-				playerVelVec[cc]+=0.003*spinVelPlayerCoords[cc];
-			}
-			
-			
+			//square drag //want something like spd = spd - const*spd*spd = spd (1 - const*|spd|)
+
+			var airSpdVec = playerVelVec.map(function(val, idx){return val-spinVelPlayerCoords[idx];});
+			var spd = Math.sqrt(airSpdVec.map(function(val){return val*val;}).reduce(function(val, sum){return val+sum;}));
+			//playerVelVec=scalarvectorprod(1.0-0.001*spd,playerVelVec);
+
+			//if (Math.random()<0.05){console.log("speed : " + spd);}	//show the speed. todo proper ui
+
+			//get the current atmospheric density.
+			var atmosThick = 0.001*guiParams.atmosThickness;	//1st constant just pulled out of the air. 
+			atmosThick*=Math.pow(2.71, guiParams.atmosContrast*(playerPos[0]*playerPos[0] + playerPos[1]*playerPos[1])); //as atmosScale increases, scale height decreases
+
+			playerVelVec=scalarvectorprod(1.0-atmosThick*spd,airSpdVec).map(function(val,idx){return val+spinVelPlayerCoords[idx];});
 			
 			if (autoFireCountdown>0){
 				autoFireCountdown--;
