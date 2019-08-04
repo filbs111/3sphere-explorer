@@ -933,38 +933,41 @@ function drawWorldScene(frameTime, isCubemapView) {
 	}
 	
 	
-	var boxSize = 0.02;
-	var boxRad = boxSize*Math.sqrt(3);
+	var boxSize;
+	var boxRad;
 	
 	//draw exploding box using modified shader (note this always uses atmos v2 at the mo (analytic integral of series approximation)
-	
-	var activeShaderProgram = shaderProgramTexmapPerPixelDiscardAtmosV2Explode;
-		//setup code largely shared with setting regular texmap code. todo generalise setup
-	gl.useProgram(activeShaderProgram);
-	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
-	if (activeShaderProgram.uniforms.uReflectorDiffColor){
-			gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
-	}
-	if (activeShaderProgram.uniforms.uPlayerLightColor){
-		gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
-	}
-	gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
-	gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
-	
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
-	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
+	if (guiParams.drawShapes.explodingBox){
+		boxSize = 0.02;
+		boxRad = boxSize*Math.sqrt(3);
+		
+		var activeShaderProgram = shaderProgramTexmapPerPixelDiscardAtmosV2Explode;
+			//setup code largely shared with setting regular texmap code. todo generalise setup
+		gl.useProgram(activeShaderProgram);
+		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
+		if (activeShaderProgram.uniforms.uReflectorDiffColor){
+				gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
+		}
+		if (activeShaderProgram.uniforms.uPlayerLightColor){
+			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
+		}
+		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
+		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
+		
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
+		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 
-	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+		
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
 
-	//new for this version of shader
-	//gl.uniform1f(activeShaderProgram.uniforms.uVertexMove, guiParams.normalMove + boxSize);
-	gl.uniform1f(activeShaderProgram.uniforms.uVertexMove, 0.01*Math.abs(Math.cos((Math.PI/1000)*(frameTime % 2000 ))) + boxSize);
-	
-	mat4.set(invertedWorldCamera, mvMatrix);
-	mat4.multiply(mvMatrix,teapotMatrix);		
-	drawObjectFromBuffers(explodingCubeBuffers, activeShaderProgram);
-	
+		//new for this version of shader
+		//gl.uniform1f(activeShaderProgram.uniforms.uVertexMove, guiParams.normalMove + boxSize);
+		gl.uniform1f(activeShaderProgram.uniforms.uVertexMove, 0.01*Math.abs(Math.cos((Math.PI/1000)*(frameTime % 2000 ))) + boxSize);
+		
+		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.multiply(mvMatrix,teapotMatrix);		
+		drawObjectFromBuffers(explodingCubeBuffers, activeShaderProgram);	
+	}
 	
 	boxSize = 0.1;
 	boxRad = boxSize*Math.sqrt(3);
@@ -1031,12 +1034,14 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}
 	}
 	
-	//draw boxes on duocylinder surface.  	
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
-	prepBuffersForDrawing(cubeBuffers, shaderProgramTexmap);
-	
-	for (var bb of duocylinderBoxInfo){
-		drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, invertedWorldCameraDuocylinderFrame);
+	//draw boxes on duocylinder surface. 
+	if (guiParams.drawShapes.towers){	//note currently toggles drawing for all boxes using duocylinder positioning method, including demo axis objects
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
+		prepBuffersForDrawing(cubeBuffers, shaderProgramTexmap);
+		
+		for (var bb of duocylinderBoxInfo){
+			drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, invertedWorldCameraDuocylinderFrame);
+		}
 	}
 	
 	if (guiParams.drawShapes.duoCylinder){	//TODO check procTerrain selected for world that player in
@@ -1254,7 +1259,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 	//}
 	
-	if (guiParams.drawShapes["draw teapot"]){
+	if (guiParams.drawShapes.teapot){
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,teapotMatrix);		
 		drawObjectFromBuffers(teapotBuffers, shaderProgramColored);
@@ -1806,8 +1811,10 @@ var guiParams={
 		'y=w=0':false,
 		'z=w=0':false
 		},
-		"draw teapot":false,
-		"teapot scale":0.7
+		"teapot":false,
+		"teapot scale":0.7,
+		"towers":true,
+		"explodingBox":true
 	},
 	'random boxes':{
 		number:0,
@@ -1903,8 +1910,10 @@ function init(){
 	var randBoxesFolder = drawShapesFolder.addFolder("random boxes");
 	randBoxesFolder.add(guiParams["random boxes"],"number",0,1000,50);
 	randBoxesFolder.add(guiParams["random boxes"],"size",0.01,0.05,0.01);
-	drawShapesFolder.add(guiParams.drawShapes,"draw teapot");
+	drawShapesFolder.add(guiParams.drawShapes,"teapot");
 	drawShapesFolder.add(guiParams.drawShapes,"teapot scale",0.2,2.0,0.05);
+	drawShapesFolder.add(guiParams.drawShapes,"towers");
+	drawShapesFolder.add(guiParams.drawShapes,"explodingBox");
 	
 	var polytopesFolder = gui.addFolder('polytopes');
 	polytopesFolder.add(guiParams,"draw 5-cell");
