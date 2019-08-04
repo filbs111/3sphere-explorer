@@ -11,6 +11,7 @@ var shaderProgramColored,
 	shaderProgramTexmapPerPixel,
 	shaderProgramTexmapPerPixelDiscard,
 	shaderProgramTexmapPerPixelDiscardAtmos,
+	shaderProgramTexmapPerPixelDiscardAtmosExplode,
 	shaderProgramTexmapPerPixelDiscardAtmosV2,
 	shaderProgramTexmapPerPixelDiscardAtmosV2Explode,
 	shaderProgramTexmap4Vec,
@@ -77,6 +78,10 @@ function initShaders(){
 	shaderProgramTexmapPerPixelDiscardAtmos = loadShader( "shader-texmap-perpixel-discard-atmos-vs", "shader-texmap-perpixel-discard-fs",{
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
 					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					});
+	shaderProgramTexmapPerPixelDiscardAtmosExplode = loadShader( "shader-texmap-perpixel-discard-atmos-vertvel-vs", "shader-texmap-perpixel-discard-fs",{
+					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord", "aVertexVelocity"],
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor","uVertexMove"]
 					});
 	shaderProgramTexmapPerPixelDiscardAtmosV2 = loadShader( "shader-texmap-perpixel-discard-atmos-v2-vs", "shader-texmap-perpixel-discard-fs",{
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
@@ -932,7 +937,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 		dropLightPos = [lightMat[12], lightMat[13], lightMat[14], lightMat[15]];	//todo make light dimmer/directional when "coming out of" portal
 	}
 	
-	
 	var boxSize;
 	var boxRad;
 	
@@ -941,7 +945,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		boxSize = 0.02;
 		boxRad = boxSize*Math.sqrt(3);
 		
-		var activeShaderProgram = shaderProgramTexmapPerPixelDiscardAtmosV2Explode;
+		var activeShaderProgram = guiParams["altAtmosShader"]?shaderProgramTexmapPerPixelDiscardAtmosV2Explode:shaderProgramTexmapPerPixelDiscardAtmosExplode;
 			//setup code largely shared with setting regular texmap code. todo generalise setup
 		gl.useProgram(activeShaderProgram);
 		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
@@ -965,7 +969,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform1f(activeShaderProgram.uniforms.uVertexMove, 0.01*Math.abs(Math.cos((Math.PI/1000)*(frameTime % 2000 ))) + boxSize);
 		
 		mat4.set(invertedWorldCamera, mvMatrix);
-		mat4.multiply(mvMatrix,teapotMatrix);		
+		mat4.multiply(mvMatrix,teapotMatrix);
+		mat4.set(teapotMatrix, mMatrix);
 		drawObjectFromBuffers(explodingCubeBuffers, activeShaderProgram);	
 	}
 	
