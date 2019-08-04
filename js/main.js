@@ -12,6 +12,7 @@ var shaderProgramColored,
 	shaderProgramTexmapPerPixelDiscard,
 	shaderProgramTexmapPerPixelDiscardAtmos,
 	shaderProgramTexmapPerPixelDiscardAtmosV2,
+	shaderProgramTexmapPerPixelDiscardAtmosV2Explode,
 	shaderProgramTexmap4Vec,
 	shaderProgramTexmap4VecAtmos,
 	shaderProgramTexmap4VecAtmosV2,
@@ -51,7 +52,7 @@ function initShaders(){
 					});
 	shaderProgramColoredPerPixelDiscardAtmosV2Explode = loadShader( "shader-perpixel-discard-vs-atmos-v2-explode", "shader-perpixel-discard-fs",{
 					attributes:["aVertexPosition","aVertexNormal"],
-					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uColor","uEmitColor","uFogColor","uAtmosThickness","uAtmosContrast","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor","uNormalMove"]
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uColor","uEmitColor","uFogColor","uAtmosThickness","uAtmosContrast","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor","uVertexMove"]
 					});
 
 	shaderProgramColoredPerPixelTransparentDiscard = loadShader( "shader-perpixel-transparent-discard-vs", "shader-perpixel-transparent-discard-fs",{
@@ -80,6 +81,10 @@ function initShaders(){
 	shaderProgramTexmapPerPixelDiscardAtmosV2 = loadShader( "shader-texmap-perpixel-discard-atmos-v2-vs", "shader-texmap-perpixel-discard-fs",{
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
 					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					});
+	shaderProgramTexmapPerPixelDiscardAtmosV2Explode = loadShader( "shader-texmap-perpixel-discard-atmos-v2-vertvel-vs", "shader-texmap-perpixel-discard-fs",{
+					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord", "aVertexVelocity"],
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor","uVertexMove"]
 					});
 					
 	shaderProgramTexmap4Vec = loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs",{
@@ -156,6 +161,7 @@ var duocylinderObjects={
 var sphereBuffers={};
 var quadBuffers={};
 var cubeBuffers={};
+var explodingCubeBuffers={};
 var cubeFrameBuffers={};
 var cubeFrameSubdivBuffers={};
 var octoFrameBuffers={};
@@ -228,6 +234,7 @@ function initBuffers(){
 	loadBufferData(sphereBuffers, makeSphereData(99,200,1)); //todo use normalized box or icosohedron
 	loadBufferData(quadBuffers, quadData);
 	loadBufferData(cubeBuffers, levelCubeData);
+	loadBufferData(explodingCubeBuffers, explodingCubeData);
 	loadBufferData(cubeFrameBuffers, cubeFrameBlenderObject);
 	loadBufferData(cubeFrameSubdivBuffers, cubeFrameSubdivObject);
 	loadBufferData(octoFrameBuffers, octoFrameBlenderObject);
@@ -255,6 +262,10 @@ function initBuffers(){
 		if (sourceData.uvcoords){
 			bufferObj.vertexTextureCoordBuffer= gl.createBuffer();
 			bufferArrayData(bufferObj.vertexTextureCoordBuffer, sourceData.uvcoords, 2);
+		}
+		if (sourceData.velocities){	//for exploding objects
+			bufferObj.vertexVelocityBuffer= gl.createBuffer();
+			bufferArrayData(bufferObj.vertexVelocityBuffer, sourceData.velocities, 3);
 		}
 		
 		bufferObj.vertexNormalBuffer= gl.createBuffer();
@@ -921,8 +932,45 @@ function drawWorldScene(frameTime, isCubemapView) {
 		dropLightPos = [lightMat[12], lightMat[13], lightMat[14], lightMat[15]];	//todo make light dimmer/directional when "coming out of" portal
 	}
 	
+	
+	var boxSize = 0.02;
+	var boxRad = boxSize*Math.sqrt(3);
+	
+	//draw exploding box using modified shader (note this always uses atmos v2 at the mo (analytic integral of series approximation)
+	
+	var activeShaderProgram = shaderProgramTexmapPerPixelDiscardAtmosV2Explode;
+		//setup code largely shared with setting regular texmap code. todo generalise setup
+	gl.useProgram(activeShaderProgram);
+	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
+	if (activeShaderProgram.uniforms.uReflectorDiffColor){
+			gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
+	}
+	if (activeShaderProgram.uniforms.uPlayerLightColor){
+		gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
+	}
+	gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
+	gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
+	
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
+	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
+
+	
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+
+	//new for this version of shader
+	//gl.uniform1f(activeShaderProgram.uniforms.uVertexMove, guiParams.normalMove + boxSize);
+	gl.uniform1f(activeShaderProgram.uniforms.uVertexMove, 0.01*Math.abs(Math.cos((Math.PI/1000)*(frameTime % 2000 ))) + boxSize);
+	
+	mat4.set(invertedWorldCamera, mvMatrix);
+	mat4.multiply(mvMatrix,teapotMatrix);		
+	drawObjectFromBuffers(explodingCubeBuffers, activeShaderProgram);
+	
+	
+	boxSize = 0.1;
+	boxRad = boxSize*Math.sqrt(3);
+	
 	//var activeShaderProgram = shaderProgramColored;	//draw spheres
-	var activeShaderProgram = shaderProgramTexmap;	//draw cubes
+	activeShaderProgram = shaderProgramTexmap;	//draw cubes
 	//gl.enableVertexAttribArray(1);	//do need tex coords
 
 	gl.useProgram(activeShaderProgram);
@@ -937,8 +985,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 	gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
 	gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 	
-	var boxSize = 0.1;
-	var boxRad = boxSize*Math.sqrt(3);
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 	
@@ -1180,8 +1226,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 	activeShaderProgram = shaderProgramColored;
 	gl.useProgram(activeShaderProgram);
 	
-	if (activeShaderProgram.uniforms.uNormalMove){
-		gl.uniform1f(activeShaderProgram.uniforms.uNormalMove, guiParams.normalMove);
+	if (activeShaderProgram.uniforms.uVertexMove){
+		gl.uniform1f(activeShaderProgram.uniforms.uVertexMove, guiParams.normalMove);
 	}
 	
 	gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);	//no emmision
@@ -1546,6 +1592,10 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 		gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexNormalBuffer);
 		gl.vertexAttribPointer(shaderProg.attributes.aVertexNormal, bufferObj.vertexNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	}
+	if (bufferObj.vertexVelocityBuffer && shaderProg.attributes.aVertexVelocity){
+		gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexVelocityBuffer);
+		gl.vertexAttribPointer(shaderProg.attributes.aVertexVelocity, bufferObj.vertexVelocityBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	}
 	
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
 	
@@ -1749,14 +1799,14 @@ var guiParams={
 	duocylinderRotateSpeed:0,
 	drawShapes:{
 		boxes:{
-		'y=z=0':true,	//x*x+w*w=1
-		'x=z=0':true,	//y*y+w*w=1
-		'x=y=0':true,	//z*z+w*w=1
-		'x=w=0':true,
-		'y=w=0':true,
-		'z=w=0':true
+		'y=z=0':false,	//x*x+w*w=1
+		'x=z=0':false,	//y*y+w*w=1
+		'x=y=0':false,	//z*z+w*w=1
+		'x=w=0':false,
+		'y=w=0':false,
+		'z=w=0':false
 		},
-		"draw teapot":true,
+		"draw teapot":false,
 		"teapot scale":0.7
 	},
 	'random boxes':{
@@ -1808,7 +1858,8 @@ var playerLightUnscaled;
 var playerLight;
 var muzzleFlashAmounts=[0,0,0,0];
 var teapotMatrix=mat4.create();mat4.identity(teapotMatrix);
-xyzmove4mat(teapotMatrix,[0,1.85,0]);
+//xyzmove4mat(teapotMatrix,[0,1.85,0]);
+xyzmove4mat(teapotMatrix,[0,0,-0.5]);
 var sshipMatrix=mat4.create();mat4.identity(sshipMatrix);
 var sshipMatrixNoInterp=mat4.create();mat4.identity(sshipMatrixNoInterp);
 var targetMatrix=mat4.create();mat4.identity(targetMatrix);
