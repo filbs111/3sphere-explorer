@@ -1480,8 +1480,13 @@ function drawWorldScene(frameTime, isCubemapView) {
 	for (var ee in explosions){
 		var singleExplosion = explosions[ee];
 	
-		mat4.set(invertedWorldCamera, mvMatrix);
+		if (singleExplosion.rotateWithDuocylinder){
+			mat4.set(invertedWorldCameraDuocylinderFrame, mvMatrix);
+		}else{
+			mat4.set(invertedWorldCamera, mvMatrix);
+		}
 		mat4.multiply(mvMatrix,singleExplosion.matrix);
+		
 		//var radius = singleExplosion.life*0.0002;
 		var radius = (100-singleExplosion.life)*singleExplosion.size;
 		var opac = 0.01*singleExplosion.life;
@@ -1522,13 +1527,14 @@ function drawWorldScene(frameTime, isCubemapView) {
 var explosions ={};		//todo how to contain this? eg should constructor be eg explosions.construct()? what's good practice?
 var Explosion=function(){
 	var nextExplId = 0;
-	return function(matrix, size, color){
+	return function(matrix, size, color, rotateWithDuocylinder){
 		this.matrix = matrix;
 		this.size = size;
 		this.color = color;
 		this.life=100;
 		explosions[nextExplId]=this;
 		nextExplId+=1;
+		this.rotateWithDuocylinder=rotateWithDuocylinder;
 	}
 }();
 
@@ -2405,7 +2411,7 @@ var iterateMechanics = (function iterateMechanics(){
 			if (terrainModel == "procTerrain"){
 				//collision with duocylinder procedural terrain
 				var bulletPos = [bulletMatrix[12],bulletMatrix[13],bulletMatrix[14],bulletMatrix[15]];	//todo use this elsewhere?
-				if (getHeightAboveTerrainFor4VecPos(bulletPos)<0){detonateBullet(bullet, bulletMatrix);}
+				if (getHeightAboveTerrainFor4VecPos(bulletPos)<0){detonateBullet(bullet, bulletMatrix, true);}
 			}
 			
 			//slow collision detection between bullet and array of boxes.
@@ -2436,11 +2442,11 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 			
 			for (var bb of duocylinderBoxInfo){
-				boxCollideCheck(bb.matrix,duocylinderSurfaceBoxScale,critValueDCBox, bulletMatrixTransposedDCRefFrame);
+				boxCollideCheck(bb.matrix,duocylinderSurfaceBoxScale,critValueDCBox, bulletMatrixTransposedDCRefFrame, true);
 			}
 						
 			
-			function boxCollideCheck(cellMat,thisBoxSize,boxCritValue, bulletMatrixTransposedForRefFrame){
+			function boxCollideCheck(cellMat,thisBoxSize,boxCritValue, bulletMatrixTransposedForRefFrame, moveWithDuocylinder){
 					var bulletMatrixTransposedForRefFrame = bulletMatrixTransposedForRefFrame || bulletMatrixTransposed;
 				//if (cellMat[15]>criticalWPos){return;}	//not drawing boxes too close to portal, so don't collide with them either!
 														//also breaks ring box collision now (when box near portal)
@@ -2454,7 +2460,7 @@ var iterateMechanics = (function iterateMechanics(){
 					if (relativeMat[15]>0 && Math.max(Math.abs(relativeMat[3]),
 								Math.abs(relativeMat[7]),
 								Math.abs(relativeMat[11]))<thisBoxSize*relativeMat[15]){
-						detonateBullet(bullet, bulletMatrix);
+						detonateBullet(bullet, bulletMatrix, moveWithDuocylinder);
 				}
 			}
 			
@@ -2636,10 +2642,20 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			}
 		}
-		function detonateBullet(bullet, bulletMatrix){	//TODO what scope does this have? best practice???
+		function detonateBullet(bullet, bulletMatrix, moveWithDuocylinder){	//TODO what scope does this have? best practice???
 			bullet.vel = [0,0,0];	//if colliding with target, stop bullet.
 			bullet.active=false;
-			var tmp=new Explosion(bulletMatrix, 0.0003, [1,0.5,0.25]);
+			
+			if (!moveWithDuocylinder){
+				new Explosion(bulletMatrix, 0.0003, [1,0.5,0.25]);
+			}else{
+				var tmpMat = mat4.create(bulletMatrix);
+				mat4.transpose(tmpMat);	//inefficient! TODO precalc matrix to do this transpose-rotate-transpose!
+				rotate4mat(tmpMat, 0, 1, duocylinderSpin);	//get bullet matrix in frame of duocylinder. might be duplicating work from elsewhere.
+				mat4.transpose(tmpMat);	//inefficient
+				new Explosion(tmpMat, 0.0003, [0,0.5,1],true);	//different colour for debugging
+			}
+			
 			//singleExplosion.life = 100;
 			//singleExplosion.matrix = bulletMatrix;
 		}
