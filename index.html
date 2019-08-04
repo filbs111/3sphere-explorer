@@ -2162,7 +2162,7 @@
 		float sin2Term = dot(uCameraWorldPos.xy, normalDirection.xy);
 		float shiftAngle = atan(cos2Term,sin2Term);
 		
-		float maxDoubleAng = 2.0*acos(dotProd);
+		float maxDoubleAng = 2.0*acos(dotProd*0.999);
 		
 		//float magTerm = sqrt(cos2Term*cos2Term+sin2Term*sin2Term);
 		float magTerm = length(vec2(cos2Term, sin2Term));
