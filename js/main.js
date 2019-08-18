@@ -1047,7 +1047,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
 		prepBuffersForDrawing(cubeBuffers, shaderProgramTexmap);
 		
-		for (var bb of duocylinderBoxInfo){
+		for (var bb of duocylinderBoxInfo.towerblocks){
 			drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, cubeBuffers, invertedWorldCameraDuocylinderFrame);
 		}
 	}
@@ -1277,25 +1277,19 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);	//no emission
 		modelScale = 1.0;
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+		/*
+		//draw a single tower
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,teapotMatrix);		
 		xyzmove4mat(mvMatrix,[0,0.695,0]);	
 		xyzrotate4mat(mvMatrix,[-Math.PI/2,0,0]);	
 		drawObjectFromBuffers(hyperboloidBuffers, shaderProgramColored);
-	}
-	
-	//reuse logic for drawing towers
-	if (guiParams.drawShapes.hyperboloid){	//note currently toggles drawing for all boxes using duocylinder positioning method, including demo axis objects
-	
-		//set this again - might have reused this for explosions or something?!!!! 
-		invertedWorldCameraDuocylinderFrame = mat4.create(invertedWorldCamera);
-		rotate4mat(invertedWorldCameraDuocylinderFrame, 0, 1, duocylinderSpin);	//APPEARS TO NOT HELP
+		*/
 		
-	
-		//gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
+		//reuse logic for drawing towers
 		prepBuffersForDrawing(hyperboloidBuffers, activeShaderProgram);
 		
-		for (var bb of duocylinderBoxInfo){
+		for (var bb of duocylinderBoxInfo.hyperboloids){
 			drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, hyperboloidBuffers, invertedWorldCameraDuocylinderFrame);
 		}
 	}
@@ -2482,7 +2476,7 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			}
 			
-			for (var bb of duocylinderBoxInfo){
+			for (var bb of duocylinderBoxInfo.towerblocks){
 				boxCollideCheck(bb.matrix,duocylinderSurfaceBoxScale,critValueDCBox, bulletMatrixTransposedDCRefFrame, true);
 			}
 						
