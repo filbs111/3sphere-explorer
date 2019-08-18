@@ -15,8 +15,9 @@ function initGL(){
 	}
 }
 function resizecanvas(){
-	var screenWidth = window.innerWidth;
-	var screenHeight = window.innerHeight;
+	var overResolutionFactor=1;	//main reason to cause bad perf to check optimisations. 6 is what it takes for bad framerate on gtx 1080!!
+	var screenWidth = overResolutionFactor*window.innerWidth;
+	var screenHeight = overResolutionFactor*window.innerHeight;
 	if (canvas.width != screenWidth || canvas.height != screenHeight){
 		canvas.width = screenWidth;
 		canvas.height = screenHeight;
@@ -24,6 +25,9 @@ function resizecanvas(){
 		gl.viewportHeight = screenHeight;	//?? need to set both these things?? 
 	}
 	screenAspect = gl.viewportWidth/gl.viewportHeight;
+	
+	canvas.style.width=window.innerWidth+"px";
+	canvas.style.height=window.innerHeight+"px";
 }
 
 function getShader(gl, id) {
@@ -74,8 +78,9 @@ function loadShader(vs_id,fs_id, obj) {
 	
 	obj.attributes.forEach(function(item, index){
 		progAttributes[item] = gl.getAttribLocation(shaderProgram, item);
-		gl.enableVertexAttribArray(progAttributes[item]);
-	});
+		//gl.enableVertexAttribArray(progAttributes[item]);	//now unnecessary since enabling and disabling when prepping buffers
+	});														//avoiding issue of not drawing if enabled but nothing bound. alternative workaround maybe 
+															//to bind a dummy thing to it.
 	obj.uniforms.forEach(function(item, index){
 		console.log("getting uniform location for " + item);
 		progUniforms[item] = gl.getUniformLocation(shaderProgram, item);

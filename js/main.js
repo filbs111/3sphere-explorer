@@ -1560,7 +1560,20 @@ function generateCullFunc(pMat){
 }
 
 
+function enableDisableAttributes(shaderProg){
+	//avoid issue where if object with a lot of attributes has a shader loaded and enableVertexAttribArray was called,
+	//and nothing is bound to it, won't draw anything. 
+	//just disable lots (TODO keep track of which are enabled and enable/disable as required
+	for (var ii=0;ii<8;ii++){
+		gl.disableVertexAttribArray(ii);
+	}
+	Object.keys(shaderProg.attributes).forEach(function(item, index){
+		gl.enableVertexAttribArray(gl.getAttribLocation(shaderProg, item));
+	});
+}
+
 function drawTennisBall(duocylinderObj, shader){
+	enableDisableAttributes(shader);
 
 	gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexPositionBuffer);
     gl.vertexAttribPointer(shader.attributes.aVertexPosition, duocylinderObj.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
@@ -1601,6 +1614,8 @@ function drawObjectFromBuffers(bufferObj, shaderProg, usesCubeMap){
 	drawObjectFromPreppedBuffers(bufferObj, shaderProg);
 }
 function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
+	enableDisableAttributes(shaderProg);
+	
 	gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexPositionBuffer);
     gl.vertexAttribPointer(shaderProg.attributes.aVertexPosition, bufferObj.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	
@@ -1825,7 +1840,7 @@ var guiParams={
 		"teapot":false,
 		"teapot scale":0.7,
 		"towers":true,
-		"explodingBox":true
+		"explodingBox":false
 	},
 	'random boxes':{
 		number:0,
@@ -2054,12 +2069,6 @@ function init(){
 	gl.enable(gl.CULL_FACE);
 	setupScene();
 	requestAnimationFrame(drawScene);
-	
-	//bodge - if initially drawing only objects using shader with fewer attributes than shader with most loaded so far, fails to draw,
-	//logs: Error: WebGL warning: drawElements: Vertex attrib array 2 is enabled but has no buffer bound.
-	//maybe should be using disableVertexAttribArray, but seems that in practice as long as something is bound to the attribute, works, even if active shader not using it
-	//hack is to just prep buffers for a shader that uses the most attributes
-	prepBuffersForDrawing(cubeBuffers, shaderProgramTexmapPerPixelDiscard);
 	
 	function setFog(world,color){
 		var r = parseInt(color.substring(1,3),16) /255;
