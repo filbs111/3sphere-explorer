@@ -1048,7 +1048,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		prepBuffersForDrawing(cubeBuffers, shaderProgramTexmap);
 		
 		for (var bb of duocylinderBoxInfo){
-			drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, invertedWorldCameraDuocylinderFrame);
+			drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, cubeBuffers, invertedWorldCameraDuocylinderFrame);
 		}
 	}
 	
@@ -1058,13 +1058,13 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
 	}
 	
-	function drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, invertedCamera){
+	function drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, buffers, invertedCamera){
 		var invertedCamera = invertedCamera || invertedWorldCamera;
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, bb.color);
 		mat4.set(invertedCamera, mvMatrix);
 		mat4.multiply(mvMatrix, bb.matrix);
 		mat4.set(bb.matrix, mMatrix);
-		drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+		drawObjectFromPreppedBuffers(buffers, activeShaderProgram);
 	}
 	
 	function drawPreppedBufferOnDuocylinder(aa, bb, hh, cc, buff){
@@ -1272,7 +1272,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawObjectFromBuffers(teapotBuffers, shaderProgramColored);
 	}
 	
-if (guiParams.drawShapes.hyperboloid){
+	if (guiParams.drawShapes.hyperboloid){
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.gray);
 		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);	//no emission
 		modelScale = 1.0;
@@ -1283,6 +1283,23 @@ if (guiParams.drawShapes.hyperboloid){
 		xyzrotate4mat(mvMatrix,[-Math.PI/2,0,0]);	
 		drawObjectFromBuffers(hyperboloidBuffers, shaderProgramColored);
 	}
+	
+	//reuse logic for drawing towers
+	if (guiParams.drawShapes.hyperboloid){	//note currently toggles drawing for all boxes using duocylinder positioning method, including demo axis objects
+	
+		//set this again - might have reused this for explosions or something?!!!! 
+		invertedWorldCameraDuocylinderFrame = mat4.create(invertedWorldCamera);
+		rotate4mat(invertedWorldCameraDuocylinderFrame, 0, 1, duocylinderSpin);	//APPEARS TO NOT HELP
+		
+	
+		//gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
+		prepBuffersForDrawing(hyperboloidBuffers, activeShaderProgram);
+		
+		for (var bb of duocylinderBoxInfo){
+			drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, hyperboloidBuffers, invertedWorldCameraDuocylinderFrame);
+		}
+	}
+	
 	
 	var drawFunc = guiParams["draw spaceship"]? drawSpaceship : drawBall;
 	

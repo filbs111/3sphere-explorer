@@ -14,7 +14,8 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 	//this is a huge number of boxes. very inefficient. testing only. if want scene like this, combine into fewer objects (eg one)
 	for (var ii=0;ii<4;ii++){
 		for (var jj=0;jj<4;jj++){
-			for (var hi=-1;hi<8;hi++){
+			//for (var hi=-1;hi<8;hi++){
+			for (var hi=2;hi<3;hi++){
 				addBoxData(ii*0.4 +1,jj*0.4 -1,hi*0.05, [0.5, 0.5, 0.5, 1.0]);
 			}
 		}
@@ -25,6 +26,8 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 		xyzrotate4mat(boxMatrix, [0,0,aa]);
 		zmove4mat(boxMatrix, bb);
 		xmove4mat(boxMatrix, Math.PI/4 - hh);
+		//xyzrotate4mat(boxMatrix, [Math.PI/4,0,0]);
+		xyzrotate4mat(boxMatrix, [0,Math.PI/2,0]);
 		boxInfo.push({matrix:boxMatrix, color:cc});
 	};
 	
