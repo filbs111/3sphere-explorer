@@ -1,8 +1,37 @@
 var hyperboloidData = (function generateHyperboloidData({top,bottom,topRad,bottomRad,rotation,divisions}){
 	//TODO strip data, but do as simple indexed first
 	//TODO grid data instead of twisted to avoid "screwlike" shading artifacts
-	var innerTopRad = topRad-0.01;
-	var innerBottomRad = bottomRad-0.01;
+	var innerTopRad = topRad-0.005;
+	var innerBottomRad = bottomRad-0.005;
+	
+	//to find normal to surface, consider the two straight lines on surface that cross at the point of interest
+	//for example, at bottom
+	// (bottomRad,0,bottom)
+	// lines go to 2 points: 
+	// (cos(rotation)*topRad, (+/-)sin(rotation)*topRad, top)
+	//which have centre point
+	// (cos(rotation)*topRad, 0, top)
+	// taking the difference -> vector
+	// cos(rotation)*topRad - bottomRad ,0,top-bottom
+	// => normal : normalize( -(top-bottom),0, cos(rotation)*topRad - bottomRad);
+	
+	//note using same for normals inside and outside bar sign, because almost the same. (really should use inner radii for calculation)
+	
+	var bottomNormRadial = top-bottom;
+	var bottomNormUp = bottomRad-Math.cos(rotation)*topRad;
+	var mag = Math.sqrt(bottomNormRadial*bottomNormRadial + bottomNormUp*bottomNormUp);
+	bottomNormRadial/=mag;
+	bottomNormUp/=mag;
+	//console.log("bottomNormRadial="+bottomNormRadial);
+	//console.log("bottomNormUp="+bottomNormUp);
+	
+	var topNormRadial = top-bottom;
+	var topNormUp = Math.cos(rotation)*bottomRad-topRad;
+	var mag = Math.sqrt(topNormRadial*topNormRadial + topNormUp*topNormUp);
+	topNormRadial/=mag;
+	topNormUp/=mag;
+	//console.log("topNormRadial="+topNormRadial);
+	//console.log("topNormUp="+topNormUp);
 	
 	var vertices=[];
 	var normals=[];
@@ -20,12 +49,12 @@ var hyperboloidData = (function generateHyperboloidData({top,bottom,topRad,botto
 		vertices.push(bottom);
 		
 		//TODO proper normals . for now, zero z component
-		normals.push(Math.sin(angle));
-		normals.push(Math.cos(angle));
-		normals.push(0);
-		normals.push(Math.sin(angle+rotation));
-		normals.push(Math.cos(angle+rotation));
-		normals.push(0);
+		normals.push(topNormRadial*Math.sin(angle));
+		normals.push(topNormRadial*Math.cos(angle));
+		normals.push(topNormUp);
+		normals.push(bottomNormRadial*Math.sin(angle+rotation));
+		normals.push(bottomNormRadial*Math.cos(angle+rotation));
+		normals.push(bottomNormUp);
 		
 		indices.push(idx);
 		indices.push((idx+2)%numverts);
@@ -50,12 +79,12 @@ var hyperboloidData = (function generateHyperboloidData({top,bottom,topRad,botto
 		vertices.push(bottom);
 		
 		//TODO proper normals . for now, zero z component
-		normals.push(-Math.sin(angle));
-		normals.push(-Math.cos(angle));
-		normals.push(0);
-		normals.push(-Math.sin(angle+rotation));
-		normals.push(-Math.cos(angle+rotation));
-		normals.push(0);
+		normals.push(-topNormRadial*Math.sin(angle));
+		normals.push(-topNormRadial*Math.cos(angle));
+		normals.push(-topNormUp);
+		normals.push(-bottomNormRadial*Math.sin(angle+rotation));
+		normals.push(-bottomNormRadial*Math.cos(angle+rotation));
+		normals.push(-bottomNormUp);
 		
 		indices.push(numverts+idx);
 		indices.push(numverts+(idx+1)%numverts);
