@@ -178,6 +178,7 @@ var teapotBuffers={};
 var sshipBuffers={};
 var gunBuffers={};
 var icoballBuffers={};
+var hyperboloidBuffers={};
 
 var sshipModelScale=0.0002;
 var duocylinderSurfaceBoxScale = 0.025;
@@ -252,6 +253,7 @@ function initBuffers(){
 	loadBufferData(sshipBuffers, sshipObject);
 	loadBufferData(gunBuffers, gunObject);
 	loadBufferData(icoballBuffers, icoballObj);
+	loadBufferData(hyperboloidBuffers, hyperboloidData);
 
 	function bufferArrayData(buffer, arr, size){
 		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -612,6 +614,7 @@ var sshipWorld=0;	//used for player light
 
 var colorArrs = {
 	white:[1.0, 1.0, 1.0, 1.0],
+	gray:[0.6,0.6,0.6,1.0],
 	darkGray:[0.4, 0.4, 0.4, 1.0],
 	veryDarkGray:[0.2, 0.2, 0.2, 1.0],
 	red:[1.0, 0.4, 0.4, 1.0],
@@ -1251,13 +1254,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 
 	//gl.disableVertexAttribArray(1);	//don't need texcoords
-	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.teapot);	//BLUE
-	gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0.1,0.3]);	//some emission
-	modelScale = guiParams.drawShapes["teapot scale"];
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 
-	
 	//TODO this only 
 	//if (activeShaderProgram.uniforms.uReflectorPos){
 		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
@@ -1265,11 +1262,27 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//}
 	
 	if (guiParams.drawShapes.teapot){
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.teapot);	//BLUE
+		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0.1,0.3]);	//some emission
+
+		modelScale = guiParams.drawShapes["teapot scale"];
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,teapotMatrix);		
 		drawObjectFromBuffers(teapotBuffers, shaderProgramColored);
 	}
 	
+if (guiParams.drawShapes.hyperboloid){
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.gray);
+		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);	//no emission
+		modelScale = 1.0;
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.multiply(mvMatrix,teapotMatrix);		
+		xyzmove4mat(mvMatrix,[0,0.695,0]);	
+		xyzrotate4mat(mvMatrix,[-Math.PI/2,0,0]);	
+		drawObjectFromBuffers(hyperboloidBuffers, shaderProgramColored);
+	}
 	
 	var drawFunc = guiParams["draw spaceship"]? drawSpaceship : drawBall;
 	
@@ -1837,10 +1850,11 @@ var guiParams={
 		'y=w=0':false,
 		'z=w=0':false
 		},
-		"teapot":false,
+		teapot:false,
 		"teapot scale":0.7,
-		"towers":true,
-		"explodingBox":false
+		towers:true,
+		explodingBox:false,
+		hyperboloid:true
 	},
 	'random boxes':{
 		number:0,
@@ -1940,6 +1954,7 @@ function init(){
 	drawShapesFolder.add(guiParams.drawShapes,"teapot scale",0.2,2.0,0.05);
 	drawShapesFolder.add(guiParams.drawShapes,"towers");
 	drawShapesFolder.add(guiParams.drawShapes,"explodingBox");
+	drawShapesFolder.add(guiParams.drawShapes,"hyperboloid");
 	
 	var polytopesFolder = gui.addFolder('polytopes');
 	polytopesFolder.add(guiParams,"draw 5-cell");

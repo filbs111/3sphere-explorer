@@ -53,13 +53,27 @@ function decentMod(num,toModBy){	//handle crappy nature of mod function (gives -
 }
 
 function terrainGetHeight(ii,jj){
-	//egg box
-	var tmpsf = 2*Math.PI*10/procTerrainSize;
-	//var height = 0.02*Math.sin(ii*tmpsf)*Math.sin(jj*tmpsf);
-	//var height = 0.02*Math.sin(jj*jj*tmpsf*0.005);		//sorted out for ii. todo jj. test terrain patterns?
-	var height = 0.000004*((jj*ii)%10000);
+	//TODO precalculate! otherwise calculating every time do a collision check!!
 	
-	height = 2*Math.max(height,-0.1);	//raise deep parts to "sea" level
+	//return 0;
+	
+	//make a flat region
+	//if (ii<10 && jj<10){
+	if ((ii<40) && (jj>100) && (jj<156)){
+		return 0.0;
+	}
+	
+	//egg box
+	var tmpsf = 2*Math.PI*5/procTerrainSize;
+	var height = 0.1*Math.sin(ii*tmpsf)*Math.sin(jj*tmpsf);
+	//var height = 0.2*Math.sin(jj*jj*tmpsf*0.005);		//sorted out for ii. todo jj. test terrain patterns?
+	//var height = 0.000004*((jj*ii)%10000);
+	
+	//height = 2*Math.max(height,-0.1);	//raise deep parts to "sea" level
+	
+	//add a big pyramid
+	//height = Math.max(0.4-0.02*Math.max(Math.abs(ii-20),Math.abs(jj-20)), height);
+	
 	return height;
 }
 
