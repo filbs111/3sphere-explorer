@@ -1052,6 +1052,15 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}
 	}
 	
+	if (guiParams.drawShapes.stonehenge){	
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
+		prepBuffersForDrawing(cubeBuffers, shaderProgramTexmap);
+		
+		for (var bb of duocylinderBoxInfo.stonehenge){
+			drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, cubeBuffers, invertedWorldCameraDuocylinderFrame);
+		}
+	}
+	
 	if (guiParams.drawShapes.duoCylinder){	//TODO check procTerrain selected for world that player in
 		lookupTerrainForPlayerPos();	//TODO in position update (not rendering)
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.003,0.003,0.003]);
@@ -1865,7 +1874,8 @@ var guiParams={
 		"teapot scale":0.7,
 		towers:true,
 		explodingBox:false,
-		hyperboloid:true
+		hyperboloid:true,
+		stonehenge:true
 	},
 	'random boxes':{
 		number:0,
@@ -1966,6 +1976,7 @@ function init(){
 	drawShapesFolder.add(guiParams.drawShapes,"towers");
 	drawShapesFolder.add(guiParams.drawShapes,"explodingBox");
 	drawShapesFolder.add(guiParams.drawShapes,"hyperboloid");
+	drawShapesFolder.add(guiParams.drawShapes,"stonehenge");
 	
 	var polytopesFolder = gui.addFolder('polytopes');
 	polytopesFolder.add(guiParams,"draw 5-cell");
