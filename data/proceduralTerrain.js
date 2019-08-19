@@ -6,6 +6,20 @@ function lookupTerrainForPlayerPos(){
 	terrainCollisionTestBoxPos = terrainGetHeightFor4VecPos(playerPos);	
 }
 
+function getInterpHeightForAB(aa,bb){
+	
+	//interpolate height. currently this func used for realtime height detection and mesh creation, and this should make latter slower, but unimportant.
+	var aaFloor = Math.floor(aa);
+	var bbFloor = Math.floor(bb);
+	var aaCeil = (aaFloor + 1)%procTerrainSize;	//&255 maybe faster
+	var bbCeil = (bbFloor + 1)%procTerrainSize;
+	var aaRemainder = aa-aaFloor;
+	var bbRemainder = bb-bbFloor;
+	return (1-aaRemainder)*((1-bbRemainder)*terrainGetHeight(aaFloor,bbFloor) + bbRemainder*terrainGetHeight(aaFloor,bbCeil)) +
+									aaRemainder*((1-bbRemainder)*terrainGetHeight(aaCeil,bbFloor) + bbRemainder*terrainGetHeight(aaCeil,bbCeil));
+							//interpolation that assumes doubly ruled squares. TODO two triangles to match mesh
+}
+
 function terrainGetHeightFor4VecPos(vec){
 	var multiplier = procTerrainSize/(2*Math.PI);	//TODO don't require enter same number here and elsewhere (gridSize)
 	var a = Math.atan2(vec[2],vec[3]);
@@ -15,18 +29,9 @@ function terrainGetHeightFor4VecPos(vec){
 	var aa=multiplier*decentMod(a,2*Math.PI);
 	var bb=multiplier*decentMod(b + duocylinderSpin,2*Math.PI);
 	
-	//interpolate height. currently this func used for realtime height detection and mesh creation, and this should make latter slower, but unimportant.
-	var aaFloor = Math.floor(aa);
-	var bbFloor = Math.floor(bb);
-	var aaCeil = (aaFloor + 1)%procTerrainSize;	//&255 maybe faster
-	var bbCeil = (bbFloor + 1)%procTerrainSize;
-	var aaRemainder = aa-aaFloor;
-	var bbRemainder = bb-bbFloor;
-	var interpolatedHeight = (1-aaRemainder)*((1-bbRemainder)*terrainGetHeight(aaFloor,bbFloor) + bbRemainder*terrainGetHeight(aaFloor,bbCeil)) +
-									aaRemainder*((1-bbRemainder)*terrainGetHeight(aaCeil,bbFloor) + bbRemainder*terrainGetHeight(aaCeil,bbCeil));
-							//interpolation that assumes doubly ruled squares. TODO two triangles to match mesh
+	var interpolatedHeight = getInterpHeightForAB(aa,bb);
 	
-//	console.log("height : " + terrainGetHeight(aa,bb));
+//	console.log("height : " + getInterpHeightForAB(aa,bb));
 	//return {a:-a, b:Math.PI*1.5 -b , h:terrainGetHeight(aa,bb)};	//position such that will draw on landscape
 	return {a:-a, b:Math.PI*1.5 -b , h:(Math.PI/4)*interpolatedHeight};
 	//return {a:-a, b:Math.PI*1.5 -b , h: -0.5*Math.asin( (vec[0]*vec[0] + vec[1]*vec[1]) - (vec[2]*vec[2] + vec[3]*vec[3]))};	//position such that will draw at input 4vec position
@@ -42,7 +47,7 @@ function getHeightAboveTerrainFor4VecPos(vec){
 	//TODO interpolation across polygon. initially just reuse equation used to generate terrain grid data.
 	var aa=multiplier*decentMod(a,2*Math.PI);
 	var bb=multiplier*decentMod(b + duocylinderSpin,2*Math.PI);
-	var h = (Math.PI/4)*terrainGetHeight(aa,bb);	//TODO interpolate
+	var h = (Math.PI/4)*getInterpHeightForAB(aa,bb);
 	
 	return c-h;
 }
