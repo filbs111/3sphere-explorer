@@ -2512,10 +2512,16 @@ var iterateMechanics = (function iterateMechanics(){
 					boxCollideCheck(randomMats[ii],boxSize,critValueRandBox);
 				}
 			}
-			
-			for (var bb of duocylinderBoxInfo.towerblocks){
-				boxCollideCheck(bb.matrix,duocylinderSurfaceBoxScale,critValueDCBox, bulletMatrixTransposedDCRefFrame, true);
+			if (guiParams.drawShapes.towers){
+				for (var bb of duocylinderBoxInfo.towerblocks){
+					boxCollideCheck(bb.matrix,duocylinderSurfaceBoxScale,critValueDCBox, bulletMatrixTransposedDCRefFrame, true);
+				}
 			}
+			if (guiParams.drawShapes.stonehenge){
+				for (var bb of duocylinderBoxInfo.stonehenge){
+					boxCollideCheck(bb.matrix,duocylinderSurfaceBoxScale,critValueDCBox, bulletMatrixTransposedDCRefFrame, true);
+				}
+			}	
 				
 			
 			function boxCollideCheck(cellMat,thisBoxSize,boxCritValue, bulletMatrixTransposedForRefFrame, moveWithDuocylinder){
