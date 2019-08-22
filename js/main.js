@@ -1047,7 +1047,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
 		prepBuffersForDrawing(cubeBuffers, shaderProgramTexmap);
 		
-		for (var bb of duocylinderBoxInfo.towerblocks){
+		for (var bb of duocylinderBoxInfo.towerblocks.list){
 			drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, cubeBuffers, invertedWorldCameraDuocylinderFrame);
 		}
 	}
@@ -1056,7 +1056,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
 		prepBuffersForDrawing(cubeBuffers, shaderProgramTexmap);
 		
-		for (var bb of duocylinderBoxInfo.stonehenge){
+		for (var bb of duocylinderBoxInfo.stonehenge.list){
 			drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, cubeBuffers, invertedWorldCameraDuocylinderFrame);
 		}
 	}
@@ -1298,7 +1298,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//reuse logic for drawing towers
 		prepBuffersForDrawing(hyperboloidBuffers, activeShaderProgram);
 		
-		for (var bb of duocylinderBoxInfo.hyperboloids){
+		for (var bb of duocylinderBoxInfo.hyperboloids.list){
 			drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, hyperboloidBuffers, invertedWorldCameraDuocylinderFrame);
 		}
 	}
@@ -2480,9 +2480,10 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			var terrainModel = (bullet.world==0) ? guiParams.duocylinderModel0 : guiParams.duocylinderModel1;	//todo use array
 					//todo keep bullets in 2 lists/arrays so can check this once per world
+					
+			var bulletPos = [bulletMatrix[12],bulletMatrix[13],bulletMatrix[14],bulletMatrix[15]];	//todo use this elsewhere?
 			if (terrainModel == "procTerrain"){
-				//collision with duocylinder procedural terrain
-				var bulletPos = [bulletMatrix[12],bulletMatrix[13],bulletMatrix[14],bulletMatrix[15]];	//todo use this elsewhere?
+				//collision with duocylinder procedural terrain	
 				if (getHeightAboveTerrainFor4VecPos(bulletPos)<0){detonateBullet(bullet, bulletMatrix, true);}
 			}
 			
@@ -2512,16 +2513,30 @@ var iterateMechanics = (function iterateMechanics(){
 					boxCollideCheck(randomMats[ii],boxSize,critValueRandBox);
 				}
 			}
-			if (guiParams.drawShapes.towers){
-				for (var bb of duocylinderBoxInfo.towerblocks){
+			
+			var tmpXYPos = duocylXYfor4Pos(bulletPos);
+			var gridSquareX = (Math.floor(tmpXYPos.x))%8;
+			var gridSquareY = (Math.floor(tmpXYPos.y))%8;
+			var gridSq = gridSquareX + 8*gridSquareY;
+			if (gridSq<0 || gridSq>63){alert("grid square out of range! " + gridSq);}
+			
+			if (guiParams.drawShapes.towers){	
+				boxCollideBulletForBoxArray(duocylinderBoxInfo.towerblocks.gridContents);
+			}
+			if (guiParams.drawShapes.stonehenge){
+				boxCollideBulletForBoxArray(duocylinderBoxInfo.stonehenge.gridContents);
+			}
+			function boxCollideBulletForBoxArray(boxArr){
+				boxCollideArray(boxArr[gridSq]);
+				boxCollideArray(boxArr[(gridSq+1)%64]);
+				boxCollideArray(boxArr[(gridSq+8)%64]);
+				boxCollideArray(boxArr[(gridSq+9)%64]);
+			}
+			function boxCollideArray(bArray){
+				for (var bb of bArray){
 					boxCollideCheck(bb.matrix,duocylinderSurfaceBoxScale,critValueDCBox, bulletMatrixTransposedDCRefFrame, true);
 				}
 			}
-			if (guiParams.drawShapes.stonehenge){
-				for (var bb of duocylinderBoxInfo.stonehenge){
-					boxCollideCheck(bb.matrix,duocylinderSurfaceBoxScale,critValueDCBox, bulletMatrixTransposedDCRefFrame, true);
-				}
-			}	
 				
 			
 			function boxCollideCheck(cellMat,thisBoxSize,boxCritValue, bulletMatrixTransposedForRefFrame, moveWithDuocylinder){

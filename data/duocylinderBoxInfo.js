@@ -1,7 +1,17 @@
 var duocylinderBoxInfo=(function generateBoxInfo(){
-	var boxInfoTowerblocks = [];
-	var boxInfoHyperboloids = [];
-	var boxInfoStonehenge = [];
+	var boxInfoTowerblocks = initialiseInfo();
+	var boxInfoHyperboloids = initialiseInfo();
+	var boxInfoStonehenge = initialiseInfo();
+	var currentboxInfo;
+	
+	function initialiseInfo(){
+		//todo more conventional constuctor
+		var gridArr = [];
+		for (gg=0;gg<64;gg++){
+			gridArr.push([]);
+		}
+		return {list:[],gridContents:gridArr};
+	}
 	
 	var oneGridSquareOffset = Math.PI/14;
 	var fudgeFact = 2/Math.PI;	//maytbe this is correct. seems to be ratio of up move to surface move at surface
@@ -54,7 +64,17 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 		xyzrotate4mat(boxMatrix, [0.2,0,0]);	//tiny extra twist so stonehenge diagonal monorail thing looks ok (TODO separate rotations different arrays)
 		
 		xyzrotate4mat(boxMatrix, [0,Math.PI/2,0]);	//put hyperboloids upright
-		currentboxInfo.push({matrix:boxMatrix, color:cc});
+		
+		var thisItem = {matrix:boxMatrix, color:cc};
+		currentboxInfo.list.push(thisItem);
+		
+		//do in reliable way - use same logic as bullet pos lookup. (could do this direct from aa, bb here, but code more complex)
+		var tmpXYPos = duocylXYfor4Pos([boxMatrix[12],boxMatrix[13],boxMatrix[14],boxMatrix[15]]);
+		var gridSquareX = (Math.floor(tmpXYPos.x + 0.5))%8;
+		var gridSquareY = (Math.floor(tmpXYPos.y + 0.5))%8;
+		var gridSq = gridSquareX + 8*gridSquareY;
+		
+		currentboxInfo.gridContents[gridSq].push(thisItem);
 	};
 	
 	return {
@@ -63,3 +83,19 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 		stonehenge:boxInfoStonehenge
 	};
 })();
+
+function duocylXYfor4Pos(inputPos){
+	var duocylinderSpin=duocylinderSpin||0;	//initially undefined. TODO pull out to top
+	
+	//this is similar to terrainGetHeightFor4VecPos func in proceduralTerrain.js
+	//at time of writing, only want x,y from this, but could extend to give z too
+	var multiplier = 4/Math.PI;
+	var a = Math.atan2(inputPos[2],inputPos[3]);
+	var b = Math.atan2(inputPos[0],inputPos[1]);
+	
+	var aa=((multiplier*a)%8 + 8)%8;	//avoid -ve %
+	var bb=((multiplier*(b + duocylinderSpin))%8 +8)%8;
+	
+	//return {x:-a, y:Math.PI*1.5 -b};	//used something like this for terrainGetHeightFor4VecPos
+	return {x:aa, y:bb};
+}
