@@ -876,7 +876,7 @@ function updateGunTargeting(matrix){
 
 
 
-
+var lgMat;
 
 function drawWorldScene(frameTime, isCubemapView) {
 		
@@ -1376,7 +1376,33 @@ function drawWorldScene(frameTime, isCubemapView) {
 			//mat4.multiply(mvMatrix,gunMatrixCosmetic);
 			
 			drawObjectFromPreppedBuffers(gunBuffers, shaderProgramColored);
+			//drawObjectFromPreppedBuffers(sphereBuffers, shaderProgramColored);
 		}
+		
+		//landing gear - just 3 balls.
+		prepBuffersForDrawing(sphereBuffers, shaderProgramColored);
+		//prepBuffersForDrawing(gunBuffers, shaderProgramColored);
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.001,0.001,0.001]);
+		
+		drawLandingBall([0,0.007,0.007]);	//down, forward
+		drawLandingBall([0.005,0.007,-0.003]);	//left, down, back a bit
+		drawLandingBall([-0.005,0.007,-0.003]);	//right, down, back a bit
+		
+		function drawLandingBall(posn){
+			//TODO reuse drawgun code? 
+			 
+			lgMat = mat4.create(sshipMatrix);
+			xyzmove4mat(lgMat, posn);
+			
+			mat4.set(invertedWorldCamera, mvMatrix);
+			mat4.multiply(mvMatrix, lgMat);
+			
+			mat4.set(lgMat, mMatrix);
+			
+			drawObjectFromPreppedBuffers(sphereBuffers, shaderProgramColored);
+			//drawObjectFromPreppedBuffers(gunBuffers, shaderProgramColored);
+		}
+		
 	}
 		
 	function drawBall(matrix){
@@ -1872,7 +1898,7 @@ var guiParams={
 		},
 		teapot:false,
 		"teapot scale":0.7,
-		towers:true,
+		towers:false,
 		explodingBox:false,
 		hyperboloid:true,
 		stonehenge:true
@@ -2490,7 +2516,7 @@ var iterateMechanics = (function iterateMechanics(){
 			for (var bb of duocylinderBoxInfo.towerblocks){
 				boxCollideCheck(bb.matrix,duocylinderSurfaceBoxScale,critValueDCBox, bulletMatrixTransposedDCRefFrame, true);
 			}
-						
+				
 			
 			function boxCollideCheck(cellMat,thisBoxSize,boxCritValue, bulletMatrixTransposedForRefFrame, moveWithDuocylinder){
 					var bulletMatrixTransposedForRefFrame = bulletMatrixTransposedForRefFrame || bulletMatrixTransposed;
