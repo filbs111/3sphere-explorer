@@ -128,10 +128,34 @@ var hyperboloidData = (function generateHyperboloidData({top,bottom,topRad,botto
 		angle+=angleStep;
 	}
 	
+	
+	function collisionCheck(pos3vec){
+		//takes position in frame of hyperbola. returns if inside shape.
+		//3vec calculated by matrix rotation of world position by matrix for hyperbola object in question
+		//then projecting onto 3d, normalising by scale of object.
+		//TODO early bounding sphere check
+		//todo OO
+		
+		//temporary approx cylinder collision
+		if (pos3vec[2]>top){
+			return false;
+		}
+		if (pos3vec[2]<bottom){
+			return false;
+		}
+		var xySq = pos3vec[0]*pos3vec[0] + pos3vec[1]*pos3vec[1];
+		if (xySq>topRad*topRad){	//simple cylinder check
+			return false;
+		}
+		//console.log("collising with hyperbola " + JSON.stringify(pos3vec));
+		return true;
+	}
+	
 	return {
 		vertices:vertices,
 		normals:normals,
-		indices:indices
+		indices:indices,
+		colCheck:collisionCheck
 	}
 	
 })({

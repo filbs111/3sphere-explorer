@@ -2555,13 +2555,27 @@ var iterateMechanics = (function iterateMechanics(){
 					
 					if (relativeMat[15]<boxCritValue){return;}	//early sphere check
 					
-					if (relativeMat[15]>0 && Math.max(Math.abs(relativeMat[3]),
+					if (Math.max(Math.abs(relativeMat[3]),
 								Math.abs(relativeMat[7]),
 								Math.abs(relativeMat[11]))<thisBoxSize*relativeMat[15]){
 						detonateBullet(bullet, bulletMatrix, moveWithDuocylinder);
 				}
 			}
 			
+			//hyperbolas
+			hyperboloidData
+			if (guiParams.drawShapes.hyperboloid){
+				for (var mm of duocylinderBoxInfo.hyperboloids.list){
+					mat4.set(bulletMatrixTransposedDCRefFrame, relativeMat);
+					mat4.multiply(relativeMat, mm.matrix);
+					
+					if (relativeMat[15]<0.5){continue;}	//early sphere check	TODO correct value (closer to 1 for smaller objects.
+					
+					if (hyperboloidData.colCheck([relativeMat[3],relativeMat[7],relativeMat[11]].map(function(val){return val/(relativeMat[15]);}))){
+						detonateBullet(bullet, bulletMatrix, true);
+					}
+				}
+			}
 			
 			//similar thing for 8-cell frames
 			var cellSize = guiParams["8-cell scale"];
