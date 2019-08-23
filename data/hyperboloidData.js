@@ -143,8 +143,14 @@ var hyperboloidData = (function generateHyperboloidData({top,bottom,topRad,botto
 		if (pos3vec[2]<bottom){
 			return false;
 		}
+		
+		var adjustedZ = (pos3vec[2]-bottom) / (top-bottom);	//TODO precalc denominator
+		var aPointAtHeight = [adjustedZ*topRad + (1-adjustedZ)*Math.cos(rotation)*bottomRad,
+							(1-adjustedZ)*Math.sin(rotation)*bottomRad];
+		
+		
 		var xySq = pos3vec[0]*pos3vec[0] + pos3vec[1]*pos3vec[1];
-		if (xySq>topRad*topRad){	//simple cylinder check
+		if (xySq>aPointAtHeight[0]*aPointAtHeight[0]+aPointAtHeight[1]*aPointAtHeight[1]){	//simple cylinder check
 			return false;
 		}
 		//console.log("collising with hyperbola " + JSON.stringify(pos3vec));
