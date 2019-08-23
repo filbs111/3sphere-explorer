@@ -145,12 +145,12 @@ var hyperboloidData = (function generateHyperboloidData({top,bottom,topRad,botto
 		}
 		
 		var adjustedZ = (pos3vec[2]-bottom) / (top-bottom);	//TODO precalc denominator
-		var aPointAtHeight = [adjustedZ*topRad + (1-adjustedZ)*Math.cos(rotation)*bottomRad,
-							(1-adjustedZ)*Math.sin(rotation)*bottomRad];
 		
+		var aPointAtHeightSq = Math.pow( (1-adjustedZ)*bottomRad ,2) + Math.pow( adjustedZ*topRad , 2) + 
+							2*adjustedZ*(1-adjustedZ)*Math.cos(rotation)*topRad*bottomRad;
 		
 		var xySq = pos3vec[0]*pos3vec[0] + pos3vec[1]*pos3vec[1];
-		if (xySq>aPointAtHeight[0]*aPointAtHeight[0]+aPointAtHeight[1]*aPointAtHeight[1]){	//simple cylinder check
+		if (xySq>aPointAtHeightSq){	//simple cylinder check
 			return false;
 		}
 		//console.log("collising with hyperbola " + JSON.stringify(pos3vec));
