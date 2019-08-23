@@ -2514,11 +2514,17 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			}
 			
+			//var bulletPosAdjusted = [ bulletMatrixTransposedDCRefFrame[3],bulletMatrixTransposedDCRefFrame[7], bulletMatrixTransposedDCRefFrame[11], bulletMatrixTransposedDCRefFrame[15]];
 			var tmpXYPos = duocylXYfor4Pos(bulletPos);
 			var gridSquareX = (Math.floor(tmpXYPos.x))%8;
 			var gridSquareY = (Math.floor(tmpXYPos.y))%8;
-			var gridSq = gridSquareX + 8*gridSquareY;
-			if (gridSq<0 || gridSq>63){alert("grid square out of range! " + gridSq);}
+			var gridSqs = [
+				gridSquareX + 8*gridSquareY,
+				(gridSquareX+1)%8 + 8*gridSquareY,
+				gridSquareX + 8*((gridSquareY+1)%8),
+				(gridSquareX+1)%8 + 8*((gridSquareY+1)%8)
+			];
+			if (gridSqs[0]<0 || gridSqs[0]>63){alert("grid square out of range! " + gridSq);}
 			
 			if (guiParams.drawShapes.towers){	
 				boxCollideBulletForBoxArray(duocylinderBoxInfo.towerblocks.gridContents);
@@ -2527,10 +2533,9 @@ var iterateMechanics = (function iterateMechanics(){
 				boxCollideBulletForBoxArray(duocylinderBoxInfo.stonehenge.gridContents);
 			}
 			function boxCollideBulletForBoxArray(boxArr){
-				boxCollideArray(boxArr[gridSq]);
-				boxCollideArray(boxArr[(gridSq+1)%64]);
-				boxCollideArray(boxArr[(gridSq+8)%64]);
-				boxCollideArray(boxArr[(gridSq+9)%64]);
+				for (var gs of gridSqs){
+					boxCollideArray(boxArr[gs]);
+				}
 			}
 			function boxCollideArray(bArray){
 				for (var bb of bArray){

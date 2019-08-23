@@ -85,7 +85,9 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 })();
 
 function duocylXYfor4Pos(inputPos){
-	var duocylinderSpin=duocylinderSpin||0;	//initially undefined. TODO pull out to top
+	if (typeof duocylinderSpin!="number"){	//initially undefined. TODO pull out to top
+		duocylinderSpin=0;
+	}
 	
 	//this is similar to terrainGetHeightFor4VecPos func in proceduralTerrain.js
 	//at time of writing, only want x,y from this, but could extend to give z too
@@ -98,4 +100,9 @@ function duocylXYfor4Pos(inputPos){
 	
 	//return {x:-a, y:Math.PI*1.5 -b};	//used something like this for terrainGetHeightFor4VecPos
 	return {x:aa, y:bb};
+}
+
+function testDuocylXYfor4Pos(){
+	var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];
+	console.log(duocylXYfor4Pos(playerPos));
 }
