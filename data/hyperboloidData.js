@@ -4,6 +4,14 @@ var hyperboloidData = (function generateHyperboloidData({top,bottom,topRad,botto
 	var innerTopRad = topRad-0.005;
 	var innerBottomRad = bottomRad-0.005;
 	
+	var cRotation = Math.cos(rotation);
+	
+	//precalculation for collision checking
+	var topRadSq = topRad*topRad;
+	var bottomRadSq = bottomRad*bottomRad;
+	var twoCRotBottomRadTopRad = 2*cRotation*topRad*bottomRad;
+	var topMinusBottom = top-bottom;
+	
 	//to find normal to surface, consider the two straight lines on surface that cross at the point of interest
 	//for example, at bottom
 	// (bottomRad,0,bottom)
@@ -18,7 +26,7 @@ var hyperboloidData = (function generateHyperboloidData({top,bottom,topRad,botto
 	//note using same for normals inside and outside bar sign, because almost the same. (really should use inner radii for calculation)
 	
 	var bottomNormRadial = top-bottom;
-	var bottomNormUp = bottomRad-Math.cos(rotation)*topRad;
+	var bottomNormUp = bottomRad-cRotation*topRad;
 	var mag = Math.sqrt(bottomNormRadial*bottomNormRadial + bottomNormUp*bottomNormUp);
 	bottomNormRadial/=mag;
 	bottomNormUp/=mag;
@@ -26,7 +34,7 @@ var hyperboloidData = (function generateHyperboloidData({top,bottom,topRad,botto
 	//console.log("bottomNormUp="+bottomNormUp);
 	
 	var topNormRadial = top-bottom;
-	var topNormUp = Math.cos(rotation)*bottomRad-topRad;
+	var topNormUp = cRotation*bottomRad-topRad;
 	var mag = Math.sqrt(topNormRadial*topNormRadial + topNormUp*topNormUp);
 	topNormRadial/=mag;
 	topNormUp/=mag;
@@ -144,10 +152,11 @@ var hyperboloidData = (function generateHyperboloidData({top,bottom,topRad,botto
 			return false;
 		}
 		
-		var adjustedZ = (pos3vec[2]-bottom) / (top-bottom);	//TODO precalc denominator
+		var adjustedZ = (pos3vec[2]-bottom) / topMinusBottom;
+		var oneMAdjustedZ = 1- adjustedZ;
 		
-		var aPointAtHeightSq = Math.pow( (1-adjustedZ)*bottomRad ,2) + Math.pow( adjustedZ*topRad , 2) + 
-							2*adjustedZ*(1-adjustedZ)*Math.cos(rotation)*topRad*bottomRad;
+		var aPointAtHeightSq = oneMAdjustedZ*oneMAdjustedZ*bottomRadSq + adjustedZ*adjustedZ*topRadSq + 
+							adjustedZ*oneMAdjustedZ*twoCRotBottomRadTopRad;
 		
 		var xySq = pos3vec[0]*pos3vec[0] + pos3vec[1]*pos3vec[1];
 		if (xySq>aPointAtHeightSq){	//simple cylinder check
