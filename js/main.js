@@ -1061,7 +1061,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}
 	}
 	
-	if (guiParams.drawShapes.duoCylinder){	//TODO check procTerrain selected for world that player in
+	var duocylinderModel = (colorsSwitch==0) ? guiParams.duocylinderModel0 : guiParams.duocylinderModel1;	//todo use array
+	
+	if (duocylinderModel == 'procTerrain'){
 		lookupTerrainForPlayerPos();	//TODO in position update (not rendering)
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.003,0.003,0.003]);
 		drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
@@ -1203,9 +1205,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		//console.log("num drawn: " + numDrawn);
 	}
-	
-	var duocylinderModel = (colorsSwitch==0) ? guiParams.duocylinderModel0 : guiParams.duocylinderModel1;	//todo use array
-	
+		
 	if (duocylinderModel!='none'){	//x*x+y*y=z*z+w*w
 		
 		//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
