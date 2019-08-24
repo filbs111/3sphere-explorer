@@ -1064,7 +1064,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var duocylinderModel = (colorsSwitch==0) ? guiParams.duocylinderModel0 : guiParams.duocylinderModel1;	//todo use array
 	
 	if (duocylinderModel == 'procTerrain'){
-		lookupTerrainForPlayerPos();	//TODO in position update (not rendering)
+		var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//copied from elsewhere
+		terrainCollisionTestBoxPos = terrainGetHeightFor4VecPos(playerPos);		//TODO in position update (not rendering)
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.003,0.003,0.003]);
 		drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
 	}
@@ -2226,6 +2227,7 @@ var iterateMechanics = (function iterateMechanics(){
 	var autoFireCountdownStartVal=1;
 	var lastPlayerAngMove = [0,0,0];	//for interpolation
 	var duoCylinderAngVelConst=0;
+	var suspensionHeight=0;
 	
 	return function(){
 		
@@ -2408,6 +2410,23 @@ var iterateMechanics = (function iterateMechanics(){
 					autoFireCountdown=autoFireCountdownStartVal;
 				}
 			}
+			
+			//some logic shared with drawing code
+			var duocylinderModel = (playerContainer.world==0) ? guiParams.duocylinderModel0 : guiParams.duocylinderModel1;	//todo use array
+			if (duocylinderModel == 'procTerrain'){
+				var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//copied from elsewhere
+				//simple spring force terrain collision - 
+				//lookup height above terrain, subtract some value (height above terrain where restoring force goes to zero - basically maximum extension of landing legs. apply sprint force upward to player proportional to this amount.
+				//then apply force along ground normal, damping, friction force, landing legs, torques...
+				var suspensionHeightNow = getHeightAboveTerrainFor4VecPos(playerPos);
+				suspensionHeightNow = Math.max(Math.min(-suspensionHeightNow,0) + 0.005, 0);	//capped
+				var suspensionVel = suspensionHeightNow-suspensionHeight;
+				suspensionHeight = suspensionHeightNow;
+				var suspensionForce = 10*suspensionHeight+ 50*suspensionVel;	//TODO cap so doesnt pull down
+				//apply force to player. todo work out player's "up" vector wrt duocylinder, but can test by manually putting player upright
+				playerVelVec[1]-=suspensionForce;
+			}
+			
 		}
 		
 		var moveAmount = timeElapsed * moveSpeed;

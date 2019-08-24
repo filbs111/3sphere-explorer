@@ -1,11 +1,6 @@
 var terrainCollisionTestBoxPos={a:0,b:0,h:0};
 var procTerrainSize=256;
 
-function lookupTerrainForPlayerPos(){
-	var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//copied from elsewhere
-	terrainCollisionTestBoxPos = terrainGetHeightFor4VecPos(playerPos);	
-}
-
 function getInterpHeightForAB(aa,bb){
 	
 	//interpolate height. currently this func used for realtime height detection and mesh creation, and this should make latter slower, but unimportant.
