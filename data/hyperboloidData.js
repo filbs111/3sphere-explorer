@@ -45,34 +45,67 @@ var hyperboloidData = (function generateHyperboloidData({top,bottom,topRad,botto
 	var normals=[];
 	var indices=[];
 	var idx=0;
+	var numvertsOuter = 3*divisions;
 	var numverts = 2*divisions;	//per part - inner, outer, rim
 	var angle = 0;
 	var angleStep = 2*Math.PI/divisions;
+	
+	//divide outside at z=0.5*(top+bottom). TODO more divisions? non-diagonal cuts?
+	//work out point between bottom 
+	var aCentrePos = [ bottomRad*Math.sin(rotation)/2 , (topRad+bottomRad*Math.cos(rotation))/2 , (top+bottom)/2 ];
+	var centreH=aCentrePos[2];
+	var centreAng = Math.atan2(aCentrePos[0],aCentrePos[1]);
+	//alert(centreAng);
+	var centreRad = Math.sqrt(aCentrePos[0]*aCentrePos[0]+aCentrePos[1]*aCentrePos[1]);
+	//alert(centreRad);
+	
+	var centerNormRadial = top-centreH;
+	var centerNormUp = centreRad - Math.cos(centreAng)*topRad;
+	var mag = Math.sqrt(centerNormRadial*centerNormRadial + centerNormUp*centerNormUp);
+	centerNormRadial/=mag;
+	centerNormUp/=mag;
+	
+	alert("radial: "+ centerNormRadial + ", up:" + centerNormUp);
+	
 	for (var ii=0;ii<divisions;ii++){
 		vertices.push(topRad*Math.sin(angle));
 		vertices.push(topRad*Math.cos(angle));
 		vertices.push(top);
+		vertices.push(centreRad*Math.sin(angle+centreAng));
+		vertices.push(centreRad*Math.cos(angle+centreAng));
+		vertices.push(centreH);
 		vertices.push(bottomRad*Math.sin(angle+rotation));
 		vertices.push(bottomRad*Math.cos(angle+rotation));
 		vertices.push(bottom);
 		
-		//TODO proper normals . for now, zero z component
 		normals.push(topNormRadial*Math.sin(angle));
 		normals.push(topNormRadial*Math.cos(angle));
 		normals.push(topNormUp);
+		normals.push(centerNormRadial*Math.sin(angle+centreAng));
+		normals.push(centerNormRadial*Math.cos(angle+centreAng));
+		normals.push(centerNormUp);
 		normals.push(bottomNormRadial*Math.sin(angle+rotation));
 		normals.push(bottomNormRadial*Math.cos(angle+rotation));
 		normals.push(bottomNormUp);
 		
 		indices.push(idx);
-		indices.push((idx+2)%numverts);
-		indices.push((idx+1)%numverts);
+		indices.push((idx+3)%numvertsOuter);
+		indices.push((idx+1)%numvertsOuter);
 		
-		indices.push((idx+1)%numverts);
-		indices.push((idx+2)%numverts);
-		indices.push((idx+3)%numverts);
+		indices.push((idx+1)%numvertsOuter);
+		indices.push((idx+3)%numvertsOuter);
+		indices.push((idx+4)%numvertsOuter);
 		
-		idx+=2;
+		//+1
+		indices.push(idx+1);
+		indices.push((idx+4)%numvertsOuter);
+		indices.push((idx+2)%numvertsOuter);
+		
+		indices.push((idx+2)%numvertsOuter);
+		indices.push((idx+4)%numvertsOuter);
+		indices.push((idx+5)%numvertsOuter);
+		
+		idx+=3;
 		angle+=angleStep;
 	}
 	
@@ -86,7 +119,6 @@ var hyperboloidData = (function generateHyperboloidData({top,bottom,topRad,botto
 		vertices.push(innerBottomRad*Math.cos(angle+rotation));
 		vertices.push(bottom);
 		
-		//TODO proper normals . for now, zero z component
 		normals.push(-topNormRadial*Math.sin(angle));
 		normals.push(-topNormRadial*Math.cos(angle));
 		normals.push(-topNormUp);
@@ -94,13 +126,13 @@ var hyperboloidData = (function generateHyperboloidData({top,bottom,topRad,botto
 		normals.push(-bottomNormRadial*Math.cos(angle+rotation));
 		normals.push(-bottomNormUp);
 		
-		indices.push(numverts+idx);
-		indices.push(numverts+(idx+1)%numverts);
-		indices.push(numverts+(idx+2)%numverts);
+		indices.push(numvertsOuter+idx);
+		indices.push(numvertsOuter+(idx+1)%numverts);
+		indices.push(numvertsOuter+(idx+2)%numverts);
 		
-		indices.push(numverts+(idx+1)%numverts);
-		indices.push(numverts+(idx+3)%numverts);
-		indices.push(numverts+(idx+2)%numverts);
+		indices.push(numvertsOuter+(idx+1)%numverts);
+		indices.push(numvertsOuter+(idx+3)%numverts);
+		indices.push(numvertsOuter+(idx+2)%numverts);
 		
 		idx+=2;
 		angle+=angleStep;
@@ -108,7 +140,7 @@ var hyperboloidData = (function generateHyperboloidData({top,bottom,topRad,botto
 	
 	//upper rim
 	idx=0;
-	var offs = 2*numverts;
+	var offs = numvertsOuter+numverts;
 	for (var ii=0;ii<divisions;ii++){
 		vertices.push(innerTopRad*Math.sin(angle));
 		vertices.push(innerTopRad*Math.cos(angle));
@@ -179,5 +211,5 @@ var hyperboloidData = (function generateHyperboloidData({top,bottom,topRad,botto
 	topRad:0.08,
 	bottomRad:0.1,
 	rotation:-Math.PI/2,
-	divisions:48
+	divisions:32
 });
