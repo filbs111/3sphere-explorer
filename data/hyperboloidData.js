@@ -55,17 +55,14 @@ var hyperboloidData = (function generateHyperboloidData({top,bottom,topRad,botto
 	var aCentrePos = [ bottomRad*Math.sin(rotation)/2 , (topRad+bottomRad*Math.cos(rotation))/2 , (top+bottom)/2 ];
 	var centreH=aCentrePos[2];
 	var centreAng = Math.atan2(aCentrePos[0],aCentrePos[1]);
-	//alert(centreAng);
 	var centreRad = Math.sqrt(aCentrePos[0]*aCentrePos[0]+aCentrePos[1]*aCentrePos[1]);
-	//alert(centreRad);
 	
 	var centerNormRadial = top-centreH;
 	var centerNormUp = centreRad - Math.cos(centreAng)*topRad;
 	var mag = Math.sqrt(centerNormRadial*centerNormRadial + centerNormUp*centerNormUp);
 	centerNormRadial/=mag;
 	centerNormUp/=mag;
-	
-	alert("radial: "+ centerNormRadial + ", up:" + centerNormUp);
+	//alert("radial: "+ centerNormRadial + ", up:" + centerNormUp);
 	
 	for (var ii=0;ii<divisions;ii++){
 		vertices.push(topRad*Math.sin(angle));
