@@ -383,12 +383,14 @@ var offsetCam = (function(){
 	var targetForType = {
 		"near 3rd person":[0,-0.0075,-0.005],
 		"far 3rd person":[0,-0.02,-0.03],
+		"far 3rd person 2":[0,0,-0.03],	//straight behind (not raised)
 		"cockpit":[0,0,0.001],
 		"side":[0.006,0,0.0025]
 	}
 	var targetForTypeReverse = {
 		"near 3rd person":[0,-0.0075,0.005],
 		"far 3rd person":[0,-0.02,0.03],
+		"far 3rd person 2":[0,0,0.03],
 		"cockpit":[0,0,-0.01],
 		"side":[0.006,0,0.0025]
 	}
@@ -1066,7 +1068,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	if (duocylinderModel == 'procTerrain'){
 		var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//copied from elsewhere
 		terrainCollisionTestBoxPos = terrainGetHeightFor4VecPos(playerPos);		//TODO in position update (not rendering)
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.003,0.003,0.003]);
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.001,0.001,0.001]);
 		drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
 	}
 	
@@ -1386,6 +1388,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawLandingBall([0,0.007,0.007]);	//down, forward
 		drawLandingBall([0.005,0.007,-0.003]);	//left, down, back a bit
 		drawLandingBall([-0.005,0.007,-0.003]);	//right, down, back a bit
+		
+		drawLandingBall([0,0.01,0]);	//straight down for testing landing
 		
 		function drawLandingBall(posn){			 
 			lgMat = mat4.create(sshipMatrix);
@@ -1937,7 +1941,7 @@ var guiParams={
 	playerLight:'#ffffff',
 	onRails:false,
 	spinCorrection:true,
-	cameraType:"near 3rd person",
+	cameraType:"far 3rd person 2",
 	cameraFov:105,
 	flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
 	reflector:{
@@ -2031,7 +2035,7 @@ function init(){
 	controlFolder.add(guiParams, 'lockPointer');
 	
 	var displayFolder = gui.addFolder('display');	//control and movement
-	displayFolder.add(guiParams, "cameraType", ["cockpit", "near 3rd person", "far 3rd person", "side"]);
+	displayFolder.add(guiParams, "cameraType", ["cockpit", "near 3rd person", "far 3rd person", "far 3rd person 2", "side"]);
 	displayFolder.add(guiParams, "cameraFov", 60,120,5);
 	displayFolder.add(guiParams, "flipReverseCamera");
 	displayFolder.add(guiParams, "perPixelLighting");
@@ -2425,20 +2429,34 @@ var iterateMechanics = (function iterateMechanics(){
 			//some logic shared with drawing code
 			var duocylinderModel = (playerContainer.world==0) ? guiParams.duocylinderModel0 : guiParams.duocylinderModel1;	//todo use array
 			if (duocylinderModel == 'procTerrain'){
-				var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//copied from elsewhere
+				//var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//copied from elsewhere
+				
+				var landingLegMat = mat4.create(playerCamera);
+				xyzmove4mat(landingLegMat, [0,0.01,0]);
+				var playerPos = [landingLegMat[12],landingLegMat[13],landingLegMat[14],landingLegMat[15]];			//copied from elsewhere
+				var ballSize = 0.002;	//0.005 reasonable for centre of player model. smaller for landing legs
+				
 				//simple spring force terrain collision - 
 				//lookup height above terrain, subtract some value (height above terrain where restoring force goes to zero - basically maximum extension of landing legs. apply sprint force upward to player proportional to this amount.
 				//then apply force along ground normal, friction force, landing legs, torques...
 				var suspensionHeightNow = getHeightAboveTerrainFor4VecPos(playerPos);
-				suspensionHeightNow = Math.max(Math.min(-suspensionHeightNow,0) + 0.005, 0);	//capped
+				suspensionHeightNow = Math.max(Math.min(-suspensionHeightNow,0) + ballSize, 0);	//capped
 				var suspensionVel = suspensionHeightNow-suspensionHeight;
 				suspensionHeight = suspensionHeightNow;
 				var suspensionForce = 12*suspensionHeight+ 200*suspensionVel;	//TODO cap so doesnt pull down
 				//apply force to player, "up" wrt duocylinder
 				for (var cc=0;cc<3;cc++){
-					playerVelVec[cc]+=suspensionForce*radialPlayerCoords[cc];
+					playerVelVec[cc]+=suspensionForce*radialPlayerCoords[cc];	//radialPlayerCoords will be a bit different for landing legs but assume same since small displacement
 				}
+				
+				//same again but for a landing leg displaced from body of spaceship. TODO generalise
+				
+				
+				
 			}
+			
+			
+			
 			
 		}
 		
