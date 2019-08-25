@@ -183,6 +183,12 @@ var hyperboloidBuffers={};
 var sshipModelScale=0.0002;
 var duocylinderSurfaceBoxScale = 0.025;
 
+var landingLegData=[
+		{pos:[0,0.006,0.007],suspHeight:0},	//down, forward
+		{pos:[0.006,0.006,-0.004],suspHeight:0},	//left, down, back a bit
+		{pos:[-0.006,0.006,-0.004],suspHeight:0}	//right, down, back a bit
+	];
+		
 function initBuffers(){
 	loadDuocylinderBufferData(duocylinderObjects.grid, tballGridDataPantheonStyle);
 	loadDuocylinderBufferData(duocylinderObjects.terrain, terrainData);
@@ -383,14 +389,14 @@ var offsetCam = (function(){
 	var targetForType = {
 		"near 3rd person":[0,-0.0075,-0.005],
 		"far 3rd person":[0,-0.02,-0.03],
-		"far 3rd person 2":[0,0,-0.03],	//straight behind (not raised)
+		"far 3rd person 2":[0,0,-0.02],	//straight behind (not raised)
 		"cockpit":[0,0,0.001],
 		"side":[0.006,0,0.0025]
 	}
 	var targetForTypeReverse = {
 		"near 3rd person":[0,-0.0075,0.005],
 		"far 3rd person":[0,-0.02,0.03],
-		"far 3rd person 2":[0,0,0.03],
+		"far 3rd person 2":[0,0,0.02],
 		"cockpit":[0,0,-0.01],
 		"side":[0.006,0,0.0025]
 	}
@@ -1385,12 +1391,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//prepBuffersForDrawing(gunBuffers, shaderProgramColored);
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.001,0.001,0.001]);
 		
-		drawLandingBall([0,0.007,0.007]);	//down, forward
-		drawLandingBall([0.005,0.007,-0.003]);	//left, down, back a bit
-		drawLandingBall([-0.005,0.007,-0.003]);	//right, down, back a bit
-		
-		drawLandingBall([0,0.01,0]);	//straight down for testing landing
-		
+		for (gear of landingLegData){
+			drawLandingBall(gear.pos);
+		}
+				
 		function drawLandingBall(posn){			 
 			lgMat = mat4.create(sshipMatrix);
 			xyzmove4mat(lgMat, posn);
@@ -2233,7 +2237,6 @@ var iterateMechanics = (function iterateMechanics(){
 	var autoFireCountdownStartVal=1;
 	var lastPlayerAngMove = [0,0,0];	//for interpolation
 	var duoCylinderAngVelConst=0;
-	var suspensionHeight=0;
 	
 	return function(){
 		
@@ -2429,39 +2432,47 @@ var iterateMechanics = (function iterateMechanics(){
 			//some logic shared with drawing code
 			var duocylinderModel = (playerContainer.world==0) ? guiParams.duocylinderModel0 : guiParams.duocylinderModel1;	//todo use array
 			if (duocylinderModel == 'procTerrain'){
-				//var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//copied from elsewhere
-				
-				var legPosPlayerFrame = [0,0.01,0];
-				var landingLegMat = mat4.create(playerCamera);
-				xyzmove4mat(landingLegMat, legPosPlayerFrame);
-				var playerPos = [landingLegMat[12],landingLegMat[13],landingLegMat[14],landingLegMat[15]];			//copied from elsewhere
-				var ballSize = 0.002;	//0.005 reasonable for centre of player model. smaller for landing legs
-				
-				//simple spring force terrain collision - 
-				//lookup height above terrain, subtract some value (height above terrain where restoring force goes to zero - basically maximum extension of landing legs. apply sprint force upward to player proportional to this amount.
-				//then apply force along ground normal, friction force, landing legs, torques...
-				var suspensionHeightNow = getHeightAboveTerrainFor4VecPos(playerPos);
-				suspensionHeightNow = Math.max(Math.min(-suspensionHeightNow,0) + ballSize, 0);	//capped
-				var suspensionVel = suspensionHeightNow-suspensionHeight;
-				suspensionHeight = suspensionHeightNow;
-				var suspensionForce = 20*suspensionHeight+ 250*suspensionVel;	//TODO cap so doesnt pull down
-																		//TODO rotational speed impact on velocity
-				//apply force to player, "up" wrt duocylinder
-				for (var cc=0;cc<3;cc++){
-					playerVelVec[cc]+=suspensionForce*radialPlayerCoords[cc];	//radialPlayerCoords will be a bit different for landing legs but assume same since small displacement
-				}
-				
-				//fake force is directly up (assumes upward terrain normal). should still cause tripod to conform to surface by appling torque from this upward force. 
-				//to find torque for a leg, want to do cross product of leg position with duocylinder up direction (in frame of player). 
-					//ie legPosPlayerFrame x radialPlayerCoords
-				var forcePlayerFrame = radialPlayerCoords.map(function(elem){return elem*suspensionForce;});
-				var torquePlayerFrame = [
-								legPosPlayerFrame[1]*forcePlayerFrame[2] - legPosPlayerFrame[2]*forcePlayerFrame[1],
-								legPosPlayerFrame[2]*forcePlayerFrame[0] - legPosPlayerFrame[0]*forcePlayerFrame[2],
-								legPosPlayerFrame[0]*forcePlayerFrame[1] - legPosPlayerFrame[1]*forcePlayerFrame[0]
-								];
-				for (cc=0;cc<3;cc++){
-					playerAngVelVec[cc]-=10000*torquePlayerFrame[cc];	//assumes moment of intertia of sphere/cube/similar
+				for (var legnum=0;legnum<3;legnum++){
+					var landingLeg = landingLegData[legnum]
+					var legPosPlayerFrame=landingLeg.pos;
+					var suspensionHeight=landingLeg.suspHeight;
+								
+					var landingLegMat = mat4.create(playerCamera);
+					xyzmove4mat(landingLegMat, legPosPlayerFrame);
+					var playerPos = [landingLegMat[12],landingLegMat[13],landingLegMat[14],landingLegMat[15]];	
+	
+					//copied from elsewhere
+					var ballSize = 0.002;	//0.005 reasonable for centre of player model. smaller for landing legs
+					
+					//simple spring force terrain collision - 
+					//lookup height above terrain, subtract some value (height above terrain where restoring force goes to zero - basically maximum extension of landing legs. apply sprint force upward to player proportional to this amount.
+					var suspensionHeightNow = getHeightAboveTerrainFor4VecPos(playerPos);
+					suspensionHeightNow = Math.max(Math.min(-suspensionHeightNow,0) + ballSize, 0);	//capped
+					var suspensionVel = suspensionHeightNow-suspensionHeight;
+					suspensionHeight = suspensionHeightNow;
+					var suspensionForce = 10*suspensionHeight+ 400*suspensionVel;	//TODO cap so doesnt pull down
+																			//TODO rotational speed impact on velocity
+					suspensionForce=Math.max(suspensionForce,0);
+																			
+					//apply force to player, "up" wrt duocylinder
+					for (var cc=0;cc<3;cc++){
+						playerVelVec[cc]+=suspensionForce*radialPlayerCoords[cc];	//radialPlayerCoords will be a bit different for landing legs but assume same since small displacement
+					}
+					
+					//fake force is directly up (assumes upward terrain normal). should still cause tripod to conform to surface by appling torque from this upward force. 
+					//to find torque for a leg, want to do cross product of leg position with duocylinder up direction (in frame of player). 
+						//ie legPosPlayerFrame x radialPlayerCoords
+					var forcePlayerFrame = radialPlayerCoords.map(function(elem){return elem*suspensionForce;});
+					var torquePlayerFrame = [
+									legPosPlayerFrame[1]*forcePlayerFrame[2] - legPosPlayerFrame[2]*forcePlayerFrame[1],
+									legPosPlayerFrame[2]*forcePlayerFrame[0] - legPosPlayerFrame[0]*forcePlayerFrame[2],
+									legPosPlayerFrame[0]*forcePlayerFrame[1] - legPosPlayerFrame[1]*forcePlayerFrame[0]
+									];
+					for (cc=0;cc<3;cc++){
+						playerAngVelVec[cc]-=10000*torquePlayerFrame[cc];	//assumes moment of intertia of sphere/cube/similar
+					}
+					
+					//TODO apply force along ground normal, friction force
 				}
 				
 			}
