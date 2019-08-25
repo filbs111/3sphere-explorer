@@ -71,7 +71,7 @@ var terrainHeightData = (function generateTerrainHeightData(){
 		
 		//egg box
 		var tmpsf = 2*Math.PI*5/procTerrainSize;
-		var height = 0.1*Math.sin(ii*tmpsf)*Math.sin(jj*tmpsf);
+		var height = 0.025*Math.sin(ii*tmpsf)*Math.sin(jj*tmpsf);
 		//var height = 0.2*Math.sin(jj*jj*tmpsf*0.005);		//sorted out for ii. todo jj. test terrain patterns?
 		//var height = 0.000004*((jj*ii)%10000);
 		
