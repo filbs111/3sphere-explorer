@@ -2449,11 +2449,11 @@ var iterateMechanics = (function iterateMechanics(){
 					var suspensionHeightNow = getHeightAboveTerrainFor4VecPos(playerPos);
 					suspensionHeightNow = Math.max(Math.min(-suspensionHeightNow,0) + ballSize, 0);	//capped
 					var suspensionVel = suspensionHeightNow-suspensionHeight;
-					suspensionHeight = suspensionHeightNow;
-					var suspensionForce = 10*suspensionHeight+ 400*suspensionVel;	//TODO cap so doesnt pull down
-																			//TODO rotational speed impact on velocity
+					var suspensionForce = 30*suspensionHeightNow+ 150*suspensionVel;	
+																			//TODO rotational speed impact on velocity									
 					suspensionForce=Math.max(suspensionForce,0);
-																			
+					landingLeg.suspHeight = suspensionHeightNow;
+														
 					//apply force to player, "up" wrt duocylinder
 					for (var cc=0;cc<3;cc++){
 						playerVelVec[cc]+=suspensionForce*radialPlayerCoords[cc];	//radialPlayerCoords will be a bit different for landing legs but assume same since small displacement
