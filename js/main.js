@@ -2388,6 +2388,15 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			//this is in frame of duocylinder. playerVelVec is in frame of player though... ?!! possible to do without matrix mult? by choosing right parts of playerCamera mat?
 			
+			//do the same thing for "up" vector. 
+			//var radialWorldCoords = [ playerPos[0], playerPos[1],0,0];	AFAIK the following is not const length, but hope will give correct direction on duocylinder surf
+			var radialWorldCoords = playerPos;	//this maybe correct
+			var radialPlayerCoords = [
+				radialWorldCoords[0]*playerCamera[0] + radialWorldCoords[1]*playerCamera[1],
+				radialWorldCoords[0]*playerCamera[4] + radialWorldCoords[1]*playerCamera[5],
+				radialWorldCoords[0]*playerCamera[8] + radialWorldCoords[1]*playerCamera[9]];
+			
+			
 			//square drag //want something like spd = spd - const*spd*spd = spd (1 - const*|spd|)
 
 			var airSpdVec = playerVelVec.map(function(val, idx){return val-spinVelPlayerCoords[idx];});
@@ -2417,14 +2426,16 @@ var iterateMechanics = (function iterateMechanics(){
 				var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//copied from elsewhere
 				//simple spring force terrain collision - 
 				//lookup height above terrain, subtract some value (height above terrain where restoring force goes to zero - basically maximum extension of landing legs. apply sprint force upward to player proportional to this amount.
-				//then apply force along ground normal, damping, friction force, landing legs, torques...
+				//then apply force along ground normal, friction force, landing legs, torques...
 				var suspensionHeightNow = getHeightAboveTerrainFor4VecPos(playerPos);
 				suspensionHeightNow = Math.max(Math.min(-suspensionHeightNow,0) + 0.005, 0);	//capped
 				var suspensionVel = suspensionHeightNow-suspensionHeight;
 				suspensionHeight = suspensionHeightNow;
-				var suspensionForce = 10*suspensionHeight+ 50*suspensionVel;	//TODO cap so doesnt pull down
-				//apply force to player. todo work out player's "up" vector wrt duocylinder, but can test by manually putting player upright
-				playerVelVec[1]-=suspensionForce;
+				var suspensionForce = 12*suspensionHeight+ 200*suspensionVel;	//TODO cap so doesnt pull down
+				//apply force to player, "up" wrt duocylinder
+				for (var cc=0;cc<3;cc++){
+					playerVelVec[cc]+=suspensionForce*radialPlayerCoords[cc];
+				}
 			}
 			
 		}
