@@ -2312,6 +2312,10 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		var duocylinderRotate = duoCylinderAngVelConst * timeElapsed*moveSpeed;
 		
+		if (guiParams["drop spaceship"]){guiParams.duocylinderRotateSpeed=0;}	//bodge to let take pics outside spaceship
+							//note doesn't play well with dat.gui - ui doesn't update
+							// (TODO have spaceship mechanics apply independent of player when outside)
+		
 		duocylinderSpin+=duocylinderRotate; 	//TODO match spin speed with sea wave speed
 		
 		
