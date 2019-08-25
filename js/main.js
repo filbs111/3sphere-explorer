@@ -1927,7 +1927,7 @@ var guiParams={
 	"culling":true,
 	"perPixelLighting":true,
 	"atmosShader":true,
-	"altAtmosShader":true,
+	"altAtmosShader":false,
 	"atmosThickness":0.2,
 	"atmosContrast":5.0,
 	fogColor0:'#b2dede',
