@@ -2431,8 +2431,9 @@ var iterateMechanics = (function iterateMechanics(){
 			if (duocylinderModel == 'procTerrain'){
 				//var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//copied from elsewhere
 				
+				var legPosPlayerFrame = [0,0.01,0];
 				var landingLegMat = mat4.create(playerCamera);
-				xyzmove4mat(landingLegMat, [0,0.01,0]);
+				xyzmove4mat(landingLegMat, legPosPlayerFrame);
 				var playerPos = [landingLegMat[12],landingLegMat[13],landingLegMat[14],landingLegMat[15]];			//copied from elsewhere
 				var ballSize = 0.002;	//0.005 reasonable for centre of player model. smaller for landing legs
 				
@@ -2443,15 +2444,25 @@ var iterateMechanics = (function iterateMechanics(){
 				suspensionHeightNow = Math.max(Math.min(-suspensionHeightNow,0) + ballSize, 0);	//capped
 				var suspensionVel = suspensionHeightNow-suspensionHeight;
 				suspensionHeight = suspensionHeightNow;
-				var suspensionForce = 12*suspensionHeight+ 200*suspensionVel;	//TODO cap so doesnt pull down
+				var suspensionForce = 20*suspensionHeight+ 250*suspensionVel;	//TODO cap so doesnt pull down
+																		//TODO rotational speed impact on velocity
 				//apply force to player, "up" wrt duocylinder
 				for (var cc=0;cc<3;cc++){
 					playerVelVec[cc]+=suspensionForce*radialPlayerCoords[cc];	//radialPlayerCoords will be a bit different for landing legs but assume same since small displacement
 				}
 				
-				//same again but for a landing leg displaced from body of spaceship. TODO generalise
-				
-				
+				//fake force is directly up (assumes upward terrain normal). should still cause tripod to conform to surface by appling torque from this upward force. 
+				//to find torque for a leg, want to do cross product of leg position with duocylinder up direction (in frame of player). 
+					//ie legPosPlayerFrame x radialPlayerCoords
+				var forcePlayerFrame = radialPlayerCoords.map(function(elem){return elem*suspensionForce;});
+				var torquePlayerFrame = [
+								legPosPlayerFrame[1]*forcePlayerFrame[2] - legPosPlayerFrame[2]*forcePlayerFrame[1],
+								legPosPlayerFrame[2]*forcePlayerFrame[0] - legPosPlayerFrame[0]*forcePlayerFrame[2],
+								legPosPlayerFrame[0]*forcePlayerFrame[1] - legPosPlayerFrame[1]*forcePlayerFrame[0]
+								];
+				for (cc=0;cc<3;cc++){
+					playerAngVelVec[cc]-=10000*torquePlayerFrame[cc];	//assumes moment of intertia of sphere/cube/similar
+				}
 				
 			}
 			
