@@ -2380,7 +2380,7 @@ var iterateMechanics = (function iterateMechanics(){
 				rotatePlayer(lastPlayerAngMove);	//TODO add rotational momentum - not direct rotate
 			}
 			
-			playerAngVelVec=scalarvectorprod(0.8,playerAngVelVec);
+			playerAngVelVec=scalarvectorprod(0.9,playerAngVelVec);
 			
 			//blend velocity with velocity of rotating duosphere. (todo angular vel to use this too)
 			//matrix entries 12-15 describe position. (remain same when rotate player and don't move)
