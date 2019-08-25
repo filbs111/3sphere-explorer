@@ -1363,9 +1363,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}
 		
 		function drawGun(gunMatrix){
-			var inverseGunMat = mat4.create(gunMatrix);
-			mat4.transpose(inverseGunMat);
-
 			//taking the gun matrix rotation relative to the spaceship matrix, then applying this to the cosmetic spaceship matrix (therefore including rendering hack position shift, and version reflected in portal)
 			mat4.identity(mvMatrix);
 			mat4.multiply(mvMatrix, invertedWorldCamera);
@@ -1376,8 +1373,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 			//mat4.set(invertedWorldCamera, mvMatrix);
 			//mat4.multiply(mvMatrix,gunMatrixCosmetic);
 			
+			mat4.set(gunMatrix, mMatrix);
+			
 			drawObjectFromPreppedBuffers(gunBuffers, shaderProgramColored);
-			//drawObjectFromPreppedBuffers(sphereBuffers, shaderProgramColored);
 		}
 		
 		//landing gear - just 3 balls.
@@ -1389,19 +1387,23 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawLandingBall([0.005,0.007,-0.003]);	//left, down, back a bit
 		drawLandingBall([-0.005,0.007,-0.003]);	//right, down, back a bit
 		
-		function drawLandingBall(posn){
-			//TODO reuse drawgun code? 
-			 
+		function drawLandingBall(posn){			 
 			lgMat = mat4.create(sshipMatrix);
 			xyzmove4mat(lgMat, posn);
 			
-			mat4.set(invertedWorldCamera, mvMatrix);
-			mat4.multiply(mvMatrix, lgMat);
+			//mat4.set(invertedWorldCamera, mvMatrix);	//no shift version
+			//mat4.multiply(mvMatrix, lgMat);
 			
 			mat4.set(lgMat, mMatrix);
 			
+			//apply the shift hack as with guns.
+			mat4.identity(mvMatrix);
+			mat4.multiply(mvMatrix, invertedWorldCamera);
+			mat4.multiply(mvMatrix, matrix);
+			mat4.multiply(mvMatrix, inverseSshipMat);
+			mat4.multiply(mvMatrix, lgMat);
+
 			drawObjectFromPreppedBuffers(sphereBuffers, shaderProgramColored);
-			//drawObjectFromPreppedBuffers(gunBuffers, shaderProgramColored);
 		}
 		
 	}
