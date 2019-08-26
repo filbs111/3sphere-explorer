@@ -111,3 +111,17 @@ function testDuocylXYfor4Pos(){
 	var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];
 	console.log(duocylXYfor4Pos(playerPos));
 }
+
+function getGridSqFor4Pos(pos){
+	var tmpXYPos = duocylXYfor4Pos(pos);
+	var gridSquareX = (Math.floor(tmpXYPos.x))%8;
+	var gridSquareY = (Math.floor(tmpXYPos.y))%8;
+	var gridSqs = [
+		gridSquareX + 8*gridSquareY,
+		(gridSquareX+1)%8 + 8*gridSquareY,
+		gridSquareX + 8*((gridSquareY+1)%8),
+		(gridSquareX+1)%8 + 8*((gridSquareY+1)%8)
+	];
+	if (gridSqs[0]<0 || gridSqs[0]>63){alert("grid square out of range! " + gridSq);}
+	return gridSqs;
+}

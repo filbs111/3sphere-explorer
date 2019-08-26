@@ -1043,8 +1043,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 			var thisMat = randomMats[ii];
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix, thisMat);
+			
 		//	if (thisMat[15]>criticalWPos){continue;}	//don't draw boxes too close to portal
 			if (frustrumCull(mvMatrix,boxRad)){
+				mat4.set(thisMat, mMatrix);
 				drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
 			}
 		}
@@ -1078,6 +1080,31 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
 	}
 	
+	//draw collision test object
+	mat4.set(invertedWorldCamera, mvMatrix);
+	mat4.multiply(mvMatrix, collisionTestObjMat);
+	mat4.set(collisionTestObjMat, mMatrix);
+	var testObjScale = 0.001
+	//draw a 3-axis cross
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [testObjScale,testObjScale,20*testObjScale]);
+	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [testObjScale,20*testObjScale,testObjScale]);
+	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [20*testObjScale,testObjScale,testObjScale]);
+	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+	//draw object centred on object colliding with to see if anything happening!
+	mat4.set(invertedWorldCamera, mvMatrix);
+	mat4.multiply(mvMatrix, collisionTestObj2Mat);
+	mat4.set(collisionTestObj2Mat, mMatrix);
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [2*testObjScale,2*testObjScale,2*testObjScale]);
+	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+	//draw object shifted by normal
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.green);
+	mat4.set(invertedWorldCamera, mvMatrix);
+	mat4.multiply(mvMatrix, collisionTestObj3Mat);
+	mat4.set(collisionTestObj3Mat, mMatrix);
+	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+
 	function drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, buffers, invertedCamera){
 		var invertedCamera = invertedCamera || invertedWorldCamera;
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, bb.color);
@@ -1975,6 +2002,11 @@ var selectedTargeting="none";
 var bullets=[];
 var gunMatrices=[];
 var canvas;
+
+var collisionTestObjMat = mat4.identity();
+var collisionTestObj2Mat = mat4.identity();
+var collisionTestObj3Mat = mat4.identity();
+
 function init(){
 
 	stats = new Stats();
@@ -2384,7 +2416,7 @@ var iterateMechanics = (function iterateMechanics(){
 				rotatePlayer(lastPlayerAngMove);	//TODO add rotational momentum - not direct rotate
 			}
 			
-			playerAngVelVec=scalarvectorprod(0.9,playerAngVelVec);
+			playerAngVelVec=scalarvectorprod(0.85,playerAngVelVec);
 			
 			//blend velocity with velocity of rotating duosphere. (todo angular vel to use this too)
 			//matrix entries 12-15 describe position. (remain same when rotate player and don't move)
@@ -2443,14 +2475,14 @@ var iterateMechanics = (function iterateMechanics(){
 								
 					var landingLegMat = mat4.create(playerCamera);
 					xyzmove4mat(landingLegMat, legPosPlayerFrame);
-					var playerPos = [landingLegMat[12],landingLegMat[13],landingLegMat[14],landingLegMat[15]];	
+					var legPos = [landingLegMat[12],landingLegMat[13],landingLegMat[14],landingLegMat[15]];	
 	
 					//copied from elsewhere
 					var ballSize = 0.002;	//0.005 reasonable for centre of player model. smaller for landing legs
 					
 					//simple spring force terrain collision - 
 					//lookup height above terrain, subtract some value (height above terrain where restoring force goes to zero - basically maximum extension of landing legs. apply sprint force upward to player proportional to this amount.
-					var suspensionHeightNow = getHeightAboveTerrainFor4VecPos(playerPos);
+					var suspensionHeightNow = getHeightAboveTerrainFor4VecPos(legPos);
 					suspensionHeightNow = Math.max(Math.min(-suspensionHeightNow,0) + ballSize, 0);	//capped
 					var suspensionVel = suspensionHeightNow-suspensionHeight;
 					var suspensionForce = 30*suspensionHeightNow+ 150*suspensionVel;	
@@ -2478,9 +2510,106 @@ var iterateMechanics = (function iterateMechanics(){
 					
 					//TODO apply force along ground normal, friction force
 				}
-				
 			}
 			
+			//apply same forces for other items. 
+			//start with just player centre. 
+			var gridSqs = getGridSqFor4Pos(playerPos);
+			//get transposed playerpos in frame of duocylinder. this is generally useful, maybe should have some func to convert? code copied from bullet collision stuff...
+			var playerMatrixTransposed = mat4.create();	//instead of transposing matrices describing possible colliding objects orientation.
+			mat4.set(playerCamera,playerMatrixTransposed);	//alternatively might store transposed other objects orientation permanently
+			mat4.transpose(playerMatrixTransposed);
+			var playerMatrixTransposedDCRefFrame=mat4.create(playerMatrixTransposed);	//in frame of duocylinder
+			rotate4mat(playerMatrixTransposedDCRefFrame, 0, 1, duocylinderSpin);
+			
+			if (guiParams.drawShapes.stonehenge){
+				var relativeMat = mat4.create();
+				var boxArrs = duocylinderBoxInfo.stonehenge.gridContents;
+				for (var gs of gridSqs){	//TODO get gridSqs
+					var bArray = boxArrs[gs];
+					for (var bb of bArray){
+						
+						//get player position in frame of bb.matrix
+						
+						//code copied from bullet collision stuff - //boxCollideCheck(bb.matrix,duocylinderSurfaceBoxScale,critValueDCBox, bulletMatrixTransposedDCRefFrame, true); ...
+						
+						mat4.set(playerMatrixTransposedDCRefFrame, relativeMat);
+						mat4.multiply(relativeMat, bb.matrix);
+					
+						//if (relativeMat[15]<boxCritValue){return;}	//early sphere check. TODO get crit value, enable
+					
+					/*
+						if (Math.max(Math.abs(relativeMat[3]),
+									Math.abs(relativeMat[7]),
+									Math.abs(relativeMat[11]))<duocylinderSurfaceBoxScale*relativeMat[15]){
+							//detonateBullet(bullet, bulletMatrix, moveWithDuocylinder);
+							console.log("COLLIDING");
+						}
+						*/
+						//TODO rounded corner collision, show object placed relative to player to indicate direction of collision(treat player as sphere) - this is similar to SDF stuff
+						//from relativeMat stuff can determine both position, and direction of reaction force in frame of object collising with. can then draw something in frame of that object to indicate this. 
+						//then find how to transform into frame of player.
+						//what doing might only work for small boxes. TODO check big (relative to 3sphere)
+						
+						//proposed method (this maybe inefficient/inaccurate but should do ok)
+						//get direction of reaction normal in frame of box
+						//add this to the position of the spaceship in the frame of the box
+						//(project back onto 3sphere - normalise)
+						//get this position in the frame of the player
+						//once working, consider how to make efficient/correct etc
+						
+						var relativePos = [relativeMat[3], relativeMat[7], relativeMat[11], relativeMat[15]];	//need last one?
+						var projectedBoxSize = duocylinderSurfaceBoxScale*relativePos[3];
+						
+						//??possibly want to do projectedPos = relativePos[0-2]/relativePos[3] , cmp with duocylinderSurfaceBoxScale
+						
+						if (Math.max(Math.abs(relativePos[0]),
+									Math.abs(relativePos[1]),
+									Math.abs(relativePos[2]))<projectedBoxSize){
+							//detonateBullet(bullet, bulletMatrix, moveWithDuocylinder);
+							//console.log("COLLIDING");
+							
+							//work out which direction normal is
+							var absDistances = relativePos.map(function (val){return Math.abs(val);});
+							var selectedIdx = -1;
+							if (absDistances[1]>absDistances[0]){
+								if (absDistances[2]>absDistances[1]){
+									selectedIdx=2;
+								}else{
+									selectedIdx=1;
+								}
+							}else{
+								if (absDistances[2]>absDistances[0]){
+									selectedIdx=2;
+								}else{
+									selectedIdx=0;
+								}
+							}
+							var reactionNormal=[0,0,0];
+							reactionNormal[selectedIdx]=-0.01*relativePos[selectedIdx]/absDistances[selectedIdx];
+												//0.01* is bodge - true normal is 1*
+							//TODO
+							//draw object relative to box to check is at player position (relativePos)
+							//draw another relative to box at relativePos+constant*reactionNormal to check in right direction
+							//then can calc this point in frame of player
+							//todo what is sense of 4vec relativePos, 3vec normal?
+							
+							mat4.set(bb.matrix, collisionTestObjMat);
+							mat4.set(bb.matrix, collisionTestObj2Mat);
+							mat4.set(bb.matrix, collisionTestObj3Mat);
+							xyzmove4mat(collisionTestObjMat, [-relativePos[0],-relativePos[1],-relativePos[2]]);
+							
+							xyzmove4mat(collisionTestObj3Mat, [-relativePos[0],-relativePos[1],-relativePos[2]]);
+							xyzmove4mat(collisionTestObj3Mat, reactionNormal);
+							
+								//this might show that should have /relativePos[3] here.
+							
+						}
+						
+					}
+				
+				}
+			}
 			
 			
 			
@@ -2591,16 +2720,7 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 			
 			//var bulletPosAdjusted = [ bulletMatrixTransposedDCRefFrame[3],bulletMatrixTransposedDCRefFrame[7], bulletMatrixTransposedDCRefFrame[11], bulletMatrixTransposedDCRefFrame[15]];
-			var tmpXYPos = duocylXYfor4Pos(bulletPos);
-			var gridSquareX = (Math.floor(tmpXYPos.x))%8;
-			var gridSquareY = (Math.floor(tmpXYPos.y))%8;
-			var gridSqs = [
-				gridSquareX + 8*gridSquareY,
-				(gridSquareX+1)%8 + 8*gridSquareY,
-				gridSquareX + 8*((gridSquareY+1)%8),
-				(gridSquareX+1)%8 + 8*((gridSquareY+1)%8)
-			];
-			if (gridSqs[0]<0 || gridSqs[0]>63){alert("grid square out of range! " + gridSq);}
+			var gridSqs = getGridSqFor4Pos(bulletPos);
 			
 			if (guiParams.drawShapes.towers){	
 				boxCollideBulletForBoxArray(duocylinderBoxInfo.towerblocks.gridContents);
