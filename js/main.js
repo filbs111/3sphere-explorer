@@ -1105,6 +1105,30 @@ function drawWorldScene(frameTime, isCubemapView) {
 	mat4.set(collisionTestObj3Mat, mMatrix);
 	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
 
+	//try to get something drawing at colliding object, relative to
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.blue);
+	mat4.set(invertedWorldCamera, mvMatrix);
+	mat4.multiply(mvMatrix, collisionTestObj4Mat);
+	mat4.set(collisionTestObj4Mat, mMatrix);
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [testObjScale,testObjScale,20*testObjScale]);
+	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [testObjScale,20*testObjScale,testObjScale]);
+	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [20*testObjScale,testObjScale,testObjScale]);
+	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+	
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.red);
+	mat4.set(invertedWorldCamera, mvMatrix);
+	mat4.multiply(mvMatrix, collisionTestObj5Mat);
+	mat4.set(collisionTestObj5Mat, mMatrix);
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [testObjScale,testObjScale,20*testObjScale]);
+	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [testObjScale,20*testObjScale,testObjScale]);
+	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [20*testObjScale,testObjScale,testObjScale]);
+	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+	
+	
 	function drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, buffers, invertedCamera){
 		var invertedCamera = invertedCamera || invertedWorldCamera;
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, bb.color);
@@ -2006,6 +2030,8 @@ var canvas;
 var collisionTestObjMat = mat4.identity();
 var collisionTestObj2Mat = mat4.identity();
 var collisionTestObj3Mat = mat4.identity();
+var collisionTestObj4Mat = mat4.identity();
+var collisionTestObj5Mat = mat4.identity();
 
 function init(){
 
@@ -2603,6 +2629,34 @@ var iterateMechanics = (function iterateMechanics(){
 							xyzmove4mat(collisionTestObj3Mat, reactionNormal);
 							
 								//this might show that should have /relativePos[3] here.
+							
+							//get the position of collisionTestObj3Mat in the frame of the player.
+							//draw something at this position (similar to how draw landing legs)
+							//....
+							
+							//already have relativeMat. position of box relative to player maybe already available
+							var relativePosB = [relativeMat[12], relativeMat[13], relativeMat[14], relativeMat[15]];
+							mat4.set(playerCamera, collisionTestObj4Mat);
+							xyzmove4mat(collisionTestObj4Mat, [-relativePosB[0],-relativePosB[1],-relativePosB[2]]);
+							//TODO account for duocylinder rotation (currently assuming unrotated)
+							
+							//position of collisionTestObj3Mat relative to playerMatrixTransposedDCRefFrame
+							//mising up playerCamera, playerMatrixTransposedDCRefFrame here... TODO sort out.
+							var relativeMatC = mat4.create();
+							mat4.set(playerMatrixTransposedDCRefFrame, relativeMatC);
+							mat4.multiply(relativeMatC, collisionTestObj3Mat);
+							var relativePosC = [relativeMatC[12], relativeMatC[13], relativeMatC[14], relativeMatC[15]];
+							
+							mat4.set(playerCamera, collisionTestObj5Mat);
+							xyzmove4mat(collisionTestObj5Mat, [-relativePosC[0],-relativePosC[1],-relativePosC[2]]);
+							
+							//apply force in this direction
+							//seems to be a bug - maybe mixed up camera and spaceship positions
+							for (var cc=0;cc<3;cc++){
+								playerVelVec[cc]-=50*relativePosC[cc];	//const acceleration -> elastic collision
+														//too small num and visibly mushy surface. too large and gains energy
+														//spring force maybe better
+							}
 							
 						}
 						
