@@ -2495,7 +2495,7 @@ var iterateMechanics = (function iterateMechanics(){
 			//some logic shared with drawing code
 			var duocylinderModel = (playerContainer.world==0) ? guiParams.duocylinderModel0 : guiParams.duocylinderModel1;	//todo use array
 			if (duocylinderModel == 'procTerrain'){
-				for (var legnum=0;legnum<3;legnum++){
+				for (var legnum=0;legnum<landingLegData.length;legnum++){
 					var landingLeg = landingLegData[legnum]
 					var legPosPlayerFrame=landingLeg.pos;
 					var suspensionHeight=landingLeg.suspHeight;
@@ -2549,7 +2549,7 @@ var iterateMechanics = (function iterateMechanics(){
 			var playerMatrixTransposedDCRefFrame=mat4.create(playerMatrixTransposed);	//in frame of duocylinder
 			rotate4mat(playerMatrixTransposedDCRefFrame, 0, 1, duocylinderSpin);
 			
-			currentPen = Math.min(currentPen,0);	//TODO better place for this? box penetration should not be -ve
+			currentPen = Math.max(currentPen,0);	//TODO better place for this? box penetration should not be -ve
 			
 			if (guiParams.drawShapes.stonehenge){
 				var relativeMat = mat4.create();
@@ -2592,38 +2592,24 @@ var iterateMechanics = (function iterateMechanics(){
 						
 						//??possibly want to do projectedPos = relativePos[0-2]/relativePos[3] , cmp with duocylinderSurfaceBoxScale
 						
+						//rounded box. TODO 1st check within bounding box of the rounded box.
+						var vectorFromBox = relativePos.map(function(elem){return elem>0 ? Math.max(elem - projectedBoxSize,0) : Math.min(elem + projectedBoxSize,0);});
+						var distSqFromBox = vectorFromBox[0]*vectorFromBox[0]+vectorFromBox[1]*vectorFromBox[1]+vectorFromBox[2]*vectorFromBox[2];
+						var distFromBox = Math.sqrt(distSqFromBox);		//todo handle distSqFromBox =0 (centre of collision ball is inside box)
 						
-						if (Math.max(Math.abs(relativePos[0]),
-									Math.abs(relativePos[1]),
-									Math.abs(relativePos[2]))<projectedBoxSize){
-							//detonateBullet(bullet, bulletMatrix, moveWithDuocylinder);
-							//console.log("COLLIDING");
-							
-							//work out which direction normal is
-							var absDistances = relativePos.map(function (val){return Math.abs(val);});
-							var selectedIdx = -1;
-							if (absDistances[1]>absDistances[0]){
-								if (absDistances[2]>absDistances[1]){
-									selectedIdx=2;
-								}else{
-									selectedIdx=1;
-								}
-							}else{
-								if (absDistances[2]>absDistances[0]){
-									selectedIdx=2;
-								}else{
-									selectedIdx=0;
-								}
-							}
+						var collisionBallSize = 0.01;
+						
+						//if (Math.max(Math.abs(relativePos[0]),
+						//			Math.abs(relativePos[1]),
+						//			Math.abs(relativePos[2]))<projectedBoxSize){
+						if (distFromBox<collisionBallSize){
 							
 							//find "penetration"
-							var currentPen = projectedBoxSize-absDistances[selectedIdx];
+							var currentPen = collisionBallSize-distFromBox;		//todo handle simultaneous box collisions
 							var penChange = currentPen - cubeColPen;
 							cubeColPen = currentPen;
 							
-							var reactionNormal=[0,0,0];
-							reactionNormal[selectedIdx]=relativePos[selectedIdx]/absDistances[selectedIdx];
-								//note  /absDistances part could be avoided since ~ projectedBoxSize
+							var reactionNormal=vectorFromBox.map(function(elem){return elem/distFromBox;});
 							
 							//reaction force proportional to currentPen -> spring force, penChange -> damper
 							var reactionForce = Math.max(20*currentPen+150*penChange, 0);	//soft like landing leg. for body collision, increase constants
