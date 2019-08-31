@@ -2310,6 +2310,8 @@ var iterateMechanics = (function iterateMechanics(){
 	var lastPlayerAngMove = [0,0,0];	//for interpolation
 	var duoCylinderAngVelConst=0;
 	
+	var currentPen=0;	//for bodgy box collision (todo use collision points array)
+	
 	return function(){
 		
 		reverseCamera=keyThing.keystate(82) || (mouseInfo.buttons & 4); 	//R or middle mouse click
@@ -2563,10 +2565,17 @@ var iterateMechanics = (function iterateMechanics(){
 			rotate4mat(playerMatrixTransposedDCRefFrame, 0, 1, duocylinderSpin);
 			
 			currentPen = Math.max(currentPen,0);	//TODO better place for this? box penetration should not be -ve
-			
+
 			if (guiParams.drawShapes.stonehenge){
+				processBoxCollisionsForBoxInfo(duocylinderBoxInfo.stonehenge);
+			}
+			if (guiParams.drawShapes.towers){
+				processBoxCollisionsForBoxInfo(duocylinderBoxInfo.towerblocks);
+			}
+			
+			function processBoxCollisionsForBoxInfo(boxInfo){
 				var relativeMat = mat4.create();
-				var boxArrs = duocylinderBoxInfo.stonehenge.gridContents;
+				var boxArrs = boxInfo.gridContents;
 				for (var gs of gridSqs){	//TODO get gridSqs
 					var bArray = boxArrs[gs];
 					for (var bb of bArray){
@@ -2618,7 +2627,7 @@ var iterateMechanics = (function iterateMechanics(){
 						if (distFromBox<collisionBallSize){
 							
 							//find "penetration"
-							var currentPen = collisionBallSize-distFromBox;		//todo handle simultaneous box collisions
+							currentPen = collisionBallSize-distFromBox;		//todo handle simultaneous box collisions
 							var penChange = currentPen - cubeColPen;
 							cubeColPen = currentPen;
 							
