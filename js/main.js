@@ -188,6 +188,7 @@ var landingLegData=[
 		{pos:[0.006,0.006,-0.004],suspHeight:0},	//left, down, back a bit
 		{pos:[-0.006,0.006,-0.004],suspHeight:0}	//right, down, back a bit
 	];
+var cubeColPen=0;	//analagous to suspHeight - penetration of box (will likely replace with rounded box system)
 		
 function initBuffers(){
 	loadDuocylinderBufferData(duocylinderObjects.grid, tballGridDataPantheonStyle);
@@ -2511,7 +2512,7 @@ var iterateMechanics = (function iterateMechanics(){
 					var suspensionHeightNow = getHeightAboveTerrainFor4VecPos(legPos);
 					suspensionHeightNow = Math.max(Math.min(-suspensionHeightNow,0) + ballSize, 0);	//capped
 					var suspensionVel = suspensionHeightNow-suspensionHeight;
-					var suspensionForce = 30*suspensionHeightNow+ 150*suspensionVel;	
+					var suspensionForce = 20*suspensionHeightNow+ 150*suspensionVel;	
 																			//TODO rotational speed impact on velocity									
 					suspensionForce=Math.max(suspensionForce,0);
 					landingLeg.suspHeight = suspensionHeightNow;
@@ -2547,6 +2548,8 @@ var iterateMechanics = (function iterateMechanics(){
 			mat4.transpose(playerMatrixTransposed);
 			var playerMatrixTransposedDCRefFrame=mat4.create(playerMatrixTransposed);	//in frame of duocylinder
 			rotate4mat(playerMatrixTransposedDCRefFrame, 0, 1, duocylinderSpin);
+			
+			currentPen = Math.min(currentPen,0);	//TODO better place for this? box penetration should not be -ve
 			
 			if (guiParams.drawShapes.stonehenge){
 				var relativeMat = mat4.create();
@@ -2589,6 +2592,7 @@ var iterateMechanics = (function iterateMechanics(){
 						
 						//??possibly want to do projectedPos = relativePos[0-2]/relativePos[3] , cmp with duocylinderSurfaceBoxScale
 						
+						
 						if (Math.max(Math.abs(relativePos[0]),
 									Math.abs(relativePos[1]),
 									Math.abs(relativePos[2]))<projectedBoxSize){
@@ -2611,9 +2615,19 @@ var iterateMechanics = (function iterateMechanics(){
 									selectedIdx=0;
 								}
 							}
+							
+							//find "penetration"
+							var currentPen = projectedBoxSize-absDistances[selectedIdx];
+							var penChange = currentPen - cubeColPen;
+							cubeColPen = currentPen;
+							
 							var reactionNormal=[0,0,0];
-							reactionNormal[selectedIdx]=-0.01*relativePos[selectedIdx]/absDistances[selectedIdx];
-												//0.01* is bodge - true normal is 1*
+							reactionNormal[selectedIdx]=relativePos[selectedIdx]/absDistances[selectedIdx];
+								//note  /absDistances part could be avoided since ~ projectedBoxSize
+							
+							//reaction force proportional to currentPen -> spring force, penChange -> damper
+							var reactionForce = Math.max(20*currentPen+150*penChange, 0);	//soft like landing leg. for body collision, increase constants
+												
 							//TODO
 							//draw object relative to box to check is at player position (relativePos)
 							//draw another relative to box at relativePos+constant*reactionNormal to check in right direction
@@ -2651,11 +2665,8 @@ var iterateMechanics = (function iterateMechanics(){
 							xyzmove4mat(collisionTestObj5Mat, [-relativePosC[0],-relativePosC[1],-relativePosC[2]]);
 							
 							//apply force in this direction
-							//seems to be a bug - maybe mixed up camera and spaceship positions
 							for (var cc=0;cc<3;cc++){
-								playerVelVec[cc]-=50*relativePosC[cc];	//const acceleration -> elastic collision
-														//too small num and visibly mushy surface. too large and gains energy
-														//spring force maybe better
+								playerVelVec[cc]+=reactionForce*relativePosC[cc];
 							}
 							
 						}
