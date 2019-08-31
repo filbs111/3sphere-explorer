@@ -184,9 +184,22 @@ var sshipModelScale=0.0002;
 var duocylinderSurfaceBoxScale = 0.025;
 
 var landingLegData=[
+								//tricycle
 		{pos:[0,0.006,0.007],suspHeight:0},	//down, forward
 		{pos:[0.006,0.006,-0.004],suspHeight:0},	//left, down, back a bit
-		{pos:[-0.006,0.006,-0.004],suspHeight:0}	//right, down, back a bit
+		{pos:[-0.006,0.006,-0.004],suspHeight:0},	//right, down, back a bit
+		
+								//add collision balls for other parts of body. TODO size/hardness property, visibility?.
+		{pos:[0.006,-0.0045,0.003],suspHeight:0},	//top front engine pods
+		{pos:[-0.006,-0.0045,0.003],suspHeight:0},
+		{pos:[0.006,-0.0045,-0.008],suspHeight:0},	//top back engine pods
+		{pos:[-0.006,-0.0045,-0.008],suspHeight:0},
+		
+		{pos:[0.006,0.0045,0.003],suspHeight:0},	//bottom front engine pods
+		{pos:[-0.006,0.0045,0.003],suspHeight:0},
+		{pos:[0.006,0.0045,-0.008],suspHeight:0},	//bottom back engine pods
+		{pos:[-0.006,0.0045,-0.008],suspHeight:0},
+		
 	];
 var cubeColPen=0;	//analagous to suspHeight - penetration of box (will likely replace with rounded box system)
 		
