@@ -185,23 +185,26 @@ var duocylinderSurfaceBoxScale = 0.025;
 
 var landingLegData=[
 								//tricycle
-		{pos:[0,0.006,0.007],suspHeight:0},	//down, forward
-		{pos:[0.006,0.006,-0.004],suspHeight:0},	//left, down, back a bit
-		{pos:[-0.006,0.006,-0.004],suspHeight:0},	//right, down, back a bit
+	//	{pos:[0,0.006,0.007],suspHeight:0},	//down, forward
+	//	{pos:[0.006,0.006,-0.004],suspHeight:0},	//left, down, back a bit
+	//	{pos:[-0.006,0.006,-0.004],suspHeight:0},	//right, down, back a bit
 		
 								//add collision balls for other parts of body. TODO size/hardness property, visibility?.
-		{pos:[0.006,-0.0045,0.003],suspHeight:0},	//top front engine pods
-		{pos:[-0.006,-0.0045,0.003],suspHeight:0},
-		{pos:[0.006,-0.0045,-0.008],suspHeight:0},	//top back engine pods
-		{pos:[-0.006,-0.0045,-0.008],suspHeight:0},
+								//note that cubeColPen, suspHeight are ~analagous. might be combined, though may affect when one "leg" colliding with both terrain abnd boxes. maybe currentPen should be a vector
+		{pos:[0.006,-0.0045,0.003],suspHeight:0,cubeColPen:0},	//top front engine pods
+		{pos:[-0.006,-0.0045,0.003],suspHeight:0,cubeColPen:0},
+		{pos:[0.006,-0.0045,-0.008],suspHeight:0,cubeColPen:0},	//top back engine pods
+		{pos:[-0.006,-0.0045,-0.008],suspHeight:0,cubeColPen:0},
 		
-		{pos:[0.006,0.0045,0.003],suspHeight:0},	//bottom front engine pods
-		{pos:[-0.006,0.0045,0.003],suspHeight:0},
-		{pos:[0.006,0.0045,-0.008],suspHeight:0},	//bottom back engine pods
-		{pos:[-0.006,0.0045,-0.008],suspHeight:0},
+		{pos:[0.006,0.0045,0.003],suspHeight:0,cubeColPen:0},	//bottom front engine pods
+		{pos:[-0.006,0.0045,0.003],suspHeight:0,cubeColPen:0},
+		{pos:[0.006,0.0045,-0.008],suspHeight:0,cubeColPen:0},	//bottom back engine pods
+		{pos:[-0.006,0.0045,-0.008],suspHeight:0,cubeColPen:0},
 		
 	];
-var cubeColPen=0;	//analagous to suspHeight - penetration of box (will likely replace with rounded box system)
+
+playerCentreBallData = {pos:[0,0,0],suspHeight:0,cubeColPen:0};
+		
 		
 function initBuffers(){
 	loadDuocylinderBufferData(duocylinderObjects.grid, tballGridDataPantheonStyle);
@@ -2568,28 +2571,35 @@ var iterateMechanics = (function iterateMechanics(){
 			currentPen = Math.max(currentPen,0);	//TODO better place for this? box penetration should not be -ve
 
 			if (guiParams.drawShapes.stonehenge){
-				processBoxCollisionsForBoxInfo(duocylinderBoxInfo.stonehenge);
+				processBoxCollisionsForBoxInfoAllPoints(duocylinderBoxInfo.stonehenge);
 			}
 			if (guiParams.drawShapes.towers){
-				processBoxCollisionsForBoxInfo(duocylinderBoxInfo.towerblocks);
+				processBoxCollisionsForBoxInfoAllPoints(duocylinderBoxInfo.towerblocks);
 			}
 			
-			function processBoxCollisionsForBoxInfo(boxInfo){
-				var relativeMat = mat4.create();
+			function processBoxCollisionsForBoxInfoAllPoints(boxInfo){
+				processBoxCollisionsForBoxInfo(boxInfo, playerCentreBallData, 0.005, true);
+				
+				for (var legnum=0;legnum<landingLegData.length;legnum++){
+					processBoxCollisionsForBoxInfo(boxInfo, landingLegData[legnum], 0.001);
+				}
+			}
+			
+			function processBoxCollisionsForBoxInfo(boxInfo, landingLeg, collisionBallSize, drawDebugStuff){
+				var pointOffset = landingLeg.pos.map(function(elem){return -elem;});	//why reversed? probably optimisable. TODO untangle signs!
+				
+				var relativeMat = mat4.identity();
 				var boxArrs = boxInfo.gridContents;
 				for (var gs of gridSqs){	//TODO get gridSqs
 					var bArray = boxArrs[gs];
 					for (var bb of bArray){
 						
+						mat4.identity(relativeMat);
+						xyzmove4mat(relativeMat, pointOffset);	//TODO precalc this matrix and set copy
+						
 						//get player position in frame of bb.matrix
 						
-						//code copied from bullet collision stuff - //boxCollideCheck(bb.matrix,duocylinderSurfaceBoxScale,critValueDCBox, bulletMatrixTransposedDCRefFrame, true); ...
-						
-						mat4.identity(relativeMat);
-						//xyzmove4mat(relativeMat, [0.02,0,0]);	//sidewaysness, 
-						//xyzmove4mat(relativeMat, landingLegData[0].pos); 	//doesn't work as hoped. compare with terrain code - done a bit differently. TODO draw out on paper.
-						xyzmove4mat(relativeMat, [0,-0.006,-0.007]); 		//adding -ves gets this to work as expected (index = 0 is nose wheel)
-						
+						//code copied from bullet collision stuff - //boxCollideCheck(bb.matrix,duocylinderSurfaceBoxScale,critValueDCBox, bulletMatrixTransposedDCRefFrame, true); ...				
 						
 						//mat4.set(playerMatrixTransposedDCRefFrame, relativeMat);
 						mat4.multiply(relativeMat, playerMatrixTransposedDCRefFrame);
@@ -2630,9 +2640,7 @@ var iterateMechanics = (function iterateMechanics(){
 						var vectorFromBox = relativePos.map(function(elem){return elem>0 ? Math.max(elem - projectedBoxSize,0) : Math.min(elem + projectedBoxSize,0);});
 						var distSqFromBox = vectorFromBox[0]*vectorFromBox[0]+vectorFromBox[1]*vectorFromBox[1]+vectorFromBox[2]*vectorFromBox[2];
 						var distFromBox = Math.sqrt(distSqFromBox);		//todo handle distSqFromBox =0 (centre of collision ball is inside box) - can happen if moving fast, cover collisionBallSize in 1 step. currently results in passing thru box)
-						
-						var collisionBallSize = 0.001;
-						
+												
 						//if (Math.max(Math.abs(relativePos[0]),
 						//			Math.abs(relativePos[1]),
 						//			Math.abs(relativePos[2]))<projectedBoxSize){
@@ -2640,49 +2648,63 @@ var iterateMechanics = (function iterateMechanics(){
 							
 							//find "penetration"
 							currentPen = collisionBallSize-distFromBox;		//todo handle simultaneous box collisions
-							var penChange = currentPen - cubeColPen;
-							cubeColPen = currentPen;
+							var penChange = currentPen - landingLeg.cubeColPen;
+							landingLeg.cubeColPen = currentPen;
 							
 							var reactionNormal=vectorFromBox.map(function(elem){return elem/distFromBox;});
 							
 							//reaction force proportional to currentPen -> spring force, penChange -> damper
 							var reactionForce = Math.max(20*currentPen+150*penChange, 0);	//soft like landing leg. for body collision, increase constants
 												
-							//TODO
-							//draw object relative to box to check is at player position (relativePos)
-							//draw another relative to box at relativePos+constant*reactionNormal to check in right direction
-							//then can calc this point in frame of player
-							//todo what is sense of 4vec relativePos, 3vec normal?
-							
-							mat4.set(bb.matrix, collisionTestObjMat);
-							mat4.set(bb.matrix, collisionTestObj2Mat);
-							mat4.set(bb.matrix, collisionTestObj3Mat);
-							xyzmove4mat(collisionTestObjMat, [-relativePos[0],-relativePos[1],-relativePos[2]]);
-							
-							xyzmove4mat(collisionTestObj3Mat, [-relativePos[0],-relativePos[1],-relativePos[2]]);
-							xyzmove4mat(collisionTestObj3Mat, reactionNormal);
-							
-								//this might show that should have /relativePos[3] here.
-							
-							//get the position of collisionTestObj3Mat in the frame of the player.
-							//draw something at this position (similar to how draw landing legs)
-							//....
-							
-							//already have relativeMat. position of box relative to player maybe already available
-							var relativePosB = [relativeMat[12], relativeMat[13], relativeMat[14], relativeMat[15]];
-							mat4.set(playerCamera, collisionTestObj4Mat);
-							xyzmove4mat(collisionTestObj4Mat, [-relativePosB[0],-relativePosB[1],-relativePosB[2]]);
-							//TODO account for duocylinder rotation (currently assuming unrotated)
 							
 							//position of collisionTestObj3Mat relative to playerMatrixTransposedDCRefFrame
 							//mising up playerCamera, playerMatrixTransposedDCRefFrame here... TODO sort out.
 							var relativeMatC = mat4.create();
 							mat4.set(playerMatrixTransposedDCRefFrame, relativeMatC);
-							mat4.multiply(relativeMatC, collisionTestObj3Mat);
+							
+							//moved one matrix outside if drawdebugstuff because it's required (collisionTestObj3Mat)
+							var tempMat3 = mat4.create();
+							mat4.set(bb.matrix, tempMat3);
+							xyzmove4mat(tempMat3, [-relativePos[0],-relativePos[1],-relativePos[2]]);
+							xyzmove4mat(tempMat3, reactionNormal);
+							mat4.multiply(relativeMatC, tempMat3);
+						
 							var relativePosC = [relativeMatC[12], relativeMatC[13], relativeMatC[14], relativeMatC[15]];
 							
-							mat4.set(playerCamera, collisionTestObj5Mat);
-							xyzmove4mat(collisionTestObj5Mat, [-relativePosC[0],-relativePosC[1],-relativePosC[2]]);
+							if (drawDebugStuff){
+								//TODO sort out what's what here. chopped around so comments a mess
+								//TODO transparent boxes mode so can see debug stuff more clearly
+								
+								//draw object relative to box to check is at player position (relativePos)
+								//draw another relative to box at relativePos+constant*reactionNormal to check in right direction
+								//then can calc this point in frame of player
+								//todo what is sense of 4vec relativePos, 3vec normal?
+								
+								mat4.set(bb.matrix, collisionTestObjMat);
+								mat4.set(bb.matrix, collisionTestObj2Mat);
+								xyzmove4mat(collisionTestObjMat, [-relativePos[0],-relativePos[1],-relativePos[2]]);
+								
+								//mat4.set(bb.matrix, collisionTestObj3Mat);
+								//xyzmove4mat(collisionTestObj3Mat, [-relativePos[0],-relativePos[1],-relativePos[2]]);
+								//xyzmove4mat(collisionTestObj3Mat, reactionNormal);
+								mat4.set(tempMat3, collisionTestObj3Mat);		//just set because using outside if (drawDebugStuff)
+								
+								
+								//this might show that should have /relativePos[3] here.
+								
+								//get the position of collisionTestObj3Mat in the frame of the player.
+								//draw something at this position (similar to how draw landing legs)
+								//....
+								
+								//already have relativeMat. position of box relative to player maybe already available
+								var relativePosB = [relativeMat[12], relativeMat[13], relativeMat[14], relativeMat[15]];
+								mat4.set(playerCamera, collisionTestObj4Mat);
+								xyzmove4mat(collisionTestObj4Mat, [-relativePosB[0],-relativePosB[1],-relativePosB[2]]);
+								//TODO account for duocylinder rotation (currently assuming unrotated)
+								
+								mat4.set(playerCamera, collisionTestObj5Mat);
+								xyzmove4mat(collisionTestObj5Mat, [-relativePosC[0],-relativePosC[1],-relativePosC[2]]);
+							}
 							
 							//apply force in this direction
 							for (var cc=0;cc<3;cc++){
