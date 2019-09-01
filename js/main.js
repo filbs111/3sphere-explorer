@@ -1155,7 +1155,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, bb.color);
 		mat4.set(invertedCamera, mvMatrix);
 		mat4.multiply(mvMatrix, bb.matrix);
-		mat4.set(bb.matrix, mMatrix);
+		
+		mat4.identity(mMatrix);rotate4mat(mMatrix, 0, 1, duocylinderSpin);		//TODO just prep a duocylinder matrix and set mMatrix to it
+		mat4.multiply(mMatrix, bb.matrix);
+		
 		drawObjectFromPreppedBuffers(buffers, activeShaderProgram);
 	}
 	
