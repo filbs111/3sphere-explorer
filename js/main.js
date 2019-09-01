@@ -2707,9 +2707,22 @@ var iterateMechanics = (function iterateMechanics(){
 							}
 							
 							//apply force in this direction
+							var forcePlayerFrame = relativePosC.map(function(elem){return elem*reactionForce;});
 							for (var cc=0;cc<3;cc++){
-								playerVelVec[cc]+=reactionForce*relativePosC[cc];
+								playerVelVec[cc]+=forcePlayerFrame[cc];
 							}
+							
+							//apply torque
+							var legPosPlayerFrame = landingLeg.pos;
+							var torquePlayerFrame = [
+									legPosPlayerFrame[1]*forcePlayerFrame[2] - legPosPlayerFrame[2]*forcePlayerFrame[1],
+									legPosPlayerFrame[2]*forcePlayerFrame[0] - legPosPlayerFrame[0]*forcePlayerFrame[2],
+									legPosPlayerFrame[0]*forcePlayerFrame[1] - legPosPlayerFrame[1]*forcePlayerFrame[0]
+									];
+							for (cc=0;cc<3;cc++){
+								playerAngVelVec[cc]-=10000*torquePlayerFrame[cc];	//assumes moment of intertia of sphere/cube/similar
+							}
+							
 							
 						}
 						
