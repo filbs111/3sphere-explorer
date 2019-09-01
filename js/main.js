@@ -558,7 +558,7 @@ function drawScene(frameTime){
 	
 	drawWorldScene(frameTime, false, offsetCameraContainer.world);
 	
-	if (!guiParams["drop spaceship"]){	//only draw hud if haven't dropped spaceship
+	if (!guiParams["drop spaceship"] && guiParams.showHud){	//only draw hud if haven't dropped spaceship
 		
 		//draw target box ?
 		//var activeShaderProgram = shaderProgramColored;
@@ -2007,7 +2007,7 @@ var guiParams={
 	"draw spaceship":true,
 	"drop spaceship":false,
 	target:{
-		type:"sphere",
+		type:"none",
 		scale:0.03
 	},
 	"targeting":"off",
@@ -2025,6 +2025,7 @@ var guiParams={
 	cameraType:"far 3rd person",
 	cameraFov:105,
 	flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
+	showHud:false,
 	reflector:{
 		draw:true,
 		cmFacesUpdated:6,
@@ -2127,6 +2128,7 @@ function init(){
 	displayFolder.add(guiParams, "cameraType", ["cockpit", "near 3rd person", "far 3rd person", "far 3rd person 2", "side"]);
 	displayFolder.add(guiParams, "cameraFov", 60,120,5);
 	displayFolder.add(guiParams, "flipReverseCamera");
+	displayFolder.add(guiParams, "showHud");
 	displayFolder.add(guiParams, "perPixelLighting");
 	displayFolder.add(guiParams, "atmosShader");
 	displayFolder.add(guiParams, "altAtmosShader");
