@@ -1069,21 +1069,25 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}
 	}
 	
+	
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
+	prepBuffersForDrawing(cubeBuffers, shaderProgramTexmap);
+	
 	//draw boxes on duocylinder surface. 
 	if (guiParams.drawShapes.towers){	//note currently toggles drawing for all boxes using duocylinder positioning method, including demo axis objects
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
-		prepBuffersForDrawing(cubeBuffers, shaderProgramTexmap);
-		
 		for (var bb of duocylinderBoxInfo.towerblocks.list){
 			drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, cubeBuffers, invertedWorldCameraDuocylinderFrame);
 		}
 	}
 	
 	if (guiParams.drawShapes.stonehenge){	
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
-		prepBuffersForDrawing(cubeBuffers, shaderProgramTexmap);
-		
 		for (var bb of duocylinderBoxInfo.stonehenge.list){
+			drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, cubeBuffers, invertedWorldCameraDuocylinderFrame);
+		}
+	}
+	
+	if (guiParams.drawShapes.roads){	
+		for (var bb of duocylinderBoxInfo.roads.list){
 			drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, cubeBuffers, invertedWorldCameraDuocylinderFrame);
 		}
 	}
@@ -1978,10 +1982,11 @@ var guiParams={
 		},
 		teapot:false,
 		"teapot scale":0.7,
-		towers:false,
+		towers:true,
 		explodingBox:false,
 		hyperboloid:true,
-		stonehenge:true
+		stonehenge:true,
+		roads:true
 	},
 	'random boxes':{
 		number:0,
@@ -2014,7 +2019,7 @@ var guiParams={
 	playerLight:'#ffffff',
 	onRails:false,
 	spinCorrection:true,
-	cameraType:"far 3rd person 2",
+	cameraType:"far 3rd person",
 	cameraFov:105,
 	flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
 	reflector:{
@@ -2090,6 +2095,7 @@ function init(){
 	drawShapesFolder.add(guiParams.drawShapes,"explodingBox");
 	drawShapesFolder.add(guiParams.drawShapes,"hyperboloid");
 	drawShapesFolder.add(guiParams.drawShapes,"stonehenge");
+	drawShapesFolder.add(guiParams.drawShapes,"roads");
 	
 	var polytopesFolder = gui.addFolder('polytopes');
 	polytopesFolder.add(guiParams,"draw 5-cell");
@@ -2575,6 +2581,9 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 			if (guiParams.drawShapes.towers){
 				processBoxCollisionsForBoxInfoAllPoints(duocylinderBoxInfo.towerblocks);
+			}
+			if (guiParams.drawShapes.roads){
+				processBoxCollisionsForBoxInfoAllPoints(duocylinderBoxInfo.roads);
 			}
 			
 			function processBoxCollisionsForBoxInfoAllPoints(boxInfo){

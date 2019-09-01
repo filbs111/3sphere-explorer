@@ -2,6 +2,7 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 	var boxInfoTowerblocks = initialiseInfo();
 	var boxInfoHyperboloids = initialiseInfo();
 	var boxInfoStonehenge = initialiseInfo();
+	var boxInfoRoads = initialiseInfo();
 	var currentboxInfo;
 	
 	function initialiseInfo(){
@@ -29,16 +30,30 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 	for (var ii=0;ii<4;ii++){
 		for (var jj=0;jj<4;jj++){
 			for (var hi=-1;hi<8;hi++){
-				addBoxData((ii+jj)*0.15 +1,(ii-jj)*0.15 -1,hi*0.05, [0.5, 0.5, 0.5, 1.0], Math.PI/4);	//45 degree twist
+				addBoxData((ii+jj)*0.15 -1.5,(ii-jj)*0.15 -0.5,hi*0.05, [0.5, 0.5, 0.5, 1.0], Math.PI/4);	//45 degree twist
 			}
 		}
+	}
+	
+	currentboxInfo=boxInfoRoads;
+	
+	//add a ring of boxes to form a 2 roads - one "around" duocylinder (in spin/antispin direction), another "along".
+	var aroundRoadSteps = 82;	//raised up so shorter than on duocyl surf
+	var alongRoadSteps = 100;	//raised up so looser than on duocyl surf
+	var stepSizeAroundRoad= Math.PI*2/aroundRoadSteps;
+	var stepSizeAlongRoad= Math.PI*2/alongRoadSteps;
+	for (var ii=0;ii<aroundRoadSteps;ii++){
+		addBoxData(ii*stepSizeAroundRoad +10,-1.7,0.05, [0.8, 0.8, 0.8, 1.0],0);
+	}
+	for (var ii=0;ii<alongRoadSteps;ii++){
+		addBoxData(Math.PI/2,ii*stepSizeAlongRoad +10,0.15, [0.8, 0.8, 0.8, 1.0],0);
 	}
 	
 	currentboxInfo=boxInfoHyperboloids;
 	for (var ii=0;ii<4;ii++){
 		for (var jj=0;jj<4;jj++){
 			for (var hi=2;hi<3;hi++){
-				addBoxData((ii+jj)*0.2 +10,(ii-jj)*0.2 -1,hi*0.05, [0.7, 0.7, 0.7, 1.0], 0);
+				addBoxData((ii+jj)*0.2 ,(ii-jj)*0.2 -0.8,hi*0.05, [0.7, 0.7, 0.7, 1.0], 0);
 			}
 		}
 	}
@@ -58,8 +73,8 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 	//add some tower that passes through portal?
 	//currently requires 2 towers. TODO different setup for each side.
 	for (var hi=0;hi<11;hi++){
-		addBoxData(0,0,hi*0.05, [0.7, 0.7, 0.7, 1.0],0);
-		addBoxData(Math.PI,0,hi*0.05, [0.7, 0.7, 0.7, 1.0],0);
+		addBoxData(-0.1,0,hi*0.05, [0.7, 0.7, 0.7, 1.0],0);
+		addBoxData(Math.PI-0.1,0,hi*0.05, [0.7, 0.7, 0.7, 1.0],0);
 	}
 	
 	function addBoxData(aa, bb, hh, cc, turn){
@@ -85,7 +100,8 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 	return {
 		towerblocks:boxInfoTowerblocks,
 		hyperboloids:boxInfoHyperboloids,
-		stonehenge:boxInfoStonehenge
+		stonehenge:boxInfoStonehenge,
+		roads:boxInfoRoads
 	};
 })();
 
