@@ -1455,7 +1455,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 		prepBuffersForDrawing(sphereBuffers, shaderProgramColored);
 		//prepBuffersForDrawing(gunBuffers, shaderProgramColored);
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.001,0.001,0.001]);
-		
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.veryDarkGray);	//DARK
+
 		for (gear of landingLegData){
 			drawLandingBall(gear.pos);
 		}
@@ -2520,7 +2521,7 @@ var iterateMechanics = (function iterateMechanics(){
 					var legPos = [landingLegMat[12],landingLegMat[13],landingLegMat[14],landingLegMat[15]];	
 	
 					//copied from elsewhere
-					var ballSize = 0.002;	//0.005 reasonable for centre of player model. smaller for landing legs
+					var ballSize = 0.001;	//0.005 reasonable for centre of player model. smaller for landing legs
 					
 					//simple spring force terrain collision - 
 					//lookup height above terrain, subtract some value (height above terrain where restoring force goes to zero - basically maximum extension of landing legs. apply sprint force upward to player proportional to this amount.
@@ -2584,8 +2585,19 @@ var iterateMechanics = (function iterateMechanics(){
 						
 						//code copied from bullet collision stuff - //boxCollideCheck(bb.matrix,duocylinderSurfaceBoxScale,critValueDCBox, bulletMatrixTransposedDCRefFrame, true); ...
 						
-						mat4.set(playerMatrixTransposedDCRefFrame, relativeMat);
+						mat4.identity(relativeMat);
+						//xyzmove4mat(relativeMat, [0.02,0,0]);	//sidewaysness, 
+						//xyzmove4mat(relativeMat, landingLegData[0].pos); 	//doesn't work as hoped. compare with terrain code - done a bit differently. TODO draw out on paper.
+						xyzmove4mat(relativeMat, [0,-0.006,-0.007]); 		//adding -ves gets this to work as expected (index = 0 is nose wheel)
+						
+						
+						//mat4.set(playerMatrixTransposedDCRefFrame, relativeMat);
+						mat4.multiply(relativeMat, playerMatrixTransposedDCRefFrame);
 						mat4.multiply(relativeMat, bb.matrix);
+					
+						//try applying landing leg offset relative to player.
+						//where should the matrix multiplication go? if got the rotation between player and box, should be able to apply leg rotation to that somehow (without need for multiplying player, box matrices independently for each collision point/landing leg
+						//xyzmove4mat(relativeMat, [0,0,0.01]);	//sadly this doesn't work
 					
 						//if (relativeMat[15]<boxCritValue){return;}	//early sphere check. TODO get crit value, enable
 					
@@ -2617,14 +2629,14 @@ var iterateMechanics = (function iterateMechanics(){
 						//rounded box. TODO 1st check within bounding box of the rounded box.
 						var vectorFromBox = relativePos.map(function(elem){return elem>0 ? Math.max(elem - projectedBoxSize,0) : Math.min(elem + projectedBoxSize,0);});
 						var distSqFromBox = vectorFromBox[0]*vectorFromBox[0]+vectorFromBox[1]*vectorFromBox[1]+vectorFromBox[2]*vectorFromBox[2];
-						var distFromBox = Math.sqrt(distSqFromBox);		//todo handle distSqFromBox =0 (centre of collision ball is inside box)
+						var distFromBox = Math.sqrt(distSqFromBox);		//todo handle distSqFromBox =0 (centre of collision ball is inside box) - can happen if moving fast, cover collisionBallSize in 1 step. currently results in passing thru box)
 						
-						var collisionBallSize = 0.01;
+						var collisionBallSize = 0.001;
 						
 						//if (Math.max(Math.abs(relativePos[0]),
 						//			Math.abs(relativePos[1]),
 						//			Math.abs(relativePos[2]))<projectedBoxSize){
-						if (distFromBox<collisionBallSize){
+						if (distFromBox<collisionBallSize && distFromBox>0){
 							
 							//find "penetration"
 							currentPen = collisionBallSize-distFromBox;		//todo handle simultaneous box collisions

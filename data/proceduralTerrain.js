@@ -3,6 +3,11 @@ var procTerrainSize=256;
 
 function getInterpHeightForAB(aa,bb){
 	
+	if (aa!=aa || bb!=bb){
+		console.log("NaN input to getInterpHeightForAB");
+		console.log(aa, bb);
+	}
+	
 	//interpolate height. currently this func used for realtime height detection and mesh creation, and this should make latter slower, but unimportant.
 	var aaFloor = Math.floor(aa);
 	var bbFloor = Math.floor(bb);
@@ -10,6 +15,14 @@ function getInterpHeightForAB(aa,bb){
 	var bbCeil = (bbFloor + 1)%procTerrainSize;
 	var aaRemainder = aa-aaFloor;
 	var bbRemainder = bb-bbFloor;
+	
+	//check for bad input
+	//seems that NaN gets in here (aa,bb)
+	if ( aaFloor<0 || bbFloor<0 || aaCeil<0 || bbCeil<0 || aaFloor>=procTerrainSize || bbFloor>=procTerrainSize || aaCeil>=procTerrainSize || bbCeil>=procTerrainSize){
+		console.log("bad input!");
+		console.log({aa:aa, bb:bb, aaFloor:aaFloor, bbFloor:bbFloor, aaCeil:aaCeil, bbCeil:bbCeil});
+	}
+	
 	return (1-aaRemainder)*((1-bbRemainder)*terrainGetHeight(aaFloor,bbFloor) + bbRemainder*terrainGetHeight(aaFloor,bbCeil)) +
 									aaRemainder*((1-bbRemainder)*terrainGetHeight(aaCeil,bbFloor) + bbRemainder*terrainGetHeight(aaCeil,bbCeil));
 							//interpolation that assumes doubly ruled squares. TODO two triangles to match mesh
@@ -23,6 +36,15 @@ function terrainGetHeightFor4VecPos(vec){
 	//TODO interpolation across polygon. initially just reuse equation used to generate terrain grid data.
 	var aa=multiplier*decentMod(a,2*Math.PI);
 	var bb=multiplier*decentMod(b + duocylinderSpin,2*Math.PI);
+	
+	if (vec[0]!=vec[0] || vec[1]!=vec[1] || vec[2]!=vec[2]){	//things can go wrong here with fast collision with boxes
+		console.log("NaN vector input to terrainGetHeightFor4VecPos");
+		console.log(vec);
+	}
+	if (aa!=aa || bb!=bb){
+		console.log("NaN ab in terrainGetHeightFor4VecPos");
+		console.log(aa, bb);
+	}
 	
 	var interpolatedHeight = getInterpHeightForAB(aa,bb);
 	
@@ -85,6 +107,13 @@ var terrainHeightData = (function generateTerrainHeightData(){
 })();
 
 function terrainGetHeight(ii,jj){
+	//detect out of bounds. ( have seen "terrainHeightData[ii] is undefined" error )
+	if (ii<0 || jj<0 || ii>=procTerrainSize || jj>=procTerrainSize){
+		console.log("out of bounds! " + ii + ", " + jj);
+	}
+	if (!terrainHeightData[ii]){
+		console.log("terrainHeight undefined for ii = " + ii);	//turns out ii sometimes NaN
+	}
 	return terrainHeightData[ii][jj];
 }
 
