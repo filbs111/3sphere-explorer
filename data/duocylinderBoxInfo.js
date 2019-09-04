@@ -43,10 +43,10 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 	var stepSizeAroundRoad= Math.PI*2/aroundRoadSteps;
 	var stepSizeAlongRoad= Math.PI*2/alongRoadSteps;
 	for (var ii=0;ii<aroundRoadSteps;ii++){
-		addBoxData(ii*stepSizeAroundRoad +10,-1.7,0.05, [0.8, 0.8, 0.8, 1.0],0);
+		addBoxData(ii*stepSizeAroundRoad +10,-1.7,0.05, [0.6, 0.6, 0.6, 1.0],0);
 	}
 	for (var ii=0;ii<alongRoadSteps;ii++){
-		addBoxData(Math.PI/2,ii*stepSizeAlongRoad +10,0.15, [0.8, 0.8, 0.8, 1.0],0);
+		addBoxData(Math.PI/2,ii*stepSizeAlongRoad +10,0.15, [0.6, 0.6, 0.6, 1.0],0);
 	}
 	
 	currentboxInfo=boxInfoHyperboloids;
@@ -63,10 +63,10 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 	var stepSize= Math.PI*2/31;
 	for (var ii=0;ii<31;ii++){	//doesn't quite meet up. probably exact is 10*PI
 		for (var hi=0;hi<4;hi++){
-			addBoxData(ii*stepSize +10,ii*stepSize,hi*0.05, [1.0, 1.0, 0.9, 1.0], Math.PI/4 + 0.2);	//tiny extra twist so stonehenge diagonal monorail thing looks ok  
+			addBoxData(ii*stepSize +10,ii*stepSize,hi*0.05, [1.0, 1.0, 1.0, 1.0], Math.PI/4 + 0.2);	//tiny extra twist so stonehenge diagonal monorail thing looks ok  
 		}
 		for (var kk=0.125;kk<1;kk+=0.25){
-			addBoxData((ii+kk)*stepSize +10,(ii+kk)*stepSize,4*0.05, [1.0, 1.0, 0.9, 1.0],Math.PI/4 + 0.2);
+			addBoxData((ii+kk)*stepSize +10,(ii+kk)*stepSize,4*0.05, [1.0, 1.0, 1.0, 1.0],Math.PI/4 + 0.2);
 		}
 	}
 	

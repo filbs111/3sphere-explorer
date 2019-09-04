@@ -642,6 +642,7 @@ var colorArrs = {
 	gray:[0.6,0.6,0.6,1.0],
 	darkGray:[0.4, 0.4, 0.4, 1.0],
 	veryDarkGray:[0.2, 0.2, 0.2, 1.0],
+	superDarkGray:[0.05, 0.05, 0.05, 1.0],
 	red:[1.0, 0.4, 0.4, 1.0],
 	green:[0.4, 1.0, 0.4, 1.0],
 	blue:[0.4, 0.4, 1.0, 1.0],
@@ -913,7 +914,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 										localVecReflectorColor[1]-localVecFogColor[1],
 										localVecReflectorColor[2]-localVecFogColor[2]];	//todo use a vector class!
 	
-	gl.clearColor.apply(gl,localVecFogColor);
+	var localVecFogColorGamma = localVecFogColor.map(function(elem){return Math.pow(elem,0.455);});
+	
+	gl.clearColor.apply(gl,localVecFogColorGamma);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 			
 	var invertedWorldCamera = mat4.create();
@@ -1465,8 +1468,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 		prepBuffersForDrawing(sphereBuffers, shaderProgramColored);
 		//prepBuffersForDrawing(gunBuffers, shaderProgramColored);
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.001,0.001,0.001]);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.veryDarkGray);	//DARK
-
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.superDarkGray);	//DARK
+		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);
+		
 		for (gear of landingLegData){
 			drawLandingBall(gear.pos);
 		}
@@ -1478,14 +1482,14 @@ function drawWorldScene(frameTime, isCubemapView) {
 			//mat4.set(invertedWorldCamera, mvMatrix);	//no shift version
 			//mat4.multiply(mvMatrix, lgMat);
 			
-			mat4.set(lgMat, mMatrix);
-			
 			//apply the shift hack as with guns.
-			mat4.identity(mvMatrix);
-			mat4.multiply(mvMatrix, invertedWorldCamera);
-			mat4.multiply(mvMatrix, matrix);
-			mat4.multiply(mvMatrix, inverseSshipMat);
-			mat4.multiply(mvMatrix, lgMat);
+			mat4.set(matrix, mMatrix);
+			mat4.multiply(mMatrix, inverseSshipMat);
+			mat4.multiply(mMatrix, lgMat);
+			
+			
+			mat4.set(invertedWorldCamera, mvMatrix);
+			mat4.multiply(mvMatrix, mMatrix);
 
 			drawObjectFromPreppedBuffers(sphereBuffers, shaderProgramColored);
 		}
@@ -2235,13 +2239,13 @@ function init(){
 		var r = parseInt(color.substring(1,3),16) /255;
 		var g = parseInt(color.substring(3,5),16) /255;
 		var b = parseInt(color.substring(5,7),16) /255;
-		worldColors[world]=[r,g,b,1];
+		worldColors[world]=[r,g,b,1].map(function(elem){return Math.pow(elem,2.2)});	//apply gamma
 	}
 	function setPlayerLight(color){
 		var r = parseInt(color.substring(1,3),16) /255;
 		var g = parseInt(color.substring(3,5),16) /255;
 		var b = parseInt(color.substring(5,7),16) /255;
-		playerLightUnscaled=[r,g,b];
+		playerLightUnscaled=[r,g,b].map(function(elem){return Math.pow(elem,2.2)});	//apply gamma
 	}
 }
 
