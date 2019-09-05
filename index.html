@@ -2174,7 +2174,9 @@
 	
 	void main(void) {
 		//gl_FragColor = uColor*textureCube(uSampler, vPos);	//TODO use this (get rid of fog)
-		gl_FragColor = vec4( vec3(fog), 1.0)*uColor*textureCube(uSampler, vPos) + (1.0-fog)*uFogColor;
+		vec4 preGammaFragColor = vec4( vec3(fog), 1.0)*uColor*pow(textureCube(uSampler, vPos),vec4(2.2)) + (1.0-fog)*uFogColor;	//todo render cubemap with gamma 1
+
+		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
 	}
 </script>
 <!-- vertex shader -->
