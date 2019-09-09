@@ -256,7 +256,11 @@ function initBuffers(){
 	var tetraFrameSubdivObject = loadBlenderExportNoOutwardFaces(tetraFrameSubdivData);
 	var dodecaFrameBlenderObject = loadBlenderExportNoOutwardFaces(dodecaFrameData.meshes[0]);
 	var teapotObject = loadBlenderExport(teapotData);	//isn't actually a blender export - just a obj json
-	var sshipObject = loadBlenderExport(sshipdata.meshes[0]);		//""
+	//var sshipObject = loadBlenderExport(sshipData.meshes[0]);		//""
+	var sshipObject = loadBlenderExport(sshipData);		//""
+		//remove uv data for now to check works like previous model. 
+		//sshipObject.uvcoords = false;
+	
 	var gunObject = loadBlenderExport(guncyldata.meshes[0]);
 	var icoballObj = loadBlenderExport(icoballdata);
 
@@ -1011,8 +1015,11 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//var activeShaderProgram = shaderProgramColored;	//draw spheres
 	activeShaderProgram = shaderProgramTexmap;	//draw cubes
 	//gl.enableVertexAttribArray(1);	//do need tex coords
-
+	
 	gl.useProgram(activeShaderProgram);
+	
+	gl.activeTexture(gl.TEXTURE0);
+	bind2dTextureIfRequired(texture);
 		
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 	if (activeShaderProgram.uniforms.uReflectorDiffColor){
@@ -1421,20 +1428,38 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	
 	function drawSpaceship(matrix){
-		modelScale=sshipModelScale;
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.veryDarkGray);	//DARK
-		//gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+		
+		//temp switch back to texmap shader (assume have already set general uniforms for this.
+		activeShaderProgram = shaderProgramTexmap;
+		gl.useProgram(activeShaderProgram);
+		
+		gl.activeTexture(gl.TEXTURE0);
+		bind2dTextureIfRequired(sshipTexture);	
+		
+		var rotatedMatrix = mat4.create(matrix);	//because using rotated model data for sship model
+		xyzrotate4mat(rotatedMatrix, [-Math.PI/2,0,0]); 
+		
+		modelScale=25*sshipModelScale;	//TODO use object that doesn't require scaling
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
 		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
 		
 		mat4.set(invertedWorldCamera, mvMatrix);
 		
-		mat4.multiply(mvMatrix,matrix);
-		mat4.set(matrix, mMatrix);
-		drawObjectFromBuffers(sshipBuffers, shaderProgramColored);
+		mat4.multiply(mvMatrix,rotatedMatrix);
+		mat4.set(rotatedMatrix, mMatrix);
+		drawObjectFromBuffers(sshipBuffers, shaderProgramTexmap);
+		
+		//switch back to coloured shader
+		activeShaderProgram = shaderProgramColored;
+		gl.useProgram(activeShaderProgram);
 		
 		//draw guns
-		var gunScale = 50*modelScale;
+		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.multiply(mvMatrix,matrix);
+		mat4.set(matrix, mMatrix);
+		
+		var gunScale = 50*sshipModelScale;
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [gunScale,gunScale,gunScale]);
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.guns);	//GREY
 		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [gunHeat/15,gunHeat/30,gunHeat/45]);
@@ -1783,8 +1808,8 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 	if (bufferObj.vertexTextureCoordBuffer){
 		gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexTextureCoordBuffer);
 		gl.vertexAttribPointer(shaderProg.attributes.aTextureCoord, bufferObj.vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
-		gl.activeTexture(gl.TEXTURE0);
-		bind2dTextureIfRequired(texture);
+		//gl.activeTexture(gl.TEXTURE0);
+		//bind2dTextureIfRequired(texture);
 		gl.uniform1i(shaderProg.uniforms.uSampler, 0);
 	}
 	
@@ -1924,7 +1949,7 @@ function setupScene() {
 	targetMatrix = cellMatData.d16[0];
 }
 
-var texture,hudTexture,hudTextureSmallCircles,hudTexturePlus,hudTextureX,hudTextureBox;
+var texture,hudTexture,hudTextureSmallCircles,hudTexturePlus,hudTextureX,hudTextureBox,sshipTexture;
 
 function initTexture(){
 	texture = makeTexture("img/0033.jpg");
@@ -1943,6 +1968,8 @@ function initTexture(){
 	//duocylinderObjects.sea.tex = null;
 	duocylinderObjects.sea.tex = makeTexture("img/4141.jpg");
 	duocylinderObjects.sea.isSea=true;
+	
+	sshipTexture = makeTexture("data/dirLight/SshipTexCombouv5FR40pc.png");
 	
 	//texture = makeTexture("img/ash_uvgrid01-grey.tiny.png");	//numbered grid
 }
