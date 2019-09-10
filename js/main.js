@@ -11,6 +11,7 @@ var shaderProgramColored,
 	shaderProgramTexmapPerPixel,
 	shaderProgramTexmapPerPixelDiscard,
 	shaderProgramTexmapPerPixelDiscardAtmos,
+	shaderProgramTexmapPerPixelDiscardAtmosGradLight,
 	shaderProgramTexmapPerPixelDiscardAtmosExplode,
 	shaderProgramTexmapPerPixelDiscardAtmosV2,
 	shaderProgramTexmapPerPixelDiscardAtmosV2Explode,
@@ -78,6 +79,11 @@ function initShaders(){
 	shaderProgramTexmapPerPixelDiscardAtmos = loadShader( "shader-texmap-perpixel-discard-atmos-vs", "shader-texmap-perpixel-discard-fs",{
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
 					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					});
+	shaderProgramTexmapPerPixelDiscardAtmosGradLight = loadShader( "shader-texmap-perpixel-discard-atmos-vs", "shader-texmap-perpixel-gradlight-discard-fs",{
+						//could do more work in vert shader currently because light calculated per vertex - could just pass channel weights to frag shader...
+					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor", "uLightPosPlayerFrame"]
 					});
 	shaderProgramTexmapPerPixelDiscardAtmosExplode = loadShader( "shader-texmap-perpixel-discard-atmos-vertvel-vs", "shader-texmap-perpixel-discard-fs",{
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord", "aVertexVelocity"],
@@ -1429,26 +1435,46 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	function drawSpaceship(matrix){
 		
-		//temp switch back to texmap shader (assume have already set general uniforms for this.
-		activeShaderProgram = shaderProgramTexmap;
+		//temp switch back to texmap shader (assume have already set general uniforms for this)	-	TODO put uniforms in!!
+		//activeShaderProgram = shaderProgramTexmap;
+		activeShaderProgram = shaderProgramTexmapPerPixelDiscardAtmosGradLight;
 		gl.useProgram(activeShaderProgram);
 		
 		gl.activeTexture(gl.TEXTURE0);
 		bind2dTextureIfRequired(sshipTexture);	
 		
+		//set uniforms - todo generalise this code (using for many shaders)
+		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
+		if (activeShaderProgram.uniforms.uReflectorDiffColor){
+				gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
+		}
+		if (activeShaderProgram.uniforms.uPlayerLightColor){
+			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
+		}
+		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
+		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
+		
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
+		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
+			
+		
+		
 		var rotatedMatrix = mat4.create(matrix);	//because using rotated model data for sship model
 		xyzrotate4mat(rotatedMatrix, [-Math.PI/2,0,0]); 
 		
 		modelScale=25*sshipModelScale;	//TODO use object that doesn't require scaling
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.gray);
 		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+		
+		//special uniform for this shader
+		gl.uniform3fv(activeShaderProgram.uniforms.uLightPosPlayerFrame, [-rotatedMatrix[3],-rotatedMatrix[7],-rotatedMatrix[11]]);
 		
 		mat4.set(invertedWorldCamera, mvMatrix);
 		
 		mat4.multiply(mvMatrix,rotatedMatrix);
 		mat4.set(rotatedMatrix, mMatrix);
-		drawObjectFromBuffers(sshipBuffers, shaderProgramTexmap);
+		drawObjectFromBuffers(sshipBuffers, shaderProgramTexmapPerPixelDiscardAtmosGradLight);
 		
 		//switch back to coloured shader
 		activeShaderProgram = shaderProgramColored;
@@ -1497,7 +1523,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);
 		
 		for (gear of landingLegData){
-			drawLandingBall(gear.pos);
+		//	drawLandingBall(gear.pos);
 		}
 				
 		function drawLandingBall(posn){			 
@@ -1980,6 +2006,9 @@ function makeTexture(src) {	//to do OO
 	texture.image.onload = function(){
 		bind2dTextureIfRequired(texture);
 		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+		
+		gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);	//linear colorspace grad light texture (TODO handle other texture differently?)
+		
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
