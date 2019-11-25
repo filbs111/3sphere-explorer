@@ -166,7 +166,8 @@ var duocylinderObjects={
 	grid:{divs:4,step:Math.PI/2},
 	terrain:{divs:2,step:Math.PI},
 	procTerrain:{divs:1,step:2*Math.PI,isStrips:true},
-	sea:{divs:1,step:2*Math.PI,isStrips:true}
+	sea:{divs:1,step:2*Math.PI,isStrips:true},
+	voxTerrain:{divs:2,step:Math.PI}
 	};
 
 var sphereBuffers={};
@@ -218,13 +219,18 @@ function initBuffers(){
 	loadDuocylinderBufferData(duocylinderObjects.procTerrain, proceduralTerrainData);
 	loadDuocylinderSeaBufferData(duocylinderObjects.sea, gridData);	//for use in a different shader. no precalculation of mapping to 4-verts
 	
+	loadGridData(voxTerrainData);	//TODO don't do this... - different shader like sea - either don't precalc 4-vec mapping, or store 3vec co-ords 
+	loadDuocylinderBufferData(duocylinderObjects.voxTerrain, voxTerrainData);
+	
 	function loadDuocylinderBufferData(bufferObj, sourceData){
 		bufferObj.vertexPositionBuffer = gl.createBuffer();
 		bufferArrayData(bufferObj.vertexPositionBuffer, sourceData.vertices, 4);
 		bufferObj.normalBuffer = gl.createBuffer();
 		bufferArrayData(bufferObj.normalBuffer, sourceData.normals, 4);
 		bufferObj.vertexTextureCoordBuffer= gl.createBuffer();
-		bufferArrayData(bufferObj.vertexTextureCoordBuffer, sourceData.uvcoords || sourceData.texturecoords[0], 2);	//handle inconsistent formats
+		if (sourceData.uvcoords || sourceData.texturecoords){	//voxterrain has no uv coords
+			bufferArrayData(bufferObj.vertexTextureCoordBuffer, sourceData.uvcoords || sourceData.texturecoords[0], 2);	//handle inconsistent formats
+		}
 		bufferObj.vertexIndexBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
 		
@@ -415,7 +421,8 @@ var offsetCam = (function(){
 	var offsetVecReverse;
 	var targetForType = {
 		"near 3rd person":[0,-0.0075,-0.005],
-		"far 3rd person":[0,-0.02,-0.03],
+		//"far 3rd person":[0,-0.02,-0.03],
+		"far 3rd person":[0,-0.01,-0.01],
 		"far 3rd person 2":[0,0,-0.02],	//straight behind (not raised)
 		"cockpit":[0,0,0.001],
 		"side":[0.006,0,0.0025]
@@ -1905,7 +1912,7 @@ function setMatrixUniforms(shaderProgram) {
 
 var cubemapFramebuffer;
 var cubemapTexture;
-var cubemapSize = 512;
+var cubemapSize = 1024;
 //cube map code from http://www.humus.name/cubemapviewer.js (slightly modified)
 var cubemapFacelist;
 
@@ -2142,8 +2149,8 @@ function init(){
 		setPlayerLight(color);
 	});
 	var drawShapesFolder = gui.addFolder('drawShapes');
-	drawShapesFolder.add(guiParams, "duocylinderModel0", ["grid","terrain","procTerrain","sea",'none'] );
-	drawShapesFolder.add(guiParams, "duocylinderModel1", ["grid","terrain","procTerrain","sea",'none'] );
+	drawShapesFolder.add(guiParams, "duocylinderModel0", ["grid","terrain","procTerrain","sea",'voxTerrain','none'] );
+	drawShapesFolder.add(guiParams, "duocylinderModel1", ["grid","terrain","procTerrain","sea",'voxTerrain','none'] );
 	drawShapesFolder.add(guiParams, "duocylinderRotateSpeed", -2.5,2.5,0.25);
 	var boxesFolder = drawShapesFolder.addFolder('boxes');
 	for (shape in guiParams.drawShapes.boxes){
