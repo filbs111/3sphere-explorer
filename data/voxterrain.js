@@ -14,7 +14,8 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		}
 	}
 
-	var voxFunction = sinesfunctionthree;	
+	//var voxFunction = sinesfunctionthree;
+	var voxFunction = perlinfunctionTwoSided;
 	makeVoxdataForFunc(voxFunction);
 	
 	var mattoinvert = mat3.create();
@@ -659,6 +660,10 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		var sinscale=4/Math.PI;
 		//return Math.sin(ii/sinscale)+Math.sin(jj/sinscale)+Math.sin(kk/sinscale);
 		return Math.sin(ii/sinscale)+Math.sin(jj/sinscale)- 0.1*(kk-32)*(kk-32) + 1;
+	}
+	function perlinfunctionTwoSided(ii,jj,kk){
+		//return 10*noise.perlin3(ii/64,jj/64,kk/64) - 0.02*(kk-32)*(kk-32);	//landscape with 3d perlin surface
+		return 10*wrapPerlin(ii/12,jj/12,kk/12,64/12) +0.2 - 0.002*(kk-32)*(kk-32);	//landscape with 3d perlin surface
 	}
 	
 })();
