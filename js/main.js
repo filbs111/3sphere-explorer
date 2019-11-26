@@ -168,6 +168,7 @@ var duocylinderObjects={
 	procTerrain:{divs:1,step:2*Math.PI,isStrips:true},
 	sea:{divs:1,step:2*Math.PI,isStrips:true},
 	voxTerrain:{divs:2,step:Math.PI}
+	//voxTerrain:{divs:1,step:2*Math.PI}
 	};
 
 var sphereBuffers={};
@@ -2003,6 +2004,11 @@ function initTexture(){
 	duocylinderObjects.sea.isSea=true;
 	
 	sshipTexture = makeTexture("data/dirLight/SshipTexCombouv5FR40pc.png");
+	
+	//TODO use another texture
+	duocylinderObjects.voxTerrain.tex = duocylinderObjects.procTerrain.tex;
+	//duocylinderObjects.voxTerrain.tex = duocylinderObjects.grid.tex;
+	
 	
 	//texture = makeTexture("img/ash_uvgrid01-grey.tiny.png");	//numbered grid
 }

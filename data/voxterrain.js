@@ -617,24 +617,35 @@ var voxTerrainData = (function generateVoxTerrainData(){
 	//sparseVoxData.smoothVertices = sparseVoxData.smoothVertices.map(function(elem){return elem/2;});
 	
 	//swizzle data. just vertices initially - should do normals too.
-	var myverts = sparseVoxData.smoothVertices;
+	//var myverts = sparseVoxData.smoothVertices;
+	//var myverts = sparseVoxData.basicAvgVertices;	//actually currently these are hard boxel verts?!
+	//var myverts = sparseVoxData.vertices;
+	var myverts = sparseVoxData.dcVertices;
+	var mynorms = sparseVoxData.dcNormals;
 	var tmp;
 	for (var ii=0;ii<myverts.length;ii+=3){
 		//switch y/z
 		tmp = myverts[ii+1];
 		myverts[ii+1] = myverts[ii+2] - 1;
 		myverts[ii+2] = tmp;
-		
 		myverts[ii]=-myverts[ii];	//mirror x so correct winding order
+		
+		//same for normals. also reverse direction vs webgl-voxels project
+		tmp = mynorms[ii+1];
+		mynorms[ii+1] = -mynorms[ii+2];
+		mynorms[ii+2] = -tmp;
 	}
 	
-	//dummy uv data
-	sparseVoxData.uvcoords = [sparseVoxData.smoothVertices.length*2/3];
+	//simple top projection uv data (TODO triplanar mapping shader + infer uvs from vert positions in shader)
+	var uvs = [];
+	for (var uvidx=0,vidx=0;vidx<sparseVoxData.smoothVertices.length;uvidx+=2,vidx+=3){
+		uvs.push(8*myverts[vidx],8*myverts[vidx+2]);
+	}
+	sparseVoxData.uvcoords= uvs;
 	
 	return {
-		//vertices:sparseVoxData.vertices,
-		vertices:sparseVoxData.smoothVertices,
-		normals:sparseVoxData.normals,	//note that normals with unperterbed grid voxels makes little sense
+		vertices:myverts,
+		normals:mynorms,	//note that normals with unperterbed grid voxels makes little sense
 		faces:sparseVoxData.indices,
 		uvcoords:sparseVoxData.uvcoords,
 		directionalIndices:sparseVoxData.directionalIndices
