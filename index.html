@@ -156,7 +156,6 @@
 	}
 </script>
 
-
 <!-- tex mapped pix shader -->
 <script id="shader-texmap-fs" type="x-shader/x-fragment">
 	precision mediump float;
@@ -180,7 +179,6 @@
 		gl_FragColor.a =1.0;
 	}
 </script>
-
 
 <!-- tex mapped pix shader -->
 <script id="shader-texmap-fs-mapproject" type="x-shader/x-fragment">
@@ -1358,6 +1356,89 @@
 				
 		veclight+=uReflectorDiffColor*portalLight;
 				
+		vTextureCoord = vec3( aTextureCoord.st, 1.0 );
+	}
+</script>
+
+<script id="shader-texmap-color-vs-4vec-atmos" type="x-shader/x-vertex">
+	#define CONST_ITERS 64.0
+
+	attribute vec4 aVertexPosition;
+	attribute vec4 aVertexNormal;
+	attribute vec3 aVertexColor;
+	attribute vec2 aTextureCoord;
+	varying vec3 vTextureCoord;
+	uniform float uAtmosThickness;
+	uniform float uAtmosContrast;
+	uniform mat4 uMMatrix;
+	uniform mat4 uMVMatrix;
+	uniform mat4 uPMatrix;
+	uniform vec4 uCameraWorldPos;
+	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
+	uniform vec3 uPlayerLightColor;
+	uniform vec3 uReflectorDiffColor;
+	uniform vec4 uReflectorPos;
+	uniform float uReflectorCos;
+	varying float fog;
+	varying vec3 veclight;
+	
+	void main(void) {
+		vec4 transformedCoord = uMVMatrix * aVertexPosition;
+		vec4 worldCoord = uMMatrix * aVertexPosition;
+		gl_Position = uPMatrix * transformedCoord;
+		
+		float dotProd = dot(uCameraWorldPos,worldCoord);
+		
+		vec4 normalDirection = normalize(worldCoord - dotProd*uCameraWorldPos);	//point 90 deg around world from camera, in direction of worldCoord
+		
+		float partOne = dot(uCameraWorldPos.xy, uCameraWorldPos.xy);
+		float partTwo = dot(normalDirection.xy, normalDirection.xy);
+		float constTerm = (partOne+partTwo)/2.0;
+		float cos2Term = (partOne-partTwo)/2.0;
+		float sin2Term = dot(uCameraWorldPos.xy, normalDirection.xy);
+		float shiftAngle = atan(cos2Term,sin2Term);
+		
+		float maxDoubleAng = 2.0*acos(dotProd);
+		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
+		
+		//float magTerm = sqrt(cos2Term*cos2Term+sin2Term*sin2Term);
+		float magTerm = length(vec2(cos2Term, sin2Term));
+		
+		float total=0.0;
+		for (float aa=0.0;aa<CONST_ITERS;aa++){
+			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
+			total+= exp(uAtmosContrast*rsq);
+		}
+		total*= maxDoubleAngOverIters*exp(uAtmosContrast*(constTerm));	
+		fog = exp(-uAtmosThickness*total/2.0);
+		
+		
+		
+		vec4 transformedNormal = uMVMatrix * aVertexNormal;
+		vec4 adjustedPos = transformedCoord - uDropLightPos;
+		float light = -dot( normalize(adjustedPos), transformedNormal);
+		light = max(light,0.0);	//unnecessary if camera pos = light pos
+		light/=1.0 + 4.2*dot(adjustedPos,adjustedPos);		//terms higher than other shaders by sqrt(2) because length
+															//of 1,0,0,0 -> 0,1,0,0 (90 deg around world)
+		//TODO can process multiple lights using matrix?
+		
+		veclight=uPlayerLightColor*light;
+		
+		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
+	
+		//light from portal. TODO pass in a colour for this, more complex lighting (at surface of portal, should be hemispherical light etc)
+		//this is just bodged/guessed to achieve correct behaviour at/across portal. TODO check/correct!
+		float portalLight = dot( uReflectorPos, transformedNormal);
+		
+		portalLight = max(0.5*portalLight +0.5+ posCosDiff,0.0);	//unnecessary if camera pos = light pos
+		//falloff
+		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
+				
+		veclight+=uReflectorDiffColor*portalLight;
+		veclight*=aVertexColor;
+		//veclight=aVertexColor;
+		
+		
 		vTextureCoord = vec3( aTextureCoord.st, 1.0 );
 	}
 </script>

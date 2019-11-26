@@ -18,6 +18,7 @@ var shaderProgramColored,
 	shaderProgramTexmap4Vec,
 	shaderProgramTexmap4VecAtmos,
 	shaderProgramTexmap4VecAtmosV2,
+	shaderProgramTexmapColor4VecAtmos,
 	shaderProgramTexmap4VecMapproject,
 	shaderProgramTexmap4VecMapprojectAtmos,
 	shaderProgramTexmap4VecMapprojectAtmosV2,
@@ -108,6 +109,11 @@ function initShaders(){
 					});
 	shaderProgramTexmap4VecAtmosV2 = loadShader( "shader-texmap-vs-4vec-atmos-v2", "shader-texmap-fs",{
 					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					});
+					
+	shaderProgramTexmapColor4VecAtmos = loadShader( "shader-texmap-color-vs-4vec-atmos", "shader-texmap-fs",{
+					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord","aVertexColor"],
 					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 					
@@ -228,13 +234,20 @@ function initBuffers(){
 		bufferArrayData(bufferObj.vertexPositionBuffer, sourceData.vertices, 4);
 		bufferObj.normalBuffer = gl.createBuffer();
 		bufferArrayData(bufferObj.normalBuffer, sourceData.normals, 4);
-		bufferObj.vertexTextureCoordBuffer= gl.createBuffer();
-		if (sourceData.uvcoords || sourceData.texturecoords){	//voxterrain has no uv coords
+		
+		if (sourceData.colors){
+			//alert("loading with colours. colors length : " + sourceData.colors.length);
+			//alert("vertices length : " + sourceData.vertices.length);
+			bufferObj.vertexColorBuffer = gl.createBuffer();
+			bufferArrayData(bufferObj.vertexColorBuffer, sourceData.colors, 3);
+		}
+		if (sourceData.uvcoords || sourceData.texturecoords){
+			bufferObj.vertexTextureCoordBuffer= gl.createBuffer();
 			bufferArrayData(bufferObj.vertexTextureCoordBuffer, sourceData.uvcoords || sourceData.texturecoords[0], 2);	//handle inconsistent formats
 		}
+		
 		bufferObj.vertexIndexBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
-		
 		if (Array.isArray(sourceData.faces[0])){	//if faces is an array of length 3 arrays
 			sourceData.indices = [].concat.apply([],sourceData.faces);
 		} else {									//faces is just a set of indices - used for procTerrain indexed strips. TODO maybe don't use "faces"
@@ -1318,7 +1331,11 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
 		if (!duocylinderObjects[duocylinderModel].isSea){
-			activeShaderProgram = duocylinderObjects[duocylinderModel].useMapproject? (guiParams["atmosShader"]?(guiParams["altAtmosShader"]?shaderProgramTexmap4VecMapprojectAtmosV2:shaderProgramTexmap4VecMapprojectAtmos):shaderProgramTexmap4VecMapproject) : (guiParams["atmosShader"]?(guiParams["altAtmosShader"]?shaderProgramTexmap4VecAtmosV2:shaderProgramTexmap4VecAtmos):shaderProgramTexmap4Vec);
+			if (duocylinderObjects[duocylinderModel].hasVertColors){
+				activeShaderProgram = shaderProgramTexmapColor4VecAtmos;	//not variants implemented
+			}else{
+				activeShaderProgram = duocylinderObjects[duocylinderModel].useMapproject? (guiParams["atmosShader"]?(guiParams["altAtmosShader"]?shaderProgramTexmap4VecMapprojectAtmosV2:shaderProgramTexmap4VecMapprojectAtmos):shaderProgramTexmap4VecMapproject) : (guiParams["atmosShader"]?(guiParams["altAtmosShader"]?shaderProgramTexmap4VecAtmosV2:shaderProgramTexmap4VecAtmos):shaderProgramTexmap4Vec);
+			}
 			gl.useProgram(activeShaderProgram);
 		}else{
 			activeShaderProgram = guiParams["atmosShader"]? (guiParams["altAtmosShader"]?shaderProgramDuocylinderSeaAtmosV2:shaderProgramDuocylinderSeaAtmos):shaderProgramDuocylinderSea;
@@ -1791,6 +1808,10 @@ function drawTennisBall(duocylinderObj, shader){
 		gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.normalBuffer);
 		gl.vertexAttribPointer(shader.attributes.aVertexNormal, duocylinderObj.normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	}
+	if (duocylinderObj.vertexColorBuffer){
+		gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexColorBuffer);
+		gl.vertexAttribPointer(shader.attributes.aVertexColor, duocylinderObj.vertexColorBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	}
 	if (duocylinderObj.vertexTextureCoordBuffer){	//not used in duocylinder-sea
 		gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexTextureCoordBuffer);
 		gl.vertexAttribPointer(shader.attributes.aTextureCoord, duocylinderObj.vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
@@ -1836,9 +1857,6 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 		gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexVelocityBuffer);
 		gl.vertexAttribPointer(shaderProg.attributes.aVertexVelocity, bufferObj.vertexVelocityBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	}
-	
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
-	
 	if (bufferObj.vertexTextureCoordBuffer){
 		gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexTextureCoordBuffer);
 		gl.vertexAttribPointer(shaderProg.attributes.aTextureCoord, bufferObj.vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
@@ -1846,6 +1864,9 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 		//bind2dTextureIfRequired(texture);
 		gl.uniform1i(shaderProg.uniforms.uSampler, 0);
 	}
+	
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
+
 	
 	if (usesCubeMap){
 		gl.uniform1i(shaderProg.uniforms.uSampler, 1);	//put cubemap in tex 1 always, avoiding bind calls.
@@ -2009,6 +2030,8 @@ function initTexture(){
 	duocylinderObjects.voxTerrain.tex = duocylinderObjects.procTerrain.tex;
 	//duocylinderObjects.voxTerrain.tex = duocylinderObjects.grid.tex;
 	
+	duocylinderObjects.voxTerrain.hasVertColors=true;
+	
 	
 	//texture = makeTexture("img/ash_uvgrid01-grey.tiny.png");	//numbered grid
 }
@@ -2044,7 +2067,7 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	duocylinderModel0:"procTerrain",
+	duocylinderModel0:"voxTerrain",
 	duocylinderModel1:"terrain",
 	duocylinderRotateSpeed:0,
 	drawShapes:{
@@ -2058,11 +2081,11 @@ var guiParams={
 		},
 		teapot:false,
 		"teapot scale":0.7,
-		towers:true,
+		towers:false,
 		explodingBox:false,
-		hyperboloid:true,
-		stonehenge:true,
-		roads:true
+		hyperboloid:false,
+		stonehenge:false,
+		roads:false
 	},
 	'random boxes':{
 		number:0,

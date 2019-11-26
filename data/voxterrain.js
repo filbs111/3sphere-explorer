@@ -14,8 +14,8 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		}
 	}
 
-	//var voxFunction = sinesfunctionthree;
-	var voxFunction = perlinfunctionTwoSided;
+	var voxFunction = sinesfunctionthree;
+	//var voxFunction = perlinfunctionTwoSided;
 	makeVoxdataForFunc(voxFunction);
 	
 	var mattoinvert = mat3.create();
@@ -465,7 +465,7 @@ var voxTerrainData = (function generateVoxTerrainData(){
 			
 			//grayColor = grayColorForPointAndNormal(dcPos[0],dcPos[1],dcPos[2],dcNorm,1/sumNorm);	//wierd result since average normal is not the normal at this point! 
 			grayColor = grayColorForPointAndNormal(dcPos[0],dcPos[1],dcPos[2]);	//don't pass in normal info, calc inside function
-			
+																				
 			dcColors.push(grayColor, grayColor, grayColor);	//TODO separate surf color for directional lighting from ambient response
 		}
 
@@ -522,7 +522,7 @@ var voxTerrainData = (function generateVoxTerrainData(){
 			
 			curveColor = Math.max(Math.atan(curveColor)*(2/Math.PI),0.0);
 			
-			//grayColor*=0.5-curveColor;	//using *= to retain perlin
+			//grayColor*=0.5-curveColor;	//using *= to retain perlin	//TODO wrap vert colours (0,64)
 			grayColor=0.5-curveColor;	//using *= to retain perlin
 			return grayColor;
 		}
@@ -608,7 +608,7 @@ var voxTerrainData = (function generateVoxTerrainData(){
 			dcNormals:dcNormals,
 			colors:colors,
 			dcColors:dcColors,
-			directionalIndices:directionalIndices,
+		//	directionalIndices:directionalIndices,	//can be used to draw faces in 6 cube directions with separate draw calls (can use for square terrain culling, shading)
 			indices:Array.prototype.concat.apply([],directionalIndices)
 		};
 	})();
@@ -648,7 +648,9 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		normals:mynorms,	//note that normals with unperterbed grid voxels makes little sense
 		faces:sparseVoxData.indices,
 		uvcoords:sparseVoxData.uvcoords,
-		directionalIndices:sparseVoxData.directionalIndices
+		colors:sparseVoxData.dcColors,
+		//colors:sparseVoxData.colors
+		//directionalIndices:sparseVoxData.directionalIndices
 	}
 	
 	function makeVoxdataForFunc(thefunction){
