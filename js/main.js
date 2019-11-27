@@ -112,8 +112,8 @@ function initShaders(){
 					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 					
-	shaderProgramTexmapColor4VecAtmos = loadShader( "shader-texmap-color-vs-4vec-atmos", "shader-texmap-fs",{
-					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord","aVertexColor"],
+	shaderProgramTexmapColor4VecAtmos = loadShader( "shader-texmap-color-triplanar-vs-4vec-atmos", "shader-texmap-triplanar-fs",{
+					attributes:["aVertexPosition", "aVertexNormal","aTriCoord","aTriNormal","aVertexColor"],
 					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 					
@@ -244,6 +244,14 @@ function initBuffers(){
 		if (sourceData.uvcoords || sourceData.texturecoords){
 			bufferObj.vertexTextureCoordBuffer= gl.createBuffer();
 			bufferArrayData(bufferObj.vertexTextureCoordBuffer, sourceData.uvcoords || sourceData.texturecoords[0], 2);	//handle inconsistent formats
+		}
+		if (sourceData.tricoords){
+			bufferObj.vertexTriCoordBuffer= gl.createBuffer();
+			bufferArrayData(bufferObj.vertexTriCoordBuffer, sourceData.tricoords, 3);
+		}
+		if (sourceData.trinormals){
+			bufferObj.vertexTriNormalBuffer= gl.createBuffer();
+			bufferArrayData(bufferObj.vertexTriNormalBuffer, sourceData.trinormals, 3);
 		}
 		
 		bufferObj.vertexIndexBuffer = gl.createBuffer();
@@ -1816,6 +1824,15 @@ function drawTennisBall(duocylinderObj, shader){
 		gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexTextureCoordBuffer);
 		gl.vertexAttribPointer(shader.attributes.aTextureCoord, duocylinderObj.vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	}
+	if (duocylinderObj.vertexTriCoordBuffer){
+		gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexTriCoordBuffer);
+		gl.vertexAttribPointer(shader.attributes.aTriCoord, duocylinderObj.vertexTriCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	}
+	if (duocylinderObj.vertexTriNormalBuffer){	//note could combo if with vertexTriCoordBuffer
+		gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexTriNormalBuffer);
+		gl.vertexAttribPointer(shader.attributes.aTriNormal, duocylinderObj.vertexTriNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	}
+	
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, duocylinderObj.vertexIndexBuffer);
 	
 	gl.activeTexture(gl.TEXTURE0);
@@ -2026,11 +2043,12 @@ function initTexture(){
 	
 	sshipTexture = makeTexture("data/dirLight/SshipTexCombouv5FR40pc.png");
 	
-	//TODO use another texture
-	duocylinderObjects.voxTerrain.tex = duocylinderObjects.procTerrain.tex;
-	//duocylinderObjects.voxTerrain.tex = duocylinderObjects.grid.tex;
+	//duocylinderObjects.voxTerrain.tex = makeTexture("img/ash_uvgrid01.jpg");
+	//duocylinderObjects.voxTerrain.tex = makeTexture("img/cretish0958.png");
+	duocylinderObjects.voxTerrain.tex = makeTexture("img/13787.jpg");
 	
 	duocylinderObjects.voxTerrain.hasVertColors=true;
+	duocylinderObjects.voxTerrain.usesTriplanarMapping=true;	//note that hasVertColors, usesTriplanarMapping currently equivalent (has both or neither)
 	
 	
 	//texture = makeTexture("img/ash_uvgrid01-grey.tiny.png");	//numbered grid
@@ -2113,8 +2131,11 @@ var guiParams={
 	"altAtmosShader":false,
 	"atmosThickness":0.2,
 	"atmosContrast":5.0,
-	fogColor0:'#b2dede',
-	fogColor1:'#ff8888',
+	//fogColor0:'#b2dede',
+	//fogColor0:'#b451c5',
+	fogColor0:'#b311e5',
+	//fogColor1:'#ff8888',
+	fogColor1:'#ac1d1c',
 	playerLight:'#ffffff',
 	onRails:false,
 	spinCorrection:true,

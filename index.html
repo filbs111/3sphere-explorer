@@ -180,6 +180,33 @@
 	}
 </script>
 
+<!-- triplanar texture mapping for voxel terrain -->
+<script id="shader-texmap-triplanar-fs" type="x-shader/x-fragment">
+	precision mediump float;
+	varying vec3 vTextureCoord;
+	uniform sampler2D uSampler;
+	uniform vec4 uColor;
+	varying float fog;
+	uniform vec4 uFogColor;
+	varying vec3 veclight;
+	varying vec3 vPos;		//3vector position (before mapping onto duocyinder)
+	varying vec3 vTexAmounts;
+	
+	void main(void) {		
+		float texOffset = 0.5;
+		vec3 texColor = mat3(texture2D(uSampler, vec2(vPos.y, vPos.z)).xyz, texture2D(uSampler, vec2(vPos.x, vPos.z + texOffset )).xyz, texture2D(uSampler, vec2(vPos.x + texOffset, vPos.y + texOffset )).xyz) * vTexAmounts;
+		
+		vec4 preGammaFragColor = vec4( texColor*fog*( veclight + uFogColor.xyz ), 1.0)*uColor + (1.0-fog)*uFogColor;
+		
+		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
+		//gl_FragColor = vec4( pow(preGammaFragColor.r,0.455), pow(preGammaFragColor.g,0.455), pow(preGammaFragColor.b,0.455), pow(preGammaFragColor.a,0.455));
+		
+		//gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
+		//gl_FragColor = (1.0-fog)*uFogColor;
+		gl_FragColor.a =1.0;
+	}
+</script>
+
 <!-- tex mapped pix shader -->
 <script id="shader-texmap-fs-mapproject" type="x-shader/x-fragment">
 	#define CONST_TAU 6.2831853
@@ -1360,14 +1387,15 @@
 	}
 </script>
 
-<script id="shader-texmap-color-vs-4vec-atmos" type="x-shader/x-vertex">
+<script id="shader-texmap-color-triplanar-vs-4vec-atmos" type="x-shader/x-vertex">
+	//TODO determine whether more efficient to calc aVertexPosition, aVertexNormal from aTriCoord, aTriNormal here in vert shader, or precalc and pass in.
 	#define CONST_ITERS 64.0
 
 	attribute vec4 aVertexPosition;
 	attribute vec4 aVertexNormal;
 	attribute vec3 aVertexColor;
-	attribute vec2 aTextureCoord;
-	varying vec3 vTextureCoord;
+	attribute vec3 aTriCoord;
+	attribute vec3 aTriNormal;
 	uniform float uAtmosThickness;
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
@@ -1381,6 +1409,8 @@
 	uniform float uReflectorCos;
 	varying float fog;
 	varying vec3 veclight;
+	varying vec3 vPos;		//3vector position (before mapping onto duocyinder)
+	varying vec3 vTexAmounts;
 	
 	void main(void) {
 		vec4 transformedCoord = uMVMatrix * aVertexPosition;
@@ -1437,9 +1467,10 @@
 		veclight+=uReflectorDiffColor*portalLight;
 		veclight*=aVertexColor;
 		//veclight=aVertexColor;
-		
-		
-		vTextureCoord = vec3( aTextureCoord.st, 1.0 );
+				
+		//vTexAmounts = vec3(1.0);	//aTriNormal*aTriNormal;
+		vPos = aTriCoord;
+		vTexAmounts = aTriNormal*aTriNormal;
 	}
 </script>
 

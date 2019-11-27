@@ -14,8 +14,8 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		}
 	}
 
-	var voxFunction = sinesfunctionthree;
-	//var voxFunction = perlinfunctionTwoSided;
+	//var voxFunction = sinesfunctionthree;
+	var voxFunction = perlinfunctionTwoSided;
 	makeVoxdataForFunc(voxFunction);
 	
 	var mattoinvert = mat3.create();
@@ -636,18 +636,12 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		mynorms[ii+2] = -tmp;
 	}
 	
-	//simple top projection uv data (TODO triplanar mapping shader + infer uvs from vert positions in shader)
-	var uvs = [];
-	for (var uvidx=0,vidx=0;vidx<sparseVoxData.smoothVertices.length;uvidx+=2,vidx+=3){
-		uvs.push(8*myverts[vidx],8*myverts[vidx+2]);
-	}
-	sparseVoxData.uvcoords= uvs;
-	
 	return {
 		vertices:myverts,
+		tricoords:myverts,	//retained when loadGridData() maps 3vec vertices to 4vec verts (mapping onto duocylinder)
 		normals:mynorms,	//note that normals with unperterbed grid voxels makes little sense
+		trinormals:mynorms,		//as with tricoords.
 		faces:sparseVoxData.indices,
-		uvcoords:sparseVoxData.uvcoords,
 		colors:sparseVoxData.dcColors,
 		//colors:sparseVoxData.colors
 		//directionalIndices:sparseVoxData.directionalIndices
@@ -672,7 +666,8 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		kk%=64;
 		var sinscale=4/Math.PI;
 		//return Math.sin(ii/sinscale)+Math.sin(jj/sinscale)+Math.sin(kk/sinscale);
-		return Math.sin(ii/sinscale)+Math.sin(jj/sinscale)- 0.1*(kk-32)*(kk-32) + 1;
+		//return Math.sin(ii/sinscale)+Math.sin(jj/sinscale)- 0.1*(kk-32)*(kk-32) + 1;
+		return -3*Math.sin(ii/sinscale)*Math.sin(jj/sinscale)*Math.sin(ii/sinscale)*Math.sin(jj/sinscale) - 0.2*(kk-32)*(kk-32) +0.6 ;
 	}
 	function perlinfunctionTwoSided(ii,jj,kk){
 		//return 10*noise.perlin3(ii/64,jj/64,kk/64) - 0.02*(kk-32)*(kk-32);	//landscape with 3d perlin surface
