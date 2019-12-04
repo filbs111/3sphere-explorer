@@ -2942,6 +2942,9 @@ var iterateMechanics = (function iterateMechanics(){
 				//collision with duocylinder procedural terrain	
 				if (getHeightAboveTerrainFor4VecPos(bulletPos)<0){detonateBullet(bullet, bulletMatrix, true);}
 			}
+			if (terrainModel == "voxTerrain"){	//TODO generalise collision by specifying a function for terrain. (voxTerrain, procTerrain)
+				if (voxCollisionFunction(bulletPos)>0){detonateBullet(bullet, bulletMatrix, true);}
+			}
 			
 			//slow collision detection between bullet and array of boxes.
 			//todo 1 try simple optimisation by matrix/scalar multiplication instead of matrix-matrix

@@ -1,6 +1,15 @@
 //something to generate voxel mesh.
 //intial implementation will be voxels wrapped onto duocylinder. 1st implementation - keep axis aligned, wrap in shader. alternative would require more complex texture projection in shader - though this is how do regular grid terrain currently.
 //TODO separate out SDF for collision detection calls.
+
+var voxCollisionFunction; //something that can be used for collision detection. 
+						  //for consistency with basic 2d terrain stuff, for input 4vector, provide: penetration depth, normal vector.
+						  //maybe want simple version that just returns whether collided. ( eg for bullet collisions)
+						  
+						  //suppose with normal vector in two duocylinder "surface" directions and radial. should be careful to get conversion right - basic assumptions might get correct close to halfway duocylinder ( dividing 3sphere in two exactly), but may go wrong away from this.
+						  //maybe better to have normal direction returned as 4vec.
+						  
+
 var voxTerrainData = (function generateVoxTerrainData(){
 	
 	var voxdata = [];
@@ -17,7 +26,27 @@ var voxTerrainData = (function generateVoxTerrainData(){
 	//var voxFunction = sinesfunctionthree;
 	//var voxFunction = perlinfunctionTwoSided;
 	var voxFunction = perlinfunctionTwoLevel;
+	//var voxFunction = perlinfunctionSpiral;
+	//var voxFunction = balls;
 	makeVoxdataForFunc(voxFunction);
+	
+	voxCollisionFunction = function(vec){
+		//convert into duocylinder "space", and lookup voxFunction
+		//initial implementation - just change some test value, use to set spaceship colour to test can check whether inside voxTerrain
+		//function tennisBallLoader.js:get4vecfrom3vec  - want a reverse translation. already have example of this for 2d duocylinder "procTerrain" - proceduralTerrain.js:getHeightAboveTerrainFor4VecPos.  TODO generalise? this function very similar to that.
+		
+		var multiplier = 64/(Math.PI);
+		
+		var a = -Math.atan2(vec[2],vec[3]);	//note the - here, not used in procTerrain
+		var b = Math.atan2(vec[0],vec[1]);
+		var c = -0.5*Math.asin( (vec[0]*vec[0] + vec[1]*vec[1]) - (vec[2]*vec[2] + vec[3]*vec[3]));	//this height of 4vec that can be compared to landscape height
+	
+		var aa=multiplier*decentMod(a,Math.PI);		//vox terrain currently repeated 2x2 squares
+		var bb=multiplier*decentMod(b + duocylinderSpin,Math.PI);
+		var cc=(0.5+c*2/Math.PI)*64;
+	
+		return voxFunction(aa,bb,cc);
+	}
 	
 	var mattoinvert = mat3.create();
 	var myvec3 = vec3.create();
@@ -400,7 +429,8 @@ var voxTerrainData = (function generateVoxTerrainData(){
 			if (mattoinvert==null){console.log("null matrix!!!!");};	//else{console.log("matrix is not null");}
 			mat3.multiplyVec3(mattoinvert, myvec3);
 			
-			var dcPos = [ii_lo+myvec3[0], jj_lo+myvec3[1], kk_lo+myvec3[2]];	
+			var dcPos = [ii_lo+myvec3[0], jj_lo+myvec3[1], kk_lo+myvec3[2]];
+			dcPos = dcPos.map(function(elem){return elem+0.5;});	//shift to match up with smoothVertices
 			dcVertices.push(dcPos[0]/32, dcPos[1]/32, dcPos[2]/32);
 			
 			//normalise average normals
@@ -618,10 +648,10 @@ var voxTerrainData = (function generateVoxTerrainData(){
 	//sparseVoxData.smoothVertices = sparseVoxData.smoothVertices.map(function(elem){return elem/2;});
 	
 	//swizzle data. just vertices initially - should do normals too.
-	//var myverts = sparseVoxData.smoothVertices;
+	//var myverts = sparseVoxData.smoothVertices;	//good for smooth surfaces
 	//var myverts = sparseVoxData.basicAvgVertices;	//actually currently these are hard boxel verts?!
 	//var myverts = sparseVoxData.vertices;
-	var myverts = sparseVoxData.dcVertices;
+	var myverts = sparseVoxData.dcVertices;	//better for objects with sharp corners, but surface grows for convex objects (eg spheres)
 	var mynorms = sparseVoxData.dcNormals;
 	var tmp;
 	for (var ii=0;ii<myverts.length;ii+=3){
@@ -677,6 +707,44 @@ var voxTerrainData = (function generateVoxTerrainData(){
 	function perlinfunctionTwoLevel(ii,jj,kk){
 		//return perlinfunctionTwoSided(ii,jj,Math.abs(kk-32) + 10 + 32);
 		return sinesfunctionthree(ii,jj,Math.abs(kk-32) - 5 + 32);
+	}
+	/*
+	function perlinfunctionCrazy(ii,jj,kk){	//happy accident
+		ii%=64;
+		jj%=64;
+		kk%=64;
+		var sinscale=4/Math.PI;
+		
+		var kkAdj = kk;	//+ii/16;
+		var kkNearest = kkAdj%8 - 4;
+		
+		return -3*Math.sin(ii/sinscale)*Math.sin(jj/sinscale)*Math.sin(ii/sinscale)*Math.sin(jj/sinscale) - 0.2*kkNearest*kkNearest +0.6 ;
+	}
+	*/
+	function perlinfunctionSpiral(ii,jj,kk){
+		ii%=64;
+		jj%=64;
+		kk%=64;
+		var sinscale=4/Math.PI;
+		
+		//var kkAdj = kk+ii/8 + jj/8;	//mismatched wrap, looks good though
+		var kkAdj = kk+ii/4 + jj/4;
+		var kkNearest = kkAdj%16 - 8;
+		
+		return -3*Math.sin(ii/sinscale)*Math.sin(jj/sinscale)*Math.sin(ii/sinscale)*Math.sin(jj/sinscale) - 0.5*kkNearest*kkNearest +0.6 ;	//holey
+		//return - 0.5*kkNearest*kkNearest +0.6 ;
+	}
+	function balls(ii,jj,kk){
+		ii%=64;
+		jj%=64;
+		kk%=64;
+		var sinscale=4/Math.PI;
+		
+		kk-=32;
+		ii = ii%8 -4;
+		jj = jj%8 -4;
+		
+		return - 0.5*ii*ii - 0.5*jj*jj - kk*kk/Math.PI + 4;
 	}
 	
 })();
