@@ -298,7 +298,9 @@ function initBuffers(){
 	var gunObject = loadBlenderExport(guncyldata.meshes[0]);
 	var icoballObj = loadBlenderExport(icoballdata);
 
-	loadBufferData(sphereBuffers, makeSphereData(99,200,1)); //todo use normalized box or icosohedron
+	//loadBufferData(sphereBuffers, makeSphereData(99,200,1)); //todo use normalized box/icosohedron,subdivided octohedron etc, triangle strips
+	loadBufferData(sphereBuffers, makeSphereData(127,255,1)); //near index limit 65536.
+	//loadBufferData(sphereBuffers, makeSphereData(49,100,1));
 	loadBufferData(quadBuffers, quadData);
 	loadBufferData(cubeBuffers, levelCubeData);
 	loadBufferData(explodingCubeBuffers, explodingCubeData);
@@ -498,12 +500,23 @@ function drawScene(frameTime){
 	
 	offsetCam.setType(guiParams.cameraType);
 
-	var offsetSteps = 100;
-	var offsetVecStep = offsetCam.getVec().map(function(item){return item/offsetSteps;});
-	portalTest(offsetCameraContainer,0);
-	for (var ii=0;ii<100;ii++){	//TODO more efficient. if insufficient subdivision, transition stepped.
-		xyzmove4mat(offsetPlayerCamera,offsetVecStep);	
-		portalTest(offsetCameraContainer,0);
+	var offsetSteps = 500;	//todo proper move thru portal taking into account path. or can make more efficient by binary search (~log(n) tests)
+	var tmp4mat = mat4.create();
+	var wentThrough = false;
+	for (var ii=0;ii<offsetSteps;ii++){	//TODO more efficient. if insufficient subdivision, transition stepped.
+		mat4.set(offsetPlayerCamera, tmp4mat);	//TODO check order
+		xyzmove4mat(tmp4mat,offsetCam.getVec().map(function(item){return item*ii/offsetSteps;}));
+		if (checkWithinReflectorRange(tmp4mat, reflectorInfo.rad)){
+			//portalTest will pass, so repeat with original matrix
+			xyzmove4mat(offsetPlayerCamera,offsetCam.getVec().map(function(item){return item*ii/offsetSteps;}));
+			portalTest(offsetCameraContainer,0);
+			wentThrough = true;
+			//assume wont cross twice, move remainder of way
+			xyzmove4mat(offsetPlayerCamera,offsetCam.getVec().map(function(item){return item*(offsetSteps-ii)/offsetSteps;}));
+		}
+	}
+	if (!wentThrough){
+		xyzmove4mat(offsetPlayerCamera,offsetCam.getVec());
 	}
 	
 	//move camera away from portal (todo ensure player model movement references offsetPlayerCamera BEFORE this move!
@@ -669,7 +682,7 @@ function setProjectionMatrix(pMatrix, vFov, ratio, polarity){
 	pMatrix[0] = ratio/fy ;
 	pMatrix[5] = 1.0/fy;
 	pMatrix[11]	= -1;	//rotate w into z.
-	pMatrix[14] = -0.0001;	//smaller = more z range. 1/50 gets ~same near clipping result as stereographic/perspective 0.01 near
+	pMatrix[14] = -0.00001;	//smaller = more z range. 1/50 gets ~same near clipping result as stereographic/perspective 0.01 near
 	pMatrix[10]	= 0;
 	pMatrix[15] = 0;
 }
@@ -1905,6 +1918,7 @@ function drawObjectFromPreppedBuffers(bufferObj, shaderProg){
 	gl.uniformMatrix4fv(shaderProg.uniforms.uMVMatrix, false, mvMatrix);
 	if (shaderProg.uniforms.uMMatrix){gl.uniformMatrix4fv(shaderProg.uniforms.uMMatrix, false, mMatrix);}
 	gl.drawElements(gl.TRIANGLES, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+	//gl.drawElements(gl.LINES, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 }
 
 var bind2dTextureIfRequired = (function createBind2dTextureIfRequiredFunction(){
@@ -2149,7 +2163,7 @@ var guiParams={
 		mappingType:'vertex projection',
 		scale:0.3,
 		isPortal:true,
-		moveAway:0.0008
+		moveAway:0.0001
 	},
 	normalMove:0
 };
