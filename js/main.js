@@ -1556,7 +1556,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 			//mat4.set(invertedWorldCamera, mvMatrix);
 			//mat4.multiply(mvMatrix,gunMatrixCosmetic);
 			
-			mat4.set(gunMatrix, mMatrix);
+			//mat4.set(gunMatrix, mMatrix);	//this is wrong!
+			mat4.set(matrix, mMatrix);	//todo make this more efficient by combining with above
+			mat4.multiply(mMatrix, inverseSshipMat);
+			mat4.multiply(mMatrix, gunMatrix);
 			
 			drawObjectFromPreppedBuffers(gunBuffers, shaderProgramColored);
 		}

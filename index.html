@@ -2372,7 +2372,6 @@
 	void main(void) {
 		//gl_FragColor = uColor*textureCube(uSampler, vPos);	//TODO use this (get rid of fog)
 		vec4 preGammaFragColor = vec4( vec3(fog), 1.0)*uColor*pow(textureCube(uSampler, vPos),vec4(2.2)) + (1.0-fog)*uFogColor;	//todo render cubemap with gamma 1
-
 		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
 	}
 </script>
@@ -2449,8 +2448,8 @@
 	
 	void main(void) {
 		float csq = dot(uCentrePosScaled,uCentrePosScaled);
-		float cdotp = dot(uCentrePosScaled, -aVertexPosition);
-		float a = pow((1.0-csq)+cdotp*cdotp, 0.5) - cdotp;
+		float cdotp = dot(uCentrePosScaled, aVertexPosition);
+		float a = pow((1.0-csq)+cdotp*cdotp, 0.5) + cdotp;
 		vec3 scaledVertexPosition = aVertexPosition*a;
 	
 		vec4 aVertexPositionNormalized = normalize(vec4( uModelScale*(scaledVertexPosition-uCentrePosScaled), 1.0));	
@@ -2458,6 +2457,18 @@
 		vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
 		vec4 worldCoord = uMMatrix * aVertexPositionNormalized;
 
+		//calculcate position on surface of portal if camera is inside portal. 
+		//todo can this be calculated more efficiently along with other terms?
+		//float fudgeSizeVal = 0.953; 	//above this w component inside portal. expect this for portal scale =0.3 because root(1-0.3*0.3). 
+										//todo pass through portal size
+		float fudgeSizeVal = 0.96; 	//works better, guess because problems with approximation
+		vec4 rayStart = uCameraWorldPos;
+		if (uCameraWorldPos.w > fudgeSizeVal){	//can lose if here if separate shader for within/out portal
+			//dumb approximation, should work for small distances - just find where line from start to end intersects plane for w=fudgeSizeVal
+			vec4 midpoint = vec4( ((uCameraWorldPos.w - fudgeSizeVal)*worldCoord.xyz + (fudgeSizeVal - worldCoord.w)*uCameraWorldPos.xyz)/(uCameraWorldPos.w-worldCoord.w) , fudgeSizeVal);
+			rayStart = normalize(midpoint);	
+		}
+		
 		/*
 		fog = 0.5*(1.0 + transformedCoord.w);
 		//note 1.0 = no fog, 0 = total fog.
@@ -2485,15 +2496,15 @@
 		fog=exp(-totalPath*uAtmosThickness*maxAngOverIters);
 		*/
 	
-		float dotProd = dot(uCameraWorldPos,worldCoord);
+		float dotProd = dot(rayStart,worldCoord);
 		
-		vec4 normalDirection = normalize(worldCoord - dotProd*uCameraWorldPos);	//point 90 deg around world from camera, in direction of worldCoord
+		vec4 normalDirection = normalize(worldCoord - dotProd*rayStart);	//point 90 deg around world from camera, in direction of worldCoord
 		
-		float partOne = dot(uCameraWorldPos.xy, uCameraWorldPos.xy);
+		float partOne = dot(rayStart.xy, rayStart.xy);
 		float partTwo = dot(normalDirection.xy, normalDirection.xy);
 		float constTerm = (partOne+partTwo)/2.0;
 		float cos2Term = (partOne-partTwo)/2.0;
-		float sin2Term = dot(uCameraWorldPos.xy, normalDirection.xy);
+		float sin2Term = dot(rayStart.xy, normalDirection.xy);
 		float shiftAngle = atan(cos2Term,sin2Term);
 		
 		float maxDoubleAng = 2.0*acos(dotProd*0.999);
