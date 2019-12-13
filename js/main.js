@@ -447,8 +447,9 @@ var offsetCam = (function(){
 		"near 3rd person":[0,-0.0075,-0.005],
 		//"far 3rd person":[0,-0.02,-0.03],
 		"far 3rd person":[0,-0.01,-0.01],
-		"far 3rd person 2":[0,0,-0.02],	//straight behind (not raised)
-		"cockpit":[0,0,0.001],
+		//"far 3rd person 2":[0,0,-0.02],	//straight behind (not raised)
+		"far 3rd person 2":[0,-0.02,-0.025],	
+		"cockpit":[0,0,0.0015],
 		"side":[0.006,0,0.0025]
 	}
 	var targetForTypeReverse = {
@@ -695,6 +696,7 @@ var colorArrs = {
 	darkGray:[0.4, 0.4, 0.4, 1.0],
 	veryDarkGray:[0.2, 0.2, 0.2, 1.0],
 	superDarkGray:[0.05, 0.05, 0.05, 1.0],
+	black:[0, 0, 0, 1.0],
 	red:[1.0, 0.4, 0.4, 1.0],
 	green:[0.4, 1.0, 0.4, 1.0],
 	blue:[0.4, 0.4, 1.0, 1.0],
@@ -1574,7 +1576,47 @@ function drawWorldScene(frameTime, isCubemapView) {
 		for (gear of landingLegData){
 		//	drawLandingBall(gear.pos);
 		}
-				
+		
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.blue);
+		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0.01,0.01,0.6]);
+		//draw "thrusters". TODO make look better, transparent so should render last, brightness according to analog input, "playerlight" to match (direction+magnitude)
+		if (currentThrustInput[2]>0){					//rearward thrusters
+			drawLandingBall([0.006,0.0035,-0.0085]);	//	left ,down	,fwd
+			drawLandingBall([0.006,-0.0035,-0.0085]);
+			drawLandingBall([-0.006,0.0035,-0.0085]);
+			drawLandingBall([-0.006,-0.0035,-0.0085]);
+		}
+		if (currentThrustInput[2]<0){				//forward thrusters
+			drawLandingBall([0.006,0.0035,0.004]);
+			drawLandingBall([0.006,-0.0035,0.004]);		
+			drawLandingBall([-0.006,0.0035,0.004]);		
+			drawLandingBall([-0.006,-0.0035,0.004]);
+		}
+		if (currentThrustInput[0]<0){				//left
+			drawLandingBall([0.007,0.0035,0.003]);
+			drawLandingBall([0.007,-0.0035,0.003]);
+			drawLandingBall([0.007,0.0035,-0.0075]);
+			drawLandingBall([0.007,-0.0035,-0.0075]);
+		}
+		if (currentThrustInput[0]>0){				//right
+			drawLandingBall([-0.007,0.0035,0.003]);
+			drawLandingBall([-0.007,-0.0035,0.003]);
+			drawLandingBall([-0.007,0.0035,-0.0075]);
+			drawLandingBall([-0.007,-0.0035,-0.0075]);
+		}
+		if (currentThrustInput[1]>0){				//top
+			drawLandingBall([0.006,-0.0045,0.003]);
+			drawLandingBall([-0.006,-0.0045,0.003]);
+			drawLandingBall([0.006,-0.0045,-0.0075]);
+			drawLandingBall([-0.006,-0.0045,-0.0075]);
+		}
+		if (currentThrustInput[1]<0){				//bottom
+			drawLandingBall([0.006,0.0045,0.003]);
+			drawLandingBall([-0.006,0.0045,0.003]);
+			drawLandingBall([0.006,0.0045,-0.0075]);
+			drawLandingBall([-0.006,0.0045,-0.0075]);
+		}
+	
 		function drawLandingBall(posn){			 
 			lgMat = mat4.create(sshipMatrix);
 			xyzmove4mat(lgMat, posn);
@@ -2156,8 +2198,8 @@ var guiParams={
 	playerLight:'#ffffff',
 	onRails:false,
 	spinCorrection:true,
-	cameraType:"far 3rd person",
-	cameraFov:105,
+	cameraType:"far 3rd person 2",
+	cameraFov:115,
 	flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
 	showHud:false,
 	reflector:{
@@ -2435,6 +2477,7 @@ for (var ang=0;ang<5;ang++){
 
 var duocylinderSpin = 0;
 var reverseCamera=false;
+var currentThrustInput = [0,0,0];
 var iterateMechanics = (function iterateMechanics(){
 	var lastTime=Date.now();
 	var moveSpeed=0.000075;
@@ -2561,9 +2604,11 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
 			
-			playerVelVec[0]+=thrust*(keyThing.keystate(65)-keyThing.keystate(68)); //lateral
-			playerVelVec[1]+=thrust*(keyThing.keystate(32)-keyThing.keystate(220)); //vertical
-			playerVelVec[2]+=thrust*(keyThing.keystate(87)-keyThing.keystate(83)); //fwd/back
+			currentThrustInput[0]=keyThing.keystate(65)-keyThing.keystate(68);	//lateral
+			currentThrustInput[1]=keyThing.keystate(32)-keyThing.keystate(220);	//vertical
+			currentThrustInput[2]=keyThing.keystate(87)-keyThing.keystate(83);	//fwd/back
+			
+			currentThrustInput=currentThrustInput.map(function(elem){return elem*thrust;});
 			
 			playerAngVelVec[0]+=keyThing.keystate(40)-keyThing.keystate(38); //pitch
 			playerAngVelVec[1]+=keyThing.keystate(39)-keyThing.keystate(37); //turn
@@ -2581,14 +2626,12 @@ var iterateMechanics = (function iterateMechanics(){
 					var magsq = gpMove.reduce(function(total, val){return total+ val*val;}, 0);
 					gpMove = scalarvectorprod(10000000000*magsq,gpMove);
 					
+					currentThrustInput = currentThrustInput.map(function(elem,idx){return elem+gpMove[idx];});
+					
 					//testInfo=[axes,buttons,gpMove,magsq];
 					
 					//note doing cube bodge to both thrust and to adding velocity to position (see key controls code)
 					//maybe better to pick one! (probably should apply cube logic to acc'n for exponential smoothed binary key input, do something "realistic" for drag forces
-					
-					playerVelVec[0]+=gpMove[0];	//todo either write vector addition func or use glmatrix vectors
-					playerVelVec[1]+=gpMove[1];
-					playerVelVec[2]+=gpMove[2];
 				}
 				
 				playerAngVelVec[2]+=gpSettings.roll(activeGp); //roll
@@ -2606,6 +2649,10 @@ var iterateMechanics = (function iterateMechanics(){
 				lastPlayerAngMove = scalarvectorprod(100000*magpow,gpRotate);
 				rotatePlayer(lastPlayerAngMove);	//TODO add rotational momentum - not direct rotate
 			}
+			
+			playerVelVec[0]+=currentThrustInput[0];	//todo either write vector addition func or use glmatrix vectors
+			playerVelVec[1]+=currentThrustInput[1];
+			playerVelVec[2]+=currentThrustInput[2];
 			
 			playerAngVelVec=scalarvectorprod(0.85,playerAngVelVec);
 			
