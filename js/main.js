@@ -180,6 +180,7 @@ var duocylinderObjects={
 var sphereBuffers={};
 var quadBuffers={};
 var cubeBuffers={};
+var randBoxBuffers={};
 var explodingCubeBuffers={};
 var cubeFrameBuffers={};
 var cubeFrameSubdivBuffers={};
@@ -218,7 +219,10 @@ var landingLegData=[
 	];
 
 playerCentreBallData = {pos:[0,0,0],suspHeight:0,cubeColPen:0};
-		
+
+var maxRandBoxes = 2730;
+//var maxRandBoxes = 50;	//tmp smaller to make startup faster?
+var randomMats = [];	//some random poses. used for "dust motes". really only positions required, but flexible, can use for random boxes/whatever 		
 		
 function initBuffers(){
 	loadDuocylinderBufferData(duocylinderObjects.grid, tballGridDataPantheonStyle);
@@ -318,6 +322,68 @@ function initBuffers(){
 	loadBufferData(icoballBuffers, icoballObj);
 	loadBufferData(hyperboloidBuffers, hyperboloidData);
 
+	//make a big buffer with multiple copies of an object, pre-transformed by matrices.
+	//cubes have 36 vertices, so can do 65536/24 = 2730 cubes in 1 draw call.
+	//could make smooth cubes with 8 verts -> 8192, or octohedra with 6 verts -> 10922
+	var thisMat;
+	var randBoxData = {};	//todo check best format to use - guess want to use something that works fast/efficiently with 4matrices
+	var randBoxVertData = [];
+	var randBoxNormalData = [];
+	var randBoxIndexData = [];
+	var offset=0;
+	
+	var inputVertLength = levelCubeData.vertices.length;
+	var numVerts = inputVertLength/3;	
+	var normLength = numVerts*4;
+	
+	var sourceVerts = levelCubeData.vertices;
+	var transformedVerts = [];
+	var sourceUvs = levelCubeData.uvcoords;
+	var copiedUvs = [];
+	var theseVerts;
+	var myvec4 = vec4.create();
+	var dummyNorms;
+	
+	var tmpScaleFact = 0.001;	//might be unnecessary - maybe can just adjust w component of 4vector instead. if is necessary, should precvalc rather than scaling for all vertices
+		
+	for (var ii=0;ii<maxRandBoxes;ii++,offset+=numVerts){
+		thisMat = convert_quats_to_4matrix(random_quat_pair(), mat4.create());
+		randomMats.push(thisMat);
+		
+		dummyNorms = [];						//TODO correct data (copy, transform by matrix) TODO check whether should be 4vec
+				
+		for (var vv=0;vv<inputVertLength;vv+=3){
+			//make a copy of vertex, rotate by matrix
+			myvec4[0] = sourceVerts[vv]*tmpScaleFact;
+			myvec4[1] = sourceVerts[vv+1]*tmpScaleFact;
+			myvec4[2] = sourceVerts[vv+2]*tmpScaleFact;
+			myvec4[3] = 0.99;	//?? determines scale of resulting object?? seems if too big, shader messes up. perhaps assuming normalised input
+			mat4.multiplyVec4(thisMat, myvec4);
+			transformedVerts.push([myvec4[0],myvec4[1],myvec4[2],myvec4[3]]);	//TODO is there a standard method to treat a vec4 like an array?
+		}
+		copiedUvs.push(sourceUvs);
+			
+		for (var nn=0;nn<normLength;nn++){
+			dummyNorms.push(0);
+		}
+		randBoxNormalData.push(dummyNorms);
+		
+		randBoxIndexData.push(levelCubeData.indices.map(function(elem){return elem+offset;}));
+	}
+	var randBoxData = {
+		vertices:[].concat.apply([],transformedVerts),
+		normals:[].concat.apply([],randBoxNormalData),
+		uvcoords:[].concat.apply([],copiedUvs),
+		//indices:[].concat.apply([],randBoxIndexData)
+		faces:[].concat.apply([],randBoxIndexData)	//todo use "indices" consistent with 3vec vertex format
+	}
+	
+	//console.log("randBoxData:");
+	//console.log(randBoxData);
+	loadDuocylinderBufferData(randBoxBuffers, randBoxData);	//TODO rename func so not specific to duocylinder - generally is for 4vec vertex data.
+	randBoxBuffers.divs=1;	//because reusing duocylinder drawing function
+	randBoxBuffers.step=0;	//unused
+	
 	function bufferArrayData(buffer, arr, size){
 		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW);
@@ -1105,27 +1171,31 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var numRandomBoxes = guiParams['random boxes'].number;
 	
 	if (numRandomBoxes>0){
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.randBoxes);
-		
-		boxSize = guiParams['random boxes'].size;
-		boxRad = boxSize*Math.sqrt(3);
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
-		
-	//	var criticalWPos = Math.cos(Math.atan(guiParams.reflector.scale) + Math.atan(boxRad));
-		
-		numRandomBoxes = Math.min(randomMats.length, numRandomBoxes);	//TODO check this doesn't happen/ make obvious error!
-		
-		prepBuffersForDrawing(cubeBuffers, shaderProgramTexmap);
-		for (var ii=0;ii<numRandomBoxes;ii++){
-			var thisMat = randomMats[ii];
-			mat4.set(invertedWorldCamera, mvMatrix);
-			mat4.multiply(mvMatrix, thisMat);
+		if (!guiParams['random boxes'].singleBuffer){
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.randBoxes);
 			
-		//	if (thisMat[15]>criticalWPos){continue;}	//don't draw boxes too close to portal
-			if (frustrumCull(mvMatrix,boxRad)){
-				mat4.set(thisMat, mMatrix);
-				drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+			boxSize = guiParams['random boxes'].size;
+			boxRad = boxSize*Math.sqrt(3);
+			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
+			
+		//	var criticalWPos = Math.cos(Math.atan(guiParams.reflector.scale) + Math.atan(boxRad));
+			
+			numRandomBoxes = Math.min(randomMats.length, numRandomBoxes);	//TODO check this doesn't happen/ make obvious error!
+			
+			prepBuffersForDrawing(cubeBuffers, shaderProgramTexmap);
+			for (var ii=0;ii<numRandomBoxes;ii++){
+				var thisMat = randomMats[ii];
+				mat4.set(invertedWorldCamera, mvMatrix);
+				mat4.multiply(mvMatrix, thisMat);
+				
+			//	if (thisMat[15]>criticalWPos){continue;}	//don't draw boxes too close to portal
+				if (frustrumCull(mvMatrix,boxRad)){
+					mat4.set(thisMat, mMatrix);
+					drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+				}
 			}
+		}else{
+			//draw all boxes from single buffer. no culling.
 		}
 	}
 	
@@ -1349,7 +1419,39 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		//console.log("num drawn: " + numDrawn);
 	}
+
+	if (guiParams["random boxes"].singleBuffer){
+		//draw "dust motes". todo generate drawing so not copy-pasting code
+		activeShaderProgram = shaderProgramTexmap4VecAtmos;
+		gl.useProgram(activeShaderProgram);
+		//COPIED STUFF
+		if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
+			gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
+		}
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
 		
+		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
+		if (activeShaderProgram.uniforms.uReflectorDiffColor){
+				gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
+		}
+		if (activeShaderProgram.uniforms.uPlayerLightColor){
+			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
+		}
+		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
+		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
+		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
+
+		mat4.set(invertedWorldCamera, mvMatrix);
+		rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
+		
+		mat4.identity(mMatrix);							//better to set M, V matrices and leave MV for shader?
+		rotate4mat(mMatrix, 0, 1, duocylinderSpin);
+		//END COPIED STUFF!
+		//todo draw subset of buffer according to ui controlled number
+		drawTennisBall(randBoxBuffers, activeShaderProgram);
+	}
+
+	
 	if (duocylinderModel!='none'){	//x*x+y*y=z*z+w*w
 		
 		//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
@@ -2061,14 +2163,8 @@ function initCubemapFramebuffer(){
 	
 }
 
-var randomMats = [];	//some random poses. used for "dust motes". really only positions required, but flexible, can use for random boxes/whatever 
-
 function setupScene() {
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
-	
-	for (var ii=0;ii<8192;ii++){
-		randomMats.push(convert_quats_to_4matrix(random_quat_pair(), mat4.create()));
-	}
 	
 	mat4.identity(playerCamera);	//not sure why have 2 matrices here...
 	//bung extra quaternion stuff onto this for quick test
@@ -2110,6 +2206,8 @@ function initTexture(){
 	duocylinderObjects.voxTerrain.usesTriplanarMapping=true;	//note that hasVertColors, usesTriplanarMapping currently equivalent (has both or neither)
 	
 	
+	randBoxBuffers.tex=texture;
+	
 	//texture = makeTexture("img/ash_uvgrid01-grey.tiny.png");	//numbered grid
 }
 
@@ -2144,8 +2242,8 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	duocylinderModel0:"voxTerrain",
-	duocylinderModel1:"terrain",
+	duocylinderModel0:"procTerrain",
+	duocylinderModel1:"voxTerrain",
 	duocylinderRotateSpeed:0,
 	drawShapes:{
 		boxes:{
@@ -2165,9 +2263,10 @@ var guiParams={
 		roads:false
 	},
 	'random boxes':{
-		number:0,
+		number:maxRandBoxes,	//note ui controlled value does not affect singleBuffer
 		size:0.01,
-		collision:false
+		collision:false,
+		singleBuffer:true
 	},
 	"draw 5-cell":false,
 	"subdiv frames":true,
@@ -2190,12 +2289,11 @@ var guiParams={
 	"atmosShader":true,
 	"altAtmosShader":false,
 	"atmosThickness":0.2,
-	"atmosContrast":5.0,
+	"atmosContrast":2.0,
 	//fogColor0:'#b2dede',
 	//fogColor0:'#b451c5',
-	fogColor0:'#b311e5',
-	//fogColor1:'#ff8888',
-	fogColor1:'#ac1d1c',
+	fogColor0:'#ffffff',
+	fogColor1:'#000000',
 	playerLight:'#ffffff',
 	onRails:false,
 	spinCorrection:true,
@@ -2268,9 +2366,10 @@ function init(){
 		boxesFolder.add(guiParams.drawShapes.boxes, shape );
 	}
 	var randBoxesFolder = drawShapesFolder.addFolder("random boxes");
-	randBoxesFolder.add(guiParams["random boxes"],"number",0,8192,128);
+	randBoxesFolder.add(guiParams["random boxes"],"number",0,maxRandBoxes,20);
 	randBoxesFolder.add(guiParams["random boxes"],"size",0.001,0.01,0.001);
 	randBoxesFolder.add(guiParams["random boxes"],"collision");
+	randBoxesFolder.add(guiParams["random boxes"],"singleBuffer");
 	drawShapesFolder.add(guiParams.drawShapes,"teapot");
 	drawShapesFolder.add(guiParams.drawShapes,"teapot scale",0.2,2.0,0.05);
 	drawShapesFolder.add(guiParams.drawShapes,"towers");
