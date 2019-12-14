@@ -327,8 +327,6 @@ function initBuffers(){
 	//could make smooth cubes with 8 verts -> 8192, or octohedra with 6 verts -> 10922
 	var thisMat;
 	var randBoxData = {};	//todo check best format to use - guess want to use something that works fast/efficiently with 4matrices
-	var randBoxVertData = [];
-	var randBoxNormalData = [];
 	var randBoxIndexData = [];
 	var offset=0;
 	
@@ -338,20 +336,18 @@ function initBuffers(){
 	
 	var sourceVerts = levelCubeData.vertices;
 	var transformedVerts = [];
+	var sourceNorms = levelCubeData.normals;
+	var transformedNorms = [];
 	var sourceUvs = levelCubeData.uvcoords;
 	var copiedUvs = [];
-	var theseVerts;
 	var myvec4 = vec4.create();
-	var dummyNorms;
 	
 	var tmpScaleFact = 0.001;	//might be unnecessary - maybe can just adjust w component of 4vector instead. if is necessary, should precvalc rather than scaling for all vertices
 		
 	for (var ii=0;ii<maxRandBoxes;ii++,offset+=numVerts){
 		thisMat = convert_quats_to_4matrix(random_quat_pair(), mat4.create());
 		randomMats.push(thisMat);
-		
-		dummyNorms = [];						//TODO correct data (copy, transform by matrix) TODO check whether should be 4vec
-				
+						
 		for (var vv=0;vv<inputVertLength;vv+=3){
 			//make a copy of vertex, rotate by matrix
 			myvec4[0] = sourceVerts[vv]*tmpScaleFact;
@@ -360,19 +356,23 @@ function initBuffers(){
 			myvec4[3] = 0.99;	//?? determines scale of resulting object?? seems if too big, shader messes up. perhaps assuming normalised input
 			mat4.multiplyVec4(thisMat, myvec4);
 			transformedVerts.push([myvec4[0],myvec4[1],myvec4[2],myvec4[3]]);	//TODO is there a standard method to treat a vec4 like an array?
+			
+			//make a copy of normal, rotate by matrix
+			myvec4[0] = sourceNorms[vv];
+			myvec4[1] = sourceNorms[vv+1];
+			myvec4[2] = sourceNorms[vv+2];
+			myvec4[3] = 0;	//??
+			mat4.multiplyVec4(thisMat, myvec4);
+			transformedNorms.push([myvec4[0],myvec4[1],myvec4[2],myvec4[3]]);	//TODO is there a standard method to treat a vec4 like an array?
+			
 		}
 		copiedUvs.push(sourceUvs);
-			
-		for (var nn=0;nn<normLength;nn++){
-			dummyNorms.push(0);
-		}
-		randBoxNormalData.push(dummyNorms);
 		
 		randBoxIndexData.push(levelCubeData.indices.map(function(elem){return elem+offset;}));
 	}
 	var randBoxData = {
 		vertices:[].concat.apply([],transformedVerts),
-		normals:[].concat.apply([],randBoxNormalData),
+		normals:[].concat.apply([],transformedNorms),
 		uvcoords:[].concat.apply([],copiedUvs),
 		//indices:[].concat.apply([],randBoxIndexData)
 		faces:[].concat.apply([],randBoxIndexData)	//todo use "indices" consistent with 3vec vertex format
@@ -1428,7 +1428,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
 			gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
 		}
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.randBoxes);
 		
 		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 		if (activeShaderProgram.uniforms.uReflectorDiffColor){
