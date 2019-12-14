@@ -2066,7 +2066,7 @@ var randomMats = [];	//some random poses. used for "dust motes". really only pos
 function setupScene() {
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 	
-	for (var ii=0;ii<1000;ii++){
+	for (var ii=0;ii<8192;ii++){
 		randomMats.push(convert_quats_to_4matrix(random_quat_pair(), mat4.create()));
 	}
 	
@@ -2166,7 +2166,8 @@ var guiParams={
 	},
 	'random boxes':{
 		number:0,
-		size:0.02
+		size:0.01,
+		collision:false
 	},
 	"draw 5-cell":false,
 	"subdiv frames":true,
@@ -2267,8 +2268,9 @@ function init(){
 		boxesFolder.add(guiParams.drawShapes.boxes, shape );
 	}
 	var randBoxesFolder = drawShapesFolder.addFolder("random boxes");
-	randBoxesFolder.add(guiParams["random boxes"],"number",0,1000,50);
-	randBoxesFolder.add(guiParams["random boxes"],"size",0.01,0.05,0.01);
+	randBoxesFolder.add(guiParams["random boxes"],"number",0,8192,128);
+	randBoxesFolder.add(guiParams["random boxes"],"size",0.001,0.01,0.001);
+	randBoxesFolder.add(guiParams["random boxes"],"collision");
 	drawShapesFolder.add(guiParams.drawShapes,"teapot");
 	drawShapesFolder.add(guiParams.drawShapes,"teapot scale",0.2,2.0,0.05);
 	drawShapesFolder.add(guiParams.drawShapes,"towers");
@@ -3031,7 +3033,7 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 			
 			
-			if (numRandomBoxes>0){
+			if (numRandomBoxes>0 && guiParams["random boxes"].collision){
 				for (var ii=0;ii<numRandomBoxes;ii++){
 					boxCollideCheck(randomMats[ii],boxSize,critValueRandBox);
 				}
