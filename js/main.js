@@ -181,6 +181,7 @@ var sphereBuffers={};
 var quadBuffers={};
 var cubeBuffers={};
 var randBoxBuffers={};
+var roadBoxBuffers={};
 var explodingCubeBuffers={};
 var cubeFrameBuffers={};
 var cubeFrameSubdivBuffers={};
@@ -223,6 +224,68 @@ playerCentreBallData = {pos:[0,0,0],suspHeight:0,cubeColPen:0};
 var maxRandBoxes = 2730;
 //var maxRandBoxes = 50;	//tmp smaller to make startup faster?
 var randomMats = [];	//some random poses. used for "dust motes". really only positions required, but flexible, can use for random boxes/whatever 		
+
+function generateDataForDataMatricesScale(inputData, matsArray, scaleFact){
+	var numInstances = matsArray.length;
+	
+	//make a big buffer with multiple copies of an object, pre-transformed by matrices.
+	//cubes have 36 vertices, so can do 65536/24 = 2730 cubes in 1 draw call.
+	//could make smooth cubes with 8 verts -> 8192, or octohedra with 6 verts -> 10922
+	var thisMat;
+	
+	var outputIndexData = [];
+	var offset=0;
+	
+	var inputVertLength = inputData.vertices.length;
+	var numVerts = inputVertLength/3;	
+	var normLength = numVerts*4;
+	
+	var sourceVerts = inputData.vertices;
+	var transformedVerts = [];
+	var sourceNorms = inputData.normals;
+	var transformedNorms = [];
+	var sourceUvs = inputData.uvcoords;
+	var copiedUvs = [];
+	var myvec4 = vec4.create();
+	
+	for (var ii=0;ii<numInstances;ii++,offset+=numVerts){
+		thisMat = matsArray[ii]; 
+						
+		for (var vv=0;vv<inputVertLength;vv+=3){
+			//make a copy of vertex, rotate by matrix
+			myvec4[0] = sourceVerts[vv];
+			myvec4[1] = sourceVerts[vv+1];
+			myvec4[2] = sourceVerts[vv+2];
+			myvec4[3] = 1/scaleFact;	//?? determines scale of resulting object?? seems if too big, shader messes up. perhaps assuming normalised input
+								//scaleFact might be unnecessary - maybe can just adjust w component of 4vector instead. if is necessary, should precvalc rather than scaling for all vertices
+			//vec4.normalize(myvec4);		//there isn't a function for this?!! but there is for vec3!! do manually...
+			var veclen = vec4.length(myvec4);
+			for (var cc=0;cc<4;cc++){myvec4[cc]/=veclen;}
+			//would prefer to not normalize vector - would expect to get projection consistent with 3vector shader. however, appears that current 4vec shader requires it
+											
+			mat4.multiplyVec4(thisMat, myvec4);
+			transformedVerts.push([myvec4[0],myvec4[1],myvec4[2],myvec4[3]]);	//TODO is there a standard method to treat a vec4 like an array?
+			
+			//make a copy of normal, rotate by matrix
+			myvec4[0] = sourceNorms[vv];
+			myvec4[1] = sourceNorms[vv+1];
+			myvec4[2] = sourceNorms[vv+2];
+			myvec4[3] = 0;	//??
+			mat4.multiplyVec4(thisMat, myvec4);
+			transformedNorms.push([myvec4[0],myvec4[1],myvec4[2],myvec4[3]]);	//TODO is there a standard method to treat a vec4 like an array?
+			
+		}
+		copiedUvs.push(sourceUvs);
+		
+		outputIndexData.push(levelCubeData.indices.map(function(elem){return elem+offset;}));
+	}
+	return {	//todo check best format to output (would require change to buffer creation from data step that follows)
+		vertices:[].concat.apply([],transformedVerts),
+		normals:[].concat.apply([],transformedNorms),
+		uvcoords:[].concat.apply([],copiedUvs),
+		faces:[].concat.apply([],outputIndexData)	//todo use "indices" consistent with 3vec vertex format
+	}
+}
 		
 function initBuffers(){
 	loadDuocylinderBufferData(duocylinderObjects.grid, tballGridDataPantheonStyle);
@@ -322,67 +385,23 @@ function initBuffers(){
 	loadBufferData(icoballBuffers, icoballObj);
 	loadBufferData(hyperboloidBuffers, hyperboloidData);
 
-	//make a big buffer with multiple copies of an object, pre-transformed by matrices.
-	//cubes have 36 vertices, so can do 65536/24 = 2730 cubes in 1 draw call.
-	//could make smooth cubes with 8 verts -> 8192, or octohedra with 6 verts -> 10922
-	var thisMat;
-	var randBoxData = {};	//todo check best format to use - guess want to use something that works fast/efficiently with 4matrices
-	var randBoxIndexData = [];
-	var offset=0;
-	
-	var inputVertLength = levelCubeData.vertices.length;
-	var numVerts = inputVertLength/3;	
-	var normLength = numVerts*4;
-	
-	var sourceVerts = levelCubeData.vertices;
-	var transformedVerts = [];
-	var sourceNorms = levelCubeData.normals;
-	var transformedNorms = [];
-	var sourceUvs = levelCubeData.uvcoords;
-	var copiedUvs = [];
-	var myvec4 = vec4.create();
-	
-	var tmpScaleFact = 0.001;	//might be unnecessary - maybe can just adjust w component of 4vector instead. if is necessary, should precvalc rather than scaling for all vertices
-		
-	for (var ii=0;ii<maxRandBoxes;ii++,offset+=numVerts){
+	for (var ii=0;ii<maxRandBoxes;ii++){
 		thisMat = convert_quats_to_4matrix(random_quat_pair(), mat4.create());
 		randomMats.push(thisMat);
-						
-		for (var vv=0;vv<inputVertLength;vv+=3){
-			//make a copy of vertex, rotate by matrix
-			myvec4[0] = sourceVerts[vv]*tmpScaleFact;
-			myvec4[1] = sourceVerts[vv+1]*tmpScaleFact;
-			myvec4[2] = sourceVerts[vv+2]*tmpScaleFact;
-			myvec4[3] = 0.99;	//?? determines scale of resulting object?? seems if too big, shader messes up. perhaps assuming normalised input
-			mat4.multiplyVec4(thisMat, myvec4);
-			transformedVerts.push([myvec4[0],myvec4[1],myvec4[2],myvec4[3]]);	//TODO is there a standard method to treat a vec4 like an array?
-			
-			//make a copy of normal, rotate by matrix
-			myvec4[0] = sourceNorms[vv];
-			myvec4[1] = sourceNorms[vv+1];
-			myvec4[2] = sourceNorms[vv+2];
-			myvec4[3] = 0;	//??
-			mat4.multiplyVec4(thisMat, myvec4);
-			transformedNorms.push([myvec4[0],myvec4[1],myvec4[2],myvec4[3]]);	//TODO is there a standard method to treat a vec4 like an array?
-			
-		}
-		copiedUvs.push(sourceUvs);
-		
-		randBoxIndexData.push(levelCubeData.indices.map(function(elem){return elem+offset;}));
 	}
-	var randBoxData = {
-		vertices:[].concat.apply([],transformedVerts),
-		normals:[].concat.apply([],transformedNorms),
-		uvcoords:[].concat.apply([],copiedUvs),
-		//indices:[].concat.apply([],randBoxIndexData)
-		faces:[].concat.apply([],randBoxIndexData)	//todo use "indices" consistent with 3vec vertex format
-	}
+	
+	var randBoxData = generateDataForDataMatricesScale(levelCubeData, randomMats, 0.001);
 	
 	//console.log("randBoxData:");
 	//console.log(randBoxData);
 	loadDuocylinderBufferData(randBoxBuffers, randBoxData);	//TODO rename func so not specific to duocylinder - generally is for 4vec vertex data.
 	randBoxBuffers.divs=1;	//because reusing duocylinder drawing function
 	randBoxBuffers.step=0;	//unused
+	
+	var roadBoxData = generateDataForDataMatricesScale(levelCubeData, duocylinderBoxInfo.roads.list.map(function(elem){return elem.matrix;}), 0.025);
+	loadDuocylinderBufferData(roadBoxBuffers, roadBoxData);	//TODO rename func so not specific to duocylinder - generally is for 4vec vertex data.
+	roadBoxBuffers.divs=1;	//because reusing duocylinder drawing function
+	roadBoxBuffers.step=0;	//unused
 	
 	function bufferArrayData(buffer, arr, size){
 		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
@@ -749,7 +768,7 @@ function setProjectionMatrix(pMatrix, vFov, ratio, polarity){
 	pMatrix[0] = ratio/fy ;
 	pMatrix[5] = 1.0/fy;
 	pMatrix[11]	= -1;	//rotate w into z.
-	pMatrix[14] = -0.00001;	//smaller = more z range. 1/50 gets ~same near clipping result as stereographic/perspective 0.01 near
+	pMatrix[14] = -0.00003;	//smaller = more z range. 1/50 gets ~same near clipping result as stereographic/perspective 0.01 near
 	pMatrix[10]	= 0;
 	pMatrix[15] = 0;
 }
@@ -1420,46 +1439,33 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//console.log("num drawn: " + numDrawn);
 	}
 
-	if (guiParams["random boxes"].singleBuffer){
-		//draw "dust motes". todo generate drawing so not copy-pasting code
-		activeShaderProgram = shaderProgramTexmap4VecAtmos;
-		gl.useProgram(activeShaderProgram);
-		//COPIED STUFF
-		if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
-			gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
-		}
+	//general stuff used for all 4vec vertex format objects (currently)
+	mat4.set(invertedWorldCamera, mvMatrix);
+	rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
+	mat4.identity(mMatrix);							//better to set M, V matrices and leave MV for shader?
+	rotate4mat(mMatrix, 0, 1, duocylinderSpin);
+	activeShaderProgram = shaderProgramTexmap4VecAtmos;
+	gl.useProgram(activeShaderProgram);
+	performCommon4vecShaderSetup(activeShaderProgram);
+	
+	if (guiParams["random boxes"].singleBuffer){	//draw "dust motes". todo generate drawing so not copy-pasting code
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.randBoxes);
-		
-		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
-		if (activeShaderProgram.uniforms.uReflectorDiffColor){
-				gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
-		}
-		if (activeShaderProgram.uniforms.uPlayerLightColor){
-			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
-		}
-		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
-		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
-		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
-
-		mat4.set(invertedWorldCamera, mvMatrix);
-		rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
-		
-		mat4.identity(mMatrix);							//better to set M, V matrices and leave MV for shader?
-		rotate4mat(mMatrix, 0, 1, duocylinderSpin);
-		//END COPIED STUFF!
-		//todo draw subset of buffer according to ui controlled number
-		drawTennisBall(randBoxBuffers, activeShaderProgram);
+		drawTennisBall(randBoxBuffers, activeShaderProgram);	//todo draw subset of buffer according to ui controlled number
 	}
-
+	if (guiParams.drawShapes.singleBufferRoads){	//draw "dust motes". todo generate drawing so not copy-pasting code
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.darkGray);
+		drawTennisBall(roadBoxBuffers, activeShaderProgram);	//todo draw subset of buffer according to ui controlled number
+	}
 	
 	if (duocylinderModel!='none'){	//x*x+y*y=z*z+w*w
+		var duocylinderObj = duocylinderObjects[duocylinderModel];
 		
 		//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
-		if (!duocylinderObjects[duocylinderModel].isSea){
-			if (duocylinderObjects[duocylinderModel].hasVertColors){
+		if (!duocylinderObj.isSea){
+			if (duocylinderObj.hasVertColors){
 				activeShaderProgram = shaderProgramTexmapColor4VecAtmos;	//not variants implemented
 			}else{
-				activeShaderProgram = duocylinderObjects[duocylinderModel].useMapproject? (guiParams["atmosShader"]?(guiParams["altAtmosShader"]?shaderProgramTexmap4VecMapprojectAtmosV2:shaderProgramTexmap4VecMapprojectAtmos):shaderProgramTexmap4VecMapproject) : (guiParams["atmosShader"]?(guiParams["altAtmosShader"]?shaderProgramTexmap4VecAtmosV2:shaderProgramTexmap4VecAtmos):shaderProgramTexmap4Vec);
+				activeShaderProgram = duocylinderObj.useMapproject? (guiParams["atmosShader"]?(guiParams["altAtmosShader"]?shaderProgramTexmap4VecMapprojectAtmosV2:shaderProgramTexmap4VecMapprojectAtmos):shaderProgramTexmap4VecMapproject) : (guiParams["atmosShader"]?(guiParams["altAtmosShader"]?shaderProgramTexmap4VecAtmosV2:shaderProgramTexmap4VecAtmos):shaderProgramTexmap4Vec);
 			}
 			gl.useProgram(activeShaderProgram);
 		}else{
@@ -1471,7 +1477,15 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
 		}
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+		performCommon4vecShaderSetup(activeShaderProgram);
 		
+		drawTennisBall(duocylinderObj, activeShaderProgram);
+	}
+	
+	function performCommon4vecShaderSetup(activeShaderProgram){	//todo move to top level? are inner functions inefficient?
+		if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
+			gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
+		}
 		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 		if (activeShaderProgram.uniforms.uReflectorDiffColor){
 				gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
@@ -1482,16 +1496,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
 		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
-		
-		var duocylinderObj = duocylinderObjects[duocylinderModel];
-	
-		mat4.set(invertedWorldCamera, mvMatrix);
-		rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
-		
-		mat4.identity(mMatrix);							//better to set M, V matrices and leave MV for shader?
-		rotate4mat(mMatrix, 0, 1, duocylinderSpin);
-		
-		drawTennisBall(duocylinderObj, activeShaderProgram);
 	}
 	
 	//draw objects without textures
@@ -2205,8 +2209,8 @@ function initTexture(){
 	duocylinderObjects.voxTerrain.hasVertColors=true;
 	duocylinderObjects.voxTerrain.usesTriplanarMapping=true;	//note that hasVertColors, usesTriplanarMapping currently equivalent (has both or neither)
 	
-	
 	randBoxBuffers.tex=texture;
+	roadBoxBuffers.tex=texture;
 	
 	//texture = makeTexture("img/ash_uvgrid01-grey.tiny.png");	//numbered grid
 }
@@ -2260,7 +2264,8 @@ var guiParams={
 		explodingBox:false,
 		hyperboloid:false,
 		stonehenge:false,
-		roads:false
+		roads:false,
+		singleBufferRoads:false
 	},
 	'random boxes':{
 		number:maxRandBoxes,	//note ui controlled value does not affect singleBuffer
@@ -2307,7 +2312,7 @@ var guiParams={
 		mappingType:'vertex projection',
 		scale:0.3,
 		isPortal:true,
-		moveAway:0.0001
+		moveAway:0.0005
 	},
 	normalMove:0
 };
@@ -2377,6 +2382,7 @@ function init(){
 	drawShapesFolder.add(guiParams.drawShapes,"hyperboloid");
 	drawShapesFolder.add(guiParams.drawShapes,"stonehenge");
 	drawShapesFolder.add(guiParams.drawShapes,"roads");
+	drawShapesFolder.add(guiParams.drawShapes,"singleBufferRoads");
 	
 	var polytopesFolder = gui.addFolder('polytopes');
 	polytopesFolder.add(guiParams,"draw 5-cell");
