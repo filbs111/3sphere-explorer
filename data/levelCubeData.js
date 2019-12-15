@@ -121,3 +121,43 @@ var levelCubeData={
       20, 21, 22,   20, 22, 23  // Left face
     ]
 }
+
+var smoothCubeData = (function(){
+	var normConst = 1/Math.sqrt(3);
+	var vertices=[
+		-1,-1,-1,	//						0
+		-1,-1,1,	//		1
+		-1,1,-1,	//						2
+		-1,1,1,		//		3
+		1,-1,-1,	//									4
+		1,-1,1,		//					5
+		1,1,-1,		//									6
+		1,1,1		//					7
+	];
+	var normals=vertices.map(function(elem){return elem*normConst;});
+	
+	return {
+		vertices:vertices,
+		normals:normals,
+		uvcoords:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],	//TODO no uvcoords - require no texture variant of shader
+		indices:[
+			0,1,2,
+			2,1,3,
+			2,3,6,
+			6,3,7,
+			6,7,4,
+			4,7,5,
+			4,5,0,
+			0,5,1,
+			7,3,5,
+			5,3,1,
+			2,6,0,
+			0,6,4
+		],
+		stripIndices:[		//untested
+			6,6,4,2,0,
+			0,1,2,3,6,7,4,5,0,1,
+			1,3,5,7,7
+		]
+	}	
+})();

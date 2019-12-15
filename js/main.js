@@ -180,6 +180,7 @@ var duocylinderObjects={
 var sphereBuffers={};
 var quadBuffers={};
 var cubeBuffers={};
+var smoothCubeBuffers={};
 var randBoxBuffers={};
 var roadBoxBuffers={};
 var stonehengeBoxBuffers={};
@@ -223,7 +224,7 @@ var landingLegData=[
 
 playerCentreBallData = {pos:[0,0,0],suspHeight:0,cubeColPen:0};
 
-var maxRandBoxes = 2730;
+var maxRandBoxes = 8192;
 //var maxRandBoxes = 50;	//tmp smaller to make startup faster?
 var randomMats = [];	//some random poses. used for "dust motes". really only positions required, but flexible, can use for random boxes/whatever 		
 
@@ -279,7 +280,7 @@ function generateDataForDataMatricesScale(inputData, matsArray, scaleFact){
 		}
 		copiedUvs.push(sourceUvs);
 		
-		outputIndexData.push(levelCubeData.indices.map(function(elem){return elem+offset;}));
+		outputIndexData.push(inputData.indices.map(function(elem){return elem+offset;}));
 	}
 	return {	//todo check best format to output (would require change to buffer creation from data step that follows)
 		vertices:[].concat.apply([],transformedVerts),
@@ -372,6 +373,7 @@ function initBuffers(){
 	//loadBufferData(sphereBuffers, makeSphereData(49,100,1));
 	loadBufferData(quadBuffers, quadData);
 	loadBufferData(cubeBuffers, levelCubeData);
+	loadBufferData(smoothCubeBuffers, smoothCubeData);
 	loadBufferData(explodingCubeBuffers, explodingCubeData);
 	loadBufferData(cubeFrameBuffers, cubeFrameBlenderObject);
 	loadBufferData(cubeFrameSubdivBuffers, cubeFrameSubdivObject);
@@ -392,7 +394,7 @@ function initBuffers(){
 		randomMats.push(thisMat);
 	}
 	
-	var randBoxData = generateDataForDataMatricesScale(levelCubeData, randomMats, 0.001);
+	var randBoxData = generateDataForDataMatricesScale(smoothCubeData, randomMats, 0.001);	//TODO ensure none inside portal radius. (4vec vertex shader doesn't discard pixels)
 	
 	//console.log("randBoxData:");
 	//console.log(randBoxData);
