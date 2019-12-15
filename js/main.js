@@ -3173,11 +3173,14 @@ var iterateMechanics = (function iterateMechanics(){
 			//var bulletPosAdjusted = [ bulletMatrixTransposedDCRefFrame[3],bulletMatrixTransposedDCRefFrame[7], bulletMatrixTransposedDCRefFrame[11], bulletMatrixTransposedDCRefFrame[15]];
 			var gridSqs = getGridSqFor4Pos(bulletPos);
 			
-			if (guiParams.drawShapes.towers){	
+			if (guiParams.drawShapes.towers || guiParams.drawShapes.singleBufferTowers){	
 				boxCollideBulletForBoxArray(duocylinderBoxInfo.towerblocks.gridContents);
 			}
-			if (guiParams.drawShapes.stonehenge){
+			if (guiParams.drawShapes.stonehenge || guiParams.drawShapes.singleBufferStonehenge){
 				boxCollideBulletForBoxArray(duocylinderBoxInfo.stonehenge.gridContents);
+			}
+			if (guiParams.drawShapes.roads || guiParams.drawShapes.singleBufferRoads){
+				boxCollideBulletForBoxArray(duocylinderBoxInfo.roads.gridContents);
 			}
 			function boxCollideBulletForBoxArray(boxArr){
 				for (var gs of gridSqs){
