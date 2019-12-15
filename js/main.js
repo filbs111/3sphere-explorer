@@ -182,6 +182,8 @@ var quadBuffers={};
 var cubeBuffers={};
 var randBoxBuffers={};
 var roadBoxBuffers={};
+var stonehengeBoxBuffers={};
+var towerBoxBuffers={};
 var explodingCubeBuffers={};
 var cubeFrameBuffers={};
 var cubeFrameSubdivBuffers={};
@@ -397,6 +399,16 @@ function initBuffers(){
 	loadDuocylinderBufferData(randBoxBuffers, randBoxData);	//TODO rename func so not specific to duocylinder - generally is for 4vec vertex data.
 	randBoxBuffers.divs=1;	//because reusing duocylinder drawing function
 	randBoxBuffers.step=0;	//unused
+	
+	var towerBoxData = generateDataForDataMatricesScale(levelCubeData, duocylinderBoxInfo.towerblocks.list.map(function(elem){return elem.matrix;}), 0.025);
+	loadDuocylinderBufferData(towerBoxBuffers, towerBoxData);	//TODO rename func so not specific to duocylinder - generally is for 4vec vertex data.
+	towerBoxBuffers.divs=1;	//because reusing duocylinder drawing function
+	towerBoxBuffers.step=0;	//unused
+	
+	var stonehengeBoxData = generateDataForDataMatricesScale(levelCubeData, duocylinderBoxInfo.stonehenge.list.map(function(elem){return elem.matrix;}), 0.025);
+	loadDuocylinderBufferData(stonehengeBoxBuffers, stonehengeBoxData);	//TODO rename func so not specific to duocylinder - generally is for 4vec vertex data.
+	stonehengeBoxBuffers.divs=1;	//because reusing duocylinder drawing function
+	stonehengeBoxBuffers.step=0;	//unused
 	
 	var roadBoxData = generateDataForDataMatricesScale(levelCubeData, duocylinderBoxInfo.roads.list.map(function(elem){return elem.matrix;}), 0.025);
 	loadDuocylinderBufferData(roadBoxBuffers, roadBoxData);	//TODO rename func so not specific to duocylinder - generally is for 4vec vertex data.
@@ -1448,13 +1460,21 @@ function drawWorldScene(frameTime, isCubemapView) {
 	gl.useProgram(activeShaderProgram);
 	performCommon4vecShaderSetup(activeShaderProgram);
 	
-	if (guiParams["random boxes"].singleBuffer){	//draw "dust motes". todo generate drawing so not copy-pasting code
+	if (guiParams["random boxes"].singleBuffer){
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.randBoxes);
 		drawTennisBall(randBoxBuffers, activeShaderProgram);	//todo draw subset of buffer according to ui controlled number
 	}
-	if (guiParams.drawShapes.singleBufferRoads){	//draw "dust motes". todo generate drawing so not copy-pasting code
+	if (guiParams.drawShapes.singleBufferTowers){		//note does not yet support coloured vertices
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.darkGray);
-		drawTennisBall(roadBoxBuffers, activeShaderProgram);	//todo draw subset of buffer according to ui controlled number
+		drawTennisBall(towerBoxBuffers, activeShaderProgram);
+	}
+	if (guiParams.drawShapes.singleBufferStonehenge){
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.gray);
+		drawTennisBall(stonehengeBoxBuffers, activeShaderProgram);
+	}
+	if (guiParams.drawShapes.singleBufferRoads){
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.darkGray);
+		drawTennisBall(roadBoxBuffers, activeShaderProgram);
 	}
 	
 	if (duocylinderModel!='none'){	//x*x+y*y=z*z+w*w
@@ -2210,6 +2230,8 @@ function initTexture(){
 	duocylinderObjects.voxTerrain.usesTriplanarMapping=true;	//note that hasVertColors, usesTriplanarMapping currently equivalent (has both or neither)
 	
 	randBoxBuffers.tex=texture;
+	towerBoxBuffers.tex=texture;
+	stonehengeBoxBuffers.tex=texture;
 	roadBoxBuffers.tex=texture;
 	
 	//texture = makeTexture("img/ash_uvgrid01-grey.tiny.png");	//numbered grid
@@ -2261,9 +2283,11 @@ var guiParams={
 		teapot:false,
 		"teapot scale":0.7,
 		towers:false,
+		singleBufferTowers:false,
 		explodingBox:false,
 		hyperboloid:false,
 		stonehenge:false,
+		singleBufferStonehenge:false,
 		roads:false,
 		singleBufferRoads:false
 	},
@@ -2378,9 +2402,11 @@ function init(){
 	drawShapesFolder.add(guiParams.drawShapes,"teapot");
 	drawShapesFolder.add(guiParams.drawShapes,"teapot scale",0.2,2.0,0.05);
 	drawShapesFolder.add(guiParams.drawShapes,"towers");
+	drawShapesFolder.add(guiParams.drawShapes,"singleBufferTowers");
 	drawShapesFolder.add(guiParams.drawShapes,"explodingBox");
 	drawShapesFolder.add(guiParams.drawShapes,"hyperboloid");
 	drawShapesFolder.add(guiParams.drawShapes,"stonehenge");
+	drawShapesFolder.add(guiParams.drawShapes,"singleBufferStonehenge");
 	drawShapesFolder.add(guiParams.drawShapes,"roads");
 	drawShapesFolder.add(guiParams.drawShapes,"singleBufferRoads");
 	
@@ -2869,13 +2895,13 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			currentPen = Math.max(currentPen,0);	//TODO better place for this? box penetration should not be -ve
 
-			if (guiParams.drawShapes.stonehenge){
+			if (guiParams.drawShapes.stonehenge || guiParams.drawShapes.singleBufferStonehenge){
 				processBoxCollisionsForBoxInfoAllPoints(duocylinderBoxInfo.stonehenge);
 			}
-			if (guiParams.drawShapes.towers){
+			if (guiParams.drawShapes.towers || guiParams.drawShapes.singleBufferTowers){
 				processBoxCollisionsForBoxInfoAllPoints(duocylinderBoxInfo.towerblocks);
 			}
-			if (guiParams.drawShapes.roads){
+			if (guiParams.drawShapes.roads || guiParams.drawShapes.singleBufferRoads){
 				processBoxCollisionsForBoxInfoAllPoints(duocylinderBoxInfo.roads);
 			}
 			
