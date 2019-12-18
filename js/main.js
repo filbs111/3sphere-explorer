@@ -581,6 +581,7 @@ var offsetCam = (function(){
 	}
 })();
 
+var lastSeaTime=0;
 function drawScene(frameTime){
 	resizecanvas();
 
@@ -1053,8 +1054,6 @@ function updateGunTargeting(matrix){
 	
 }
 
-
-
 var lgMat;
 
 function drawWorldScene(frameTime, isCubemapView) {
@@ -1257,16 +1256,22 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	var duocylinderModel = (colorsSwitch==0) ? guiParams.duocylinderModel0 : guiParams.duocylinderModel1;	//todo use array
 	
+	var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//copied from elsewhere
+	
 	if (duocylinderModel == 'procTerrain'){
-		var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//copied from elsewhere
 		terrainCollisionTestBoxPos = terrainGetHeightFor4VecPos(playerPos);		//TODO in position update (not rendering)
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.001,0.001,0.001]);
 		drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
 	}
+	var seaTime = 0.00005*(frameTime % 20000 ); //20s loop
+	lastSeaTime=seaTime;	//for use in mechanics. TODO switch to using mechanics time for rendering instead
 	if (duocylinderModel == 'sea'){
-		var seaHeight = getSeaHeight([0,0], [0.00005*(frameTime % 20000 )]);	//actually this is a position not a height . todo time conversion in one place 
-		var tau = 6.28;
+		//var seaHeight = getSeaHeight([0,0], [0.00005*(frameTime % 20000 )]);	//actually this is a position not a height . todo time conversion in one place 
+		var seaHeight = getSeaHeight([0,0], seaTime);	//actually this is a position not a height . todo time conversion in one place 
+		var tau = Math.PI*2;
 		var shiftX = -Math.PI/2;
+		
+		shiftX+=duocylinderSpin;
 		
 		//buoy to track surface
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.4,0.01,0.01]);
@@ -1279,6 +1284,11 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawPreppedBufferOnDuocylinder(shiftX,0,0, [0.0, 0.4, 1.0, 1.0], cubeBuffers);
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.01,0.1,0.1]);
 		drawPreppedBufferOnDuocylinder(shiftX,0,0, [0.0, 0.4, 1.0, 1.0], cubeBuffers);
+		
+		//red box on sea under player
+		var testBuoyPos = seaHeightFor4VecPos(playerPos, seaTime);
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.001,0.01,0.01]);
+		drawPreppedBufferOnDuocylinder(testBuoyPos.b,testBuoyPos.a,testBuoyPos.h, [1, 0, 0, 1], cubeBuffers);
 	}
 	
 	//draw collision test object
@@ -1510,7 +1520,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}else{
 			activeShaderProgram = guiParams["atmosShader"]? (guiParams["altAtmosShader"]?shaderProgramDuocylinderSeaAtmosV2:shaderProgramDuocylinderSeaAtmos):shaderProgramDuocylinderSea;
 			gl.useProgram(activeShaderProgram);
-			gl.uniform1fv(activeShaderProgram.uniforms.uTime, [0.00005*(frameTime % 20000 )]);	//20s loop
+			gl.uniform1fv(activeShaderProgram.uniforms.uTime, [seaTime]);
+			//gl.uniform1fv(activeShaderProgram.uniforms.uTime, [0]);
 		}
 		if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
 			gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
@@ -1926,6 +1937,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		//var radius = singleExplosion.life*0.0002;
 		var radius = (100-singleExplosion.life)*singleExplosion.size;
+		//var radius = 0.01;
 		var opac = 0.01*singleExplosion.life;
 		if (frustrumCull(mvMatrix,radius)){	
 				//TODO check is draw order independent transparency
@@ -2237,8 +2249,8 @@ function initTexture(){
 	duocylinderObjects.procTerrain.useMapproject = true;
 	
 	//duocylinderObjects.sea.tex = null;
-	//duocylinderObjects.sea.tex = makeTexture("img/4141.jpg");
-	duocylinderObjects.sea.tex = makeTexture("img/ash_uvgrid01.jpg");
+	duocylinderObjects.sea.tex = makeTexture("img/4141.jpg");
+	//duocylinderObjects.sea.tex = makeTexture("img/ash_uvgrid01.jpg");
 	duocylinderObjects.sea.isSea=true;
 	
 	sshipTexture = makeTexture("data/dirLight/SshipTexCombouv5FR40pc.png");
@@ -2342,7 +2354,7 @@ var guiParams={
 	"atmosContrast":2.0,
 	//fogColor0:'#b2dede',
 	//fogColor0:'#b451c5',
-	fogColor0:'#ffffff',
+	fogColor0:'#aaaaaa',
 	fogColor1:'#000000',
 	playerLight:'#ffffff',
 	onRails:false,
@@ -3163,6 +3175,10 @@ var iterateMechanics = (function iterateMechanics(){
 			if (terrainModel == "voxTerrain"){	//TODO generalise collision by specifying a function for terrain. (voxTerrain, procTerrain)
 				if (voxCollisionFunction(bulletPos)>0){detonateBullet(bullet, bulletMatrix, true);}
 			}
+			if (terrainModel == "sea"){
+				if (getHeightAboveSeaFor4VecPos(bulletPos, lastSeaTime)<0){detonateBullet(bullet, bulletMatrix, true);}
+				//if (getHeightAboveSeaFor4VecPos(bulletPos, 0)<0){detonateBullet(bullet, bulletMatrix, true);}
+			}
 			
 			//slow collision detection between bullet and array of boxes.
 			//todo 1 try simple optimisation by matrix/scalar multiplication instead of matrix-matrix
@@ -3436,7 +3452,7 @@ var iterateMechanics = (function iterateMechanics(){
 				mat4.transpose(tmpMat);	//inefficient! TODO precalc matrix to do this transpose-rotate-transpose!
 				rotate4mat(tmpMat, 0, 1, duocylinderSpin);	//get bullet matrix in frame of duocylinder. might be duplicating work from elsewhere.
 				mat4.transpose(tmpMat);	//inefficient
-				new Explosion(tmpMat, 0.0003, [0,0.5,1],true);	//different colour for debugging
+				new Explosion(tmpMat, 0.0003, [0.2,0.4,0.6],true);	//different colour for debugging
 			}
 			
 			//singleExplosion.life = 100;

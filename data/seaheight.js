@@ -30,15 +30,67 @@ var getSeaHeight = (function(){
 	//	addWaveContribution(0.15, [4.0,0.0]);
 	//	addWaveContribution(0.15, [0.0,2.0]);
 	//	addWaveContribution(0.15, [3.0,0.0]);
-	//	addWaveContribution(0.15, [7.0,0.0]);
-	//	addWaveContribution(0.15, [0.0,6.0]);
+	//	addWaveContribution(0.3, [0.0,5.0]);
+	//	addWaveContribution(0.15, [9.0,0.0]);
 	//	addWaveContribution(0.15, [1.0,1.0]);
-		
+	
 		addWaveContribution(0.15, [1.0,9.0]);
 		addWaveContribution(0.15, [-13.0,2.0]);
 		addWaveContribution(0.15, [3.0,-7.0]);
 		addWaveContribution(0.15, [-4.0,5.0]);
-		console.log(wavePosAccum);
+		
+	//	console.log(wavePosAccum);
+	
+		//wavePosAccum[2]*=3;	//make waves more severe for testing
+	
 		return wavePosAccum;
 	}
 })();
+
+var testSeaData;
+
+function seaHeightFor4VecPos(vec, tt){		//equivalent to procTerrain.js:terrainGetHeightFor4VecPos . not really height- returns object containing map coords abd height
+	var tau = 2*Math.PI;
+	var multiplier = 1/tau;
+	var a = Math.atan2(vec[2],vec[3]);
+	var b = Math.atan2(vec[0],vec[1]);
+	
+	//TODO interpolation across polygon. initially just reuse equation used to generate terrain grid data.
+	var aa=multiplier*decentMod(a,2*Math.PI);
+	var bb=multiplier*decentMod(b + duocylinderSpin,2*Math.PI);
+	
+	if (vec[0]!=vec[0] || vec[1]!=vec[1] || vec[2]!=vec[2]){	//things can go wrong here with fast collision with boxes
+		console.log("NaN vector input to seaHeightFor4VecPos");
+		console.log(vec);
+	}
+	if (aa!=aa || bb!=bb){
+		console.log("NaN ab in seaHeightFor4VecPos");
+		console.log(aa, bb);
+	}
+		
+	var seaHeight = getSeaHeight([bb,aa],tt);	//likely wrong - seaHeight map coords go from 0 to 1, so maybe should /tau
+	
+	testSeaData={aa:aa,bb:bb,tt:tt,seaHeight:seaHeight};	
+	
+	return {a:-a, b:Math.PI*1.5 -b , h:tau*seaHeight[2]};
+}
+
+
+function getHeightAboveSeaFor4VecPos(vec, tt){	//very similar function in procTerrain., and to above. TODO generalise?
+			//note this ignores horizontal shift of surface points.
+	var tau = 2*Math.PI;
+	var multiplier = 1/tau;
+	var a = Math.atan2(vec[2],vec[3]);
+	var b = Math.atan2(vec[0],vec[1]);
+	
+	var c = -0.5*Math.asin( (vec[0]*vec[0] + vec[1]*vec[1]) - (vec[2]*vec[2] + vec[3]*vec[3]));	//this height of 4vec that can be compared to landscape height
+	//var c = -(1/Math.sqrt(2))*Math.asin( (vec[0]*vec[0] + vec[1]*vec[1]) - (vec[2]*vec[2] + vec[3]*vec[3]));	//this height of 4vec that can be compared to landscape height
+	//var c = -0.5*( (vec[0]*vec[0] + vec[1]*vec[1]) - (vec[2]*vec[2] + vec[3]*vec[3]));	//this height of 4vec that can be compared to landscape height
+	
+	
+	var aa=multiplier*decentMod(a, 2*Math.PI);
+	var bb=multiplier*decentMod(b + duocylinderSpin,2*Math.PI);
+	var h =tau*getSeaHeight([bb,aa],tt)[2];
+	
+	return c-h;
+}
