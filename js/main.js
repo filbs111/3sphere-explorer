@@ -1263,6 +1263,23 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.001,0.001,0.001]);
 		drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
 	}
+	if (duocylinderModel == 'sea'){
+		var seaHeight = getSeaHeight([0,0], [0.00005*(frameTime % 20000 )]);	//actually this is a position not a height . todo time conversion in one place 
+		var tau = 6.28;
+		var shiftX = -Math.PI/2;
+		
+		//buoy to track surface
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.4,0.01,0.01]);
+		drawPreppedBufferOnDuocylinder(shiftX-seaHeight[0]*tau,-seaHeight[1]*tau,seaHeight[2]*tau, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.01,0.1,0.1]);
+		drawPreppedBufferOnDuocylinder(shiftX-seaHeight[0]*tau,-seaHeight[1]*tau,seaHeight[2]*tau, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
+		
+		//reference static buoy
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.4,0.01,0.01]);
+		drawPreppedBufferOnDuocylinder(shiftX,0,0, [0.0, 0.4, 1.0, 1.0], cubeBuffers);
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.01,0.1,0.1]);
+		drawPreppedBufferOnDuocylinder(shiftX,0,0, [0.0, 0.4, 1.0, 1.0], cubeBuffers);
+	}
 	
 	//draw collision test object
 	mat4.set(invertedWorldCamera, mvMatrix);
@@ -2030,6 +2047,7 @@ function drawTennisBall(duocylinderObj, shader){
 			for (var yg=0;yg<duocylinderObj.divs;yg+=1){	//TODO precalc cells array better than grids here.
 				setMatrixUniforms(shader);
 				gl.drawElements(duocylinderObj.isStrips? gl.TRIANGLE_STRIP : gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+				//gl.drawElements(duocylinderObj.isStrips? gl.LINES : gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 				rotate4mat(mvMatrix, 0, 1, duocylinderObj.step);
 				rotate4mat(mMatrix, 0, 1, duocylinderObj.step);
 			}
@@ -2219,7 +2237,8 @@ function initTexture(){
 	duocylinderObjects.procTerrain.useMapproject = true;
 	
 	//duocylinderObjects.sea.tex = null;
-	duocylinderObjects.sea.tex = makeTexture("img/4141.jpg");
+	//duocylinderObjects.sea.tex = makeTexture("img/4141.jpg");
+	duocylinderObjects.sea.tex = makeTexture("img/ash_uvgrid01.jpg");
 	duocylinderObjects.sea.isSea=true;
 	
 	sshipTexture = makeTexture("data/dirLight/SshipTexCombouv5FR40pc.png");
@@ -2270,7 +2289,7 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	duocylinderModel0:"procTerrain",
+	duocylinderModel0:"sea",
 	duocylinderModel1:"voxTerrain",
 	duocylinderRotateSpeed:0,
 	drawShapes:{
