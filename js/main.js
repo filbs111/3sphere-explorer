@@ -1,3 +1,7 @@
+var shaderProgramFullscreenTextured,
+	shaderProgramFullscreenBennyBoxLite,
+	shaderProgramFullscreenBennyBox;	//https://www.youtube.com/watch?v=Z9bYzpwVINA
+
 var shaderProgramColored,
 	shaderProgramColoredPerVertex,
 	shaderProgramColoredPerPixel,
@@ -30,7 +34,20 @@ var shaderProgramColored,
 	shaderProgramVertprojCubemapAtmos,
 	shaderProgramVertprojCubemapAtmosV2,
 	shaderProgramDecal;
-function initShaders(){				
+function initShaders(){	
+	shaderProgramFullscreenTextured = loadShader( "shader-fullscreen-vs", "shader-fullscreen-fs",{
+					attributes:["aVertexPosition"],
+					uniforms:["uSampler","uInvSize"]
+					});
+	shaderProgramFullscreenBennyBoxLite = loadShader( "shader-fullscreen-vs", "shader-fullscreen-fs-bennybox-lite",{
+					attributes:["aVertexPosition"],
+					uniforms:["uSampler","uInvSize"]
+					});
+	shaderProgramFullscreenBennyBox = loadShader( "shader-fullscreen-vs", "shader-fullscreen-fs-bennybox",{
+					attributes:["aVertexPosition"],
+					uniforms:["uSampler","uInvSize"]
+					});
+			
 	shaderProgramColoredPerVertex = loadShader( "shader-simple-vs", "shader-simple-fs",{
 					attributes:["aVertexPosition","aVertexNormal"],
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uColor","uEmitColor","uFogColor", "uModelScale"]
@@ -289,8 +306,27 @@ function generateDataForDataMatricesScale(inputData, matsArray, scaleFact){
 		faces:[].concat.apply([],outputIndexData)	//todo use "indices" consistent with 3vec vertex format
 	}
 }
+
+var fsData = {
+	vertices:[
+		-1,-1,0,
+		-1,1,0,
+		1,-1,0,
+		1,1,0
+	],
+	indices:[
+		//0,1,2,
+		0,2,1,
+		//1,3,2
+		1,2,3
+	]
+}
+
+var fsBuffers={};
 		
 function initBuffers(){
+	loadBufferData(fsBuffers, fsData);
+	
 	loadDuocylinderBufferData(duocylinderObjects.grid, tballGridDataPantheonStyle);
 	loadDuocylinderBufferData(duocylinderObjects.terrain, terrainData);
 	loadDuocylinderBufferData(duocylinderObjects.procTerrain, proceduralTerrainData);
@@ -436,10 +472,10 @@ function initBuffers(){
 			bufferObj.vertexVelocityBuffer= gl.createBuffer();
 			bufferArrayData(bufferObj.vertexVelocityBuffer, sourceData.velocities, 3);
 		}
-		
-		bufferObj.vertexNormalBuffer= gl.createBuffer();
-		bufferArrayData(bufferObj.vertexNormalBuffer, sourceData.normals, 3);
-
+		if (sourceData.normals){
+			bufferObj.vertexNormalBuffer= gl.createBuffer();
+			bufferArrayData(bufferObj.vertexNormalBuffer, sourceData.normals, 3);
+		}
 		bufferObj.vertexIndexBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
 		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(sourceData.indices), gl.STATIC_DRAW);
@@ -708,8 +744,35 @@ function drawScene(frameTime){
 		xyzrotate4mat(worldCamera, (guiParams.flipReverseCamera? [Math.PI,0,0]:[0,Math.PI,0] ));	//flip 180
 	}
 	
-	
-	drawWorldScene(frameTime, false, offsetCameraContainer.world);
+	if (guiParams.renderViaTexture == "no"){
+		drawWorldScene(frameTime, false, offsetCameraContainer.world);
+	}else{
+		//draw the scene to offscreen framebuffer
+		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
+		setRttSize(gl.viewportWidth, gl.viewportHeight);
+		
+		drawWorldScene(frameTime, false, offsetCameraContainer.world);
+		
+		//draw quad to screen using drawn texture
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);	//draw to screen.
+		gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);	//TODO check whether necessary to keep setting this
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);	//TODO check whether need this - should be redrawing everything so could just disable z check
+		
+		gl.activeTexture(gl.TEXTURE0);
+		bind2dTextureIfRequired(rttTexture);	
+		//gl.bindTexture(gl.TEXTURE_2D, rttTexture);	//set just drawn texture as active for drawing to screen
+		
+		//draw the simple quad object to the screen
+		var activeProg = (guiParams.renderViaTexture == "basic") ? shaderProgramFullscreenTextured:(guiParams.renderViaTexture == "bennyBox" ? shaderProgramFullscreenBennyBox:shaderProgramFullscreenBennyBoxLite);
+		gl.useProgram(activeProg);
+		enableDisableAttributes(activeProg);
+
+		//gl.activeTexture(gl.TEXTURE0);
+
+		gl.uniform1i(activeProg.uniforms.uSampler, 0);		
+		gl.uniform2fv(activeProg.uniforms.uInvSize, [1/gl.viewportWidth , 1/gl.viewportHeight]);		
+		drawObjectFromBuffers(fsBuffers, activeProg);
+	}
 	
 	if (!guiParams["drop spaceship"] && guiParams.showHud){	//only draw hud if haven't dropped spaceship
 		
@@ -2358,11 +2421,13 @@ var guiParams={
 	fogColor1:'#000000',
 	playerLight:'#ffffff',
 	onRails:false,
+	handbrake:false,
 	spinCorrection:true,
 	cameraType:"far 3rd person 2",
 	cameraFov:115,
 	flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
 	showHud:false,
+	renderViaTexture:'no',
 	reflector:{
 		draw:true,
 		cmFacesUpdated:6,
@@ -2463,6 +2528,7 @@ function init(){
 	
 	var controlFolder = gui.addFolder('control');	//control and movement
 	controlFolder.add(guiParams, "onRails");
+	controlFolder.add(guiParams, "handbrake");
 	controlFolder.add(guiParams, "spinCorrection");
 	controlFolder.add(guiParams, 'lockPointer');
 	
@@ -2471,6 +2537,7 @@ function init(){
 	displayFolder.add(guiParams, "cameraFov", 60,120,5);
 	displayFolder.add(guiParams, "flipReverseCamera");
 	displayFolder.add(guiParams, "showHud");
+	displayFolder.add(guiParams, "renderViaTexture", ['no','basic','bennyBoxLite','bennyBox']);
 	displayFolder.add(guiParams, "perPixelLighting");
 	displayFolder.add(guiParams, "atmosShader");
 	displayFolder.add(guiParams, "altAtmosShader");
@@ -2561,6 +2628,7 @@ function init(){
 	canvas.addEventListener("touchmove", handleTouchMove, false);
 	
 	initGL();
+	initTextureFramebuffer();
 	initShaders();
 	initTexture();
 	initCubemapFramebuffer();
@@ -2819,6 +2887,12 @@ var iterateMechanics = (function iterateMechanics(){
 			playerVelVec[0]+=currentThrustInput[0];	//todo either write vector addition func or use glmatrix vectors
 			playerVelVec[1]+=currentThrustInput[1];
 			playerVelVec[2]+=currentThrustInput[2];
+			
+			if (guiParams.handbrake){
+				for (var cc=0;cc<3;cc++){
+					playerVelVec[cc]*=0.9;	//TODO time dependence, but this is just to aid debugging (switch thru display options while view static)
+				}
+			}
 			
 			playerAngVelVec=scalarvectorprod(0.85,playerAngVelVec);
 			
@@ -3732,4 +3806,70 @@ function fireGun(){
 	
 //	var gunJerkAmount = 0.004;
 //	rotatePlayer([(Math.random()-0.5)*gunJerkAmount, (Math.random()-0.5)*gunJerkAmount,0]);
+}
+
+
+
+//rtt code from webgl-wideanglecamera project via webglPostprocess project
+
+//from http://learningwebgl.com/blog/?p=1786
+var rttFramebuffer;
+var rttTexture;
+var rttView={};
+
+function setRttSize(width, height){	
+	if (rttView.sizeX == width && rttView.sizeY == height){return;}	// avoid setting again if same numbers ( has speed impact)
+																	//todo check for memory leak
+	rttView.sizeX = width;
+	rttView.sizeY = height;
+		
+	rttFramebuffer.width = width;
+	rttFramebuffer.height = height;	
+	
+	gl.bindTexture(gl.TEXTURE_2D, rttTexture);
+	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, rttFramebuffer.width, rttFramebuffer.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+	var renderbuffer = gl.createRenderbuffer();
+	gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
+	gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, rttFramebuffer.width, rttFramebuffer.height);
+
+//	gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
+	
+	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, rttTexture, 0);
+	gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, renderbuffer);
+
+	gl.bindTexture(gl.TEXTURE_2D, null);
+	gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+//	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+}
+
+function initTextureFramebuffer() {
+	rttFramebuffer = gl.createFramebuffer();
+
+	rttTexture = gl.createTexture();
+	gl.bindTexture(gl.TEXTURE_2D, rttTexture);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+	//gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+
+	//gl.generateMipmap(gl.TEXTURE_2D);
+
+	gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
+	setRttSize(2048, 1024);	//overwritten right away, so little point having here.
+	
+	/*
+	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, rttFramebuffer.width, rttFramebuffer.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+
+	var renderbuffer = gl.createRenderbuffer();
+	gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
+	gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, rttFramebuffer.width, rttFramebuffer.height);
+
+	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, rttTexture, 0);
+	gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, renderbuffer);
+
+	gl.bindTexture(gl.TEXTURE_2D, null);
+	gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+	*/
 }

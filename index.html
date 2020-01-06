@@ -78,6 +78,145 @@
 <script type="text/javascript" src="data/voxterrain.js"></script>
 
 
+<!-- vertex shader -->
+<script id="shader-fullscreen-vs" type="x-shader/x-vertex">
+	attribute vec3 aVertexPosition;
+	varying vec2 vTextureCoord;
+	
+	void main(void) {
+		gl_Position = vec4(aVertexPosition, 1.0);		
+		vTextureCoord = aVertexPosition.xy*0.5 + 0.5;
+	}
+</script>
+
+<!-- simple texture mapped pix shader -->
+<script id="shader-fullscreen-fs" type="x-shader/x-fragment">
+	precision mediump float;
+	
+	varying vec2 vTextureCoord;
+	uniform sampler2D uSampler;
+	uniform vec2 uInvSize;
+	
+	void main(void) {
+		//gl_FragColor = texture2D(uSampler, vTextureCoord);
+		//gl_FragColor = vec4(vec3(texture2D(uSampler, vTextureCoord).y),1.0);	//grayscale by just take green channel
+		
+		vec4 luma = vec4(0.299,0.587,0.144,0.0);
+		
+		vec4 MIDv4 = texture2D(uSampler, vTextureCoord);
+		float MID = dot(luma,MIDv4);
+		float NW = dot(luma, texture2D(uSampler, vTextureCoord + uInvSize*vec2(-1.0,-1.0)));
+		float NE = dot(luma, texture2D(uSampler, vTextureCoord + uInvSize*vec2(1.0,-1.0)));
+		float SW = dot(luma, texture2D(uSampler, vTextureCoord + uInvSize*vec2(-1.0,1.0)));
+		float SE = dot(luma, texture2D(uSampler, vTextureCoord + uInvSize*vec2(1.0,1.0)));
+		
+		//calculate normal to gradient
+		vec3 dir = 1.5*normalize(vec3( ((SW+SE) - (NW+NE)), ((SW+NW) - (SE+NE)) , 0.25));	//last part a fudge factor so small xy remains after normalisation
+					//1.5 is a fudge factor to extend sample position
+					
+					//TODO should NW, NE etc samples be used in final result if in desired direction?)
+				
+		vec4 avg = 0.333*(texture2D(uSampler, vTextureCoord + uInvSize*dir.xy) + texture2D(uSampler, vTextureCoord - uInvSize*dir.xy) + MIDv4);
+		
+		gl_FragColor = avg;
+		//gl_FragColor = vec4(vec3(avg.y),1.0);	//grayscale by just take green channel
+	}
+</script>
+
+<script id="shader-fullscreen-fs-bennybox-lite" type="x-shader/x-fragment">
+	precision mediump float;
+	
+	varying vec2 vTextureCoord;
+	uniform sampler2D uSampler;
+	uniform vec2 uInvSize;
+	
+	void main(void) {	
+		float FXAA_SPAN_MAX = 8.0;
+		float FXAA_REDUCE_MIN = 1.0/128.0;
+		float FXAA_REDUCE_MUL = 1.0/8.0;
+	
+		vec4 luma = vec4(0.299,0.587,0.144,0.0);
+		
+		vec4 MIDv4 = texture2D(uSampler, vTextureCoord);
+		float MID = dot(luma,MIDv4);
+		float NW = dot(luma, texture2D(uSampler, vTextureCoord + uInvSize*vec2(-1.0,-1.0)));
+		float NE = dot(luma, texture2D(uSampler, vTextureCoord + uInvSize*vec2(1.0,-1.0)));
+		float SW = dot(luma, texture2D(uSampler, vTextureCoord + uInvSize*vec2(-1.0,1.0)));
+		float SE = dot(luma, texture2D(uSampler, vTextureCoord + uInvSize*vec2(1.0,1.0)));
+		
+		//calculate normal to gradient
+		vec2 dir;
+		dir.x = (SW+SE) - (NW+NE);
+		dir.y = (SW+NW) - (SE+NE);
+					
+		float dirReduce = max((NW+NE+SW+SE)*FXAA_REDUCE_MUL*0.25 , FXAA_REDUCE_MIN);
+		float inverseDirAdjustment = 1.0/(min(abs(dir.x),abs(dir.y)) + dirReduce);
+		
+		dir = max(vec2(-1.0,-1.0)*FXAA_SPAN_MAX , min( vec2(1.0,1.0)*FXAA_SPAN_MAX , dir*inverseDirAdjustment));
+		dir = dir*0.5;	//like result2 from video
+		//now dir is multiplied by thirds, so guess could simplify above code.
+		//missing test for extreme result2 values, sampling for result1. 
+		
+		vec4 avg = 0.333*(texture2D(uSampler, vTextureCoord + uInvSize*dir.xy) + texture2D(uSampler, vTextureCoord - uInvSize*dir.xy) + MIDv4);
+		
+		gl_FragColor = avg;
+		//gl_FragColor = vec4(vec3(avg.y),1.0);	//grayscale by just take green channel
+		//gl_FragColor = vec4(vec3(dot(luma,avg)),1.0);	//grayscale
+	}
+</script>
+
+
+<script id="shader-fullscreen-fs-bennybox" type="x-shader/x-fragment">
+	precision mediump float;
+	
+	varying vec2 vTextureCoord;
+	uniform sampler2D uSampler;
+	uniform vec2 uInvSize;
+	
+	void main(void) {	
+		float FXAA_SPAN_MAX = 8.0;
+		float FXAA_REDUCE_MIN = 1.0/128.0;
+		float FXAA_REDUCE_MUL = 1.0/8.0;
+	
+		vec4 luma = vec4(0.299,0.587,0.144,0.0);
+		
+		vec4 MIDv4 = texture2D(uSampler, vTextureCoord);
+		float MID = dot(luma,MIDv4);
+		float NW = dot(luma, texture2D(uSampler, vTextureCoord + uInvSize*vec2(-1.0,-1.0)));
+		float NE = dot(luma, texture2D(uSampler, vTextureCoord + uInvSize*vec2(1.0,-1.0)));
+		float SW = dot(luma, texture2D(uSampler, vTextureCoord + uInvSize*vec2(-1.0,1.0)));
+		float SE = dot(luma, texture2D(uSampler, vTextureCoord + uInvSize*vec2(1.0,1.0)));
+		
+		//calculate normal to gradient
+		vec2 dir;
+		dir.x = (SW+SE) - (NW+NE);
+		dir.y = (SW+NW) - (SE+NE);
+					
+		float dirReduce = max((NW+NE+SW+SE)*FXAA_REDUCE_MUL*0.25 , FXAA_REDUCE_MIN);
+		float inverseDirAdjustment = 1.0/(min(abs(dir.x),abs(dir.y)) + dirReduce);
+		
+		dir = max(vec2(-1.0,-1.0)*FXAA_SPAN_MAX , min( vec2(1.0,1.0)*FXAA_SPAN_MAX , dir*inverseDirAdjustment));
+		
+		vec4 result1 = 0.5*(texture2D(uSampler, vTextureCoord + uInvSize*(0.16667*dir.xy)) + texture2D(uSampler, vTextureCoord - uInvSize*(0.16667*dir.xy)));
+		
+		vec4 result2 = result1*0.5 + 0.25*(texture2D(uSampler, vTextureCoord + uInvSize*(0.5*dir.xy)) + texture2D(uSampler, vTextureCoord - uInvSize*(0.5*dir.xy)));
+		
+		float lumaM = dot(luma, MIDv4);
+		float lumaMin = min(lumaM, min(min(NW,NE), min(SW,SE)));
+		float lumaMax = max(lumaM, max(max(NW,NE), max(SW,SE)));
+		float lumaResult2 = dot(luma, result2);
+		if (lumaResult2 < lumaMin || lumaResult2> lumaMax){
+			gl_FragColor = result1;
+		}else{
+			gl_FragColor = result2;
+		}		
+	}
+</script>
+
+
+
+
+
 <!-- tex mapped decal pix shader -->
 <script id="shader-decal-fs" type="x-shader/x-fragment">
 	precision mediump float;
