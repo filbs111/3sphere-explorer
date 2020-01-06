@@ -1217,6 +1217,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,teapotMatrix);
 		mat4.set(teapotMatrix, mMatrix);
+		
+		gl.activeTexture(gl.TEXTURE0);
+		bind2dTextureIfRequired(texture);
+		
 		drawObjectFromBuffers(explodingCubeBuffers, activeShaderProgram);	
 	}
 	
