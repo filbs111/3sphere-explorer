@@ -2427,7 +2427,7 @@ var guiParams={
 	cameraFov:115,
 	flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
 	showHud:false,
-	renderViaTexture:'no',
+	renderViaTexture:'bennyBox',
 	reflector:{
 		draw:true,
 		cmFacesUpdated:6,
