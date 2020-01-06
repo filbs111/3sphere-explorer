@@ -194,9 +194,13 @@ function makemovequatpair(move){
 
 function makerotatequatpair(rot){
 	//work out direction, length. move is a 3-vector
-	var lengthsq = rot[0]*rot[0] + rot[1]*rot[1] + rot[2]*rot[2];
-	if (lengthsq==0){return [[1,0,0,0],[1,0,0,0]];}	//handle no movement
-	var length = Math.sqrt(lengthsq);
+	//var lengthsq = rot[0]*rot[0] + rot[1]*rot[1] + rot[2]*rot[2];
+	//if (lengthsq==0){return [[1,0,0,0],[1,0,0,0]];}	//handle no movement
+	//var length = Math.sqrt(lengthsq);
+	
+	var length = Math.hypot.apply(null, rot);
+	if (length==0){return [[1,0,0,0],[1,0,0,0]];}	//handle no movement
+	
 	var mult = Math.sin(length)/length;
 	var q = [Math.cos(length), -mult*rot[0], -mult*rot[1], -mult*rot[2]];
 	var qc = [Math.cos(length), mult*rot[0], mult*rot[1], mult*rot[2]];

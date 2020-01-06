@@ -2849,7 +2849,9 @@ var iterateMechanics = (function iterateMechanics(){
 			//square drag //want something like spd = spd - const*spd*spd = spd (1 - const*|spd|)
 
 			var airSpdVec = playerVelVec.map(function(val, idx){return val-spinVelPlayerCoords[idx];});
-			var spd = Math.sqrt(airSpdVec.map(function(val){return val*val;}).reduce(function(val, sum){return val+sum;}));
+			//var spd = Math.sqrt(airSpdVec.map(function(val){return val*val;}).reduce(function(val, sum){return val+sum;}));
+			var spd = Math.hypot.apply(null, airSpdVec);
+					
 			//playerVelVec=scalarvectorprod(1.0-0.001*spd,playerVelVec);
 
 			//if (Math.random()<0.05){console.log("speed : " + spd);}	//show the speed. todo proper ui
@@ -3103,7 +3105,7 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		//make new velvec to make slow movement adjustment better, total amount moved nonlinear with press duration
 		//just multiply the "thrust" by its squared length. (ie its magnitude is cubed)
-		var playerVelVecMagsq = playerVelVec.reduce(function(total, val){return total+ val*val;}, 0);
+		//var playerVelVecMagsq = playerVelVec.reduce(function(total, val){return total+ val*val;}, 0);
 		
 		rotatePlayer(scalarvectorprod(rotateAmount,playerAngVelVec));
 		
@@ -3518,8 +3520,10 @@ var iterateMechanics = (function iterateMechanics(){
 
 //TODO less of a bodge!
 function rotateVelVec(velVec,rotateVec){
-	var velVecMagsq = velVec.reduce(function(total, val){return total+ val*val;}, 0);
-	var len = 1-Math.sqrt(velVecMagsq);
+	//var velVecMagsq = velVec.reduce(function(total, val){return total+ val*val;}, 0);
+	//var len = 1-Math.sqrt(velVecMagsq);
+	var velVecMag = Math.hypot.apply(null, velVec);
+	var len = 1-velVecMag;
 	var velVecQuat=[len,velVec[0],velVec[1],velVec[2]];	//note this is only right for small angles, since quat is cos(t), axis*sin(t)
 	var rqpair = makerotatequatpair(scalarvectorprod(-0.5,rotateVec));
 	velVecQuat=rotatequat_byquatpair(velVecQuat,rqpair);
