@@ -767,6 +767,8 @@ function drawScene(frameTime){
 		gl.useProgram(activeProg);
 		enableDisableAttributes(activeProg);
 
+		gl.cullFace(gl.BACK);
+		
 		//gl.activeTexture(gl.TEXTURE0);
 
 		gl.uniform1i(activeProg.uniforms.uSampler, 0);		
