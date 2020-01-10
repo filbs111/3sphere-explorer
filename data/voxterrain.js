@@ -25,9 +25,10 @@ var voxTerrainData = (function generateVoxTerrainData(){
 
 	//var voxFunction = sinesfunctionthree;
 	//var voxFunction = perlinfunctionTwoSided;
-	var voxFunction = perlinfunctionTwoLevel;
+	//var voxFunction = perlinfunctionTwoLevel;
 	//var voxFunction = perlinfunctionSpiral;
 	//var voxFunction = balls;
+	var voxFunction = brejao;
 	makeVoxdataForFunc(voxFunction);
 	
 	voxCollisionFunction = function(vec){
@@ -745,6 +746,49 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		jj = jj%8 -4;
 		
 		return - 0.5*ii*ii - 0.5*jj*jj - kk*kk/Math.PI + 4;
+	}
+	
+	function wierdBeans(ii,jj,kk){
+		ii%=32;
+		jj%=32;
+		kk%=32;
+		
+		var rad = Math.hypot(ii-16,jj-16);
+		var secondRad = Math.hypot( rad - 5, kk-16);
+		
+		return 10-secondRad;
+	}
+	function brejao(ii,jj,kk){
+		ii+=32;
+		jj+=32;
+		
+		kk%=64;
+		
+		var ringSize = 12;
+		var ringShift = 6;
+		var ringTilt = 0.35;
+		
+		var x = ii%32 - 16;
+		var xplus = (ii+ringShift)%32 - 16;
+		var xminus = (ii-ringShift)%32 - 16;
+		var y = jj%32 - 16;
+		var yplus = (jj+ringShift)%32 - 16;
+		var yminus = (jj-ringShift)%32 - 16;
+		
+		var rad = Math.hypot(x,yplus);
+		var ringOneRad = Math.hypot( rad - ringSize, kk-32 - ringTilt*x);	//+/-x shears ring instead of rotating it. approx but simple
+		
+		rad = Math.hypot(x,yminus);
+		var ringTwoRad = Math.hypot( rad - ringSize, kk-32 + ringTilt*x);
+				
+		rad = Math.hypot(xplus,y);
+		var ringThreeRad = Math.hypot( rad - ringSize, kk-32 + ringTilt*y);
+		
+		rad = Math.hypot(xminus,y);
+		var ringFourRad = Math.hypot( rad - ringSize, kk-32 - ringTilt*y);
+		
+		return 1.8-Math.min(Math.min(ringOneRad,ringTwoRad), Math.min(ringThreeRad,ringFourRad));
+		
 	}
 	
 })();
