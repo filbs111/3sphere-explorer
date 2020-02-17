@@ -1996,23 +1996,24 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	for (var ee in explosions){
 		var singleExplosion = explosions[ee];
-	
-		if (singleExplosion.rotateWithDuocylinder){
-			mat4.set(invertedWorldCameraDuocylinderFrame, mvMatrix);
-		}else{
-			mat4.set(invertedWorldCamera, mvMatrix);
-		}
-		mat4.multiply(mvMatrix,singleExplosion.matrix);
-		
-		//var radius = singleExplosion.life*0.0002;
-		var radius = (100-singleExplosion.life)*singleExplosion.size;
-		//var radius = 0.01;
-		var opac = 0.01*singleExplosion.life;
-		if (frustrumCull(mvMatrix,radius)){	
-				//TODO check is draw order independent transparency
-			gl.uniform3fv(transpShadProg.uniforms.uEmitColor, singleExplosion.color.map(function(val){return val*opac;}));
-			gl.uniform3fv(transpShadProg.uniforms.uModelScale, [radius,radius,radius]);
-			drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
+		if (singleExplosion.world == colorsSwitch){
+			if (singleExplosion.rotateWithDuocylinder){
+				mat4.set(invertedWorldCameraDuocylinderFrame, mvMatrix);
+			}else{
+				mat4.set(invertedWorldCamera, mvMatrix);
+			}
+			mat4.multiply(mvMatrix,singleExplosion.matrix);
+			
+			//var radius = singleExplosion.life*0.0002;
+			var radius = (100-singleExplosion.life)*singleExplosion.size;
+			//var radius = 0.01;
+			var opac = 0.01*singleExplosion.life;
+			if (frustrumCull(mvMatrix,radius)){	
+					//TODO check is draw order independent transparency
+				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, singleExplosion.color.map(function(val){return val*opac;}));
+				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [radius,radius,radius]);
+				drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
+			}
 		}
 	}
 	
@@ -2045,8 +2046,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 var explosions ={};		//todo how to contain this? eg should constructor be eg explosions.construct()? what's good practice?
 var Explosion=function(){
 	var nextExplId = 0;
-	return function(matrix, size, color, rotateWithDuocylinder){
-		this.matrix = matrix;
+	return function(objcontainer, size, color, rotateWithDuocylinder){
+		this.matrix = objcontainer.matrix;
+		this.world= objcontainer.world;
 		this.size = size;
 		this.color = color;
 		this.life=100;
@@ -2327,6 +2329,7 @@ function initTexture(){
 	//duocylinderObjects.voxTerrain.tex = makeTexture("img/ash_uvgrid01.jpg");
 	//duocylinderObjects.voxTerrain.tex = makeTexture("img/cretish0958.png");
 	duocylinderObjects.voxTerrain.tex = makeTexture("img/13787.jpg");
+	//duocylinderObjects.voxTerrain.tex = makeTexture("img/2100-v1.jpg");
 	
 	duocylinderObjects.voxTerrain.hasVertColors=true;
 	duocylinderObjects.voxTerrain.usesTriplanarMapping=true;	//note that hasVertColors, usesTriplanarMapping currently equivalent (has both or neither)
@@ -3234,14 +3237,14 @@ var iterateMechanics = (function iterateMechanics(){
 			switch (guiParams.target.type){
 				case "sphere":
 					if (relativeMat[15]>critValue){
-						detonateBullet(bullet, bulletMatrix);
+						detonateBullet(bullet);
 					}
 					break;
 				case "box":
 					if (relativeMat[15]>0 && Math.max(Math.abs(relativeMat[12]),
 								Math.abs(relativeMat[13]),
 								Math.abs(relativeMat[14]))<guiParams.target.scale){
-						detonateBullet(bullet, bulletMatrix);
+						detonateBullet(bullet);
 					}
 					break;
 			}
@@ -3252,14 +3255,14 @@ var iterateMechanics = (function iterateMechanics(){
 			var bulletPos = [bulletMatrix[12],bulletMatrix[13],bulletMatrix[14],bulletMatrix[15]];	//todo use this elsewhere?
 			if (terrainModel == "procTerrain"){
 				//collision with duocylinder procedural terrain	
-				if (getHeightAboveTerrainFor4VecPos(bulletPos)<0){detonateBullet(bullet, bulletMatrix, true);}
+				if (getHeightAboveTerrainFor4VecPos(bulletPos)<0){detonateBullet(bullet, true);}
 			}
 			if (terrainModel == "voxTerrain"){	//TODO generalise collision by specifying a function for terrain. (voxTerrain, procTerrain)
-				if (voxCollisionFunction(bulletPos)>0){detonateBullet(bullet, bulletMatrix, true);}
+				if (voxCollisionFunction(bulletPos)>0){detonateBullet(bullet, true);}
 			}
 			if (terrainModel == "sea"){
-				if (getHeightAboveSeaFor4VecPos(bulletPos, lastSeaTime)<0){detonateBullet(bullet, bulletMatrix, true);}
-				//if (getHeightAboveSeaFor4VecPos(bulletPos, 0)<0){detonateBullet(bullet, bulletMatrix, true);}
+				if (getHeightAboveSeaFor4VecPos(bulletPos, lastSeaTime)<0){detonateBullet(bullet, true);}
+				//if (getHeightAboveSeaFor4VecPos(bulletPos, 0)<0){detonateBullet(bullet, true);}
 			}
 			
 			//slow collision detection between bullet and array of boxes.
@@ -3327,7 +3330,7 @@ var iterateMechanics = (function iterateMechanics(){
 					if (Math.max(Math.abs(relativeMat[3]),
 								Math.abs(relativeMat[7]),
 								Math.abs(relativeMat[11]))<thisBoxSize*relativeMat[15]){
-						detonateBullet(bullet, bulletMatrix, moveWithDuocylinder);
+						detonateBullet(bullet, moveWithDuocylinder);
 				}
 			}
 			
@@ -3341,7 +3344,7 @@ var iterateMechanics = (function iterateMechanics(){
 					if (relativeMat[15]<0.5){continue;}	//early sphere check	TODO correct value (closer to 1 for smaller objects.
 					
 					if (hyperboloidData.colCheck([relativeMat[3],relativeMat[7],relativeMat[11]].map(function(val){return val/(relativeMat[15]);}))){
-						detonateBullet(bullet, bulletMatrix, true);
+						detonateBullet(bullet, true);
 					}
 				}
 			}
@@ -3357,7 +3360,7 @@ var iterateMechanics = (function iterateMechanics(){
 						if (Math.max(projectedPosAbs[0],projectedPosAbs[1],projectedPosAbs[2])<1){
 							var count=projectedPosAbs.reduce(function (sum,val){return val>0.8?sum+1:sum;},0);
 							if (count>1){
-								detonateBullet(bullet, bulletMatrix);
+								detonateBullet(bullet);
 							}
 						}
 					}
@@ -3420,7 +3423,7 @@ var iterateMechanics = (function iterateMechanics(){
 						}
 						
 						if (isInside){
-							detonateBullet(bullet, bulletMatrix);
+							detonateBullet(bullet);
 						}
 						
 						//todo 4th number for comparison value - means can still work if plane thru origin.
@@ -3449,7 +3452,7 @@ var iterateMechanics = (function iterateMechanics(){
 							if (projectedPosAbs[0]+projectedPosAbs[1]>2*projectedPosAbs[2]+0.8 ||
 								projectedPosAbs[0]+projectedPosAbs[2]>2*projectedPosAbs[1]+0.8 ||
 								projectedPosAbs[1]+projectedPosAbs[2]>2*projectedPosAbs[0]+0.8){
-								detonateBullet(bullet, bulletMatrix);
+								detonateBullet(bullet);
 							}
 						}
 					}
@@ -3512,7 +3515,7 @@ var iterateMechanics = (function iterateMechanics(){
 							var myDotP = dotA*Math.cos(angRad) + dotB*Math.sin(angRad);
 							if (myDotP>0.31){isInsidePrism=false;}
 						}
-						if (!isInsidePrism){detonateBullet(bullet, bulletMatrix);}
+						if (!isInsidePrism){detonateBullet(bullet);}
 						
 						
 						//todo reuse tetra version / general dot product function!
@@ -3523,18 +3526,18 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			}
 		}
-		function detonateBullet(bullet, bulletMatrix, moveWithDuocylinder){	//TODO what scope does this have? best practice???
+		function detonateBullet(bullet, moveWithDuocylinder){	//TODO what scope does this have? best practice???
 			bullet.vel = [0,0,0];	//if colliding with target, stop bullet.
 			bullet.active=false;
 			
 			if (!moveWithDuocylinder){
-				new Explosion(bulletMatrix, 0.0003, [1,0.5,0.25]);
+				new Explosion(bullet, 0.0003, [1,0.5,0.25]);
 			}else{
-				var tmpMat = mat4.create(bulletMatrix);
+				var tmpMat = mat4.create(bullet.matrix);
 				mat4.transpose(tmpMat);	//inefficient! TODO precalc matrix to do this transpose-rotate-transpose!
 				rotate4mat(tmpMat, 0, 1, duocylinderSpin);	//get bullet matrix in frame of duocylinder. might be duplicating work from elsewhere.
 				mat4.transpose(tmpMat);	//inefficient
-				new Explosion(tmpMat, 0.0003, [0.2,0.4,0.6],true);	//different colour for debugging
+				new Explosion({matrix:tmpMat, world:bullet.world}, 0.0003, [0.2,0.4,0.6],true);	//different colour for debugging
 			}
 			
 			//singleExplosion.life = 100;
@@ -3796,9 +3799,9 @@ function fireGun(){
 			newFireDirectionVec[2]+=muzzleVel;
 			bullets.push({matrix:newBulletMatrix,vel:newFireDirectionVec,world:sshipWorld,active:true});
 			
-			new Explosion(gunMatrix, 0.00005, [0.06,0.06,0.06]);	//smoke/steam fx.
+			new Explosion({matrix:gunMatrix,world:sshipWorld}, 0.00005, [0.06,0.06,0.06]);	//smoke/steam fx.
 															//TODO emit from hot gun (continue after firing), lighting for smoke (don't see in dark) ...
-			
+															//TODO get correct world (which side of portal end of gun is in)
 			matPool.destroy(relativeMatrix);
 			
 			//limit number of bullets
