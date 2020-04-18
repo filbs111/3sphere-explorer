@@ -1,6 +1,6 @@
 var usingAudioAPI=false;
 var audiocontext;
-
+/*
 try {
 		// Fix up for prefixing
 	window.AudioContext = window.AudioContext||window.webkitAudioContext;
@@ -8,7 +8,7 @@ try {
 	usingAudioAPI = true;
 } catch(e) {
 }
-
+*/
 	
 var MySound = (function(){
 	
@@ -46,8 +46,9 @@ var MySound = (function(){
 			
 		};
 		
-		mySound.prototype.play = function(delay){
+		mySound.prototype.play = function(delay, vol){
 			//console.log("will play sound, using web audio API, from: " + this.soundAddress + ", delay: " + delay);
+			vol = vol || 1;
 			
 			if (!this.buffer){
 				console.log("not loaded yet. returning");
@@ -55,8 +56,12 @@ var MySound = (function(){
 			}
 			console.log("will play sound " + this.soundAddress);
 			var source = audiocontext.createBufferSource();	//TODO pool of sounds? is creating a new buffersource each play. unknown if expensive
-			source.buffer = this.buffer				
-			source.connect(this.gainNode);
+			source.buffer = this.buffer	
+
+			var indivGainNode = audiocontext.createGain();
+			indivGainNode.gain.setValueAtTime(vol, audiocontext.currentTime);
+			
+			source.connect(indivGainNode).connect(this.gainNode);
 
 			//audiocontext.resume();	//??
 			source.start(audiocontext.currentTime + delay);
@@ -72,19 +77,27 @@ var MySound = (function(){
 			this.soundAddress = soundAddress;
 			this.audios = [];
 			this.nextAudio = 0;
+			this.typeVol = 0;
 			this.NUM_AUDIOS = 25;	//for audio element fallback only.
 			for (var ii=0;ii<this.NUM_AUDIOS;ii++){
-				this.audios.push( new Audio(this.soundAddress) );
+				this.audios.push({elem:new Audio(this.soundAddress), indivVol:0});
 			}
 		}
-		mySound.prototype.play = function(delay){	//note that delay is not used at this time - seems fine in IE without
+		mySound.prototype.play = function(delay, vol){	//note that delay is not used at this time - seems fine in IE without
+			vol = vol || 1;
 			console.log("will play sound, using fallback audio tags, from: " + this.soundAddress);
-			this.audios[this.nextAudio].play();
+			var audio = this.audios[this.nextAudio];
+			audio.indivVol = vol;
+			audio.elem.volume = this.typeVol*vol;
+			audio.elem.play();
 			this.nextAudio = (this.nextAudio+1)%this.NUM_AUDIOS;
 		};
 		mySound.prototype.setVolume = function(volume){
+			this.typeVol = volume;
+			var audio;
 			for (var ii=0;ii<this.NUM_AUDIOS;ii++){
-				this.audios[ii].volume = volume;
+				audio = this.audios[ii];
+				audio.elem.volume = volume*audio.indivVol;
 			}
 		}
 	}
@@ -100,16 +113,16 @@ var myAudioPlayer = (function(){
 	var gunSound  = new MySound('audio/gun.wav');
 	
 	return {
-		playGunSound: function(delay){
+		playGunSound: function(delay, vol){
 			gunSound.play(delay);
 		},
-		playBombSound: function(delay){
-			bombSound.play(delay);
+		playBombSound: function(delay, vol){
+			bombSound.play(delay, vol);
 		},
 		setGlobalVolume: function(volume){	//todo actually use globalGainNode
 			console.log("SETTING GLOBAL VOLUME");
 			gunSound.setVolume(volume);
-			bombSound.setVolume(volume*0.01);
+			bombSound.setVolume(volume*0.4);
 		}
 	}
 })();

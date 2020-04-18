@@ -295,8 +295,12 @@ function copy_quaternion(q_from,q_to){
 }
 
 
-
-
+function distBetween4mats(mat1,mat2){
+	var p1 = mat1.slice(12);
+	var p2 = mat2.slice(12);
+	var disp = p1.map(function(elem,ii){return elem - p2[ii];});
+	return Math.hypot.apply(null, disp);
+}
 
 function check4mat(mat){
 	//see whether becoming not normalised/orthogonal
