@@ -1,14 +1,15 @@
 var usingAudioAPI=false;
 var audiocontext;
-/*
+
 try {
 		// Fix up for prefixing
 	window.AudioContext = window.AudioContext||window.webkitAudioContext;
 	audiocontext = new AudioContext();	//guess this is the bit that throws - can't do undefined()
 	usingAudioAPI = true;
 } catch(e) {
+	alert('Web Audio API is not supported in this browser.\nFalling back to audio elements.\nA modern web browser is recommended.');
 }
-*/
+
 	
 var MySound = (function(){
 	
