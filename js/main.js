@@ -1141,9 +1141,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 	mat4.transpose(invertedWorldCamera);
 	
 	//equivalent for frame of duocylinder, to reduce complexity of drawing, collision checks etc
-	var invertedWorldCameraDuocylinderFrame = mat4.create(invertedWorldCamera);
+	var invertedWorldCameraDuocylinderFrame = mat4.create(invertedWorldCamera);	//todo reuse from pool
 	rotate4mat(invertedWorldCameraDuocylinderFrame, 0, 1, duocylinderSpin);
-
+	
 	//calculate stuff for discard shaders
 	//position of reflector in frame of camera (after MVMatrix transformation)
 	var reflectorPosTransformed = [worldCamera[3],worldCamera[7],worldCamera[11],worldCamera[15]];
@@ -2751,6 +2751,8 @@ var iterateMechanics = (function iterateMechanics(){
 	
 	var currentPen=0;	//for bodgy box collision (todo use collision points array)
 	
+	var playerCameraDuocylinderFrame = mat4.create(playerCamera);		//todo resuse from pool
+	
 	return function(){
 		
 		reverseCamera=keyThing.keystate(82) || (mouseInfo.buttons & 4); 	//R or middle mouse click
@@ -2815,14 +2817,17 @@ var iterateMechanics = (function iterateMechanics(){
 			offsetCam.iterate();
 		}
 		
+		mat4.set(playerCamera, playerCameraDuocylinderFrame);
+		rotate4mat(playerCameraDuocylinderFrame, 0, 1, duocylinderSpin);
+		
 		for (var ee in explosions){
 			var singleExplosion = explosions[ee];
 			singleExplosion.life-=0.6*numSteps;
 			if (singleExplosion.life<1){
 				delete explosions[ee];
 			}
-			if (singleExplosion.sound){	//todo account for duocylinder rotation, put this as explosion method?
-				var distance = distBetween4mats(playerCamera, singleExplosion.matrix);
+			if (singleExplosion.sound){
+				var distance = distBetween4mats(singleExplosion.rotateWithDuocylinder ? playerCameraDuocylinderFrame:playerCamera, singleExplosion.matrix);
 				var soundSize = 0.03;	//closest distance can get to sound, where volume is 1
 				var vol = soundSize/Math.hypot(distance, soundSize);
 				singleExplosion.sound.setDelay(distance);	//correct for small dist - like to 3d distance for points on sphere. TODO use shortest curve
