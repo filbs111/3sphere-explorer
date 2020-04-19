@@ -2046,7 +2046,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 var explosions ={};		//todo how to contain this? eg should constructor be eg explosions.construct()? what's good practice?
 var Explosion=function(){
 	var nextExplId = 0;
-	return function(objcontainer, size, color, rotateWithDuocylinder){
+	return function(objcontainer, size, color, rotateWithDuocylinder, hasSound){
 		this.matrix = objcontainer.matrix;
 		this.world= objcontainer.world;
 		this.size = size;
@@ -2055,6 +2055,10 @@ var Explosion=function(){
 		explosions[nextExplId]=this;
 		nextExplId+=1;
 		this.rotateWithDuocylinder=rotateWithDuocylinder;
+		
+		if (hasSound){
+			this.sound = myAudioPlayer.playBombSound(0,0);
+		}
 	}
 }();
 
@@ -2817,6 +2821,13 @@ var iterateMechanics = (function iterateMechanics(){
 			if (singleExplosion.life<1){
 				delete explosions[ee];
 			}
+			if (singleExplosion.sound){	//todo account for duocylinder rotation, put this as explosion method?
+				var distance = distBetween4mats(playerCamera, singleExplosion.matrix);
+				var soundSize = 0.03;	//closest distance can get to sound, where volume is 1
+				var vol = soundSize/Math.hypot(distance, soundSize);
+				singleExplosion.sound.setDelay(distance);	//correct for small dist - like to 3d distance for points on sphere. TODO use shortest curve
+				singleExplosion.sound.setGain(vol);
+			}
 		}
 		
 		var duocylinderRotate = duoCylinderAngVelConst * timeElapsed*moveSpeed;
@@ -3530,29 +3541,15 @@ var iterateMechanics = (function iterateMechanics(){
 			bullet.vel = [0,0,0];	//if colliding with target, stop bullet.
 			bullet.active=false;
 			
-			//how loud should explosion be? really will be refocused when opposite side of world, but inconvenient - assume is drowned out by fog. 
-			//TODO noise through portal.
-			var distance; 
-			
 			if (!moveWithDuocylinder){
-				new Explosion(bullet, 0.0003, [1,0.5,0.25]);
-				
-				distance = distBetween4mats(playerCamera, bullet.matrix);
+				new Explosion(bullet, 0.0003, [1,0.5,0.25], false, true);
 			}else{
 				var tmpMat = mat4.create(bullet.matrix);
 				mat4.transpose(tmpMat);	//inefficient! TODO precalc matrix to do this transpose-rotate-transpose!
 				rotate4mat(tmpMat, 0, 1, duocylinderSpin);	//get bullet matrix in frame of duocylinder. might be duplicating work from elsewhere.
 				mat4.transpose(tmpMat);	//inefficient
-				new Explosion({matrix:tmpMat, world:bullet.world}, 0.0003, [0.2,0.4,0.6],true);	//different colour for debugging
-				
-				distance = distBetween4mats(playerCamera, tmpMat);
+				new Explosion({matrix:tmpMat, world:bullet.world}, 0.0003, [0.2,0.4,0.6],true, true);	//different colour for debugging
 			}
-			
-			var soundSize = 0.03;	//closest distance can get to sound, where volume is 1
-			var vol = soundSize/Math.hypot(distance, soundSize);
-			console.log("playing bomb sound, vol: " + vol);
-			myAudioPlayer.playBombSound(distance, vol);	//TODO move this inside Explosion
-										//todo use more proper distance (this is correct for small distances - analgous to 3d distance for points on sphere, not distance of shortest curve)
 			
 			//singleExplosion.life = 100;
 			//singleExplosion.matrix = bulletMatrix;

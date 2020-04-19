@@ -55,16 +55,18 @@ var MySound = (function(){
 			var source = audiocontext.createBufferSource();	//TODO pool of sounds? is creating a new buffersource each play. unknown if expensive
 			source.buffer = this.buffer	
 
-			var indivGainNode = audiocontext.createGain(2.0);	//param is max delay. for fudge distance, opposite side of 3sph is distance 2 away
+			var indivGainNode = audiocontext.createGain();	
 			indivGainNode.gain.setValueAtTime(vol, audiocontext.currentTime);
 			
-			this.delayNode = audiocontext.createDelay();
-			this.delayNode.delayTime.setValueAtTime(delay, audiocontext.currentTime);
+			var indivDelayNode = audiocontext.createDelay(2.0);	//param is max delay. for fudge distance, opposite side of 3sph is distance 2 away
+			indivDelayNode.delayTime.setValueAtTime(delay, audiocontext.currentTime);
 			
-			source.connect(this.delayNode).connect(indivGainNode).connect(this.gainNode);
+			source.connect(indivDelayNode).connect(indivGainNode).connect(this.gainNode);
 			
 			//audiocontext.resume();	//??
 			source.start(audiocontext.currentTime);
+			
+			return new IndivSound(indivGainNode, indivDelayNode);
 		};
 		mySound.prototype.setVolume = function(volume){
 			this.gainNode.gain.value = volume;
@@ -72,6 +74,19 @@ var MySound = (function(){
 	
 	return mySound;
 })();
+
+function IndivSound(gainNode, delayNode){
+	this.gainNode = gainNode;
+	this.delayNode = delayNode;
+	//this.lastSetGain = 0;		//todo set less frequently for smoother playback (may notice with smoother sounds)
+	//this.lastSetDelay = 0;
+}
+IndivSound.prototype.setDelay = function(delay){
+	this.delayNode.delayTime.setValueAtTime(delay, audiocontext.currentTime);
+}
+IndivSound.prototype.setGain = function(gain){
+	this.gainNode.gain.setValueAtTime(gain, audiocontext.currentTime);
+}
 
 
 var myAudioPlayer = (function(){
@@ -86,7 +101,7 @@ var myAudioPlayer = (function(){
 			gunSound.play(delay);
 		},
 		playBombSound: function(delay, vol){
-			bombSound.play(delay, vol);
+			return bombSound.play(delay, vol);
 		},
 		setGlobalVolume: function(volume){	//todo actually use globalGainNode
 			console.log("SETTING GLOBAL VOLUME");
