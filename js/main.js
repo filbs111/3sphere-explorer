@@ -1993,6 +1993,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}
 	}
 	
+	var maxShockRadAng = 1;
+	
 	for (var ee in explosions){
 		var singleExplosion = explosions[ee];
 		if (singleExplosion.world == colorsSwitch){
@@ -2007,12 +2009,26 @@ function drawWorldScene(frameTime, isCubemapView) {
 			var radius = (100-singleExplosion.life)*singleExplosion.size;
 			//var radius = 0.01;
 			var opac = 0.01*singleExplosion.life;
+			
 			if (frustrumCull(mvMatrix,radius)){	
 					//TODO check is draw order independent transparency
 				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, singleExplosion.color.map(function(val){return val*opac;}));
 				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [radius,radius,radius]);
 				drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
 			}
+			
+			//larger shockwave, should match sound
+			var largeRadiusAng = radius * (100-singleExplosion.life)*5;	//note that speed of sound delay approximation currently used 4vec distance, not curve, so this will only match up for small distances. 5 is a guess that seems about right. TODO work out properly!
+			if (largeRadiusAng<maxShockRadAng){
+				var largeRadius = Math.tan(largeRadiusAng);
+				if (frustrumCull(mvMatrix,largeRadius)){	//todo larger max shock rad for larger singleExplosion.size
+					var largeOpac = 0.1*(1-(largeRadiusAng/maxShockRadAng));	//linearly drop opacity as sphere expands (simple)
+					gl.uniform3fv(transpShadProg.uniforms.uEmitColor, singleExplosion.color.map(function(val){return val*largeOpac;}));	//TODO neutral colour
+					gl.uniform3fv(transpShadProg.uniforms.uModelScale, [largeRadius,largeRadius,largeRadius]);
+					drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
+				}
+			}
+			
 		}
 	}
 	
