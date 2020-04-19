@@ -15,8 +15,13 @@ function testVoxABC(){	//WORKS!!
 	var inputVec = playerCamera.slice(12);
 	console.log(inputVec);
 	var abc = voxABCFor4vec(inputVec);
-	var result = get4vecForABCDCCoords(abc.a,abc.b,abc.c);
-	console.log(result);
+	
+	//var result = get4vecForABCDCCoords(abc.a,abc.b,abc.c);
+	//console.log(result);
+	var matresult = getMatForABCDCCoords(abc.a,abc.b,abc.c);
+	console.log(matresult.slice(12));
+	
+	mat4.set(matresult, closestPointTestMat);
 }
 
 function getMatForABCDCCoords(a,b,c){	
@@ -97,30 +102,42 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		
 		var multiplier = 64/(Math.PI);
 		
-		var a = -Math.atan2(vec[2],vec[3]);	//note the - here, not used in procTerrain
-		var b = Math.atan2(vec[0],vec[1]);
-		var c = -0.5*Math.asin( (vec[0]*vec[0] + vec[1]*vec[1]) - (vec[2]*vec[2] + vec[3]*vec[3]));	//this height of 4vec that can be compared to landscape height
+		var abc = voxABCFor4vec(vec);
+		
+		var a = abc.a;
+		var b = abc.b;
+		var c = abc.c;	//this height of 4vec that can be compared to landscape height
 	
 		//simple test - check can get back 4vec position
-		return get4vecForABCDCCoords(a,b,c);
+		//return get4vecForABCDCCoords(a,b,c);
 	
-		/*
 		var aa=multiplier*decentMod(a,Math.PI);		//vox terrain currently repeated 2x2 squares
 		var bb=multiplier*decentMod(b + duocylinderSpin,Math.PI);
-		var cc=(0.5+c*2/Math.PI)*64;
+		var cc= 32 +c*2*multiplier;
 		
 		//next test, attempt to convert back to 4vector input from aa,bb,cc
-		//return get4vecForDCCoords(aa,bb,cc);
-		*/
+		//return get4vecForABCDCCoords(aa/multiplier,bb/multiplier -duocylinderSpin, (cc-32)/(2*multiplier));
 
-		/*
 		//find gradient in aa,bb,cc space, 1 step gradient descent to find approximate closest point on surface
 		var smallAmount = 0.01;
 		var centralLevel = voxFunction(aa,bb,cc);
-		var aaGradient = voxFunction(aa+smallAmount,bb,cc)-centralLevel;
-		var bbGradient = voxFunction(aa,bb+smallAmount,cc)-centralLevel;
-		var ccGradient = voxFunction(aa,bb,cc+smallAmount)-centralLevel;
-		*/
+		var aaGradient = (voxFunction(aa+smallAmount,bb,cc)-centralLevel)/smallAmount;	//could cancel out smallAmount in below calc for small perf but confusing to read
+		var bbGradient = (voxFunction(aa,bb+smallAmount,cc)-centralLevel)/smallAmount;
+		var ccGradient = (voxFunction(aa,bb,cc+smallAmount)-centralLevel)/smallAmount;
+		
+		//totalgradient is hypot of these.
+		//move in direction of gradient. -centralLevel*(gradientvec/gradientmag) by 1/gradientmag - ie by gradientvec/gradientmagsq.
+		var gradMag = aaGradient*aaGradient + bbGradient*bbGradient + ccGradient*ccGradient;
+		
+		//for input=output test
+		gradMag=0;
+		
+		var multiplier2 = centralLevel*gradMag;
+		aa-= multiplier2*aaGradient;
+		bb-= multiplier2*bbGradient;
+		cc-= multiplier2*ccGradient;
+		
+		return get4vecForABCDCCoords(aa/multiplier,bb/multiplier -duocylinderSpin, (cc-32)/(2*multiplier));
 	}	
 	
 	var mattoinvert = mat3.create();
