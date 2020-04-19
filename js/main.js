@@ -2849,9 +2849,9 @@ var iterateMechanics = (function iterateMechanics(){
 				
 				var soundSize = 0.03;	//closest distance can get to sound, where volume is 1
 				var vol = soundSize/Math.hypot(distance, soundSize);
-				singleExplosion.sound.setDelay(distance);	//correct for small dist - like to 3d distance for points on sphere. TODO use shortest curve
-				singleExplosion.sound.setGain(vol);
-				singleExplosion.sound.setPan(tmpRelativeMat[12]/(Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14])));	//left/hypot(size,down,forwards) 
+				var pan = Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]);	//left/hypot(size,down,forwards) 
+				
+				singleExplosion.sound.setAll({delay:distance, gain:vol, pan:pan});
 			}
 		}
 		

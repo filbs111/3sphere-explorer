@@ -81,19 +81,17 @@ function IndivSound(gainNode, delayNode, pannerNode){
 	this.gainNode = gainNode;
 	this.delayNode = delayNode;
 	this.pannerNode = pannerNode;
-	//this.lastSetGain = 0;		//todo set less frequently for smoother playback (may notice with smoother sounds)
-	//this.lastSetDelay = 0;
+	this.lastSet = 0;		//set less frequently for smoother playback (may notice with smoother sounds)
 }
-IndivSound.prototype.setDelay = function(delay){
-	this.delayNode.delayTime.setValueAtTime(delay, audiocontext.currentTime);
+IndivSound.prototype.setAll = function(settings){
+	var thisScheduledAudioRampTime = audiocontext.currentTime + 0.1;
+	if (thisScheduledAudioRampTime > this.lastSet + 0.05){  //workaround for inability to cancel cancelScheduledValues due to buggy firefox
+		this.lastSet =  thisScheduledAudioRampTime;
+		this.delayNode.delayTime.linearRampToValueAtTime(settings.delay, thisScheduledAudioRampTime);
+		this.gainNode.gain.linearRampToValueAtTime(settings.gain, thisScheduledAudioRampTime);
+		this.pannerNode.pan.linearRampToValueAtTime(settings.pan, thisScheduledAudioRampTime);
+	}
 }
-IndivSound.prototype.setGain = function(gain){
-	this.gainNode.gain.setValueAtTime(gain, audiocontext.currentTime);
-}
-IndivSound.prototype.setPan = function(pan){
-	this.pannerNode.pan.setValueAtTime(pan, audiocontext.currentTime);
-}
-
 
 var myAudioPlayer = (function(){
 	//make a few sounds
