@@ -2328,8 +2328,8 @@ function initTexture(){
 	
 	//duocylinderObjects.voxTerrain.tex = makeTexture("img/ash_uvgrid01.jpg");
 	//duocylinderObjects.voxTerrain.tex = makeTexture("img/cretish0958.png");
-	duocylinderObjects.voxTerrain.tex = makeTexture("img/13787.jpg");
-	//duocylinderObjects.voxTerrain.tex = makeTexture("img/2100-v1.jpg");
+	//duocylinderObjects.voxTerrain.tex = makeTexture("img/13787.jpg");
+	duocylinderObjects.voxTerrain.tex = makeTexture("img/2100-v1.jpg");
 	
 	duocylinderObjects.voxTerrain.hasVertColors=true;
 	duocylinderObjects.voxTerrain.usesTriplanarMapping=true;	//note that hasVertColors, usesTriplanarMapping currently equivalent (has both or neither)
@@ -3530,15 +3530,29 @@ var iterateMechanics = (function iterateMechanics(){
 			bullet.vel = [0,0,0];	//if colliding with target, stop bullet.
 			bullet.active=false;
 			
+			//how loud should explosion be? really will be refocused when opposite side of world, but inconvenient - assume is drowned out by fog. 
+			//TODO noise through portal.
+			var distance; 
+			
 			if (!moveWithDuocylinder){
 				new Explosion(bullet, 0.0003, [1,0.5,0.25]);
+				
+				distance = distBetween4mats(playerCamera, bullet.matrix);
 			}else{
 				var tmpMat = mat4.create(bullet.matrix);
 				mat4.transpose(tmpMat);	//inefficient! TODO precalc matrix to do this transpose-rotate-transpose!
 				rotate4mat(tmpMat, 0, 1, duocylinderSpin);	//get bullet matrix in frame of duocylinder. might be duplicating work from elsewhere.
 				mat4.transpose(tmpMat);	//inefficient
 				new Explosion({matrix:tmpMat, world:bullet.world}, 0.0003, [0.2,0.4,0.6],true);	//different colour for debugging
+				
+				distance = distBetween4mats(playerCamera, tmpMat);
 			}
+			
+			var soundSize = 0.03;	//closest distance can get to sound, where volume is 1
+			var vol = soundSize/Math.hypot(distance, soundSize);
+			console.log("playing bomb sound, vol: " + vol);
+			myAudioPlayer.playBombSound(distance, vol);	//TODO move this inside Explosion
+										//todo use more proper distance (this is correct for small distances - analgous to 3d distance for points on sphere, not distance of shortest curve)
 			
 			//singleExplosion.life = 100;
 			//singleExplosion.matrix = bulletMatrix;

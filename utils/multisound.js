@@ -20,7 +20,7 @@ var MySound = (function(){
 	if (usingAudioAPI) {
 		audiocontext.resume();	//??
 		var globalGainNode = audiocontext.createGain();
-		globalGainNode.connect(audiocontext.destination);
+		globalGainNode.connect(audiocontext.destination);	//maybe inefficient - TODO bin globalGainNode?
 
 		//return a constructor instead, so can use this to make multiple sounds
 		var mySound = function(soundAddress){
@@ -49,7 +49,8 @@ var MySound = (function(){
 		
 		mySound.prototype.play = function(delay, vol){
 			//console.log("will play sound, using web audio API, from: " + this.soundAddress + ", delay: " + delay);
-			vol = vol || 1;
+			if (typeof vol == 'undefined'){ vol = 1;};
+			delay = delay || 0;
 			
 			if (!this.buffer){
 				console.log("not loaded yet. returning");
@@ -59,13 +60,16 @@ var MySound = (function(){
 			var source = audiocontext.createBufferSource();	//TODO pool of sounds? is creating a new buffersource each play. unknown if expensive
 			source.buffer = this.buffer	
 
-			var indivGainNode = audiocontext.createGain();
+			var indivGainNode = audiocontext.createGain(2.0);	//param is max delay. for fudge distance, opposite side of 3sph is distance 2 away
 			indivGainNode.gain.setValueAtTime(vol, audiocontext.currentTime);
 			
-			source.connect(indivGainNode).connect(this.gainNode);
-
+			this.delayNode = audiocontext.createDelay();
+			this.delayNode.delayTime.setValueAtTime(delay, audiocontext.currentTime);
+			
+			source.connect(this.delayNode).connect(indivGainNode).connect(this.gainNode);
+			
 			//audiocontext.resume();	//??
-			source.start(audiocontext.currentTime + delay);
+			source.start(audiocontext.currentTime);
 		};
 		mySound.prototype.setVolume = function(volume){
 			this.gainNode.gain.value = volume;
@@ -84,7 +88,7 @@ var MySound = (function(){
 				this.audios.push({elem:new Audio(this.soundAddress), indivVol:0});
 			}
 		}
-		mySound.prototype.play = function(delay, vol){	//note that delay is not used at this time - seems fine in IE without
+		mySound.prototype.play = function(delay, vol){	//note that delay is unused
 			vol = vol || 1;
 			console.log("will play sound, using fallback audio tags, from: " + this.soundAddress);
 			var audio = this.audios[this.nextAudio];
