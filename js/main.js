@@ -1136,12 +1136,11 @@ function drawWorldScene(frameTime, isCubemapView) {
 	gl.clearColor.apply(gl,localVecFogColorGamma);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 			
-	var invertedWorldCamera = mat4.create();
 	mat4.set(worldCamera, invertedWorldCamera);
 	mat4.transpose(invertedWorldCamera);
 	
 	//equivalent for frame of duocylinder, to reduce complexity of drawing, collision checks etc
-	var invertedWorldCameraDuocylinderFrame = mat4.create(invertedWorldCamera);	//todo reuse from pool
+	mat4.set(invertedWorldCamera, invertedWorldCameraDuocylinderFrame);
 	rotate4mat(invertedWorldCameraDuocylinderFrame, 0, 1, duocylinderSpin);
 	
 	//calculate stuff for discard shaders
@@ -2228,6 +2227,11 @@ var cmapPMatrix = mat4.create();
 setProjectionMatrix(cmapPMatrix, -90.0, 1.0);	//-90 gets reflection to look right. (different for portal?)
 var squareFrustrumCull = generateCullFunc(cmapPMatrix);
 
+var invertedWorldCamera = mat4.create();
+var invertedWorldCameraDuocylinderFrame = mat4.create();
+
+var tmpRelativeMat = mat4.create();
+var identMat = mat4.identity();
 
 function setMatrixUniforms(shaderProgram) {
     gl.uniformMatrix4fv(shaderProgram.uniforms.uPMatrix, false, pMatrix);
@@ -2817,8 +2821,17 @@ var iterateMechanics = (function iterateMechanics(){
 			offsetCam.iterate();
 		}
 		
-		mat4.set(playerCamera, playerCameraDuocylinderFrame);
-		rotate4mat(playerCameraDuocylinderFrame, 0, 1, duocylinderSpin);
+		//TODO check whether this calculation is redundant (done elsewhere)
+		mat4.set(playerCamera, worldCamera);	//TODO check whether playerCamera is main camera or spaceship, decide where microphone should be
+		mat4.set(worldCamera, invertedWorldCamera);
+		mat4.transpose(invertedWorldCamera);
+	
+		//equivalent for frame of duocylinder, to reduce complexity of drawing, collision checks etc
+		mat4.set(invertedWorldCamera, invertedWorldCameraDuocylinderFrame);
+		rotate4mat(invertedWorldCameraDuocylinderFrame, 0, 1, duocylinderSpin);
+		
+		//mat4.set(playerCamera, playerCameraDuocylinderFrame);
+		//rotate4mat(playerCameraDuocylinderFrame, 0, 1, duocylinderSpin);
 		
 		for (var ee in explosions){
 			var singleExplosion = explosions[ee];
@@ -2826,12 +2839,19 @@ var iterateMechanics = (function iterateMechanics(){
 			if (singleExplosion.life<1){
 				delete explosions[ee];
 			}
+			
 			if (singleExplosion.sound){
-				var distance = distBetween4mats(singleExplosion.rotateWithDuocylinder ? playerCameraDuocylinderFrame:playerCamera, singleExplosion.matrix);
+				mat4.set(singleExplosion.rotateWithDuocylinder ? invertedWorldCameraDuocylinderFrame:invertedWorldCamera,tmpRelativeMat);
+				mat4.multiply(tmpRelativeMat, singleExplosion.matrix);
+				
+				var distance = distBetween4mats(tmpRelativeMat, identMat);
+				//var distance = Math.hypot(tmpRelativeMat[12],tmpRelativeMat[13],tmpRelativeMat[14],tmpRelativeMat[15]-1);	//equivalent to above TODO check perf
+				
 				var soundSize = 0.03;	//closest distance can get to sound, where volume is 1
 				var vol = soundSize/Math.hypot(distance, soundSize);
 				singleExplosion.sound.setDelay(distance);	//correct for small dist - like to 3d distance for points on sphere. TODO use shortest curve
 				singleExplosion.sound.setGain(vol);
+				singleExplosion.sound.setPan(tmpRelativeMat[12]/(Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14])));	//left/hypot(size,down,forwards) 
 			}
 		}
 		

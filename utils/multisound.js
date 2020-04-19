@@ -61,12 +61,14 @@ var MySound = (function(){
 			var indivDelayNode = audiocontext.createDelay(2.0);	//param is max delay. for fudge distance, opposite side of 3sph is distance 2 away
 			indivDelayNode.delayTime.setValueAtTime(delay, audiocontext.currentTime);
 			
-			source.connect(indivDelayNode).connect(indivGainNode).connect(this.gainNode);
+			var indivPannerNode = audiocontext.createStereoPanner();
+			
+			source.connect(indivDelayNode).connect(indivGainNode).connect(indivPannerNode).connect(this.gainNode);
 			
 			//audiocontext.resume();	//??
 			source.start(audiocontext.currentTime);
 			
-			return new IndivSound(indivGainNode, indivDelayNode);
+			return new IndivSound(indivGainNode, indivDelayNode, indivPannerNode);
 		};
 		mySound.prototype.setVolume = function(volume){
 			this.gainNode.gain.value = volume;
@@ -75,9 +77,10 @@ var MySound = (function(){
 	return mySound;
 })();
 
-function IndivSound(gainNode, delayNode){
+function IndivSound(gainNode, delayNode, pannerNode){
 	this.gainNode = gainNode;
 	this.delayNode = delayNode;
+	this.pannerNode = pannerNode;
 	//this.lastSetGain = 0;		//todo set less frequently for smoother playback (may notice with smoother sounds)
 	//this.lastSetDelay = 0;
 }
@@ -86,6 +89,9 @@ IndivSound.prototype.setDelay = function(delay){
 }
 IndivSound.prototype.setGain = function(gain){
 	this.gainNode.gain.setValueAtTime(gain, audiocontext.currentTime);
+}
+IndivSound.prototype.setPan = function(pan){
+	this.pannerNode.pan.setValueAtTime(pan, audiocontext.currentTime);
 }
 
 
