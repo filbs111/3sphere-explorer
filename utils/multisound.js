@@ -108,7 +108,15 @@ var myAudioPlayer = (function(){
 		clockSoundInstance=clockSound.play(0,1,true);
 	}
 	clockSound = new MySound('audio/Freesound - ClockTickSound_01.wav by abyeditsound.mp3', playClockSound);
-	//clockSound = new MySound('audio/Freesound - ClockTickSound_01.wav by abyeditsound.mp3');
+
+	//TODO rewrite/generalise (looping) sound code. 
+	var whooshSound;
+	var whooshSoundInstance;
+	var playWhooshSound= function(){
+		console.log("attempting to play whoosh sound");
+		whooshSoundInstance=whooshSound.play(0,1,true);
+	}
+	whooshSound = new MySound('audio/blowtorch_50k.mp3', playWhooshSound);
 	
 	return {
 		playGunSound: function(delay, vol){
@@ -120,6 +128,9 @@ var myAudioPlayer = (function(){
 		//playClockSound: playClockSound,
 		setClockSound: function(settings){
 			if (clockSoundInstance){clockSoundInstance.setAll(settings);}
+		},
+		setWhooshSound: function(settings){
+			if (whooshSoundInstance){whooshSoundInstance.setAll(settings);}
 		},
 		setGlobalVolume: function(volume){	//todo actually use globalGainNode
 			console.log("SETTING GLOBAL VOLUME");

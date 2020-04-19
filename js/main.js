@@ -1325,7 +1325,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var duocylinderModel = (colorsSwitch==0) ? guiParams.duocylinderModel0 : guiParams.duocylinderModel1;	//todo use array
 	
 	var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//copied from elsewhere
-	
+		
 	if (duocylinderModel == 'procTerrain'){
 		terrainCollisionTestBoxPos = terrainGetHeightFor4VecPos(playerPos);		//TODO in position update (not rendering)
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.001,0.001,0.001]);
@@ -2883,6 +2883,7 @@ var iterateMechanics = (function iterateMechanics(){
 		//console.log("pan: " + pan);
 		myAudioPlayer.setClockSound({delay:distance/soundspd, gain:vol, pan:pan});
 		
+		
 		var duocylinderRotate = duoCylinderAngVelConst * timeElapsed*moveSpeed;
 		
 		if (guiParams["drop spaceship"]){guiParams.duocylinderRotateSpeed=0;}	//bodge to let take pics outside spaceship
@@ -2973,7 +2974,7 @@ var iterateMechanics = (function iterateMechanics(){
 			//matrix entries 12-15 describe position. (remain same when rotate player and don't move)
 			//playerVel is in frame of player though - so apply matrix rotation to this.
 			
-			var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//guess what this is
+			var playerPos = playerCamera.slice(12);			//guess what this is
 			
 			var spinVelWorldCoords = [ duoCylinderAngVelConst*playerPos[1],-duoCylinderAngVelConst*playerPos[0],0,0];	
 							
@@ -3018,9 +3019,14 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			}
 			
+			var distanceForTerrainNoise = 100;	//something arbitrarily large
+			
 			//some logic shared with drawing code
 			var duocylinderModel = (playerContainer.world==0) ? guiParams.duocylinderModel0 : guiParams.duocylinderModel1;	//todo use array
 			if (duocylinderModel == 'procTerrain'){
+				
+				distanceForTerrainNoise = getHeightAboveTerrainFor4VecPos(playerPos);	//TODO actual distance using surface normal (IIRC this is simple vertical height above terrain)
+
 				for (var legnum=0;legnum<landingLegData.length;legnum++){
 					var landingLeg = landingLegData[legnum]
 					var legPosPlayerFrame=landingLeg.pos;
@@ -3064,6 +3070,27 @@ var iterateMechanics = (function iterateMechanics(){
 					//TODO apply force along ground normal, friction force
 				}
 			}
+			if (duocylinderModel == 'sea'){
+				distanceForTerrainNoise = getHeightAboveSeaFor4VecPos(playerPos, lastSeaTime);	//height. todo use distance (unimportant because sea gradient low
+			}
+			if (duocylinderModel == 'voxTerrain'){
+				distanceForTerrainNoise = 0.02*voxCollisionFunction(playerPos);	//TODO get distance. shouldn't be necessary with SDF. maybe problem is with other terrain funcs. to estimate distance, guess want to divide this by its downhill slope (which for proper SDF should be 1). for now guess some constant that will work ~consistently with other terrain. 
+			}
+			
+			//whoosh sound. simple educated guess model for sound of passing by objects. maybe with a some component of pure wind noise
+			//volume increase with speed - either generally, or component perpendicular to nearest surface normal
+			//volume increases with proximity to obstacles. (can just use 1/r consistent with other sounds)
+			//todo use the projected nearest surface point to inform stereo pan
+			//todo use atmos thickness
+			//todo use correct speed of sound (consistent with elsewhere)
+			var terrainNoiseRad = 0.005;
+			var adjustedDist = Math.hypot(distanceForTerrainNoise,terrainNoiseRad)
+			var vol = terrainNoiseRad/adjustedDist;
+			var noisySpeed = 20;	//around/above this speed, spdFactor tends to 1. below this, ~linear
+			var spdFactor = spd/Math.hypot(spd,noisySpeed);
+			myAudioPlayer.setWhooshSound({delay:adjustedDist, gain:vol*spdFactor, pan:0});
+			
+			
 			
 			//apply same forces for other items. 
 			//start with just player centre. 
