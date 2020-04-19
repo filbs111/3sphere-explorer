@@ -8,7 +8,40 @@ var voxCollisionFunction; //something that can be used for collision detection.
 						  
 						  //suppose with normal vector in two duocylinder "surface" directions and radial. should be careful to get conversion right - basic assumptions might get correct close to halfway duocylinder ( dividing 3sphere in two exactly), but may go wrong away from this.
 						  //maybe better to have normal direction returned as 4vec.
-						  
+var voxClosestPoint;						  
+var voxABCFor4vec;
+
+function testVoxABC(){	//WORKS!!
+	var inputVec = playerCamera.slice(12);
+	console.log(inputVec);
+	var abc = voxABCFor4vec(inputVec);
+	var result = get4vecForABCDCCoords(abc.a,abc.b,abc.c);
+	console.log(result);
+}
+
+function getMatForABCDCCoords(a,b,c){	
+	//don't neg a because though voxCollisionFunction, (terrainGetHeightFor4VecPos, getHeightAboveTerrainFor4VecPos) use different sign, latter return negates it again!
+	a = a;
+	//see terrainGetHeightFor4VecPos , absent in  getHeightAboveTerrainFor4VecPos ?!
+	b = Math.PI*1.5 -b;
+	
+	//switch a, b because drawPreppedBufferOnDuocylinder call switches them
+	var tmp =a;
+	a=b;
+	b=tmp;
+	
+	//see moveToDuocylinderAB (called from drawPreppedBufferOnDuocylinder without further shenanigans)
+
+	mat4.identity(tmpRelativeMat);
+	xyzrotate4mat(tmpRelativeMat, [0,0,a]);
+	zmove4mat(tmpRelativeMat, b);
+	xmove4mat(tmpRelativeMat, Math.PI/4 - c );	//or ymove - should check what way up want models to be. PI/4 is onto surface of duocylinder
+			//even this doesn't work!! suspect maybe something to do with mvMatrix
+	return tmpRelativeMat;
+}
+function get4vecForABCDCCoords(a,b,c){	//simple version first!
+	return getMatForABCDCCoords(a,b,c).slice(12);
+}
 
 var voxTerrainData = (function generateVoxTerrainData(){
 	
@@ -48,6 +81,47 @@ var voxTerrainData = (function generateVoxTerrainData(){
 	
 		return voxFunction(aa,bb,cc);
 	}
+	voxABCFor4vec = function(vec){	//just testing
+		var a = -Math.atan2(vec[2],vec[3]);	//note the - here, not used in procTerrain
+		var b = Math.atan2(vec[0],vec[1]);
+		var c = -0.5*Math.asin( (vec[0]*vec[0] + vec[1]*vec[1]) - (vec[2]*vec[2] + vec[3]*vec[3]));	//this height of 4vec that can be compared to landscape height
+		return {a:a,b:b,c:c}
+	}
+	voxClosestPoint = function(vec){	//return a 4vec position of (approximate) closest point on surface to the input point.
+		//do this by finding the downhill slope, assuming is constant.
+		//to get best result, should do in 4vec space, but for simplicity, do in aa,bb,cc space - result should be same close to duocylinder 0-level, since aa,bb,cc axes are equal scale here. away from this. imagine an ellipsoid about input point, scaled in proportion to these axes.
+		//this code assumes are close to duocylinder 0-level, and therefore voxel boxes are approximately cubic
+		//if use voxels away from 0-level, should correct for this, possibly by using 4vector space formulation. expect can just put corrective multipliers in this somewhere
+		
+		//note duplicates code from voxCollisionFunction
+		
+		var multiplier = 64/(Math.PI);
+		
+		var a = -Math.atan2(vec[2],vec[3]);	//note the - here, not used in procTerrain
+		var b = Math.atan2(vec[0],vec[1]);
+		var c = -0.5*Math.asin( (vec[0]*vec[0] + vec[1]*vec[1]) - (vec[2]*vec[2] + vec[3]*vec[3]));	//this height of 4vec that can be compared to landscape height
+	
+		//simple test - check can get back 4vec position
+		return get4vecForABCDCCoords(a,b,c);
+	
+		/*
+		var aa=multiplier*decentMod(a,Math.PI);		//vox terrain currently repeated 2x2 squares
+		var bb=multiplier*decentMod(b + duocylinderSpin,Math.PI);
+		var cc=(0.5+c*2/Math.PI)*64;
+		
+		//next test, attempt to convert back to 4vector input from aa,bb,cc
+		//return get4vecForDCCoords(aa,bb,cc);
+		*/
+
+		/*
+		//find gradient in aa,bb,cc space, 1 step gradient descent to find approximate closest point on surface
+		var smallAmount = 0.01;
+		var centralLevel = voxFunction(aa,bb,cc);
+		var aaGradient = voxFunction(aa+smallAmount,bb,cc)-centralLevel;
+		var bbGradient = voxFunction(aa,bb+smallAmount,cc)-centralLevel;
+		var ccGradient = voxFunction(aa,bb,cc+smallAmount)-centralLevel;
+		*/
+	}	
 	
 	var mattoinvert = mat3.create();
 	var myvec3 = vec3.create();
@@ -410,7 +484,8 @@ var voxTerrainData = (function generateVoxTerrainData(){
 			
 			//do matrix calculation using sums
 			//glmatrix library provides a function to invert a matrix. can't find a func to multiply a vector by a matrix though, but simple to write func
-				centrebias=0;	//to stop adding here
+				centrebias=0.1;	//to stop adding here
+					//adding this back in fixes black spots (bad normals?)
 			mattoinvert[0]=sumnxx + centrebias*sumnum;	mattoinvert[1]=sumnxy;						mattoinvert[2]=sumnxz;	
 			mattoinvert[3]=sumnxy;						mattoinvert[4]=sumnyy + centrebias*sumnum;	mattoinvert[5]=sumnyz;
 			mattoinvert[6]=sumnxz;						mattoinvert[7]=sumnyz;						mattoinvert[8]=sumnzz + centrebias*sumnum;
@@ -432,7 +507,10 @@ var voxTerrainData = (function generateVoxTerrainData(){
 			
 			var dcPos = [ii_lo+myvec3[0], jj_lo+myvec3[1], kk_lo+myvec3[2]];
 			dcPos = dcPos.map(function(elem){return elem+0.5;});	//shift to match up with smoothVertices
+			//dcPos = dcPos.map(function(elem){return elem-10;});	//???
+			//dcPos = dcPos.map(function(elem){return elem+0.0;});	//experiment - maybe not correct at the mo - appears to make shading more accurate, but impacts vert pos so messes up current collision detection. seems like shouldn't impact shading because shading should be determined by normals, which aren't impacted. but how is shading done? ie calculation of light direction in shader, that will dot with normal???
 			dcVertices.push(dcPos[0]/32, dcPos[1]/32, dcPos[2]/32);
+			//dcVertices.push(((dcPos[0]+32)%32)/32, ((dcPos[1]+32)%32)/32, ((dcPos[2]+32)%32)/32);	//?????
 			
 			//normalise average normals
 			var sumNorm = Math.sqrt(sumnx*sumnx + sumny*sumny + sumnz*sumnz + 0.1);
@@ -653,7 +731,8 @@ var voxTerrainData = (function generateVoxTerrainData(){
 	//var myverts = sparseVoxData.basicAvgVertices;	//actually currently these are hard boxel verts?!
 	//var myverts = sparseVoxData.vertices;
 	var myverts = sparseVoxData.dcVertices;	//better for objects with sharp corners, but surface grows for convex objects (eg spheres)
-	var mynorms = sparseVoxData.dcNormals;
+	var mynorms = sparseVoxData.dcNormals;	//sometimes have problems with these
+	//var mynorms = sparseVoxData.normals;	//also problems with these!
 	var tmp;
 	for (var ii=0;ii<myverts.length;ii+=3){
 		//switch y/z
@@ -759,14 +838,17 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		return 10-secondRad;
 	}
 	function brejao(ii,jj,kk){
-		ii+=32;
-		jj+=32;
+		ii+=128;
+		jj+=128;
 		
+		kk+=64;
 		kk%=64;
 		
 		var ringSize = 12;
 		var ringShift = 6;
 		var ringTilt = 0.35;
+		//var ringTilt = 0.5;
+		//var ringTilt = 0;
 		
 		var x = ii%32 - 16;
 		var xplus = (ii+ringShift)%32 - 16;
@@ -787,11 +869,51 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		rad = Math.hypot(xminus,y);
 		var ringFourRad = Math.hypot( rad - ringSize, kk-32 - ringTilt*y);
 		
-		return 1.8-Math.min(Math.min(ringOneRad,ringTwoRad), Math.min(ringThreeRad,ringFourRad));
+		/*
+		//cap rads to discontinuity on repeat? this changes dark glitches, so guess on right track.
+		var radMax = 6;
+		ringOneRad = Math.min(radMax, ringOneRad);
+		ringTwoRad = Math.min(radMax, ringTwoRad);
+		ringThreeRad = Math.min(radMax, ringThreeRad);
+		ringFourRad = Math.min(radMax, ringFourRad);
+		*/
+		//return 1.8-Math.min(Math.min(ringOneRad,ringTwoRad), Math.min(ringThreeRad,ringFourRad));
+		//return 1.8-Math.min(Math.min(ringOneRad,ringTwoRad), ringThreeRad);	// 3 rings. wierd spots
+		//return 1.8-Math.min(ringOneRad,ringTwoRad);	// 2 rings. wierd spots
+		
+		
+		
+		return 1.2-smoothMin(smoothMin(ringOneRad,ringTwoRad), smoothMin(ringThreeRad,ringFourRad));	//thin
+		
+		
+		//return 1.8-smoothMin(smoothMin(ringOneRad,ringTwoRad), smoothMin(ringThreeRad,ringFourRad));
+		//return 1.8-smoothMin(smoothMin(ringOneRad,ringTwoRad), ringThreeRad);	//3 rings. wierd spots
+		//return 1.8-smoothMin(ringOneRad,ringTwoRad);	//2 rings only. no wierd spots
+		
+		//some funtion that goes near flat at long range, so less kink on repeat? (sine maybe better)
+		//still has black spot vertices problem
+		//return -1.8+(1.8*1.8)/smoothMin(smoothMin(ringOneRad,ringTwoRad), smoothMin(ringThreeRad,ringFourRad));
+		//return -1.8+(1.8*1.8)/Math.min(Math.min(ringOneRad,ringTwoRad), Math.min(ringThreeRad,ringFourRad));
+
 		
 	}
 	
 })();
+
+function smoothMin(x,y){	//introduces black spot normals. unknown why
+	var smoothness=2.5;
+	return 0.5*( (x+y) - Math.hypot( x-y , smoothness));	//AFAIK reproduces min for smoothness = 0
+	
+	/*
+	//reduce discontinuities due to effect of one field switching? 
+	var max = 10;
+	var fudge = 1.4;
+	x = max* (1- Math.exp(-fudge*x/max));
+	y = max* (1- Math.exp(-fudge*y/max));
+	return 0.5*( (x+y) - Math.hypot( x-y , smoothness));
+	
+	*/
+}
 
 
 //some stuff to augment perlin library.
