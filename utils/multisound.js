@@ -18,7 +18,7 @@ var MySound = (function(){
 		globalGainNode.connect(audiocontext.destination);	//maybe inefficient - TODO bin globalGainNode?
 
 		//return a constructor instead, so can use this to make multiple sounds
-		var mySound = function(soundAddress){
+		var mySound = function(soundAddress, cb){
 			this.gainNode = audiocontext.createGain();
 			this.gainNode.connect(globalGainNode);
 			
@@ -27,13 +27,14 @@ var MySound = (function(){
 			this.buffer = null;
 			var that=this;		//??!!!
 			var request = new XMLHttpRequest();
-			request.open('GET', this.soundAddress, true);
+			request.open('GET', this.soundAddress);
 			request.responseType = 'arraybuffer';
 			request.onload = function() {
 				console.log("request loaded..." + that.soundAddress);
 				audiocontext.decodeAudioData(request.response, function(buffer){
 					console.log("set sound buffer");
 					that.buffer = buffer;
+					cb && cb();
 				}, function(err){
 					console.log("oops! problem loading sound from : " + this.soundAddress);
 				});
@@ -42,7 +43,7 @@ var MySound = (function(){
 			
 		};
 		
-		mySound.prototype.play = function(delay, vol){
+		mySound.prototype.play = function(delay, vol, loop){
 			//console.log("will play sound, using web audio API, from: " + this.soundAddress + ", delay: " + delay);
 			if (typeof vol == 'undefined'){ vol = 1;};
 			delay = delay || 0;
@@ -51,10 +52,10 @@ var MySound = (function(){
 				console.log("not loaded yet. returning");
 				return;
 			}
-			console.log("will play sound " + this.soundAddress);
 			var source = audiocontext.createBufferSource();	//TODO pool of sounds? is creating a new buffersource each play. unknown if expensive
 			source.buffer = this.buffer	
-
+			if (loop){source.loop = true;}
+			
 			var indivGainNode = audiocontext.createGain();	
 			indivGainNode.gain.setValueAtTime(vol, audiocontext.currentTime);
 			
@@ -100,6 +101,15 @@ var myAudioPlayer = (function(){
 	var bombSound = new MySound('audio/bomb50k.mp3');
 	var gunSound  = new MySound('audio/gun.wav');
 	
+	var clockSound;
+	var clockSoundInstance;
+	var playClockSound= function(){
+		console.log("attempting to play clock sound");
+		clockSoundInstance=clockSound.play(0,1,true);
+	}
+	clockSound = new MySound('audio/Freesound - ClockTickSound_01.wav by abyeditsound.mp3', playClockSound);
+	//clockSound = new MySound('audio/Freesound - ClockTickSound_01.wav by abyeditsound.mp3');
+	
 	return {
 		playGunSound: function(delay, vol){
 			gunSound.play(delay);
@@ -107,10 +117,15 @@ var myAudioPlayer = (function(){
 		playBombSound: function(delay, vol){
 			return bombSound.play(delay, vol);
 		},
+		//playClockSound: playClockSound,
+		setClockSound: function(settings){
+			if (clockSoundInstance){clockSoundInstance.setAll(settings);}
+		},
 		setGlobalVolume: function(volume){	//todo actually use globalGainNode
 			console.log("SETTING GLOBAL VOLUME");
 			gunSound.setVolume(volume);
 			bombSound.setVolume(volume*0.4);
+			clockSound.setVolume(volume);
 		}
 	}
 })();

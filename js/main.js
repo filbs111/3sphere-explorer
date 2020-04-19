@@ -2397,7 +2397,7 @@ var guiParams={
 		"teapot scale":0.7,
 		towers:false,
 		singleBufferTowers:false,
-		explodingBox:false,
+		explodingBox:true,
 		hyperboloid:false,
 		stonehenge:false,
 		singleBufferStonehenge:false,
@@ -2833,13 +2833,14 @@ var iterateMechanics = (function iterateMechanics(){
 		//mat4.set(playerCamera, playerCameraDuocylinderFrame);
 		//rotate4mat(playerCameraDuocylinderFrame, 0, 1, duocylinderSpin);
 		
+		var soundspd = 2;	//TODO change delaynode creation param (faster sound means less possible delay)
+		
 		for (var ee in explosions){
 			var singleExplosion = explosions[ee];
 			singleExplosion.life-=0.6*numSteps;
 			if (singleExplosion.life<1){
 				delete explosions[ee];
 			}
-			
 			if (singleExplosion.sound){
 				mat4.set(singleExplosion.rotateWithDuocylinder ? invertedWorldCameraDuocylinderFrame:invertedWorldCamera,tmpRelativeMat);
 				mat4.multiply(tmpRelativeMat, singleExplosion.matrix);
@@ -2849,11 +2850,22 @@ var iterateMechanics = (function iterateMechanics(){
 				
 				var soundSize = 0.03;	//closest distance can get to sound, where volume is 1
 				var vol = soundSize/Math.hypot(distance, soundSize);
-				var pan = Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]);	//left/hypot(size,down,forwards) 
+				var pan = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));	//tanh(left/hypot(size,down,forwards)). tanh smoothly limits to +/- 1
 				
-				singleExplosion.sound.setAll({delay:distance, gain:vol, pan:pan});
+				singleExplosion.sound.setAll({delay:distance/soundspd, gain:vol, pan:pan});
 			}
 		}
+		
+		//TODO general func to set everything or at least calculate settings object. (so don't repeat so much code here and above for explosions)
+		//teapot/exploding box visually represents ticking sound (coincidence that exploding box has same tempo! TODO properly synchronise)
+		mat4.set(invertedWorldCamera,tmpRelativeMat);
+		mat4.multiply(tmpRelativeMat, teapotMatrix);				
+		var distance = distBetween4mats(tmpRelativeMat, identMat);		
+		var soundSize = 0.02;	//closest distance can get to sound, where volume is 1
+		var vol = soundSize/Math.hypot(distance, soundSize);
+		var pan = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));	//tanh(left/hypot(size,down,forwards) )
+		//console.log("pan: " + pan);
+		myAudioPlayer.setClockSound({delay:distance/soundspd, gain:vol, pan:pan});
 		
 		var duocylinderRotate = duoCylinderAngVelConst * timeElapsed*moveSpeed;
 		
