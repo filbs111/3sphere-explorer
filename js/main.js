@@ -1336,17 +1336,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 		if (duocylinderModel == 'voxTerrain'){
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix, closestPointTestMat);
-			
 			mat4.set(closestPointTestMat, mMatrix);
-			boxSize = 0.002;
 			gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.magenta);
-		
-			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize*10,boxSize,boxSize]);
-			drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
-			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize*10,boxSize]);
-			drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
-			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize*10]);
-			drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+			drawTriAxisCross(0.02);
 		}
 	}
 	
@@ -1383,14 +1375,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 	mat4.set(invertedWorldCamera, mvMatrix);
 	mat4.multiply(mvMatrix, collisionTestObjMat);
 	mat4.set(collisionTestObjMat, mMatrix);
-	var testObjScale = 0.001
-	//draw a 3-axis cross
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [testObjScale,testObjScale,20*testObjScale]);
-	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [testObjScale,20*testObjScale,testObjScale]);
-	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [20*testObjScale,testObjScale,testObjScale]);
-	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+	var testObjScale=0.001;
+	drawTriAxisCross(testObjScale*20);
+	
 	//draw object centred on object colliding with to see if anything happening!
 	mat4.set(invertedWorldCamera, mvMatrix);
 	mat4.multiply(mvMatrix, collisionTestObj2Mat);
@@ -1409,23 +1396,13 @@ function drawWorldScene(frameTime, isCubemapView) {
 	mat4.set(invertedWorldCamera, mvMatrix);
 	mat4.multiply(mvMatrix, collisionTestObj4Mat);
 	mat4.set(collisionTestObj4Mat, mMatrix);
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [testObjScale,testObjScale,20*testObjScale]);
-	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [testObjScale,20*testObjScale,testObjScale]);
-	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [20*testObjScale,testObjScale,testObjScale]);
-	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+	drawTriAxisCross(0.02);
 	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.red);
 	mat4.set(invertedWorldCamera, mvMatrix);
 	mat4.multiply(mvMatrix, collisionTestObj5Mat);
 	mat4.set(collisionTestObj5Mat, mMatrix);
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [testObjScale,testObjScale,20*testObjScale]);
-	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [testObjScale,20*testObjScale,testObjScale]);
-	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [20*testObjScale,testObjScale,testObjScale]);
-	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+	drawTriAxisCross(0.02);
 	
 	
 	function drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, buffers, invertedCamera){
@@ -3115,7 +3092,7 @@ var iterateMechanics = (function iterateMechanics(){
 				var soundSize = 0.002;	//reduced this below noiseRad so get more pan
 				panForTerrainNoise = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));	//tanh(left/hypot(size,down,forwards)). tanh smoothly limits to +/- 1
 				
-				console.log(panForTerrainNoise);
+				//console.log(panForTerrainNoise);
 				
 				//distanceForTerrainNoise = 0.02*voxCollisionFunction(playerPos);	//TODO get distance. shouldn't be necessary with SDF. maybe problem is with other terrain funcs. to estimate distance, guess want to divide this by its downhill slope (which for proper SDF should be 1). for now guess some constant that will work ~consistently with other terrain. 
 			}
@@ -4016,3 +3993,13 @@ function initTextureFramebuffer() {
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	*/
 }
+
+function drawTriAxisCross(scale){
+	var smallScale = scale/20;
+	gl.uniform3fv(shaderProgramTexmap.uniforms.uModelScale, [smallScale,smallScale,scale]);
+	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+	gl.uniform3fv(shaderProgramTexmap.uniforms.uModelScale, [smallScale,scale,smallScale]);
+	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+	gl.uniform3fv(shaderProgramTexmap.uniforms.uModelScale, [scale,smallScale,smallScale]);
+	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+};
