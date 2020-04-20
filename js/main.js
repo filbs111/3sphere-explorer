@@ -1332,23 +1332,23 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
 	}
 	
-	if (duocylinderModel == 'voxTerrain'){
-		test2VoxABC();	//updates closestPointTestMat
-			//could use drawPreppedBufferOnDuocylinder , but have gone to trouble of getting the matrix already...
-		mat4.set(invertedWorldCamera, mvMatrix);
-		mat4.multiply(mvMatrix, closestPointTestMat);	
-		mat4.set(closestPointTestMat, mMatrix);
-		boxSize = 0.002;
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.magenta);
-	
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize*10,boxSize,boxSize]);
-		drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize*10,boxSize]);
-		drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize*10]);
-		drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+	if (guiParams.debug.closestPoint){
+		if (duocylinderModel == 'voxTerrain'){
+			mat4.set(invertedWorldCamera, mvMatrix);
+			mat4.multiply(mvMatrix, closestPointTestMat);
+			
+			mat4.set(closestPointTestMat, mMatrix);
+			boxSize = 0.002;
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.magenta);
+		
+			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize*10,boxSize,boxSize]);
+			drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize*10,boxSize]);
+			drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize*10]);
+			drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+		}
 	}
-	
 	
 	
 	var seaTime = 0.00005*(frameTime % 20000 ); //20s loop
@@ -2419,7 +2419,7 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	duocylinderModel0:"sea",
+	duocylinderModel0:"voxTerrain",
 	duocylinderModel1:"voxTerrain",
 	duocylinderRotateSpeed:0,
 	drawShapes:{
@@ -2490,6 +2490,9 @@ var guiParams={
 		scale:0.3,
 		isPortal:true,
 		moveAway:0.0005
+	},
+	debug:{
+		closestPoint:true
 	},
 	normalMove:0
 };
@@ -2600,6 +2603,9 @@ function init(){
 	displayFolder.add(guiParams, "atmosContrast", -10,10,0.5);
 	displayFolder.add(guiParams, "culling");
 	displayFolder.add(guiParams, "normalMove", 0,0.02,0.001);
+	
+	var debugFolder = gui.addFolder('debug');
+	debugFolder.add(guiParams.debug, "closestPoint");
 	
 	var reflectorFolder = gui.addFolder('reflector');
 	reflectorFolder.add(guiParams.reflector, "draw");
@@ -3096,7 +3102,10 @@ var iterateMechanics = (function iterateMechanics(){
 				distanceForTerrainNoise = getHeightAboveSeaFor4VecPos(playerPos, lastSeaTime);	//height. todo use distance (unimportant because sea gradient low
 			}
 			if (duocylinderModel == 'voxTerrain'){
-				distanceForTerrainNoise = 0.02*voxCollisionFunction(playerPos);	//TODO get distance. shouldn't be necessary with SDF. maybe problem is with other terrain funcs. to estimate distance, guess want to divide this by its downhill slope (which for proper SDF should be 1). for now guess some constant that will work ~consistently with other terrain. 
+				test2VoxABC();	//updates closestPointTestMat
+				distanceForTerrainNoise = distBetween4mats(playerCamera, closestPointTestMat);
+				
+				//distanceForTerrainNoise = 0.02*voxCollisionFunction(playerPos);	//TODO get distance. shouldn't be necessary with SDF. maybe problem is with other terrain funcs. to estimate distance, guess want to divide this by its downhill slope (which for proper SDF should be 1). for now guess some constant that will work ~consistently with other terrain. 
 			}
 			
 			//whoosh sound. simple educated guess model for sound of passing by objects. maybe with a some component of pure wind noise
