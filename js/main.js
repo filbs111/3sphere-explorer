@@ -438,17 +438,17 @@ function initBuffers(){
 	randBoxBuffers.divs=1;	//because reusing duocylinder drawing function
 	randBoxBuffers.step=0;	//unused
 	
-	var towerBoxData = generateDataForDataMatricesScale(levelCubeData, duocylinderBoxInfo.towerblocks.list.map(function(elem){return elem.matrix;}), 0.025);
+	var towerBoxData = generateDataForDataMatricesScale(levelCubeData, duocylinderBoxInfo.towerblocks.list.map(function(elem){return elem.matrix;}), duocylinderSurfaceBoxScale);
 	loadDuocylinderBufferData(towerBoxBuffers, towerBoxData);	//TODO rename func so not specific to duocylinder - generally is for 4vec vertex data.
 	towerBoxBuffers.divs=1;	//because reusing duocylinder drawing function
 	towerBoxBuffers.step=0;	//unused
 	
-	var stonehengeBoxData = generateDataForDataMatricesScale(levelCubeData, duocylinderBoxInfo.stonehenge.list.map(function(elem){return elem.matrix;}), 0.025);
+	var stonehengeBoxData = generateDataForDataMatricesScale(levelCubeData, duocylinderBoxInfo.stonehenge.list.map(function(elem){return elem.matrix;}), duocylinderSurfaceBoxScale);
 	loadDuocylinderBufferData(stonehengeBoxBuffers, stonehengeBoxData);	//TODO rename func so not specific to duocylinder - generally is for 4vec vertex data.
 	stonehengeBoxBuffers.divs=1;	//because reusing duocylinder drawing function
 	stonehengeBoxBuffers.step=0;	//unused
 	
-	var roadBoxData = generateDataForDataMatricesScale(levelCubeData, duocylinderBoxInfo.roads.list.map(function(elem){return elem.matrix;}), 0.025);
+	var roadBoxData = generateDataForDataMatricesScale(levelCubeData, duocylinderBoxInfo.roads.list.map(function(elem){return elem.matrix;}), duocylinderSurfaceBoxScale);
 	loadDuocylinderBufferData(roadBoxBuffers, roadBoxData);	//TODO rename func so not specific to duocylinder - generally is for 4vec vertex data.
 	roadBoxBuffers.divs=1;	//because reusing duocylinder drawing function
 	roadBoxBuffers.step=0;	//unused
@@ -3027,7 +3027,7 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			var distanceForTerrainNoise = 100;	//something arbitrarily large
 			var panForTerrainNoise = 0;
-			
+						
 			//some logic shared with drawing code
 			var duocylinderModel = (playerContainer.world==0) ? guiParams.duocylinderModel0 : guiParams.duocylinderModel1;	//todo use array
 			if (duocylinderModel == 'procTerrain'){
@@ -3109,11 +3109,13 @@ var iterateMechanics = (function iterateMechanics(){
 			var vol = terrainNoiseRad/adjustedDist;
 			var noisySpeed = 20;	//around/above this speed, spdFactor tends to 1. below this, ~linear
 			var spdFactor = spd/Math.hypot(spd,noisySpeed);
+			adjustedDist = Math.min(adjustedDist,2);	//clamp. (TODO set value to max delay). prevents log spam
 			myAudioPlayer.setWhooshSound({delay:adjustedDist, gain:vol*spdFactor, pan:panForTerrainNoise});
 			
 			//whoosh for boxes, closest point calculation done inside collision function
 			adjustedDist = Math.hypot(closestBoxDist,terrainNoiseRad);
 			vol = terrainNoiseRad/adjustedDist;
+			adjustedDist = Math.min(adjustedDist,2);	//clamp. (TODO set value to max delay). prevents log spam
 			myAudioPlayer.setWhooshSoundBox({delay:adjustedDist, gain:vol*spdFactor, pan:0});	//todo pan
 			
 			
@@ -3130,6 +3132,8 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			currentPen = Math.max(currentPen,0);	//TODO better place for this? box penetration should not be -ve
 
+			closestBoxDist =100; //used for thwop noise. initialise to arbitrarily large. TODO store point so pan sound
+			
 			if (guiParams.drawShapes.stonehenge || guiParams.drawShapes.singleBufferStonehenge){
 				processBoxCollisionsForBoxInfoAllPoints(duocylinderBoxInfo.stonehenge);
 			}
@@ -3152,8 +3156,7 @@ var iterateMechanics = (function iterateMechanics(){
 			function processBoxCollisionsForBoxInfo(boxInfo, landingLeg, collisionBallSize, drawDebugStuff, useForThwop){
 				var pointOffset = landingLeg.pos.map(function(elem){return -elem;});	//why reversed? probably optimisable. TODO untangle signs!
 				
-				var closestBoxDistThisBox = 100;	//something arbitrarily large (guess maybe largest value can take is 1 or 2)
-											//used for box "Thwop" - initially just using 1 noise for all boxes. 
+				var closestBoxDistThisBox = closestBoxDist;
 				
 				var relativeMat = mat4.identity();
 				var boxArrs = boxInfo.gridContents;
