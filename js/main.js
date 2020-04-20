@@ -3048,6 +3048,7 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 			
 			var distanceForTerrainNoise = 100;	//something arbitrarily large
+			var panForTerrainNoise = 0;
 			
 			//some logic shared with drawing code
 			var duocylinderModel = (playerContainer.world==0) ? guiParams.duocylinderModel0 : guiParams.duocylinderModel1;	//todo use array
@@ -3105,6 +3106,17 @@ var iterateMechanics = (function iterateMechanics(){
 				test2VoxABC();	//updates closestPointTestMat
 				distanceForTerrainNoise = distBetween4mats(playerCamera, closestPointTestMat);
 				
+				//get terrain noise pan. TODO reuse other pan code (explosions etc)
+				
+				mat4.set(invertedWorldCamera,tmpRelativeMat);
+				mat4.multiply(tmpRelativeMat, closestPointTestMat);
+				//distanceForTerrainNoise = distBetween4mats(tmpRelativeMat, identMat);	//should be same as previous result
+				
+				var soundSize = 0.002;	//reduced this below noiseRad so get more pan
+				panForTerrainNoise = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));	//tanh(left/hypot(size,down,forwards)). tanh smoothly limits to +/- 1
+				
+				console.log(panForTerrainNoise);
+				
 				//distanceForTerrainNoise = 0.02*voxCollisionFunction(playerPos);	//TODO get distance. shouldn't be necessary with SDF. maybe problem is with other terrain funcs. to estimate distance, guess want to divide this by its downhill slope (which for proper SDF should be 1). for now guess some constant that will work ~consistently with other terrain. 
 			}
 			
@@ -3114,12 +3126,12 @@ var iterateMechanics = (function iterateMechanics(){
 			//todo use the projected nearest surface point to inform stereo pan
 			//todo use atmos thickness
 			//todo use correct speed of sound (consistent with elsewhere)
-			var terrainNoiseRad = 0.005;
+			var terrainNoiseRad = 0.01;
 			var adjustedDist = Math.hypot(distanceForTerrainNoise,terrainNoiseRad)
 			var vol = terrainNoiseRad/adjustedDist;
 			var noisySpeed = 20;	//around/above this speed, spdFactor tends to 1. below this, ~linear
 			var spdFactor = spd/Math.hypot(spd,noisySpeed);
-			myAudioPlayer.setWhooshSound({delay:adjustedDist, gain:vol*spdFactor, pan:0});
+			myAudioPlayer.setWhooshSound({delay:adjustedDist, gain:vol*spdFactor, pan:panForTerrainNoise});
 			
 			
 			
