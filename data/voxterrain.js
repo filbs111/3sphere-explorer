@@ -914,6 +914,13 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		var yplus = (jj+ringShift)%32 - 16;
 		var yminus = (jj-ringShift)%32 - 16;
 		
+		var roundingPower = 8;	//even number
+		var x = x* ( 1 - Math.pow(x/16, roundingPower));	//make sawtooth rounded (make field continuous so direction of closest point estimation using gradient works better.)
+		var y = y* ( 1 - Math.pow(y/16, roundingPower));
+		
+		//var xwave=x;	//turn off adjustments
+		//var ywave=y;
+		
 		var rad = Math.hypot(x,yplus);
 		var ringOneRad = Math.hypot( rad - ringSize, kk-32 - ringTilt*x);	//+/-x shears ring instead of rotating it. approx but simple
 		
