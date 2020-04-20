@@ -2246,7 +2246,8 @@ var invertedWorldCameraDuocylinderFrame = mat4.create();
 var tmpRelativeMat = mat4.create();
 var identMat = mat4.identity();
 
-var closestPointTestMat = mat4.create();
+var closestPointTestMat = mat4.create();	//TODO maybe more efficient to just use a point here. (matrix is used to draw debug something, but could convert to matrix only when debug drawing...
+var closestBoxDist=100;	//initialise to arbitrarily large. TODO store point so pan sound	
 
 function setMatrixUniforms(shaderProgram) {
     gl.uniformMatrix4fv(shaderProgram.uniforms.uPMatrix, false, pMatrix);
@@ -3110,6 +3111,11 @@ var iterateMechanics = (function iterateMechanics(){
 			var spdFactor = spd/Math.hypot(spd,noisySpeed);
 			myAudioPlayer.setWhooshSound({delay:adjustedDist, gain:vol*spdFactor, pan:panForTerrainNoise});
 			
+			//whoosh for boxes, closest point calculation done inside collision function
+			adjustedDist = Math.hypot(closestBoxDist,terrainNoiseRad);
+			vol = terrainNoiseRad/adjustedDist;
+			myAudioPlayer.setWhooshSoundBox({delay:adjustedDist, gain:vol*spdFactor, pan:0});	//todo pan
+			
 			
 			
 			//apply same forces for other items. 
@@ -3135,15 +3141,18 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 			
 			function processBoxCollisionsForBoxInfoAllPoints(boxInfo){
-				processBoxCollisionsForBoxInfo(boxInfo, playerCentreBallData, 0.005, true);
+				processBoxCollisionsForBoxInfo(boxInfo, playerCentreBallData, 0.005, true, true);
 				
 				for (var legnum=0;legnum<landingLegData.length;legnum++){
-					processBoxCollisionsForBoxInfo(boxInfo, landingLegData[legnum], 0.001);
+					processBoxCollisionsForBoxInfo(boxInfo, landingLegData[legnum], 0.001, false);
 				}
 			}
 			
-			function processBoxCollisionsForBoxInfo(boxInfo, landingLeg, collisionBallSize, drawDebugStuff){
+			function processBoxCollisionsForBoxInfo(boxInfo, landingLeg, collisionBallSize, drawDebugStuff, useForThwop){
 				var pointOffset = landingLeg.pos.map(function(elem){return -elem;});	//why reversed? probably optimisable. TODO untangle signs!
+				
+				var closestBoxDistThisBox = 100;	//something arbitrarily large (guess maybe largest value can take is 1 or 2)
+											//used for box "Thwop" - initially just using 1 noise for all boxes. 
 				
 				var relativeMat = mat4.identity();
 				var boxArrs = boxInfo.gridContents;
@@ -3197,7 +3206,9 @@ var iterateMechanics = (function iterateMechanics(){
 						var vectorFromBox = relativePos.map(function(elem){return elem>0 ? Math.max(elem - projectedBoxSize,0) : Math.min(elem + projectedBoxSize,0);});
 						var distSqFromBox = vectorFromBox[0]*vectorFromBox[0]+vectorFromBox[1]*vectorFromBox[1]+vectorFromBox[2]*vectorFromBox[2];
 						var distFromBox = Math.sqrt(distSqFromBox);		//todo handle distSqFromBox =0 (centre of collision ball is inside box) - can happen if moving fast, cover collisionBallSize in 1 step. currently results in passing thru box)
-												
+						
+						closestBoxDistThisBox = Math.min(closestBoxDistThisBox, distFromBox);
+						
 						//if (Math.max(Math.abs(relativePos[0]),
 						//			Math.abs(relativePos[1]),
 						//			Math.abs(relativePos[2]))<projectedBoxSize){
@@ -3285,6 +3296,10 @@ var iterateMechanics = (function iterateMechanics(){
 						
 					}
 				
+				}
+				
+				if (useForThwop){
+					closestBoxDist = closestBoxDistThisBox;
 				}
 			}
 			

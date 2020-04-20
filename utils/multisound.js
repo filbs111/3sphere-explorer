@@ -112,9 +112,11 @@ var myAudioPlayer = (function(){
 	//TODO rewrite/generalise (looping) sound code. 
 	var whooshSound;
 	var whooshSoundInstance;
+	var whooshSoundBoxInstance;
 	var playWhooshSound= function(){
 		console.log("attempting to play whoosh sound");
-		whooshSoundInstance=whooshSound.play(0,1,true);
+		whooshSoundInstance=whooshSound.play(0,0,true);
+		whooshSoundBoxInstance=whooshSound.play(0,0,true);
 	}
 	whooshSound = new MySound('audio/blowtorch_50k.mp3', playWhooshSound);
 	
@@ -131,6 +133,9 @@ var myAudioPlayer = (function(){
 		},
 		setWhooshSound: function(settings){
 			if (whooshSoundInstance){whooshSoundInstance.setAll(settings);}
+		},
+		setWhooshSoundBox: function(settings){
+			if (whooshSoundBoxInstance){whooshSoundBoxInstance.setAll(settings);}
 		},
 		setGlobalVolume: function(volume){	//todo actually use globalGainNode
 			console.log("SETTING GLOBAL VOLUME");
