@@ -1331,6 +1331,26 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.001,0.001,0.001]);
 		drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
 	}
+	
+	if (duocylinderModel == 'voxTerrain'){
+		test2VoxABC();	//updates closestPointTestMat
+			//could use drawPreppedBufferOnDuocylinder , but have gone to trouble of getting the matrix already...
+		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.multiply(mvMatrix, closestPointTestMat);	
+		mat4.set(closestPointTestMat, mMatrix);
+		boxSize = 0.002;
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.magenta);
+	
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize*10,boxSize,boxSize]);
+		drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize*10,boxSize]);
+		drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize*10]);
+		drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+	}
+	
+	
+	
 	var seaTime = 0.00005*(frameTime % 20000 ); //20s loop
 	lastSeaTime=seaTime;	//for use in mechanics. TODO switch to using mechanics time for rendering instead
 	if (duocylinderModel == 'sea'){
@@ -2248,6 +2268,8 @@ var invertedWorldCameraDuocylinderFrame = mat4.create();
 
 var tmpRelativeMat = mat4.create();
 var identMat = mat4.identity();
+
+var closestPointTestMat = mat4.create();
 
 function setMatrixUniforms(shaderProgram) {
     gl.uniformMatrix4fv(shaderProgram.uniforms.uPMatrix, false, pMatrix);

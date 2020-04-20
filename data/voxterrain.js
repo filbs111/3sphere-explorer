@@ -2,6 +2,9 @@
 //intial implementation will be voxels wrapped onto duocylinder. 1st implementation - keep axis aligned, wrap in shader. alternative would require more complex texture projection in shader - though this is how do regular grid terrain currently.
 //TODO separate out SDF for collision detection calls.
 
+//var voxlog = console.log;	//if enable logging, be sure to stop calling test2VoxABC in the main game loop!
+var voxlog = function(log){};
+
 var voxCollisionFunction; //something that can be used for collision detection. 
 						  //for consistency with basic 2d terrain stuff, for input 4vector, provide: penetration depth, normal vector.
 						  //maybe want simple version that just returns whether collided. ( eg for bullet collisions)
@@ -13,18 +16,37 @@ var voxABCFor4vec;
 
 function testVoxABC(){	//WORKS!!
 	var inputVec = playerCamera.slice(12);
-	console.log(inputVec);
+	voxlog(inputVec);
+	
 	var abc = voxABCFor4vec(inputVec);
+	voxlog("abc");
+	voxlog(abc);
 	
-	//var result = get4vecForABCDCCoords(abc.a,abc.b,abc.c);
-	//console.log(result);
+	var result = get4vecForABCDCCoords(abc.a,abc.b,abc.c);
+	voxlog(result);
+	
 	var matresult = getMatForABCDCCoords(abc.a,abc.b,abc.c);
-	console.log(matresult.slice(12));
+	voxlog(matresult.slice(12));
+}
+function test2VoxABC(){
+	var inputVec = playerCamera.slice(12);
+	voxlog(inputVec);
+	var abcResult = voxClosestPoint(inputVec);
+	voxlog("abcResult:");
+	voxlog(abcResult);
 	
-	mat4.set(matresult, closestPointTestMat);
+	var matResult = getMatForABCDCCoords(abcResult.a,abcResult.b,abcResult.c);
+	
+	voxlog(matResult.slice(12));
+	
+	mat4.set(matResult, closestPointTestMat);
 }
 
-function getMatForABCDCCoords(a,b,c){	
+
+function getMatForABCDCCoords(a,b,c){
+	voxlog("getMatForABCDCCoords input:");
+	voxlog({a:a,b:b,c:c});
+	
 	//don't neg a because though voxCollisionFunction, (terrainGetHeightFor4VecPos, getHeightAboveTerrainFor4VecPos) use different sign, latter return negates it again!
 	a = a;
 	//see terrainGetHeightFor4VecPos , absent in  getHeightAboveTerrainFor4VecPos ?!
@@ -42,9 +64,15 @@ function getMatForABCDCCoords(a,b,c){
 	zmove4mat(tmpRelativeMat, b);
 	xmove4mat(tmpRelativeMat, Math.PI/4 - c );	//or ymove - should check what way up want models to be. PI/4 is onto surface of duocylinder
 			//even this doesn't work!! suspect maybe something to do with mvMatrix
+	
+	voxlog("getMatForABCDCCoords");
+	voxlog(tmpRelativeMat.slice(12));
+			
 	return tmpRelativeMat;
 }
 function get4vecForABCDCCoords(a,b,c){	//simple version first!
+	voxlog("get4vecForABCDCCoords");
+	voxlog({a:a,b:b,c:c});
 	return getMatForABCDCCoords(a,b,c).slice(12);
 }
 
@@ -108,16 +136,22 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		var b = abc.b;
 		var c = abc.c;	//this height of 4vec that can be compared to landscape height
 	
+		voxlog("abc");
+		voxlog(abc);
+	
 		//simple test - check can get back 4vec position
 		//return get4vecForABCDCCoords(a,b,c);
+		//return getMatForABCDCCoords(a,b,c);
+		//return abc;
 	
 		var aa=multiplier*decentMod(a,Math.PI);		//vox terrain currently repeated 2x2 squares
 		var bb=multiplier*decentMod(b + duocylinderSpin,Math.PI);
 		var cc= 32 +c*2*multiplier;
 		
 		//next test, attempt to convert back to 4vector input from aa,bb,cc
-		//return get4vecForABCDCCoords(aa/multiplier,bb/multiplier -duocylinderSpin, (cc-32)/(2*multiplier));
-
+		//return get4vecForABCDCCoords(aa/multiplier, bb/multiplier-duocylinderSpin , (cc-32)/(2*multiplier));
+		//return {a:aa/multiplier, b:bb/multiplier-duocylinderSpin, c:(cc-32)/(2*multiplier)};
+		
 		//find gradient in aa,bb,cc space, 1 step gradient descent to find approximate closest point on surface
 		var smallAmount = 0.01;
 		var centralLevel = voxFunction(aa,bb,cc);
@@ -126,18 +160,24 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		var ccGradient = (voxFunction(aa,bb,cc+smallAmount)-centralLevel)/smallAmount;
 		
 		//totalgradient is hypot of these.
-		//move in direction of gradient. -centralLevel*(gradientvec/gradientmag) by 1/gradientmag - ie by gradientvec/gradientmagsq.
-		var gradMag = aaGradient*aaGradient + bbGradient*bbGradient + ccGradient*ccGradient;
+		//move in direction of gradient. (gradientvec/gradientmag) by -centralLevel/gradientmag - ie by -centralLevel*gradientvec/gradientmagsq.
+		var gradMagSq = aaGradient*aaGradient + bbGradient*bbGradient + ccGradient*ccGradient;
+		voxlog({gradMagSq:gradMagSq});
 		
-		//for input=output test
-		gradMag=0;
-		
-		var multiplier2 = centralLevel*gradMag;
+		var multiplier2 = centralLevel/gradMagSq;
+
+		/*
 		aa-= multiplier2*aaGradient;
 		bb-= multiplier2*bbGradient;
 		cc-= multiplier2*ccGradient;
 		
-		return get4vecForABCDCCoords(aa/multiplier,bb/multiplier -duocylinderSpin, (cc-32)/(2*multiplier));
+		//return get4vecForABCDCCoords(aa/multiplier,bb/multiplier -duocylinderSpin, (cc-32)/(2*multiplier));
+		//return {a:aa/multiplier, b:bb/multiplier -duocylinderSpin, c:(cc-32)/(2*multiplier)};
+				//ends up in odd place because vox terrain repeats. instead, return a,b,c with delta aa added...
+				*/
+		multiplier2/=multiplier;
+		return {a:a-multiplier2*aaGradient, b:b-multiplier2*bbGradient, c:c - multiplier2*ccGradient/2};
+			//TODO see whether assuming that gradient =1 makes this smoother.
 	}	
 	
 	var mattoinvert = mat3.create();
