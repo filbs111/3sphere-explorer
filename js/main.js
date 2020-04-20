@@ -1371,39 +1371,39 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawPreppedBufferOnDuocylinder(testBuoyPos.b,testBuoyPos.a,testBuoyPos.h, [1, 0, 0, 1], cubeBuffers);
 	}
 	
-	//draw collision test object
-	mat4.set(invertedWorldCamera, mvMatrix);
-	mat4.multiply(mvMatrix, collisionTestObjMat);
-	mat4.set(collisionTestObjMat, mMatrix);
-	var testObjScale=0.001;
-	drawTriAxisCross(testObjScale*20);
-	
-	//draw object centred on object colliding with to see if anything happening!
-	mat4.set(invertedWorldCamera, mvMatrix);
-	mat4.multiply(mvMatrix, collisionTestObj2Mat);
-	mat4.set(collisionTestObj2Mat, mMatrix);
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [2*testObjScale,2*testObjScale,2*testObjScale]);
-	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
-	//draw object shifted by normal
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.green);
-	mat4.set(invertedWorldCamera, mvMatrix);
-	mat4.multiply(mvMatrix, collisionTestObj3Mat);
-	mat4.set(collisionTestObj3Mat, mMatrix);
-	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+	if (guiParams.debug.closestPoint){	//draw collision test object
+		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.multiply(mvMatrix, collisionTestObjMat);
+		mat4.set(collisionTestObjMat, mMatrix);
+		var testObjScale=0.001;
+		drawTriAxisCross(testObjScale*20);
+		
+		//draw object centred on object colliding with to see if anything happening!
+		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.multiply(mvMatrix, collisionTestObj2Mat);
+		mat4.set(collisionTestObj2Mat, mMatrix);
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [2*testObjScale,2*testObjScale,2*testObjScale]);
+		drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+		//draw object shifted by normal
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.green);
+		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.multiply(mvMatrix, collisionTestObj3Mat);
+		mat4.set(collisionTestObj3Mat, mMatrix);
+		drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
 
-	//try to get something drawing at colliding object, relative to
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.blue);
-	mat4.set(invertedWorldCamera, mvMatrix);
-	mat4.multiply(mvMatrix, collisionTestObj4Mat);
-	mat4.set(collisionTestObj4Mat, mMatrix);
-	drawTriAxisCross(0.02);
-	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.red);
-	mat4.set(invertedWorldCamera, mvMatrix);
-	mat4.multiply(mvMatrix, collisionTestObj5Mat);
-	mat4.set(collisionTestObj5Mat, mMatrix);
-	drawTriAxisCross(0.02);
-	
+		//try to get something drawing at colliding object, relative to
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.blue);
+		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.multiply(mvMatrix, collisionTestObj4Mat);
+		mat4.set(collisionTestObj4Mat, mMatrix);
+		drawTriAxisCross(0.02);
+		
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.red);
+		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.multiply(mvMatrix, collisionTestObj5Mat);
+		mat4.set(collisionTestObj5Mat, mMatrix);
+		drawTriAxisCross(0.02);
+	}
 	
 	function drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, buffers, invertedCamera){
 		var invertedCamera = invertedCamera || invertedWorldCamera;
@@ -1861,7 +1861,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 	function drawBall(matrix){
 		//draw "light" object
-		var sphereRad = 0.012;
+		var sphereRad = 0.01;
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [sphereRad,sphereRad,sphereRad]);
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
 		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);
@@ -2397,7 +2397,7 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	duocylinderModel0:"voxTerrain",
+	duocylinderModel0:"grid",
 	duocylinderModel1:"voxTerrain",
 	duocylinderRotateSpeed:0,
 	drawShapes:{
@@ -2412,13 +2412,13 @@ var guiParams={
 		teapot:false,
 		"teapot scale":0.7,
 		towers:false,
-		singleBufferTowers:false,
+		singleBufferTowers:true,
 		explodingBox:true,
 		hyperboloid:false,
 		stonehenge:false,
-		singleBufferStonehenge:false,
+		singleBufferStonehenge:true,
 		roads:false,
-		singleBufferRoads:false
+		singleBufferRoads:true
 	},
 	'random boxes':{
 		number:maxRandBoxes,	//note ui controlled value does not affect singleBuffer
@@ -2435,7 +2435,7 @@ var guiParams={
 	"24-cell scale":1,
 	"draw 120-cell":false,
 	"draw 600-cell":false,
-	"draw spaceship":true,
+	"draw spaceship":false,
 	"drop spaceship":false,
 	target:{
 		type:"none",
@@ -3141,10 +3141,11 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 			
 			function processBoxCollisionsForBoxInfoAllPoints(boxInfo){
-				processBoxCollisionsForBoxInfo(boxInfo, playerCentreBallData, 0.005, true, true);
-				
+				//processBoxCollisionsForBoxInfo(boxInfo, playerCentreBallData, 0.005, true, true);
+				processBoxCollisionsForBoxInfo(boxInfo, playerCentreBallData, 0.01, true, true);
+						
 				for (var legnum=0;legnum<landingLegData.length;legnum++){
-					processBoxCollisionsForBoxInfo(boxInfo, landingLegData[legnum], 0.001, false);
+				//	processBoxCollisionsForBoxInfo(boxInfo, landingLegData[legnum], 0.001, false);	//disable to debug easier using only playerCentreBallData collision
 				}
 			}
 			
