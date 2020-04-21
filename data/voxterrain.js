@@ -31,9 +31,12 @@ function testVoxABC(){	//WORKS!!
 function test2VoxABC(){
 	var inputVec = playerCamera.slice(12);
 	voxlog(inputVec);
-	var abcResult = voxClosestPoint(inputVec);
+	var voxResult = voxClosestPoint(inputVec);
+	var abcResult = voxResult.abc;
 	voxlog("abcResult:");
 	voxlog(abcResult);
+	
+	voxCollisionCentralLevel = voxResult.centralLevel;
 	
 	var matResult = getMatForABCDCCoords(abcResult.a,abcResult.b,abcResult.c);
 	
@@ -176,7 +179,10 @@ var voxTerrainData = (function generateVoxTerrainData(){
 				//ends up in odd place because vox terrain repeats. instead, return a,b,c with delta aa added...
 				*/
 		multiplier2/=multiplier;
-		return {a:a-multiplier2*aaGradient, b:b-multiplier2*bbGradient, c:c - multiplier2*ccGradient/2};
+		return {
+			abc:{a:a-multiplier2*aaGradient, b:b-multiplier2*bbGradient, c:c - multiplier2*ccGradient/2},
+			centralLevel:centralLevel
+		};
 			//TODO see whether assuming that gradient =1 makes this smoother.
 	}	
 	

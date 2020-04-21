@@ -1863,7 +1863,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//draw "light" object
 		var sphereRad = settings.playerBallRad;
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [sphereRad,sphereRad,sphereRad]);
-		var voxColliding = distBetween4mats(playerCamera, closestPointTestMat) < sphereRad;
+		var voxColliding = (voxCollisionCentralLevel>0) || (distBetween4mats(playerCamera, closestPointTestMat) < sphereRad); 
+						//sphere centre inside voxel volume OR sphere intersects with voxel zero surface.
+			//note could just have a simple signed distance, of vox field value divided by magnitide of gradient. however, current gradient is in abc space. TODO make work with this clunky version, then try abc-> player space gradient conversion, check results are consistent.
+		
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, voxColliding ? colorArrs.red: colorArrs.white);
 		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);
 		mat4.set(invertedWorldCamera, mvMatrix);
@@ -2248,6 +2251,8 @@ var tmpRelativeMat = mat4.create();
 var identMat = mat4.identity();
 
 var closestPointTestMat = mat4.create();	//TODO maybe more efficient to just use a point here. (matrix is used to draw debug something, but could convert to matrix only when debug drawing...
+var voxCollisionCentralLevel =0;
+
 var closestBoxDist=100;	//initialise to arbitrarily large. TODO store point so pan sound	
 
 function setMatrixUniforms(shaderProgram) {
