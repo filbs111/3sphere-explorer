@@ -1339,6 +1339,12 @@ function drawWorldScene(frameTime, isCubemapView) {
 			mat4.set(closestPointTestMat, mMatrix);
 			gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.magenta);
 			drawTriAxisCross(0.02);
+			
+			mat4.set(invertedWorldCamera, mvMatrix);
+			mat4.multiply(mvMatrix, voxCollisionDebugMat);
+			mat4.set(voxCollisionDebugMat, mMatrix);
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.blue);
+			drawTriAxisCross(0.01);
 		}
 	}
 	
@@ -2246,12 +2252,14 @@ var squareFrustrumCull = generateCullFunc(cmapPMatrix);
 
 var invertedWorldCamera = mat4.create();
 var invertedWorldCameraDuocylinderFrame = mat4.create();
+var invertedPlayerCamera = mat4.create();
 
 var tmpRelativeMat = mat4.create();
 var identMat = mat4.identity();
 
 var closestPointTestMat = mat4.create();	//TODO maybe more efficient to just use a point here. (matrix is used to draw debug something, but could convert to matrix only when debug drawing...
 var voxCollisionCentralLevel =0;
+var voxCollisionDebugMat = mat4.create();	//in player frame, showing where the collison/reaction
 
 var closestBoxDist=100;	//initialise to arbitrarily large. TODO store point so pan sound	
 
@@ -2403,7 +2411,7 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	duocylinderModel0:"grid",
+	duocylinderModel0:"voxTerrain",
 	duocylinderModel1:"voxTerrain",
 	duocylinderRotateSpeed:0,
 	drawShapes:{
@@ -2890,7 +2898,7 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		//TODO general func to set everything or at least calculate settings object. (so don't repeat so much code here and above for explosions)
 		//teapot/exploding box visually represents ticking sound (coincidence that exploding box has same tempo! TODO properly synchronise)
-		mat4.set(invertedWorldCamera,tmpRelativeMat);
+		mat4.set(invertedPlayerCamera,tmpRelativeMat);
 		mat4.multiply(tmpRelativeMat, teapotMatrix);				
 		var distance = distBetween4mats(tmpRelativeMat, identMat);		
 		var soundSize = 0.02;	//closest distance can get to sound, where volume is 1
@@ -3035,6 +3043,12 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			}
 			
+			//IIRC playerCamera is the spaceship (or virtual spaceship if "dropped spaceship"), and worldCamera is the actual camera (screen)
+			//mat4.set(worldCamera, invertedWorldCamera);		//ensure up to date...
+			//mat4.transpose(invertedWorldCamera);
+			mat4.set(playerCamera, invertedPlayerCamera);		//using spaceship as sound listener. 
+			mat4.transpose(invertedPlayerCamera);
+			
 			var distanceForTerrainNoise = 100;	//something arbitrarily large
 			var panForTerrainNoise = 0;
 						
@@ -3096,7 +3110,7 @@ var iterateMechanics = (function iterateMechanics(){
 				
 				//get terrain noise pan. TODO reuse other pan code (explosions etc)
 				
-				mat4.set(invertedWorldCamera,tmpRelativeMat);
+				mat4.set(invertedPlayerCamera,tmpRelativeMat);
 				mat4.multiply(tmpRelativeMat, closestPointTestMat);
 				//distanceForTerrainNoise = distBetween4mats(tmpRelativeMat, identMat);	//should be same as previous result
 				
@@ -3106,7 +3120,27 @@ var iterateMechanics = (function iterateMechanics(){
 				//console.log(panForTerrainNoise);
 				
 				//distanceForTerrainNoise = 0.02*voxCollisionFunction(playerPos);	//TODO get distance. shouldn't be necessary with SDF. maybe problem is with other terrain funcs. to estimate distance, guess want to divide this by its downhill slope (which for proper SDF should be 1). for now guess some constant that will work ~consistently with other terrain. 
+				
+				
+				//voxel collision. 
+				//simple version, just push away from closest point. this will be in "wrong direction" if inside voxel volume, so will fall down if tunnel inside. TODO this better! see notes for function drawBall. TODO damping, friction etc
+				var penetration = settings.playerBallRad - distanceForTerrainNoise;
+				//if (penetration>0){
+				var pointDisplacement = tmpRelativeMat.slice(12, 15);	//for small distances, length of this is ~ distanceForTerrainNoise
+				mat4.set(playerCamera, voxCollisionDebugMat);
+				xyzmove4mat(voxCollisionDebugMat, pointDisplacement.map(function(elem){return elem*-1;}));
+				
+				if (penetration>0){
+					var springConstant = 200;	//simple spring. rebounding force proportional to penetration. //high number = less likely tunneling at high speed.
+					var multiplier = penetration*springConstant/distanceForTerrainNoise;	//also normalise. playerBallRad would give near same result assuming penetrations remain small
+					
+					var forcePlayerFrame = pointDisplacement.map(function(elem){return elem*multiplier;});	//TODO use vector class?
+					for (var cc=0;cc<3;cc++){
+						playerVelVec[cc]+=forcePlayerFrame[cc];
+					}
+				}
 			}
+			
 			
 			//whoosh sound. simple educated guess model for sound of passing by objects. maybe with a some component of pure wind noise
 			//volume increase with speed - either generally, or component perpendicular to nearest surface normal
