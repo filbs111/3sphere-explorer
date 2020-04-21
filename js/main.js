@@ -1861,9 +1861,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 	function drawBall(matrix){
 		//draw "light" object
-		var sphereRad = 0.01;
+		var sphereRad = settings.playerBallRad;
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [sphereRad,sphereRad,sphereRad]);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+		var voxColliding = distBetween4mats(playerCamera, closestPointTestMat) < sphereRad;
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, voxColliding ? colorArrs.red: colorArrs.white);
 		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,	matrix);
@@ -2474,6 +2475,10 @@ var guiParams={
 	},
 	normalMove:0
 };
+var settings = {
+	playerBallRad:0.01,
+}
+
 var worldColors=[];
 var playerLightUnscaled;
 var playerLight;
@@ -3145,8 +3150,7 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 			
 			function processBoxCollisionsForBoxInfoAllPoints(boxInfo){
-				//processBoxCollisionsForBoxInfo(boxInfo, playerCentreBallData, 0.005, true, true);
-				processBoxCollisionsForBoxInfo(boxInfo, playerCentreBallData, 0.01, true, true);
+				processBoxCollisionsForBoxInfo(boxInfo, playerCentreBallData, settings.playerBallRad, true, true);
 						
 				for (var legnum=0;legnum<landingLegData.length;legnum++){
 				//	processBoxCollisionsForBoxInfo(boxInfo, landingLegData[legnum], 0.001, false);	//disable to debug easier using only playerCentreBallData collision
@@ -3226,8 +3230,11 @@ var iterateMechanics = (function iterateMechanics(){
 							var reactionNormal=vectorFromBox.map(function(elem){return elem/distFromBox;});
 							
 							//reaction force proportional to currentPen -> spring force, penChange -> damper
-							var reactionForce = Math.max(20*currentPen+150*penChange, 0);	//soft like landing leg. for body collision, increase constants
-												
+						//	var reactionForce = Math.max(20*currentPen+150*penChange, 0);	//soft like landing leg. for body collision, increase constants
+							
+							var reactionForce = Math.max(50*currentPen+1000*penChange, 0);	//for body collision, increased constants to prevent tunneling. 
+																							//(TODO redo this system - timesteps should get smaller as get closer, can jump using SDF, maybe should only react to colliding with closest box, etc.
+														
 							
 							//position of collisionTestObj3Mat relative to playerMatrixTransposedDCRefFrame
 							//mising up playerCamera, playerMatrixTransposedDCRefFrame here... TODO sort out.
