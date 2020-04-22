@@ -15,8 +15,12 @@ var MySound = (function(){
 	
 		audiocontext.resume();	//??
 		var globalGainNode = audiocontext.createGain();
-		globalGainNode.connect(audiocontext.destination);	//maybe inefficient - TODO bin globalGainNode?
+		var distortion = audiocontext.createWaveShaper();
+		distortion.curve = makeDistortionCurve(400);
+		distortion.oversample = '4x';
+		globalGainNode.connect(distortion).connect(audiocontext.destination);	//maybe inefficient - TODO bin globalGainNode?
 
+		
 		//return a constructor instead, so can use this to make multiple sounds
 		var mySound = function(soundAddress, cb){
 			this.gainNode = audiocontext.createGain();
@@ -108,6 +112,7 @@ var myAudioPlayer = (function(){
 		clockSoundInstance=clockSound.play(0,1,true);
 	}
 	clockSound = new MySound('audio/Freesound - ClockTickSound_01.wav by abyeditsound.mp3', playClockSound);
+	//clockSound = new MySound('audio/Freesound - ClockTickSound_01.wav by abyeditsound.mp3');	//turn off
 
 	//TODO rewrite/generalise (looping) sound code. 
 	var whooshSound;
@@ -139,10 +144,26 @@ var myAudioPlayer = (function(){
 		},
 		setGlobalVolume: function(volume){	//todo actually use globalGainNode
 			console.log("SETTING GLOBAL VOLUME");
-			gunSound.setVolume(volume);
-			bombSound.setVolume(volume*0.4);
+			gunSound.setVolume(volume*0.2);
+			bombSound.setVolume(volume*0.2);
 			clockSound.setVolume(volume);
 		}
 	}
 })();
 myAudioPlayer.setGlobalVolume(1);	//if set above 1, fallback html media element will throw exception!!!
+
+//copied from https://developer.mozilla.org/en-US/docs/Web/API/WaveShaperNode
+function makeDistortionCurve(amount) {
+  var k = typeof amount === 'number' ? amount : 50,
+    n_samples = 44100,
+    curve = new Float32Array(n_samples),
+    deg = Math.PI / 180,
+    i = 0,
+    x;
+  for ( ; i < n_samples; ++i ) {
+    x = i * 2 / n_samples - 1;
+    curve[i] = ( 3 + k ) * x * 20 * deg / ( Math.PI + k * Math.abs(x) );
+  }
+  return curve;
+};
+
