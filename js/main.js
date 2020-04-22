@@ -2260,6 +2260,7 @@ var identMat = mat4.identity();
 var closestPointTestMat = mat4.create();	//TODO maybe more efficient to just use a point here. (matrix is used to draw debug something, but could convert to matrix only when debug drawing...
 var voxCollisionCentralLevel =0;
 var voxCollisionDebugMat = mat4.create();	//in player frame, showing where the collison/reaction
+var lastVoxPenetration = 0;
 
 var closestBoxDist=100;	//initialise to arbitrarily large. TODO store point so pan sound	
 
@@ -3106,6 +3107,7 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 			if (duocylinderModel == 'voxTerrain'){
 				test2VoxABC();	//updates closestPointTestMat
+				
 				distanceForTerrainNoise = distBetween4mats(playerCamera, closestPointTestMat);
 				
 				//get terrain noise pan. TODO reuse other pan code (explosions etc)
@@ -3125,18 +3127,26 @@ var iterateMechanics = (function iterateMechanics(){
 				//voxel collision. 
 				//simple version, just push away from closest point. this will be in "wrong direction" if inside voxel volume, so will fall down if tunnel inside. TODO this better! see notes for function drawBall. TODO damping, friction etc
 				var penetration = settings.playerBallRad - distanceForTerrainNoise;
+				var penetrationChange = penetration - lastVoxPenetration;	//todo cap this.
+				lastVoxPenetration = penetration;
 				//if (penetration>0){
 				var pointDisplacement = tmpRelativeMat.slice(12, 15);	//for small distances, length of this is ~ distanceForTerrainNoise
 				mat4.set(playerCamera, voxCollisionDebugMat);
 				xyzmove4mat(voxCollisionDebugMat, pointDisplacement.map(function(elem){return elem*-1;}));
 				
 				if (penetration>0){
-					var springConstant = 200;	//simple spring. rebounding force proportional to penetration. //high number = less likely tunneling at high speed.
-					var multiplier = penetration*springConstant/distanceForTerrainNoise;	//also normalise. playerBallRad would give near same result assuming penetrations remain small
+					var springConstant = 100;	//simple spring. rebounding force proportional to penetration. //high number = less likely tunneling at high speed.
+					var multiplier = penetration*springConstant
+					var dampConstant = 200;
+					multiplier+=penetrationChange*dampConstant;
+					
+					multiplier/=distanceForTerrainNoise;	//normalise. playerBallRad would give near same result assuming penetrations remain small
 					
 					var forcePlayerFrame = pointDisplacement.map(function(elem){return elem*multiplier;});	//TODO use vector class?
 					for (var cc=0;cc<3;cc++){
 						playerVelVec[cc]+=forcePlayerFrame[cc];
+						//playerVelVec[cc]*=0.96;	////simple bodge for some friction that does not work because doesnt account for duocylinder spin. 
+							//TODO modify velocity in rotating frame
 					}
 				}
 			}
