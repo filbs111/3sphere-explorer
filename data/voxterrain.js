@@ -97,7 +97,8 @@ var voxTerrainData = (function generateVoxTerrainData(){
 	//var voxFunction = perlinfunctionTwoLevel;
 	//var voxFunction = perlinfunctionSpiral;
 	//var voxFunction = balls;
-	var voxFunction = brejao;
+	//var voxFunction = brejao;
+	var voxFunction = longHolesTwo;
 	makeVoxdataForFunc(voxFunction);
 	
 	voxCollisionFunction = function(vec){
@@ -968,7 +969,83 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		
 	}
 	
+	function longHoles(ii,jj,kk){
+		var height = (kk-32);
+		//var envelope = height*height;
+		//return 20-envelope;		//simple flat ground - two sided but can't get from one side to the other.
+		
+		var groundHeight = 4;
+		var aboveGround = Math.max(0,Math.abs(height)-groundHeight);
+		
+		var holestep = 16;
+		var holerad = 7;
+		var halfholestep = holestep/2;
+		var xx = (ii+holestep)%holestep - halfholestep;
+		var yy = (jj+holestep)%holestep - halfholestep;
+		var rad = Math.hypot(xx,yy);	//
+		var distanceInside = Math.max( holerad - rad , 0);
+		
+		var curvature = 4;	//how much surface is "inflated" over sharp version. note if curvature=0... 		
+		
+		var distFromSurf=curvature - Math.hypot(distanceInside,aboveGround);	// <-- this function just goes to zero inside surface, presumably breaking surface extraction. could implement a hypot which treats +ve/-ve different - basically SDF for a cube corner.
+		
+		//return distFromSurf;	//simple
+		
+		return distFromSurf-1;	//simple
+
+		
+		//abs this surface for 2-sided. (player will be locked on one side unless poke a hole through though
+		//var skinThickness = 0.5;
+		//return -Math.min(-1, Math.abs(distFromSurf-skinThickness));	//note -ve number again to ensure crosses 0.
+		
+	}
+	
+	function longHolesTwo(ii,jj,kk){
+		var holerad = 7;
+		var holerad2 = 5;
+		var holestep = 32;
+		var halfholestep = holestep/2;
+		var groundHeight = 2;
+		var curvature = 5;	//how much surface is "inflated" over sharp version. 	
+		var skinThickness = 0.1;	//too small and surface extraction goes bad. not really well suited to this unless have more voxels
+		var curvature2 = 0.9;
+		
+		var height = (kk-32);
+		//var envelope = height*height;
+		//return 20-envelope;		//simple flat ground - two sided but can't get from one side to the other.
+		
+		var aboveGround = Math.abs(height)-groundHeight;
+		
+		
+		var xx = (ii+holestep)%holestep - halfholestep;
+		var yy = (jj+holestep)%holestep - halfholestep;
+		var rad = Math.hypot(xx,yy);	//
+		var distanceInside = holerad - rad;
+		
+		var distFromSurf= sdfCornerDist(distanceInside,aboveGround) - curvature;	
+		
+		//return -distFromSurf;
+				
+		//abs this surface for 2-sided. (player will be locked on one side unless poke holes through (could do by portal!)	
+		distFromSurf = skinThickness-Math.abs(distFromSurf);
+		//return distFromSurf;
+		
+		//some more holes to cut through, allowing player to get from one side to the other.
+		var xx2 = (ii+halfholestep)%holestep - halfholestep;
+		var yy2 = (jj+halfholestep)%holestep - halfholestep;
+		var rad2 = Math.hypot(xx2,yy2);	//
+		var distanceInside2 = holerad2 - rad2;
+		distFromSurf= curvature2 -sdfCornerDist(-distFromSurf,distanceInside2);	//-ve signs because returned value should be +ve inside solid things (!)
+		return distFromSurf;
+	}
+	
 })();
+
+function sdfCornerDist(){	//basically SDF for a square/cube corner.
+	var inside = Math.min(Math.max.apply(null, arguments), 0);
+	var outside = Math.hypot.apply(null, Array.from(arguments).map(function(elem){return Math.max(elem,0);}));
+	return outside + inside;
+}
 
 function smoothMin(x,y){	//introduces black spot normals. unknown why
 	var smoothness=2.5;
