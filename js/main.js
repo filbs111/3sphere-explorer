@@ -1322,19 +1322,18 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}
 	}
 	
-	var duocylinderModel = (colorsSwitch==0) ? guiParams.duocylinderModel0 : guiParams.duocylinderModel1;	//todo use array
-	var seaActive = (colorsSwitch==0) ? guiParams.duocylinderSea0 : guiParams.duocylinderSea1;
+	var worldInfo = (colorsSwitch==0) ? guiParams.world0 : guiParams.world1;	//todo use array
 	
 	var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//copied from elsewhere
 		
-	if (duocylinderModel == 'procTerrain'){
+	if (worldInfo.duocylinderModel == 'procTerrain'){
 		terrainCollisionTestBoxPos = terrainGetHeightFor4VecPos(playerPos);		//TODO in position update (not rendering)
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.001,0.001,0.001]);
 		drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
 	}
 	
 	if (guiParams.debug.closestPoint){
-		if (duocylinderModel == 'voxTerrain'){
+		if (worldInfo.duocylinderModel == 'voxTerrain'){
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix, closestPointTestMat);
 			mat4.set(closestPointTestMat, mMatrix);
@@ -1352,7 +1351,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	var seaTime = 0.00005*(frameTime % 20000 ); //20s loop
 	lastSeaTime=seaTime;	//for use in mechanics. TODO switch to using mechanics time for rendering instead
-	if (seaActive){
+	if (worldInfo.seaActive){
 		//var seaHeight = getSeaHeight([0,0], [0.00005*(frameTime % 20000 )]);	//actually this is a position not a height . todo time conversion in one place 
 		var seaHeight = getSeaHeight([0,0], seaTime);	//actually this is a position not a height . todo time conversion in one place 
 		var tau = Math.PI*2;
@@ -1581,10 +1580,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawTennisBall(roadBoxBuffers, activeShaderProgram);
 	}
 	
-	if (duocylinderModel!='none'){
-		drawDuocylinderObject(duocylinderObjects[duocylinderModel]);
+	if (worldInfo.duocylinderModel!='none'){
+		drawDuocylinderObject(duocylinderObjects[worldInfo.duocylinderModel]);
 	}
-	if (seaActive){
+	if (worldInfo.seaActive){
 		drawDuocylinderObject(duocylinderObjects['sea']);
 	}
 	
@@ -2422,10 +2421,8 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	duocylinderModel0:"voxTerrain",
-	duocylinderSea0:true,
-	duocylinderModel1:"voxTerrain",
-	duocylinderSea1:false,
+	world0:{duocylinderModel:"voxTerrain",seaActive:true},
+	world1:{duocylinderModel:"voxTerrain",seaActive:false},
 	duocylinderRotateSpeed:0,
 	drawShapes:{
 		boxes:{
@@ -2552,10 +2549,12 @@ function init(){
 		setPlayerLight(color);
 	});
 	var drawShapesFolder = gui.addFolder('drawShapes');
-	drawShapesFolder.add(guiParams, "duocylinderModel0", ["grid","terrain","procTerrain",'voxTerrain','none'] );
-	drawShapesFolder.add(guiParams, "duocylinderSea0" );
-	drawShapesFolder.add(guiParams, "duocylinderModel1", ["grid","terrain","procTerrain",'voxTerrain','none'] );
-	drawShapesFolder.add(guiParams, "duocylinderSea1" );
+	var world0Folder = gui.addFolder('world0');
+	world0Folder.add(guiParams.world0, "duocylinderModel", ["grid","terrain","procTerrain",'voxTerrain','none'] );
+	world0Folder.add(guiParams.world0, "seaActive" );
+	var world1Folder = gui.addFolder('world1');
+	world1Folder.add(guiParams.world1, "duocylinderModel", ["grid","terrain","procTerrain",'voxTerrain','none'] );
+	world1Folder.add(guiParams.world1, "seaActive" );
 	drawShapesFolder.add(guiParams, "duocylinderRotateSpeed", -2.5,2.5,0.25);
 	var boxesFolder = drawShapesFolder.addFolder('boxes');
 	for (shape in guiParams.drawShapes.boxes){
@@ -3084,10 +3083,9 @@ var iterateMechanics = (function iterateMechanics(){
 			var panForTerrainNoise = 0;
 						
 			//some logic shared with drawing code
-			var duocylinderModel = (playerContainer.world==0) ? guiParams.duocylinderModel0 : guiParams.duocylinderModel1;	//todo use array
-			var seaActive = (playerContainer.world==0) ? guiParams.duocylinderSea0 : guiParams.duocylinderSea1;
+			var worldInfo = (playerContainer.world==0) ? guiParams.world0 : guiParams.world1;	//todo use array
 
-			if (duocylinderModel == 'procTerrain'){
+			if (worldInfo.duocylinderModel == 'procTerrain'){
 				
 				distanceForTerrainNoise = getHeightAboveTerrainFor4VecPos(playerPos);	//TODO actual distance using surface normal (IIRC this is simple vertical height above terrain)
 
@@ -3134,10 +3132,10 @@ var iterateMechanics = (function iterateMechanics(){
 					//TODO apply force along ground normal, friction force
 				}
 			}
-			if (seaActive){
+			if (worldInfo.seaActive){
 				distanceForTerrainNoise = getHeightAboveSeaFor4VecPos(playerPos, lastSeaTime);	//height. todo use distance (unimportant because sea gradient low
 			}
-			if (duocylinderModel == 'voxTerrain'){
+			if (worldInfo.duocylinderModel == 'voxTerrain'){
 				test2VoxABC();	//updates closestPointTestMat
 				
 				distanceForTerrainNoise = distBetween4mats(playerCamera, closestPointTestMat);
@@ -3467,19 +3465,18 @@ var iterateMechanics = (function iterateMechanics(){
 					break;
 			}
 			
-			var terrainModel = (bullet.world==0) ? guiParams.duocylinderModel0 : guiParams.duocylinderModel1;	//todo use array
+			var worldInfo = (bullet.world==0) ? guiParams.world0 : guiParams.world1;
 					//todo keep bullets in 2 lists/arrays so can check this once per world
-			var seaActive = (bullet.world==0) ? guiParams.duocylinderSea0 : guiParams.duocylinderSea1; 
 			
 			var bulletPos = [bulletMatrix[12],bulletMatrix[13],bulletMatrix[14],bulletMatrix[15]];	//todo use this elsewhere?
-			if (terrainModel == "procTerrain"){
+			if (worldInfo.duocylinderModel == "procTerrain"){
 				//collision with duocylinder procedural terrain	
 				if (getHeightAboveTerrainFor4VecPos(bulletPos)<0){detonateBullet(bullet, true);}
 			}
-			if (terrainModel == "voxTerrain"){	//TODO generalise collision by specifying a function for terrain. (voxTerrain, procTerrain)
+			if (worldInfo.duocylinderModel == "voxTerrain"){	//TODO generalise collision by specifying a function for terrain. (voxTerrain, procTerrain)
 				if (voxCollisionFunction(bulletPos)>0){detonateBullet(bullet, true);}
 			}
-			if (seaActive){
+			if (worldInfo.seaActive){
 				if (getHeightAboveSeaFor4VecPos(bulletPos, lastSeaTime)<0){detonateBullet(bullet, true);}
 				//if (getHeightAboveSeaFor4VecPos(bulletPos, 0)<0){detonateBullet(bullet, true);}
 			}
