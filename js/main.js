@@ -2942,7 +2942,7 @@ var iterateMechanics = (function iterateMechanics(){
 		duocylinderSpin+=duocylinderRotate; 	//TODO match spin speed with sea wave speed
 		
 		
-		if (guiParams.spinCorrection){
+		if (guiParams.control.spinCorrection){
 			//rotate player in this frame (maybe better to drag towards this angular velocity, with drag prop to atmos density)
 			//what is direction along duocylinder in frame of player?
 			
@@ -3069,7 +3069,7 @@ var iterateMechanics = (function iterateMechanics(){
 			airSpdVec[0]*=0.996;	//left/right
 			airSpdVec[1]*=0.996;	//up/down
 			
-			if (guiParams.handbrake){
+			if (guiParams.control.handbrake){
 				for (var cc=0;cc<3;cc++){
 					airSpdVec[cc]*=0.9;	//TODO time dependence, but this is just to aid debugging (switch thru display options while view static)
 				}
@@ -3891,7 +3891,7 @@ function movePlayer(vec){
 }
 
 function rotatePlayer(vec){
-	if (!guiParams.onRails){
+	if (!guiParams.control.onRails){
 		//turning player makes velocity rotate relative to player.
 		playerVelVec = rotateVelVec(playerVelVec,vec);
 	};
