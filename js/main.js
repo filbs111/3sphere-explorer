@@ -2417,6 +2417,7 @@ var mouseInfo = {
 	y:0,
 	dragging: false,
 	lastPointingDir:{},
+	pendingMovement:[0,0],
 	currentPointingDir:{x:0,y:0,z:1,w:1}
 };
 var stats;
@@ -2480,9 +2481,12 @@ var guiParams={
 	fogColor0:'#aaaaaa',
 	fogColor1:'#000000',
 	playerLight:'#ffffff',
-	onRails:false,
-	handbrake:false,
-	spinCorrection:true,
+	control:{
+		onRails:false,
+		handbrake:false,
+		spinCorrection:true,
+		smoothMouse:200
+	},
 	cameraType:"far 3rd person 2",
 	cameraFov:115,
 	flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
@@ -2536,7 +2540,7 @@ function init(){
 	stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
 	document.body.appendChild( stats.dom );
 
-	guiParams.lockPointer = function(){
+	guiParams.control.lockPointer = function(){
 		canvas.requestPointerLock();
 		gui.close();
 	}
@@ -2600,10 +2604,11 @@ function init(){
 	targetFolder.add(guiParams, "targeting", ["off","simple","individual"]);
 	
 	var controlFolder = gui.addFolder('control');	//control and movement
-	controlFolder.add(guiParams, "onRails");
-	controlFolder.add(guiParams, "handbrake");
-	controlFolder.add(guiParams, "spinCorrection");
-	controlFolder.add(guiParams, 'lockPointer');
+	controlFolder.add(guiParams.control, "onRails");
+	controlFolder.add(guiParams.control, "handbrake");
+	controlFolder.add(guiParams.control, "spinCorrection");
+	controlFolder.add(guiParams.control, 'lockPointer');
+	controlFolder.add(guiParams.control, 'smoothMouse', 0, 1000,50);
 	
 	var displayFolder = gui.addFolder('display');	//control and movement
 	displayFolder.add(guiParams, "cameraType", ["cockpit", "near 3rd person", "far 3rd person", "far 3rd person 2", "side"]);
@@ -2696,7 +2701,8 @@ function init(){
 			
 		}
 		if (pointerLocked){
-			rotatePlayer([ -0.001* evt.movementY, -0.001* evt.movementX, 0]);	//TODO screen resolution dependent sensitivity.
+			mouseInfo.pendingMovement[0]+=-0.001* evt.movementX;	//TODO screen resolution dependent sensitivity.
+			mouseInfo.pendingMovement[1]+=-0.001* evt.movementY;				
 		}
 	});
 	
@@ -2954,6 +2960,17 @@ var iterateMechanics = (function iterateMechanics(){
 		}
 		
 		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
+			var fractionToMove = 1;
+			if (guiParams.control.smoothMouse == 0 ){
+				fractionToKeep=0;
+			}else{
+				fractionToKeep = Math.exp(-timeStep/guiParams.control.smoothMouse);	//smoothMouse ~ smoothing time (ms)
+			}
+			var amountToMove = mouseInfo.pendingMovement.map(function(elem){return elem*(1-fractionToKeep);});
+			mouseInfo.pendingMovement[0]*=fractionToKeep;		//TODO vector class!!!
+			mouseInfo.pendingMovement[1]*=fractionToKeep;
+			
+			rotatePlayer([ amountToMove[1], amountToMove[0], 0]);	
 			
 			currentThrustInput[0]=keyThing.keystate(65)-keyThing.keystate(68);	//lateral
 			currentThrustInput[1]=keyThing.keystate(32)-keyThing.keystate(220);	//vertical
