@@ -1,11 +1,12 @@
 //something to look up height of sea. equation should match sea shader.
 //see index.html: <script id="shader-texmap-vs-duocylinder-sea" type="x-shader/x-vertex">
-var getSeaHeight = (function(){
+var seaHeight = (function(){
 	var tau = 6.2831853;
 	var someConstant = 0.4;	//affects speed of animation
 	var wavePosAccum;
 	var currentTime;
 	var wavePosIn;
+	var zeroLevel = 0;
 	
 	function addWaveContribution(peakiness, waveCycles){	
 		var invWavelength = Math.sqrt(waveCycles[0]*waveCycles[0] + waveCycles[1]*waveCycles[1]);	//TODO "hardcode" invWavelenth, freq, ampl as input function call - can calculate at startup and return function(pos,tt) that includes addWaveContribution with relevant parameters
@@ -23,30 +24,33 @@ var getSeaHeight = (function(){
 		wavePosAccum[2]+= ampl*Math.sin(phase);
 	}
 	
-	return function(pos,tt){	//pos is [xx,yy]
-		wavePosAccum = [pos[0],pos[1],0.02];
-		currentTime=tt;
-		wavePosIn=pos;
-	//	addWaveContribution(0.15, [4.0,0.0]);
-	//	addWaveContribution(0.15, [0.0,2.0]);
-	//	addWaveContribution(0.15, [3.0,0.0]);
-	//	addWaveContribution(0.3, [0.0,5.0]);
-	//	addWaveContribution(0.15, [9.0,0.0]);
-	//	addWaveContribution(0.15, [1.0,1.0]);
-	
-		addWaveContribution(0.15, [1.0,9.0]);
-		addWaveContribution(0.15, [-13.0,2.0]);
-		addWaveContribution(0.15, [3.0,-7.0]);
-		addWaveContribution(0.15, [-4.0,5.0]);
+	return {
+		get:function(pos,tt){	//pos is [xx,yy]
+			wavePosAccum = [pos[0],pos[1],zeroLevel];
+			currentTime=tt;
+			wavePosIn=pos;
+		//	addWaveContribution(0.15, [4.0,0.0]);
+		//	addWaveContribution(0.15, [0.0,2.0]);
+		//	addWaveContribution(0.15, [3.0,0.0]);
+		//	addWaveContribution(0.3, [0.0,5.0]);
+		//	addWaveContribution(0.15, [9.0,0.0]);
+		//	addWaveContribution(0.15, [1.0,1.0]);
 		
-	//	console.log(wavePosAccum);
-	
-		//wavePosAccum[2]*=3;	//make waves more severe for testing
-	
-		return wavePosAccum;
+			addWaveContribution(0.15, [1.0,9.0]);
+			addWaveContribution(0.15, [-13.0,2.0]);
+			addWaveContribution(0.15, [3.0,-7.0]);
+			addWaveContribution(0.15, [-4.0,5.0]);
+			
+		//	console.log(wavePosAccum);
+		
+			//wavePosAccum[2]*=3;	//make waves more severe for testing
+		
+			return wavePosAccum;
+		},
+		setZeroLevel:function(lev){zeroLevel=lev;}	//TODO instance sea objects with own zero level, to have different level for multiple seas without calling setZeroLevel repeatedly
 	}
 })();
-
+var getSeaHeight=seaHeight.get;
 var testSeaData;
 
 function seaHeightFor4VecPos(vec, tt){		//equivalent to procTerrain.js:terrainGetHeightFor4VecPos . not really height- returns object containing map coords abd height

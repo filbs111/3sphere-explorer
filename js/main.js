@@ -150,15 +150,15 @@ function initShaders(){
 	//shaderProgramDuocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-flat-fs",{
 	shaderProgramDuocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-texmap-fs",{
 					attributes:["aVertexPosition"],
-					uniforms:["uPMatrix","uMVMatrix","uTime","uDropLightPos","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					uniforms:["uPMatrix","uMVMatrix","uTime","uZeroLevel","uDropLightPos","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 	shaderProgramDuocylinderSeaAtmos = loadShader( "shader-texmap-vs-duocylinder-sea-atmos", "shader-texmap-fs",{
 					attributes:["aVertexPosition"],
-					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uTime","uDropLightPos","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uTime","uZeroLevel","uDropLightPos","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 	shaderProgramDuocylinderSeaAtmosV2 = loadShader( "shader-texmap-vs-duocylinder-sea-atmos-v2", "shader-texmap-fs",{
 					attributes:["aVertexPosition"],
-					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uTime","uDropLightPos","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uTime","uZeroLevel","uDropLightPos","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 					
 	shaderProgramCubemap = loadShader( "shader-cubemap-vs", "shader-cubemap-fs",{
@@ -1352,8 +1352,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var seaTime = 0.00005*(frameTime % 20000 ); //20s loop
 	lastSeaTime=seaTime;	//for use in mechanics. TODO switch to using mechanics time for rendering instead
 	if (worldInfo.seaActive){
+		seaHeight.setZeroLevel(guiParams.seaLevel);
+		
 		//var seaHeight = getSeaHeight([0,0], [0.00005*(frameTime % 20000 )]);	//actually this is a position not a height . todo time conversion in one place 
-		var seaHeight = getSeaHeight([0,0], seaTime);	//actually this is a position not a height . todo time conversion in one place 
+		var currentSeaHeight = getSeaHeight([0,0], seaTime);	//actually this is a position not a height . todo time conversion in one place 
 		var tau = Math.PI*2;
 		var shiftX = -Math.PI/2;
 		
@@ -1362,9 +1364,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 		if (guiParams.debug.buoys){
 			//buoy to track surface
 			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.4,0.01,0.01]);
-			drawPreppedBufferOnDuocylinder(shiftX-seaHeight[0]*tau,-seaHeight[1]*tau,seaHeight[2]*tau, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
+			drawPreppedBufferOnDuocylinder(shiftX-currentSeaHeight[0]*tau,-currentSeaHeight[1]*tau,currentSeaHeight[2]*tau, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
 			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.01,0.1,0.1]);
-			drawPreppedBufferOnDuocylinder(shiftX-seaHeight[0]*tau,-seaHeight[1]*tau,seaHeight[2]*tau, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
+			drawPreppedBufferOnDuocylinder(shiftX-currentSeaHeight[0]*tau,-currentSeaHeight[1]*tau,currentSeaHeight[2]*tau, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
 			
 			//reference static buoy
 			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.4,0.01,0.01]);
@@ -1584,10 +1586,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawDuocylinderObject(duocylinderObjects[worldInfo.duocylinderModel]);
 	}
 	if (worldInfo.seaActive){
-		drawDuocylinderObject(duocylinderObjects['sea']);
+		drawDuocylinderObject(duocylinderObjects['sea'], guiParams.seaLevel);
 	}
 	
-	function drawDuocylinderObject(duocylinderObj){		
+	function drawDuocylinderObject(duocylinderObj, zeroLevel){		
 		//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
 		if (!duocylinderObj.isSea){
 			if (duocylinderObj.hasVertColors){
@@ -1599,8 +1601,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}else{
 			activeShaderProgram = guiParams["atmosShader"]? (guiParams["altAtmosShader"]?shaderProgramDuocylinderSeaAtmosV2:shaderProgramDuocylinderSeaAtmos):shaderProgramDuocylinderSea;
 			gl.useProgram(activeShaderProgram);
-			gl.uniform1fv(activeShaderProgram.uniforms.uTime, [seaTime]);
-			//gl.uniform1fv(activeShaderProgram.uniforms.uTime, [0]);
+			gl.uniform1f(activeShaderProgram.uniforms.uTime, seaTime);			
+			gl.uniform1f(activeShaderProgram.uniforms.uZeroLevel, zeroLevel);
 		}
 		if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
 			gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
@@ -2424,6 +2426,7 @@ var guiParams={
 	world0:{duocylinderModel:"voxTerrain",seaActive:true},
 	world1:{duocylinderModel:"voxTerrain",seaActive:false},
 	duocylinderRotateSpeed:0,
+	seaLevel:-0.012,
 	drawShapes:{
 		boxes:{
 		'y=z=0':false,	//x*x+w*w=1
@@ -2549,12 +2552,13 @@ function init(){
 		setPlayerLight(color);
 	});
 	var drawShapesFolder = gui.addFolder('drawShapes');
-	var world0Folder = gui.addFolder('world0');
+	var world0Folder = drawShapesFolder.addFolder('world0');
 	world0Folder.add(guiParams.world0, "duocylinderModel", ["grid","terrain","procTerrain",'voxTerrain','none'] );
 	world0Folder.add(guiParams.world0, "seaActive" );
-	var world1Folder = gui.addFolder('world1');
+	var world1Folder = drawShapesFolder.addFolder('world1');
 	world1Folder.add(guiParams.world1, "duocylinderModel", ["grid","terrain","procTerrain",'voxTerrain','none'] );
 	world1Folder.add(guiParams.world1, "seaActive" );
+	drawShapesFolder.add(guiParams, "seaLevel", -0.05,0.05,0.005);
 	drawShapesFolder.add(guiParams, "duocylinderRotateSpeed", -2.5,2.5,0.25);
 	var boxesFolder = drawShapesFolder.addFolder('boxes');
 	for (shape in guiParams.drawShapes.boxes){
