@@ -3142,29 +3142,31 @@ var iterateMechanics = (function iterateMechanics(){
 			if (worldInfo.duocylinderModel == 'voxTerrain'){
 				test2VoxABC();	//updates closestPointTestMat
 				
-				distanceForTerrainNoise = distBetween4mats(playerCamera, closestPointTestMat);
-				
-				//get terrain noise pan. TODO reuse other pan code (explosions etc)
-				
+				distanceForVox = distBetween4mats(playerCamera, closestPointTestMat);
+
 				mat4.set(invertedPlayerCamera,tmpRelativeMat);
 				mat4.multiply(tmpRelativeMat, closestPointTestMat);
 				//distanceForTerrainNoise = distBetween4mats(tmpRelativeMat, identMat);	//should be same as previous result
 				
-				var soundSize = 0.002;	//reduced this below noiseRad so get more pan
-				panForTerrainNoise = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));	//tanh(left/hypot(size,down,forwards)). tanh smoothly limits to +/- 1
-				
+				if (distanceForVox<distanceForTerrainNoise){
+					distanceForTerrainNoise = distanceForVox;
+					//get terrain noise pan. TODO reuse other pan code (explosions etc)
+					
+					var soundSize = 0.002;	//reduced this below noiseRad so get more pan
+					panForTerrainNoise = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));	//tanh(left/hypot(size,down,forwards)). tanh smoothly limits to +/- 1
+				}
 				//console.log(panForTerrainNoise);
 				
-				//distanceForTerrainNoise = 0.02*voxCollisionFunction(playerPos);	//TODO get distance. shouldn't be necessary with SDF. maybe problem is with other terrain funcs. to estimate distance, guess want to divide this by its downhill slope (which for proper SDF should be 1). for now guess some constant that will work ~consistently with other terrain. 
+				//distanceForVox = 0.02*voxCollisionFunction(playerPos);	//TODO get distance. shouldn't be necessary with SDF. maybe problem is with other terrain funcs. to estimate distance, guess want to divide this by its downhill slope (which for proper SDF should be 1). for now guess some constant that will work ~consistently with other terrain. 
 				
 				
 				//voxel collision. 
 				//simple version, just push away from closest point. this will be in "wrong direction" if inside voxel volume, so will fall down if tunnel inside. TODO this better! see notes for function drawBall. TODO damping, friction etc
-				var penetration = settings.playerBallRad - distanceForTerrainNoise;
+				var penetration = settings.playerBallRad - distanceForVox;
 				var penetrationChange = penetration - lastVoxPenetration;	//todo cap this.
 				lastVoxPenetration = penetration;
 				//if (penetration>0){
-				var pointDisplacement = tmpRelativeMat.slice(12, 15);	//for small distances, length of this is ~ distanceForTerrainNoise
+				var pointDisplacement = tmpRelativeMat.slice(12, 15);	//for small distances, length of this is ~ distanceForVox
 				mat4.set(playerCamera, voxCollisionDebugMat);
 				xyzmove4mat(voxCollisionDebugMat, pointDisplacement.map(function(elem){return elem*-1;}));
 				
@@ -3174,7 +3176,7 @@ var iterateMechanics = (function iterateMechanics(){
 					var dampConstant = 200;
 					multiplier+=penetrationChange*dampConstant;
 					
-					multiplier/=distanceForTerrainNoise;	//normalise. playerBallRad would give near same result assuming penetrations remain small
+					multiplier/=distanceForVox;	//normalise. playerBallRad would give near same result assuming penetrations remain small
 					
 					var forcePlayerFrame = pointDisplacement.map(function(elem){return elem*multiplier;});	//TODO use vector class?
 					for (var cc=0;cc<3;cc++){
@@ -3184,6 +3186,7 @@ var iterateMechanics = (function iterateMechanics(){
 					}
 				}
 			}
+			
 			
 			
 			//whoosh sound. simple educated guess model for sound of passing by objects. maybe with a some component of pure wind noise
