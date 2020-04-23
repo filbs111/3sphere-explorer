@@ -2817,10 +2817,9 @@ var iterateMechanics = (function iterateMechanics(){
 
 		var gpads=navigator.getGamepads();
 		if (gpads){
-			for (gg in gpads){
-				thisgp = gpads[gg];
-				if (thisgp && thisgp.buttons && thisgp.buttons[10] && thisgp.axes){
-					activeGp = thisgp;
+			for (gpad of gpads){
+				if (gpad && gpad.buttons && gpad.buttons[10] && gpad.axes){
+					activeGp = gpad;
 					break;
 				}
 			}
