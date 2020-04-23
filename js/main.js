@@ -2991,11 +2991,11 @@ var iterateMechanics = (function iterateMechanics(){
 			playerVelVec[1]+=currentThrustInput[1];
 			playerVelVec[2]+=currentThrustInput[2];
 			
-			if (guiParams.handbrake){
-				for (var cc=0;cc<3;cc++){
-					playerVelVec[cc]*=0.9;	//TODO time dependence, but this is just to aid debugging (switch thru display options while view static)
-				}
-			}
+			
+			//print speed
+			var infoToShow ="";
+			var speed = Math.hypot.apply(null, playerVelVec);
+			infoToShow += "spd:" + speed.toFixed(2);
 			
 			playerAngVelVec=scalarvectorprod(0.85,playerAngVelVec);
 			
@@ -3028,7 +3028,22 @@ var iterateMechanics = (function iterateMechanics(){
 			var airSpdVec = playerVelVec.map(function(val, idx){return val-spinVelPlayerCoords[idx];});
 			//var spd = Math.sqrt(airSpdVec.map(function(val){return val*val;}).reduce(function(val, sum){return val+sum;}));
 			var spd = Math.hypot.apply(null, airSpdVec);
-					
+			
+			infoToShow+=", airspd:" + spd.toFixed(2);
+			document.querySelector("#info2").innerHTML = infoToShow;
+			
+			//want to be able to steer in the air. todo properly - guess maybe wants "lift" from wings, but easiest implementation guess is to increase drag for lateral velocity.
+			//would like for both left/right, up/down velocity, but to test, try getting just one - like a aeroplane.
+			//TODO better aerodynamic model - would like decent "steerability" without too much slowdown when completely sideways.
+			airSpdVec[0]*=0.996;	//left/right
+			airSpdVec[1]*=0.996;	//up/down
+			
+			if (guiParams.handbrake){
+				for (var cc=0;cc<3;cc++){
+					airSpdVec[cc]*=0.9;	//TODO time dependence, but this is just to aid debugging (switch thru display options while view static)
+				}
+			}
+			
 			//playerVelVec=scalarvectorprod(1.0-0.001*spd,playerVelVec);
 
 			//if (Math.random()<0.05){console.log("speed : " + spd);}	//show the speed. todo proper ui
