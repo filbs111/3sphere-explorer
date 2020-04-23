@@ -97,7 +97,8 @@ var voxTerrainData = (function generateVoxTerrainData(){
 	//var voxFunction = perlinfunctionTwoLevel;
 	//var voxFunction = perlinfunctionSpiral;
 	//var voxFunction = balls;
-	var voxFunction = brejao;
+	//var voxFunction = brejao;
+	var voxFunction = shiftedbrejao;
 	//var voxFunction = longHolesTwo;
 	makeVoxdataForFunc(voxFunction);
 	
@@ -900,6 +901,10 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		var secondRad = Math.hypot( rad - 5, kk-16);
 		
 		return 10-secondRad;
+	}
+	
+	function shiftedbrejao(ii,jj,kk){
+		return brejao(ii,jj,kk-6);
 	}
 	function brejao(ii,jj,kk){
 		ii+=128;
