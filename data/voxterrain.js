@@ -97,8 +97,8 @@ var voxTerrainData = (function generateVoxTerrainData(){
 	//var voxFunction = perlinfunctionTwoLevel;
 	//var voxFunction = perlinfunctionSpiral;
 	//var voxFunction = balls;
-	//var voxFunction = brejao;
-	var voxFunction = longHolesTwo;
+	var voxFunction = brejao;
+	//var voxFunction = longHolesTwo;
 	makeVoxdataForFunc(voxFunction);
 	
 	voxCollisionFunction = function(vec){

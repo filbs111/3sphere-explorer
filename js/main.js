@@ -1359,22 +1359,25 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		shiftX+=duocylinderSpin;
 		
-		//buoy to track surface
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.4,0.01,0.01]);
-		drawPreppedBufferOnDuocylinder(shiftX-seaHeight[0]*tau,-seaHeight[1]*tau,seaHeight[2]*tau, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.01,0.1,0.1]);
-		drawPreppedBufferOnDuocylinder(shiftX-seaHeight[0]*tau,-seaHeight[1]*tau,seaHeight[2]*tau, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
-		
-		//reference static buoy
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.4,0.01,0.01]);
-		drawPreppedBufferOnDuocylinder(shiftX,0,0, [0.0, 0.4, 1.0, 1.0], cubeBuffers);
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.01,0.1,0.1]);
-		drawPreppedBufferOnDuocylinder(shiftX,0,0, [0.0, 0.4, 1.0, 1.0], cubeBuffers);
-		
-		//red box on sea under player
-		var testBuoyPos = seaHeightFor4VecPos(playerPos, seaTime);
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.001,0.01,0.01]);
-		drawPreppedBufferOnDuocylinder(testBuoyPos.b,testBuoyPos.a,testBuoyPos.h, [1, 0, 0, 1], cubeBuffers);
+		if (guiParams.debug.buoys){
+			//buoy to track surface
+			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.4,0.01,0.01]);
+			drawPreppedBufferOnDuocylinder(shiftX-seaHeight[0]*tau,-seaHeight[1]*tau,seaHeight[2]*tau, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
+			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.01,0.1,0.1]);
+			drawPreppedBufferOnDuocylinder(shiftX-seaHeight[0]*tau,-seaHeight[1]*tau,seaHeight[2]*tau, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
+			
+			//reference static buoy
+			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.4,0.01,0.01]);
+			drawPreppedBufferOnDuocylinder(shiftX,0,0, [0.0, 0.4, 1.0, 1.0], cubeBuffers);
+			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.01,0.1,0.1]);
+			drawPreppedBufferOnDuocylinder(shiftX,0,0, [0.0, 0.4, 1.0, 1.0], cubeBuffers);
+		}
+		if (guiParams.debug.closestPoint){
+			//red box on sea under player
+			var testBuoyPos = seaHeightFor4VecPos(playerPos, seaTime);
+			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.001,0.01,0.01]);
+			drawPreppedBufferOnDuocylinder(testBuoyPos.b,testBuoyPos.a,testBuoyPos.h, [1, 0, 0, 1], cubeBuffers);
+		}
 	}
 	
 	if (guiParams.debug.closestPoint){	//draw collision test object
@@ -2485,7 +2488,8 @@ var guiParams={
 		moveAway:0.0005
 	},
 	debug:{
-		closestPoint:true
+		closestPoint:true,
+		buoys:false
 	},
 	normalMove:0
 };
@@ -2603,6 +2607,7 @@ function init(){
 	
 	var debugFolder = gui.addFolder('debug');
 	debugFolder.add(guiParams.debug, "closestPoint");
+	debugFolder.add(guiParams.debug, "buoys");
 	
 	var reflectorFolder = gui.addFolder('reflector');
 	reflectorFolder.add(guiParams.reflector, "draw");
