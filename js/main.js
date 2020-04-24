@@ -39,6 +39,11 @@ function initShaders(){
 					attributes:["aVertexPosition"],
 					uniforms:["uSampler","uInvSize"]
 					});
+	shaderProgramFullscreenTexturedFisheye = loadShader( "shader-fullscreen-vs", "shader-fullscreen-fs-fisheye",{
+					attributes:["aVertexPosition"],
+					uniforms:["uSampler","uInvSize","uInvF"]
+					});
+					
 	shaderProgramFullscreenBennyBoxLite = loadShader( "shader-fullscreen-vs", "shader-fullscreen-fs-bennybox-lite",{
 					attributes:["aVertexPosition"],
 					uniforms:["uSampler","uInvSize"]
@@ -762,10 +767,27 @@ function drawScene(frameTime){
 		//gl.bindTexture(gl.TEXTURE_2D, rttTexture);	//set just drawn texture as active for drawing to screen
 		
 		//draw the simple quad object to the screen
-		var activeProg = (guiParams.renderViaTexture == "basic") ? shaderProgramFullscreenTextured:(guiParams.renderViaTexture == "bennyBox" ? shaderProgramFullscreenBennyBox:shaderProgramFullscreenBennyBoxLite);
+		var activeProg;
+		switch (guiParams.renderViaTexture){
+			case "basic": 
+				activeProg = shaderProgramFullscreenTextured;break;
+			case "bennyBox":
+				activeProg = shaderProgramFullscreenBennyBox;break;
+			case "bennyBoxLite":
+				activeProg = shaderProgramFullscreenBennyBoxLite;break;
+			case "fisheye":
+				activeProg = shaderProgramFullscreenTexturedFisheye;break;
+		}
 		gl.useProgram(activeProg);
 		enableDisableAttributes(activeProg);
-
+		
+		if (activeProg.uniforms.uInvF){	//used for fisheye
+			//gl.uniform2fv(activeProg.uniforms.uInvF, [1.0/rttView.fx, 1.0/rttView.fy]);	//todo get these values!
+			var fy = Math.tan(guiParams.cameraFov*Math.PI/360);	//todo pull from camera matrix?
+			var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
+			gl.uniform2fv(activeProg.uniforms.uInvF, [1.0/fx, 1.0/fy]);
+		}
+		
 		gl.cullFace(gl.BACK);
 		
 		//gl.activeTexture(gl.TEXTURE0);
@@ -2681,7 +2703,7 @@ function init(){
 	displayFolder.add(guiParams, "cameraFov", 60,120,5);
 	displayFolder.add(guiParams, "flipReverseCamera");
 	displayFolder.add(guiParams, "showHud");
-	displayFolder.add(guiParams, "renderViaTexture", ['no','basic','bennyBoxLite','bennyBox']);
+	displayFolder.add(guiParams, "renderViaTexture", ['no','basic','bennyBoxLite','bennyBox','fisheye']);
 	displayFolder.add(guiParams, "perPixelLighting");
 	displayFolder.add(guiParams, "atmosShader");
 	displayFolder.add(guiParams, "altAtmosShader");
@@ -4168,6 +4190,7 @@ function initTextureFramebuffer() {
 	gl.bindTexture(gl.TEXTURE_2D, rttTexture);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 	//gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
