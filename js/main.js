@@ -1690,6 +1690,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	
 	var drawFunc = guiParams["draw spaceship"]? drawSpaceship : drawBall;
+	var sshipDrawMatrix;
 	
 	//TODO permanent
 	var sshipMatrixShifted = mat4.create();
@@ -1706,17 +1707,18 @@ function drawWorldScene(frameTime, isCubemapView) {
 	xyzmove4mat(sshipMatrixShifted, moveAwayVec);
 	
 	if (sshipWorld == colorsSwitch){ //only draw spaceship if it's in the world that currently drawing. (TODO this for other objects eg shots)
-		drawFunc(sshipMatrixShifted);
+		sshipDrawMatrix = sshipMatrixShifted;
 	}else{
 		if (checkWithinReflectorRange(sshipMatrixShifted, Math.tan(Math.atan(reflectorInfo.rad) +0.1))){
 			var portaledMatrix = mat4.create();
 			mat4.set(sshipMatrixShifted, portaledMatrix);
 			moveMatrixThruPortal(portaledMatrix, reflectorInfo.rad, 1);
-			
-			drawFunc(portaledMatrix);
+			sshipDrawMatrix = portaledMatrix;
 		}	
 	}
-	
+	if (sshipDrawMatrix){
+		drawFunc(sshipDrawMatrix);
+	}
 	
 	function drawSpaceship(matrix){
 		
@@ -1814,46 +1816,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//	drawLandingBall(gear.pos);
 		}
 		
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.blue);
-		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0.01,0.01,0.6]);
-		//draw "thrusters". TODO make look better, transparent so should render last, brightness according to analog input, "playerlight" to match (direction+magnitude)
-		if (currentThrustInput[2]>0){					//rearward thrusters
-			drawLandingBall([0.006,0.0035,-0.0085]);	//	left ,down	,fwd
-			drawLandingBall([0.006,-0.0035,-0.0085]);
-			drawLandingBall([-0.006,0.0035,-0.0085]);
-			drawLandingBall([-0.006,-0.0035,-0.0085]);
-		}
-		if (currentThrustInput[2]<0){				//forward thrusters
-			drawLandingBall([0.006,0.0035,0.004]);
-			drawLandingBall([0.006,-0.0035,0.004]);		
-			drawLandingBall([-0.006,0.0035,0.004]);		
-			drawLandingBall([-0.006,-0.0035,0.004]);
-		}
-		if (currentThrustInput[0]<0){				//left
-			drawLandingBall([0.007,0.0035,0.003]);
-			drawLandingBall([0.007,-0.0035,0.003]);
-			drawLandingBall([0.007,0.0035,-0.0075]);
-			drawLandingBall([0.007,-0.0035,-0.0075]);
-		}
-		if (currentThrustInput[0]>0){				//right
-			drawLandingBall([-0.007,0.0035,0.003]);
-			drawLandingBall([-0.007,-0.0035,0.003]);
-			drawLandingBall([-0.007,0.0035,-0.0075]);
-			drawLandingBall([-0.007,-0.0035,-0.0075]);
-		}
-		if (currentThrustInput[1]>0){				//top
-			drawLandingBall([0.006,-0.0045,0.003]);
-			drawLandingBall([-0.006,-0.0045,0.003]);
-			drawLandingBall([0.006,-0.0045,-0.0075]);
-			drawLandingBall([-0.006,-0.0045,-0.0075]);
-		}
-		if (currentThrustInput[1]<0){				//bottom
-			drawLandingBall([0.006,0.0045,0.003]);
-			drawLandingBall([-0.006,0.0045,0.003]);
-			drawLandingBall([0.006,0.0045,-0.0075]);
-			drawLandingBall([-0.006,0.0045,-0.0075]);
-		}
-	
 		function drawLandingBall(posn){			 
 			lgMat = mat4.create(sshipMatrix);
 			xyzmove4mat(lgMat, posn);
@@ -1872,9 +1834,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 
 			drawObjectFromPreppedBuffers(sphereBuffers, shaderProgramColored);
 		}
-		
 	}
-		
+	
+	
 	function drawBall(matrix){
 		//draw "light" object
 		var sphereRad = settings.playerBallRad;
@@ -2009,6 +1971,103 @@ function drawWorldScene(frameTime, isCubemapView) {
 			}
 		}
 	}
+	
+	if (sshipDrawMatrix){
+		drawThrusters(sshipDrawMatrix);
+	}
+	
+	function drawThrusters(matrix){
+			//this is duplicated from elsewhere. TODO generalise/reuse
+		var inverseSshipMat = mat4.create(sshipMatrixNoInterp); //todo persist this matrix/ store inverseSshipMat*gunMatrix
+		mat4.transpose(inverseSshipMat);
+		
+		var thrustrad = 0.0008;
+		var thrustlong = 0.0004;
+		
+		//gl.uniform4fv(transpShadProg.uniforms.uColor, colorArrs.blue);
+			//draw "thrusters". TODO make look better, brightness according to analog input, "playerlight" to match (direction+magnitude)
+			//should be a custom 3d model or shader. engine nozzles can be solid, non transparent, with colour that changes with thrust. combine with transparent exhaust effect
+			//current implementation is inefficient with lots of overdraw, gl calls.
+		gl.uniform3fv(transpShadProg.uniforms.uModelScale, [thrustrad,thrustrad,thrustlong]);
+		var separation=0.0002;	//distance between thrust discs (squashed spheres)
+		var opacStep=0.08;
+		if (currentThrustInput[2]>0){					//rearward thrusters
+			for (var oo=-0.0077, opac=1;opac>0;opac-=opacStep,oo-=separation){
+				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
+				drawLandingBall([0.0057,0.0036,oo], matrix);	//	left ,down	,fwd
+				drawLandingBall([0.0057,-0.0036,oo], matrix);
+				drawLandingBall([-0.0057,0.0036,oo], matrix);
+				drawLandingBall([-0.0057,-0.0036,oo], matrix);
+			}
+		}
+		if (currentThrustInput[2]<0){				//forward thrusters
+			for (var oo=0.0036, opac=1;opac>0;opac-=opacStep,oo+=separation){
+				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
+				drawLandingBall([0.0057,0.0036,oo], matrix);
+				drawLandingBall([0.0057,-0.0036,oo], matrix);		
+				drawLandingBall([-0.0057,0.0036,oo], matrix);		
+				drawLandingBall([-0.0057,-0.0036,oo]);
+			}
+		}
+		gl.uniform3fv(transpShadProg.uniforms.uModelScale, [thrustlong,thrustrad,thrustrad]);
+		if (currentThrustInput[0]<0){				//left
+			for (var oo=0.007, opac=1;opac>0;opac-=opacStep,oo+=separation){
+				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
+				drawLandingBall([oo,0.0035,0.0025]);
+				drawLandingBall([oo,-0.0035,0.0025]);
+				drawLandingBall([oo,0.0035,-0.0065]);
+				drawLandingBall([oo,-0.0035,-0.0065]);
+			}
+		}
+		if (currentThrustInput[0]>0){				//right
+			for (var oo=-0.007, opac=1;opac>0;opac-=opacStep,oo-=separation){
+				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
+				drawLandingBall([oo,0.0035,0.0025]);
+				drawLandingBall([oo,-0.0035,0.0025]);
+				drawLandingBall([oo,0.0035,-0.0065]);
+				drawLandingBall([oo,-0.0035,-0.0065]);
+			}
+		}
+		gl.uniform3fv(transpShadProg.uniforms.uModelScale, [thrustrad,thrustlong,thrustrad]);
+		if (currentThrustInput[1]>0){				//top
+			for (var oo=-0.0045, opac=1;opac>0;opac-=opacStep,oo-=separation){
+				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
+				drawLandingBall([0.006,oo,0.0025]);
+				drawLandingBall([-0.006,oo,0.0025]);
+				drawLandingBall([0.006,oo,-0.0065]);
+				drawLandingBall([-0.006,oo,-0.0065]);
+			}
+		}
+		if (currentThrustInput[1]<0){				//bottom
+			for (var oo=0.0045, opac=1;opac>0;opac-=opacStep,oo+=separation){
+				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
+				drawLandingBall([0.006,oo,0.0025]);
+				drawLandingBall([-0.006,oo,0.0025]);
+				drawLandingBall([0.006,oo,-0.0065]);
+				drawLandingBall([-0.006,oo,-0.0065]);
+			}
+		}
+		
+		function drawLandingBall(posn){	//this is duplicated from elsewhere, but should be changed
+			lgMat = mat4.create(sshipMatrix);
+			xyzmove4mat(lgMat, posn);
+			
+			//mat4.set(invertedWorldCamera, mvMatrix);	//no shift version
+			//mat4.multiply(mvMatrix, lgMat);
+			
+			//apply the shift hack as with guns.
+			mat4.set(matrix, mMatrix);
+			mat4.multiply(mMatrix, inverseSshipMat);
+			mat4.multiply(mMatrix, lgMat);
+			
+			mat4.set(invertedWorldCamera, mvMatrix);
+			mat4.multiply(mvMatrix, mMatrix);
+
+			drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
+		}
+	}
+	
+	
 	
 	var maxShockRadAng = 1;
 	
@@ -2463,7 +2522,7 @@ var guiParams={
 	"24-cell scale":1,
 	"draw 120-cell":false,
 	"draw 600-cell":false,
-	"draw spaceship":false,
+	"draw spaceship":true,
 	"drop spaceship":false,
 	target:{
 		type:"none",
