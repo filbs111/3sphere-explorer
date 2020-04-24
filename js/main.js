@@ -580,17 +580,16 @@ var offsetCam = (function(){
 	var offsetVecReverse;
 	var targetForType = {
 		"near 3rd person":[0,-0.0075,-0.005],
-		//"far 3rd person":[0,-0.02,-0.03],
-		"far 3rd person":[0,-0.01,-0.01],
-		//"far 3rd person 2":[0,0,-0.02],	//straight behind (not raised)
-		"far 3rd person 2":[0,-0.02,-0.025],	
+		"mid 3rd person":[0,-0.01,-0.015],
+		"far 3rd person":[0,-0.02,-0.025],	
 		"cockpit":[0,0,0.0015],
 		"side":[0.006,0,0.0025]
 	}
 	var targetForTypeReverse = {
 		"near 3rd person":[0,-0.0075,0.005],
+		"mid 3rd person":[0,-0.0075,0.0075],
 		"far 3rd person":[0,-0.02,0.03],
-		"far 3rd person 2":[0,0,0.02],
+		//"far 3rd person":[0,0,0.02],
 		"cockpit":[0,0,-0.01],
 		"side":[0.006,0,0.0025]
 	}
@@ -1988,11 +1987,13 @@ function drawWorldScene(frameTime, isCubemapView) {
 			//draw "thrusters". TODO make look better, brightness according to analog input, "playerlight" to match (direction+magnitude)
 			//should be a custom 3d model or shader. engine nozzles can be solid, non transparent, with colour that changes with thrust. combine with transparent exhaust effect
 			//current implementation is inefficient with lots of overdraw, gl calls.
-		gl.uniform3fv(transpShadProg.uniforms.uModelScale, [thrustrad,thrustrad,thrustlong]);
 		var separation=0.0002;	//distance between thrust discs (squashed spheres)
 		var opacStep=0.08;
+		//var thrustTaper= -0.00003;
+		var thrustTaper= 0.00002;
 		if (currentThrustInput[2]>0){					//rearward thrusters
-			for (var oo=-0.0077, opac=1;opac>0;opac-=opacStep,oo-=separation){
+			for (var oo=-0.0077, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo-=separation,rr-=thrustTaper){
+				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [rr,rr,thrustlong]);
 				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
 				drawLandingBall([0.0057,0.0036,oo], matrix);	//	left ,down	,fwd
 				drawLandingBall([0.0057,-0.0036,oo], matrix);
@@ -2001,7 +2002,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 			}
 		}
 		if (currentThrustInput[2]<0){				//forward thrusters
-			for (var oo=0.0036, opac=1;opac>0;opac-=opacStep,oo+=separation){
+			for (var oo=0.0036, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo+=separation,rr-=thrustTaper){
+				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [rr,rr,thrustlong]);
 				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
 				drawLandingBall([0.0057,0.0036,oo], matrix);
 				drawLandingBall([0.0057,-0.0036,oo], matrix);		
@@ -2009,9 +2011,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 				drawLandingBall([-0.0057,-0.0036,oo]);
 			}
 		}
-		gl.uniform3fv(transpShadProg.uniforms.uModelScale, [thrustlong,thrustrad,thrustrad]);
 		if (currentThrustInput[0]<0){				//left
-			for (var oo=0.007, opac=1;opac>0;opac-=opacStep,oo+=separation){
+			for (var oo=0.007, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo+=separation,rr-=thrustTaper){
+				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [thrustlong,rr,rr]);
 				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
 				drawLandingBall([oo,0.0035,0.0025]);
 				drawLandingBall([oo,-0.0035,0.0025]);
@@ -2020,7 +2022,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 			}
 		}
 		if (currentThrustInput[0]>0){				//right
-			for (var oo=-0.007, opac=1;opac>0;opac-=opacStep,oo-=separation){
+			for (var oo=-0.007, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo-=separation,rr-=thrustTaper){
+				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [thrustlong,rr,rr]);
 				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
 				drawLandingBall([oo,0.0035,0.0025]);
 				drawLandingBall([oo,-0.0035,0.0025]);
@@ -2028,9 +2031,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 				drawLandingBall([oo,-0.0035,-0.0065]);
 			}
 		}
-		gl.uniform3fv(transpShadProg.uniforms.uModelScale, [thrustrad,thrustlong,thrustrad]);
 		if (currentThrustInput[1]>0){				//top
-			for (var oo=-0.0045, opac=1;opac>0;opac-=opacStep,oo-=separation){
+			for (var oo=-0.0045, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo-=separation,rr-=thrustTaper){
+				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [rr,thrustlong,rr]);
 				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
 				drawLandingBall([0.006,oo,0.0025]);
 				drawLandingBall([-0.006,oo,0.0025]);
@@ -2039,7 +2042,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 			}
 		}
 		if (currentThrustInput[1]<0){				//bottom
-			for (var oo=0.0045, opac=1;opac>0;opac-=opacStep,oo+=separation){
+			for (var oo=0.0045, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo+=separation,rr-=thrustTaper){
+				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [rr,thrustlong,rr]);
 				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
 				drawLandingBall([0.006,oo,0.0025]);
 				drawLandingBall([-0.006,oo,0.0025]);
@@ -2546,7 +2550,7 @@ var guiParams={
 		spinCorrection:true,
 		smoothMouse:200
 	},
-	cameraType:"far 3rd person 2",
+	cameraType:"far 3rd person",
 	cameraFov:115,
 	flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
 	showHud:false,
@@ -2670,7 +2674,7 @@ function init(){
 	controlFolder.add(guiParams.control, 'smoothMouse', 0, 1000,50);
 	
 	var displayFolder = gui.addFolder('display');	//control and movement
-	displayFolder.add(guiParams, "cameraType", ["cockpit", "near 3rd person", "far 3rd person", "far 3rd person 2", "side"]);
+	displayFolder.add(guiParams, "cameraType", ["cockpit", "near 3rd person", "mid 3rd person", "far 3rd person", "side"]);
 	displayFolder.add(guiParams, "cameraFov", 60,120,5);
 	displayFolder.add(guiParams, "flipReverseCamera");
 	displayFolder.add(guiParams, "showHud");
