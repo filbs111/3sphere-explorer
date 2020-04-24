@@ -15,16 +15,15 @@ var MySound = (function(){
 	
 		audiocontext.resume();	//??
 		var globalGainNode = audiocontext.createGain();
-		var distortion = audiocontext.createWaveShaper();
-		distortion.curve = makeDistortionCurve(400);
-		distortion.oversample = '4x';
-		globalGainNode.connect(distortion).connect(audiocontext.destination);	//maybe inefficient - TODO bin globalGainNode?
+		var globalDistortionNode = audiocontext.createWaveShaper();
+		globalDistortionNode.curve = makeDistortionCurve(80);
+		globalDistortionNode.oversample = '4x';
+		globalDistortionNode.connect(globalGainNode).connect(audiocontext.destination);	//maybe inefficient - TODO bin globalGainNode?
 
-		
 		//return a constructor instead, so can use this to make multiple sounds
 		var mySound = function(soundAddress, cb){
 			this.gainNode = audiocontext.createGain();
-			this.gainNode.connect(globalGainNode);
+			this.gainNode.connect(globalDistortionNode);
 			
 			this.soundAddress = soundAddress;
 			
