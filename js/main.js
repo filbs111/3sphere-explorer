@@ -2695,8 +2695,8 @@ function init(){
 	debugFolder.add(guiParams.debug, "buoys");
 	
 	var audioFolder = gui.addFolder('audio');
-	audioFolder.add(guiParams.audio, "volume", 0,1,0.1).onChange(myAudioPlayer.setGlobalVolume);
-	myAudioPlayer.setGlobalVolume(guiParams.audio.volume);	//if set above 1, fallback html media element will throw exception!!!
+	audioFolder.add(guiParams.audio, "volume", 0,1,0.1).onChange(MySound.setGlobalVolume);
+	MySound.setGlobalVolume(guiParams.audio.volume);	//if set above 1, fallback html media element will throw exception!!!
 	
 	var reflectorFolder = gui.addFolder('reflector');
 	reflectorFolder.add(guiParams.reflector, "draw");

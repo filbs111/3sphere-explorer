@@ -13,70 +13,74 @@ try {
 	
 var MySound = (function(){
 	
-		audiocontext.resume();	//??
-		var globalGainNode = audiocontext.createGain();
-		var globalDistortionNode = audiocontext.createWaveShaper();
-		globalDistortionNode.curve = makeDistortionCurve(80);
-		globalDistortionNode.oversample = '4x';
-		globalDistortionNode.connect(globalGainNode).connect(audiocontext.destination);	//maybe inefficient - TODO bin globalGainNode?
+	audiocontext.resume();	//??
+	var globalGainNode = audiocontext.createGain();
+	var globalDistortionNode = audiocontext.createWaveShaper();
+	globalDistortionNode.curve = makeDistortionCurve(80);
+	globalDistortionNode.oversample = '4x';
+	globalDistortionNode.connect(globalGainNode).connect(audiocontext.destination);	//maybe inefficient - TODO bin globalGainNode?
 
-		//return a constructor instead, so can use this to make multiple sounds
-		var mySound = function(soundAddress, cb){
-			this.gainNode = audiocontext.createGain();
-			this.gainNode.connect(globalDistortionNode);
-			
-			this.soundAddress = soundAddress;
-			
-			this.buffer = null;
-			var that=this;		//??!!!
-			var request = new XMLHttpRequest();
-			request.open('GET', this.soundAddress);
-			request.responseType = 'arraybuffer';
-			request.onload = function() {
-				console.log("request loaded..." + that.soundAddress);
-				audiocontext.decodeAudioData(request.response, function(buffer){
-					console.log("set sound buffer");
-					that.buffer = buffer;
-					cb && cb();
-				}, function(err){
-					console.log("oops! problem loading sound from : " + this.soundAddress);
-				});
-			}
-			request.send();
-			
-		};
+	//return a constructor instead, so can use this to make multiple sounds
+	var mySound = function(soundAddress, cb){
+		this.gainNode = audiocontext.createGain();
+		this.gainNode.connect(globalDistortionNode);
 		
-		mySound.prototype.play = function(delay, vol, loop){
-			//console.log("will play sound, using web audio API, from: " + this.soundAddress + ", delay: " + delay);
-			if (typeof vol == 'undefined'){ vol = 1;};
-			delay = delay || 0;
-			
-			if (!this.buffer){
-				console.log("not loaded yet. returning");
-				return;
-			}
-			var source = audiocontext.createBufferSource();	//TODO pool of sounds? is creating a new buffersource each play. unknown if expensive
-			source.buffer = this.buffer	
-			if (loop){source.loop = true;}
-			
-			var indivGainNode = audiocontext.createGain();	
-			indivGainNode.gain.setValueAtTime(vol, audiocontext.currentTime);
-			
-			var indivDelayNode = audiocontext.createDelay(2.0);	//param is max delay. for fudge distance, opposite side of 3sph is distance 2 away
-			indivDelayNode.delayTime.setValueAtTime(delay, audiocontext.currentTime);
-			
-			var indivPannerNode = audiocontext.createStereoPanner();
-			
-			source.connect(indivDelayNode).connect(indivGainNode).connect(indivPannerNode).connect(this.gainNode);
-			
-			//audiocontext.resume();	//??
-			source.start(audiocontext.currentTime);
-			
-			return new IndivSound(indivGainNode, indivDelayNode, indivPannerNode);
-		};
-		mySound.prototype.setVolume = function(volume){
-			this.gainNode.gain.value = volume;
-		}		
+		this.soundAddress = soundAddress;
+		
+		this.buffer = null;
+		var that=this;		//??!!!
+		var request = new XMLHttpRequest();
+		request.open('GET', this.soundAddress);
+		request.responseType = 'arraybuffer';
+		request.onload = function() {
+			console.log("request loaded..." + that.soundAddress);
+			audiocontext.decodeAudioData(request.response, function(buffer){
+				console.log("set sound buffer");
+				that.buffer = buffer;
+				cb && cb();
+			}, function(err){
+				console.log("oops! problem loading sound from : " + this.soundAddress);
+			});
+		}
+		request.send();
+		
+	};
+	
+	mySound.prototype.play = function(delay, vol, loop){
+		//console.log("will play sound, using web audio API, from: " + this.soundAddress + ", delay: " + delay);
+		if (typeof vol == 'undefined'){ vol = 1;};
+		delay = delay || 0;
+		
+		if (!this.buffer){
+			console.log("not loaded yet. returning");
+			return;
+		}
+		var source = audiocontext.createBufferSource();	//TODO pool of sounds? is creating a new buffersource each play. unknown if expensive
+		source.buffer = this.buffer	
+		if (loop){source.loop = true;}
+		
+		var indivGainNode = audiocontext.createGain();	
+		indivGainNode.gain.setValueAtTime(vol, audiocontext.currentTime);
+		
+		var indivDelayNode = audiocontext.createDelay(2.0);	//param is max delay. for fudge distance, opposite side of 3sph is distance 2 away
+		indivDelayNode.delayTime.setValueAtTime(delay, audiocontext.currentTime);
+		
+		var indivPannerNode = audiocontext.createStereoPanner();
+		
+		source.connect(indivDelayNode).connect(indivGainNode).connect(indivPannerNode).connect(this.gainNode);
+		
+		//audiocontext.resume();	//??
+		source.start(audiocontext.currentTime);
+		
+		return new IndivSound(indivGainNode, indivDelayNode, indivPannerNode);
+	};
+	mySound.prototype.setVolume = function(volume){
+		this.gainNode.gain.value = volume;
+	}
+	mySound.setGlobalVolume = function(volume){
+		console.log("SETTING GLOBAL VOLUME: " + volume);
+		globalGainNode.gain.setValueAtTime(volume, audiocontext.currentTime);
+	};
 	
 	return mySound;
 })();
@@ -124,6 +128,11 @@ var myAudioPlayer = (function(){
 	}
 	whooshSound = new MySound('audio/blowtorch_50k.mp3', playWhooshSound);
 	
+	gunSound.setVolume(0.2);
+	bombSound.setVolume(0.2);
+	clockSound.setVolume(1);
+	whooshSound.setVolume(1);
+	
 	return {
 		playGunSound: function(delay, vol){
 			gunSound.play(delay);
@@ -141,13 +150,6 @@ var myAudioPlayer = (function(){
 		setWhooshSoundBox: function(settings){
 			if (whooshSoundBoxInstance){whooshSoundBoxInstance.setAll(settings);}
 		},
-		setGlobalVolume: function(volume){	//todo actually use globalGainNode
-			console.log("SETTING GLOBAL VOLUME: " + volume);
-			gunSound.setVolume(volume*0.2);
-			bombSound.setVolume(volume*0.2);
-			clockSound.setVolume(volume);
-			whooshSound.setVolume(volume);
-		}
 	}
 })();
 
