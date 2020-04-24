@@ -1990,7 +1990,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//var transpShadProg = shaderProgramColoredPerPixelDiscard;
 	gl.useProgram(transpShadProg);
 	
-	prepBuffersForDrawing(sphereBuffers, transpShadProg);	
+	prepBuffersForDrawing(sphereBuffers, transpShadProg);
 	targetRad=0.0125;
 	gl.uniform3fv(transpShadProg.uniforms.uModelScale, [targetRad/25,targetRad/25,targetRad]);	//long streaks
 	gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [1.0, 1.0, 0.5]);	//YELLOW
