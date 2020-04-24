@@ -2567,6 +2567,9 @@ var guiParams={
 		closestPoint:false,
 		buoys:false
 	},
+	audio:{
+		volume:1,
+	},
 	normalMove:0
 };
 var settings = {
@@ -2690,6 +2693,10 @@ function init(){
 	var debugFolder = gui.addFolder('debug');
 	debugFolder.add(guiParams.debug, "closestPoint");
 	debugFolder.add(guiParams.debug, "buoys");
+	
+	var audioFolder = gui.addFolder('audio');
+	audioFolder.add(guiParams.audio, "volume", 0,1,0.1).onChange(myAudioPlayer.setGlobalVolume);
+	myAudioPlayer.setGlobalVolume(guiParams.audio.volume);	//if set above 1, fallback html media element will throw exception!!!
 	
 	var reflectorFolder = gui.addFolder('reflector');
 	reflectorFolder.add(guiParams.reflector, "draw");

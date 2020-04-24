@@ -143,14 +143,14 @@ var myAudioPlayer = (function(){
 			if (whooshSoundBoxInstance){whooshSoundBoxInstance.setAll(settings);}
 		},
 		setGlobalVolume: function(volume){	//todo actually use globalGainNode
-			console.log("SETTING GLOBAL VOLUME");
+			console.log("SETTING GLOBAL VOLUME: " + volume);
 			gunSound.setVolume(volume*0.2);
 			bombSound.setVolume(volume*0.2);
 			clockSound.setVolume(volume);
+			whooshSound.setVolume(volume);
 		}
 	}
 })();
-myAudioPlayer.setGlobalVolume(1);	//if set above 1, fallback html media element will throw exception!!!
 
 //copied from https://developer.mozilla.org/en-US/docs/Web/API/WaveShaperNode
 function makeDistortionCurve(amount) {
