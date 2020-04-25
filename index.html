@@ -894,6 +894,7 @@
 	uniform sampler2D uSampler;
 	uniform vec4 uColor;
 	uniform vec3 uPlayerLightColor;
+	uniform float thrustAmount;
 	varying float fog;
 	uniform vec4 uFogColor;
 	uniform vec3 uReflectorDiffColor;
@@ -952,9 +953,22 @@
 		vChanWeightsG*=uMaxAlbedo;
 		vChanWeightsB*=uMaxAlbedo;	//todo just apply after litColor
 		
-		vec3 litColor = vec3( dot(texture2DProj(uSampler, vTextureCoord), vChanWeightsR), 
-								dot(texture2DProj(uSampler, vTextureCoord), vChanWeightsG),
-								dot(texture2DProj(uSampler, vTextureCoord), vChanWeightsB));
+		vec4 sampleColor = texture2DProj(uSampler, vTextureCoord);
+		
+		vec3 litColor = vec3( dot(sampleColor, vChanWeightsR), 
+								dot(sampleColor, vChanWeightsG),
+								dot(sampleColor, vChanWeightsB));
+		
+		//litColor = vec3(0.0);	//zero lighting to test below stuff
+		
+		//bodge thruster light by player space light contributon. this is very approximate!
+		//todo replace by baked thruster light
+		//litColor.b += sampleColor.a;	//isotropic light contribution
+		//litColor.b += sampleColor.r;	//light contribution from the left
+		//litColor.b += sampleColor.g;	//light contribution from behind
+		//litColor.b += sampleColor.b;	//light contribution from below
+		vec3 thrustLightColor = vec3(0.1,0.2,0.9)* thrustAmount;
+		litColor += thrustLightColor*max(sampleColor.g-0.5,0.0);	//bodge - lighting is half for normals perpendicular to fwd/back, but gets intended effect of light from behind
 		
 		//guess maybe similar to some gaussian light source
 		//vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;

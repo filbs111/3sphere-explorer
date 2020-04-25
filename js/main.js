@@ -106,7 +106,7 @@ function initShaders(){
 	shaderProgramTexmapPerPixelDiscardAtmosGradLight = loadShader( "shader-texmap-perpixel-discard-atmos-vs", "shader-texmap-perpixel-gradlight-discard-fs",{
 						//could do more work in vert shader currently because light calculated per vertex - could just pass channel weights to frag shader...
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
-					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor", "uLightPosPlayerFrame"]
+					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor", "uLightPosPlayerFrame", "thrustAmount"]
 					});
 	shaderProgramTexmapPerPixelDiscardAtmosExplode = loadShader( "shader-texmap-perpixel-discard-atmos-vertvel-vs", "shader-texmap-perpixel-discard-fs",{
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord", "aVertexVelocity"],
@@ -1769,8 +1769,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
 		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
-			
 		
+		if (activeShaderProgram.uniforms.thrustAmount){
+			gl.uniform1f(activeShaderProgram.uniforms.thrustAmount, currentThrustInput[2]>0 ? 1:0);
+		}
 		
 		var rotatedMatrix = mat4.create(matrix);	//because using rotated model data for sship model
 		xyzrotate4mat(rotatedMatrix, [-Math.PI/2,0,0]); 
