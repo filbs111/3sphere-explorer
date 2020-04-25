@@ -753,7 +753,12 @@ function drawScene(frameTime){
 	}else{
 		//draw the scene to offscreen framebuffer
 		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
-		setRttSize(gl.viewportWidth, gl.viewportHeight);
+		var oversize = (guiParams.renderViaTexture == "fisheye")? 1.4 :1;	//bodge
+		var oversizedViewport = [ 2*Math.floor(oversize*gl.viewportWidth/2),  2*Math.floor(oversize*gl.viewportHeight/2)];
+		
+			document.mydebugval1 =oversizedViewport;
+		gl.viewport( 0,0, oversizedViewport[0], oversizedViewport[1] );
+		setRttSize( oversizedViewport[0], oversizedViewport[1] );
 		
 		drawWorldScene(frameTime, false, offsetCameraContainer.world);
 		
