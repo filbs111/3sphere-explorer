@@ -753,7 +753,7 @@ function drawScene(frameTime){
 	}else{
 		//draw the scene to offscreen framebuffer
 		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
-		var oversize = (guiParams.renderViaTexture == "fisheye")? 1.4 :1;	//bodge
+		var oversize = (guiParams.renderViaTexture == "fisheye")? 1.6 :1;	//bodge
 		var oversizedViewport = [ 2*Math.floor(oversize*gl.viewportWidth/2),  2*Math.floor(oversize*gl.viewportHeight/2)];
 		
 			document.mydebugval1 =oversizedViewport;
@@ -2705,7 +2705,7 @@ function init(){
 	
 	var displayFolder = gui.addFolder('display');	//control and movement
 	displayFolder.add(guiParams, "cameraType", ["cockpit", "near 3rd person", "mid 3rd person", "far 3rd person", "side"]);
-	displayFolder.add(guiParams, "cameraFov", 60,120,5);
+	displayFolder.add(guiParams, "cameraFov", 60,130,5);
 	displayFolder.add(guiParams, "flipReverseCamera");
 	displayFolder.add(guiParams, "showHud");
 	displayFolder.add(guiParams, "renderViaTexture", ['no','basic','bennyBoxLite','bennyBox','fisheye']);
