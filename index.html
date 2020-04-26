@@ -888,6 +888,63 @@
 	}
 </script>
 
+
+<script id="shader-texmap-perpixel-discard-normalmap-fs" type="x-shader/x-fragment">
+	precision mediump float;
+	varying vec3 vTextureCoord;
+	uniform sampler2D uSampler;
+	uniform vec4 uColor;
+	uniform vec3 uPlayerLightColor;
+	varying float fog;
+	uniform vec4 uFogColor;
+	uniform vec3 uReflectorDiffColor;
+	uniform vec4 uReflectorPos;
+	uniform float uReflectorCos;
+	varying vec4 adjustedPos;
+	varying vec4 transformedNormal;	
+	varying vec4 transformedCoord;
+	varying vec4 transformedTangent;
+	varying vec4 transformedBinormal;
+		
+	void main(void) {
+		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
+	
+		if (posCosDiff>0.0){
+			discard;
+		}
+		
+		vec3 texSample = texture2DProj(uSampler, vTextureCoord).xyz;
+				
+		vec3 texSampleAdjusted = texSample*vec3(2.)-vec3(1.);
+		texSampleAdjusted.xy*=0.4;	//make surface flatter.
+		texSampleAdjusted = normalize(texSampleAdjusted);
+		
+		vec4 nmapNormal = transformedNormal*texSampleAdjusted.z +transformedTangent*texSampleAdjusted.x+ transformedBinormal*texSampleAdjusted.y;	//TODO use matrix for normal, tangent, binormal!
+	
+		float light = -dot( normalize(adjustedPos), nmapNormal);
+		light = max(light,0.0);	//unnecessary if camera pos = light pos
+		//falloff
+		//light/=0.7 + 3.0*dot(adjustedPos,adjustedPos);	//currently consistent with other shaders, but clear that player light is too large there
+		light/=0.2 + 6.0*dot(adjustedPos,adjustedPos);
+		
+		//light from portal. TODO pass in a colour for this, more complex lighting (at surface of portal, should be hemispherical light etc)
+		//this is just bodged/guessed to achieve correct behaviour at/across portal. TODO check/correct!
+		float portalLight = dot( uReflectorPos, nmapNormal);
+		portalLight = max(0.5*portalLight +0.5+ posCosDiff,0.0);	//unnecessary if camera pos = light pos
+		//falloff
+		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
+				
+		//guess maybe similar to some gaussian light source
+		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*uColor + (1.0-fog)*uFogColor;
+
+		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
+		
+		gl_FragColor.a =1.0;
+	}
+</script>
+
+
+
 <script id="shader-texmap-perpixel-gradlight-discard-fs" type="x-shader/x-fragment">
 	precision mediump float;
 	varying vec3 vTextureCoord;
@@ -1073,6 +1130,42 @@
 		gl_Position = uPMatrix * transformedCoord;
 
 		transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
+		adjustedPos = transformedCoord - uDropLightPos;
+		
+		fog = 0.5*(1.0 + transformedCoord.w);
+		
+		float myZ = aVertexPositionNormalized.w;
+		vTextureCoord = vec3( aTextureCoord.st*myZ, myZ );
+	}
+</script>
+
+<script id="shader-texmap-perpixel-discard-normalmap-vs" type="x-shader/x-vertex">
+	attribute vec3 aVertexPosition;
+	attribute vec3 aVertexNormal;
+	attribute vec2 aTextureCoord;
+	attribute vec3 aVertexTangent;
+	attribute vec3 aVertexBinormal;
+	varying vec3 vTextureCoord;
+	uniform mat4 uMVMatrix;
+	uniform mat4 uPMatrix;
+	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
+	varying float fog;
+	uniform vec3 uModelScale;
+	varying vec4 adjustedPos;
+	varying vec4 transformedNormal;
+	varying vec4 transformedCoord;
+	varying vec4 transformedTangent;
+	varying vec4 transformedBinormal;
+	
+	void main(void) {
+		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
+		transformedCoord = uMVMatrix * aVertexPositionNormalized;
+		
+		gl_Position = uPMatrix * transformedCoord;
+
+		transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);	//TODO use matrix for normal, tangent, binormal
+		transformedTangent = uMVMatrix * vec4(aVertexTangent,0.0);
+		transformedBinormal = uMVMatrix * vec4(aVertexBinormal,0.0);
 		adjustedPos = transformedCoord - uDropLightPos;
 		
 		fog = 0.5*(1.0 + transformedCoord.w);

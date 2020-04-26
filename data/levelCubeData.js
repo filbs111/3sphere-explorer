@@ -111,7 +111,125 @@ var levelCubeData={
       1.0, 0.0,
       1.0, 1.0,
       0.0, 1.0,
-    ],	
+    ],
+	tangents:[		//direction of change of u coordinate in 3d space. TODO check whether these match up with standard format output by 3d programs eg blender
+		// Front	//TODO compute these, looking at all edges connected to a vertex etc. (could save download size)
+		1,0,0,			
+		1,0,0,
+		1,0,0,
+		1,0,0,
+		
+		// Back
+		-1,0,0,
+		-1,0,0,
+		-1,0,0,
+		-1,0,0,
+		
+		// Top
+		1,0,0,
+		1,0,0,
+		1,0,0,
+		1,0,0,
+		
+		// Bottom
+		-1,0,0,
+		-1,0,0,
+		-1,0,0,
+		-1,0,0,
+		
+		// Right
+		0,0,-1,
+		0,0,-1,
+		0,0,-1,
+		0,0,-1,
+		
+		// Left
+		0,0,1,
+		0,0,1,
+		0,0,1,
+		0,0,1
+		
+		/*
+		0,0,0,
+		0,0,0,
+		0,0,0,
+		0,0,0,
+		
+		0,0,0,
+		0,0,0,
+		0,0,0,
+		0,0,0,
+		
+		0,0,0,
+		0,0,0,
+		0,0,0,
+		0,0,0,
+		
+		0,0,0,
+		0,0,0,
+		0,0,0,
+		0,0,0,
+		*/
+	],
+	binormals:[	//direction of change of v coordinate in 3d space.
+		// Front
+		0,1,0,
+		0,1,0,
+		0,1,0,
+		0,1,0,
+		
+		// Back
+		0,1,0,
+		0,1,0,
+		0,1,0,
+		0,1,0,
+		
+		// Top
+		0,0,-1,
+		0,0,-1,
+		0,0,-1,
+		0,0,-1,
+		
+		// Bottom
+		0,0,-1,
+		0,0,-1,
+		0,0,-1,
+		0,0,-1,
+		
+		// Right
+		0,1,0,
+		0,1,0,
+		0,1,0,
+		0,1,0,
+		
+		// Left
+		0,1,0,
+		0,1,0,
+		0,1,0,
+		0,1,0,
+		
+		/*
+		0,0,0,
+		0,0,0,
+		0,0,0,
+		0,0,0,
+		
+		0,0,0,
+		0,0,0,
+		0,0,0,
+		0,0,0,
+		
+		0,0,0,
+		0,0,0,
+		0,0,0,
+		0,0,0,
+		
+		0,0,0,
+		0,0,0,
+		0,0,0,
+		0,0,0,
+		*/
+	],
 	indices:[
       0, 1, 2,      0, 2, 3,    // Front face
       4, 5, 6,      4, 6, 7,    // Back face

@@ -12,8 +12,8 @@ var shaderProgramColored,
 	shaderProgramColoredPerPixelTransparentDiscard,
 	shaderProgramTexmap,
 	shaderProgramTexmapPerVertex,
-	shaderProgramTexmapPerPixel,
 	shaderProgramTexmapPerPixelDiscard,
+	shaderProgramTexmapPerPixelDiscardNormalmap,
 	shaderProgramTexmapPerPixelDiscardAtmos,
 	shaderProgramTexmapPerPixelDiscardAtmosGradLight,
 	shaderProgramTexmapPerPixelDiscardAtmosExplode,
@@ -97,6 +97,10 @@ function initShaders(){
 					*/
 	shaderProgramTexmapPerPixelDiscard = loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs",{
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					});
+	shaderProgramTexmapPerPixelDiscardNormalmap = loadShader( "shader-texmap-perpixel-discard-normalmap-vs", "shader-texmap-perpixel-discard-normalmap-fs",{
+					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord", "aVertexTangent", "aVertexBinormal"],
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 	shaderProgramTexmapPerPixelDiscardAtmos = loadShader( "shader-texmap-perpixel-discard-atmos-vs", "shader-texmap-perpixel-discard-fs",{
@@ -480,6 +484,14 @@ function initBuffers(){
 		if (sourceData.normals){
 			bufferObj.vertexNormalBuffer= gl.createBuffer();
 			bufferArrayData(bufferObj.vertexNormalBuffer, sourceData.normals, 3);
+		}
+		if (sourceData.tangents){
+			bufferObj.vertexTangentBuffer= gl.createBuffer();
+			bufferArrayData(bufferObj.vertexTangentBuffer, sourceData.tangents, 3);
+		}
+		if (sourceData.binormals){
+			bufferObj.vertexBinormalBuffer= gl.createBuffer();
+			bufferArrayData(bufferObj.vertexBinormalBuffer, sourceData.binormals, 3);
 		}
 		bufferObj.vertexIndexBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
@@ -1254,27 +1266,31 @@ function drawWorldScene(frameTime, isCubemapView) {
 	boxSize = 0.1;
 	boxRad = boxSize*Math.sqrt(3);
 	
-	//var activeShaderProgram = shaderProgramColored;	//draw spheres
-	activeShaderProgram = shaderProgramTexmap;	//draw cubes
 	//gl.enableVertexAttribArray(1);	//do need tex coords
+
+	shaderSetup(shaderProgramTexmapPerPixelDiscardNormalmap, nmapTexture);
 	
-	gl.useProgram(activeShaderProgram);
-	
-	gl.activeTexture(gl.TEXTURE0);
-	bind2dTextureIfRequired(texture);
+	function shaderSetup(shader, tex){	//TODO use this more widely, possibly by pulling out to higher level. similar to performCommon4vecShaderSetup
+		activeShaderProgram = shader;
+		gl.useProgram(shader);	//todo use function variable
 		
-	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
-	if (activeShaderProgram.uniforms.uReflectorDiffColor){
-			gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
+		gl.activeTexture(gl.TEXTURE0);	//TODO should nmap, other textures use tex #s? (to reduce switching?)
+		bind2dTextureIfRequired(tex);
+
+		gl.uniform4fv(shader.uniforms.uFogColor, localVecFogColor);
+		if (shader.uniforms.uReflectorDiffColor){
+				gl.uniform3fv(shader.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
+		}
+		if (shader.uniforms.uPlayerLightColor){
+			gl.uniform3fv(shader.uniforms.uPlayerLightColor, playerLight);
+		}
+		gl.uniform4fv(shader.uniforms.uReflectorPos, reflectorPosTransformed);
+		gl.uniform1f(shader.uniforms.uReflectorCos, cosReflector);	
+		
+		gl.uniform3fv(shader.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
+		gl.uniform4fv(shader.uniforms.uDropLightPos, dropLightPos);
 	}
-	if (activeShaderProgram.uniforms.uPlayerLightColor){
-		gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
-	}
-	gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
-	gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 	
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
-	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 	
 	var guiBoxes = guiParams.drawShapes.boxes;
 	if (guiBoxes['y=z=0']){drawBoxRing(ringCells[0],colorArrs.red);}
@@ -1289,9 +1305,12 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawArrayOfModels(
 			ringCellMatData,
 			(guiParams["culling"] ? boxRad: false),
-			cubeBuffers
+			cubeBuffers,
+			activeShaderProgram
 		);
 	}
+	
+
 	
 	
 	var numRandomBoxes = guiParams['random boxes'].number;
@@ -1308,7 +1327,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			
 			numRandomBoxes = Math.min(randomMats.length, numRandomBoxes);	//TODO check this doesn't happen/ make obvious error!
 			
-			prepBuffersForDrawing(cubeBuffers, shaderProgramTexmap);
+			prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
 			for (var ii=0;ii<numRandomBoxes;ii++){
 				var thisMat = randomMats[ii];
 				mat4.set(invertedWorldCamera, mvMatrix);
@@ -1317,17 +1336,15 @@ function drawWorldScene(frameTime, isCubemapView) {
 			//	if (thisMat[15]>criticalWPos){continue;}	//don't draw boxes too close to portal
 				if (frustrumCull(mvMatrix,boxRad)){
 					mat4.set(thisMat, mMatrix);
-					drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+					drawObjectFromPreppedBuffers(cubeBuffers, activeShaderProgram);
 				}
 			}
-		}else{
-			//draw all boxes from single buffer. no culling.
 		}
 	}
 	
 	
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
-	prepBuffersForDrawing(cubeBuffers, shaderProgramTexmap);
+	prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
 	
 	//draw boxes on duocylinder surface. 
 	if (guiParams.drawShapes.towers){	//note currently toggles drawing for all boxes using duocylinder positioning method, including demo axis objects
@@ -1347,6 +1364,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 			drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, cubeBuffers, invertedWorldCameraDuocylinderFrame);
 		}
 	}
+	
+	//switch to non-normalmap shader
+	shaderSetup(shaderProgramTexmap, texture);
 	
 	var worldInfo = (colorsSwitch==0) ? guiParams.world0 : guiParams.world1;	//todo use array
 	
@@ -1552,18 +1572,19 @@ function drawWorldScene(frameTime, isCubemapView) {
 	}
 	
 	//todo this should take buffers, shaders and call prepBuffersForDrawing, drawObjectFromPreppedBuffers
-	function drawArrayOfModels(cellMats, cullRad, buffers){
-		prepBuffersForDrawing(buffers, shaderProgramTexmap);
+	function drawArrayOfModels(cellMats, cullRad, buffers, shaderProg){
+		shaderProg = shaderProg || shaderProgramTexmap;
+		prepBuffersForDrawing(buffers, shaderProg);
 		numDrawn = 0;
 		if (!cullRad){
 			drawArrayForFunc(function(){
-				drawObjectFromPreppedBuffers(buffers, shaderProgramTexmap);
+				drawObjectFromPreppedBuffers(buffers, shaderProg);
 				numDrawn++;
 				});
 		}else{
 			drawArrayForFunc(function(){
 				if (frustrumCull(mvMatrix,cullRad)){
-					drawObjectFromPreppedBuffers(buffers, shaderProgramTexmap);
+					drawObjectFromPreppedBuffers(buffers, shaderProg);
 					numDrawn++;
 				}
 			});
@@ -2285,6 +2306,14 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 		gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexNormalBuffer);
 		gl.vertexAttribPointer(shaderProg.attributes.aVertexNormal, bufferObj.vertexNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	}
+	if (bufferObj.vertexTangentBuffer && shaderProg.attributes.aVertexTangent){
+		gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexTangentBuffer);
+		gl.vertexAttribPointer(shaderProg.attributes.aVertexTangent, bufferObj.vertexTangentBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	}
+	if (bufferObj.vertexBinormalBuffer && shaderProg.attributes.aVertexBinormal){
+		gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexBinormalBuffer);
+		gl.vertexAttribPointer(shaderProg.attributes.aVertexBinormal, bufferObj.vertexBinormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	}
 	if (bufferObj.vertexVelocityBuffer && shaderProg.attributes.aVertexVelocity){
 		gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexVelocityBuffer);
 		gl.vertexAttribPointer(shaderProg.attributes.aVertexVelocity, bufferObj.vertexVelocityBuffer.itemSize, gl.FLOAT, false, 0, 0);
@@ -2444,10 +2473,11 @@ function setupScene() {
 	targetMatrix = cellMatData.d16[0];
 }
 
-var texture,hudTexture,hudTextureSmallCircles,hudTexturePlus,hudTextureX,hudTextureBox,sshipTexture;
+var texture,hudTexture,hudTextureSmallCircles,hudTexturePlus,hudTextureX,hudTextureBox,sshipTexture,nmapTexture;
 
 function initTexture(){
 	texture = makeTexture("img/0033.jpg");
+	nmapTexture = makeTexture("img/images.squarespace-cdn.com.png");	//button cushion
 	hudTexture = makeTexture("img/circles.png");
 	hudTextureSmallCircles = makeTexture("img/smallcircles.png");
 	hudTexturePlus = makeTexture("img/plus.png");
@@ -2516,15 +2546,15 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	world0:{duocylinderModel:"voxTerrain",seaActive:true},
+	world0:{duocylinderModel:"none",seaActive:true},
 	world1:{duocylinderModel:"voxTerrain",seaActive:false},
 	duocylinderRotateSpeed:0,
 	seaLevel:-0.012,
 	drawShapes:{
 		boxes:{
-		'y=z=0':false,	//x*x+w*w=1
-		'x=z=0':false,	//y*y+w*w=1
-		'x=y=0':false,	//z*z+w*w=1
+		'y=z=0':true,	//x*x+w*w=1
+		'x=z=0':true,	//y*y+w*w=1
+		'x=y=0':true,	//z*z+w*w=1
 		'x=w=0':false,
 		'y=w=0':false,
 		'z=w=0':false
@@ -2532,13 +2562,13 @@ var guiParams={
 		teapot:false,
 		"teapot scale":0.7,
 		towers:false,
-		singleBufferTowers:true,
-		explodingBox:true,
+		singleBufferTowers:false,
+		explodingBox:false,
 		hyperboloid:false,
 		stonehenge:false,
-		singleBufferStonehenge:true,
+		singleBufferStonehenge:false,
 		roads:false,
-		singleBufferRoads:true
+		singleBufferRoads:false
 	},
 	'random boxes':{
 		number:maxRandBoxes,	//note ui controlled value does not affect singleBuffer
