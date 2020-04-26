@@ -900,12 +900,12 @@ var colorArrs = {
 	veryDarkGray:[0.2, 0.2, 0.2, 1.0],
 	superDarkGray:[0.05, 0.05, 0.05, 1.0],
 	black:[0, 0, 0, 1.0],
-	red:[1.0, 0.4, 0.4, 1.0],
-	green:[0.4, 1.0, 0.4, 1.0],
-	blue:[0.4, 0.4, 1.0, 1.0],
-	yellow:[1.0, 1.0, 0.4, 1.0],
-	magenta:[1.0, 0.4, 1.0, 1.0],
-	cyan:[0.4, 1.0, 1.0, 1.0],
+	red:[1.0, 0.1, 0.1, 1.0],
+	green:[0.1, 1.0, 0.1, 1.0],
+	blue:[0.1, 0.1, 1.0, 1.0],
+	yellow:[1.0, 1.0, 0.1, 1.0],
+	magenta:[1.0, 0.1, 1.0, 1.0],
+	cyan:[0.1, 1.0, 1.0, 1.0],
 	randBoxes:[0.9, 0.9, 1.0, 0.9],
 	teapot:[0.4, 0.4, 0.8, 1.0],
 	hudFlightDir:[0.0, 0.5, 1.0, 0.5],
@@ -1168,10 +1168,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var localVecReflectorDiffColor = [ localVecReflectorColor[0]-localVecFogColor[0],
 										localVecReflectorColor[1]-localVecFogColor[1],
 										localVecReflectorColor[2]-localVecFogColor[2]];	//todo use a vector class!
-	
-	var localVecFogColorGamma = localVecFogColor.map(function(elem){return Math.pow(elem,0.455);});
-	
-	gl.clearColor.apply(gl,localVecFogColorGamma);
+		
+	gl.clearColor.apply(gl,worldColorsPlain[colorsSwitch]);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 			
 	mat4.set(worldCamera, invertedWorldCamera);
@@ -2636,6 +2634,7 @@ var settings = {
 }
 
 var worldColors=[];
+var worldColorsPlain=[];
 var playerLightUnscaled;
 var playerLight;
 var muzzleFlashAmounts=[0,0,0,0];
@@ -2857,7 +2856,12 @@ function init(){
 		var r = parseInt(color.substring(1,3),16) /255;
 		var g = parseInt(color.substring(3,5),16) /255;
 		var b = parseInt(color.substring(5,7),16) /255;
-		worldColors[world]=[r,g,b,1].map(function(elem){return Math.pow(elem,2.2)});	//apply gamma
+		worldColorsPlain[world]=[r,g,b,1];
+		worldColors[world]=worldColorsPlain[world].map(function(elem){
+			var withGamma =Math.pow(elem,2.2);
+			return withGamma;
+			//return withGamma/(1.001-withGamma);	//undo tone mapping
+		});
 	}
 	function setPlayerLight(color){
 		var r = parseInt(color.substring(1,3),16) /255;

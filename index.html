@@ -327,7 +327,7 @@
 		light = -dot( normalize(adjustedPos), transformedNormal);
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		//falloff
-		light/=0.7 + 3.0*dot(adjustedPos,adjustedPos);	//1st num some const to ensure light doesn't go inf at short dist
+		light/=0.1 + 5.0*dot(adjustedPos,adjustedPos);	//1st num some const to ensure light doesn't go inf at short dist
 													//guess maybe similar to some gaussian light source
 		fog = 0.5*(1.0 + transformedCoord.w);
 	}
@@ -350,6 +350,9 @@
 		
 		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
 		//gl_FragColor = vec4( pow(preGammaFragColor.r,0.455), pow(preGammaFragColor.g,0.455), pow(preGammaFragColor.b,0.455), pow(preGammaFragColor.a,0.455));
+		
+		//tone mapping
+		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);
 		
 		//gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		//gl_FragColor = (1.0-fog)*uFogColor;
@@ -374,6 +377,9 @@
 		vec3 texColor = mat3(texture2D(uSampler, vec2(vPos.y, vPos.z)).xyz, texture2D(uSampler, vec2(vPos.x, vPos.z + texOffset )).xyz, texture2D(uSampler, vec2(vPos.x + texOffset, vPos.y + texOffset )).xyz) * vTexAmounts;
 		
 		vec4 preGammaFragColor = vec4( texColor*fog*( veclight + uFogColor.xyz ), 1.0)*uColor + (1.0-fog)*uFogColor;
+		
+		//tone mapping
+		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
 		
 		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
 		//gl_FragColor = vec4( pow(preGammaFragColor.r,0.455), pow(preGammaFragColor.g,0.455), pow(preGammaFragColor.b,0.455), pow(preGammaFragColor.a,0.455));
@@ -406,9 +412,11 @@
 		//gl_FragColor = vec4( fog*( veclight + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		vec4 preGammaFragColor = vec4( fog*( veclight + uFogColor.xyz ), 1.0)*uColor*texture2D(uSampler, newTexCoord) + (1.0-fog)*uFogColor;
 		
+		//tone mapping
+		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
+		
 		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
 		//gl_FragColor = vec4( pow(preGammaFragColor.r,0.455), pow(preGammaFragColor.g,0.455), pow(preGammaFragColor.b,0.455), pow(preGammaFragColor.a,0.455));
-		
 		
 		
 		//gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
@@ -452,7 +460,7 @@
 		float light = -dot( normalize(adjustedPos), transformedNormal);
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		//falloff
-		light/=0.7 + 3.0*dot(adjustedPos,adjustedPos);	//1st num some const to ensure light doesn't go inf at short dist
+		light/=0.1 + 5.0*dot(adjustedPos,adjustedPos);	//1st num some const to ensure light doesn't go inf at short dist
 													//guess maybe similar to some gaussian light source
 		gl_FragColor = vec4( fog*(( vec3(light) + uFogColor.xyz )*uColor.xyz + uEmitColor), 1.0) + (1.0-fog)*uFogColor;
 	}
@@ -505,7 +513,7 @@
 		float light = -dot( normalize(adjustedPos), transformedNormal);
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		//falloff
-		light/=0.7 + 3.0*dot(adjustedPos,adjustedPos);	//1st num some const to ensure light doesn't go inf at short dist
+		light/=0.1 + 5.0*dot(adjustedPos,adjustedPos);	//1st num some const to ensure light doesn't go inf at short dist
 		
 		//light from portal. TODO pass in a colour for this, more complex lighting (at surface of portal, should be hemispherical light etc)
 		float portalLight = dot( uReflectorPos, transformedNormal);
@@ -523,6 +531,9 @@
 		//guess maybe similar to some gaussian light source
 		
 		vec4 preGammaFragColor = vec4( fog*(( uPlayerLightColor*light+ uReflectorDiffColor*portalLight + uFogColor.xyz )*uColor.xyz + uEmitColor), 1.0) + (1.0-fog)*uFogColor;
+		
+		//tone mapping
+		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
 		
 		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
 		//gl_FragColor = vec4( pow(preGammaFragColor.r,0.455), pow(preGammaFragColor.g,0.455), pow(preGammaFragColor.b,0.455), pow(preGammaFragColor.a,0.455));
@@ -831,7 +842,7 @@
 		float light = -dot( normalize(adjustedPos), transformedNormal);
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		//falloff
-		light/=0.7 + 3.0*dot(adjustedPos,adjustedPos);
+		light/=0.1 + 5.0*dot(adjustedPos,adjustedPos);
 		
 		gl_FragColor = vec4( fog*( vec3(light) + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		
@@ -866,8 +877,8 @@
 		float light = -dot( normalize(adjustedPos), transformedNormal);
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		//falloff
-		light/=0.7 + 3.0*dot(adjustedPos,adjustedPos);
-		
+		light/=0.1 + 5.0*dot(adjustedPos,adjustedPos);
+
 		//light from portal. TODO pass in a colour for this, more complex lighting (at surface of portal, should be hemispherical light etc)
 		//this is just bodged/guessed to achieve correct behaviour at/across portal. TODO check/correct!
 		float portalLight = dot( uReflectorPos, transformedNormal);
@@ -877,6 +888,9 @@
 				
 		//guess maybe similar to some gaussian light source
 		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
+		
+		//tone mapping
+		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
 
 		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
 		//gl_FragColor = vec4( pow(preGammaFragColor.r,0.455), pow(preGammaFragColor.g,0.455), pow(preGammaFragColor.b,0.455), pow(preGammaFragColor.a,0.455));
@@ -924,8 +938,7 @@
 		float light = -dot( normalize(adjustedPos), nmapNormal);
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		//falloff
-		//light/=0.7 + 3.0*dot(adjustedPos,adjustedPos);	//currently consistent with other shaders, but clear that player light is too large there
-		light/=0.2 + 6.0*dot(adjustedPos,adjustedPos);
+		light/=0.1 + 5.0*dot(adjustedPos,adjustedPos);
 		
 		//light from portal. TODO pass in a colour for this, more complex lighting (at surface of portal, should be hemispherical light etc)
 		//this is just bodged/guessed to achieve correct behaviour at/across portal. TODO check/correct!
@@ -937,6 +950,9 @@
 		//guess maybe similar to some gaussian light source
 		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*uColor + (1.0-fog)*uFogColor;
 
+		//tone mapping
+		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);		
+		
 		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
 		
 		gl_FragColor.a =1.0;
@@ -1031,6 +1047,9 @@
 		//vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		vec4 preGammaFragColor = vec4( fog*litColor, 1.0) + (1.0-fog)*uFogColor;
 
+		//tone mapping
+		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
+		
 		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
 		//gl_FragColor = vec4( pow(preGammaFragColor.r,0.455), pow(preGammaFragColor.g,0.455), pow(preGammaFragColor.b,0.455), pow(preGammaFragColor.a,0.455));
 	
@@ -1065,7 +1084,7 @@
 		float light = -dot( normalize(adjustedPos), transformedNormal);
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		//falloff
-		light/=0.7 + 3.0*dot(adjustedPos,adjustedPos);	//1st num some const to ensure light doesn't go inf at short dist
+		light/=0.1 + 5.0*dot(adjustedPos,adjustedPos);	//1st num some const to ensure light doesn't go inf at short dist
 													//guess maybe similar to some gaussian light source
 		
 		veclight=vec3(light);
@@ -1547,6 +1566,7 @@
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		light/=1.0 + 4.2*dot(adjustedPos,adjustedPos);		//terms higher than other shaders by sqrt(2) because length
 															//of 1,0,0,0 -> 0,1,0,0 (90 deg around world)
+															//TODO recalc this since have changed falloff calc in other shaders
 		//TODO can process multiple lights using matrix?
 		
 		veclight=uPlayerLightColor*light;
@@ -1651,6 +1671,7 @@
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		light/=1.0 + 4.2*dot(adjustedPos,adjustedPos);		//terms higher than other shaders by sqrt(2) because length
 															//of 1,0,0,0 -> 0,1,0,0 (90 deg around world)
+															//todo recalc because other shaders changed
 		//TODO can process multiple lights using matrix?
 		
 		veclight=uPlayerLightColor*light;
@@ -1734,6 +1755,7 @@
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		light/=1.0 + 4.2*dot(adjustedPos,adjustedPos);		//terms higher than other shaders by sqrt(2) because length
 															//of 1,0,0,0 -> 0,1,0,0 (90 deg around world)
+															//todo recalc
 		//TODO can process multiple lights using matrix?
 		
 		veclight=uPlayerLightColor*light;
@@ -1828,6 +1850,7 @@
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		light/=1.0 + 4.2*dot(adjustedPos,adjustedPos);		//terms higher than other shaders by sqrt(2) because length
 															//of 1,0,0,0 -> 0,1,0,0 (90 deg around world)
+															//todo recalc
 		//TODO can process multiple lights using matrix?
 		
 		veclight=uPlayerLightColor*light;
@@ -1886,7 +1909,7 @@
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		light/=1.0 + 4.2*dot(adjustedPos,adjustedPos);		//terms higher than other shaders by sqrt(2) because length
 															//of 1,0,0,0 -> 0,1,0,0 (90 deg around world)
-		
+															//todo recalc
 		veclight=uPlayerLightColor*light;
 		
 		
@@ -2004,7 +2027,7 @@
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		light/=1.0 + 4.2*dot(adjustedPos,adjustedPos);		//terms higher than other shaders by sqrt(2) because length
 															//of 1,0,0,0 -> 0,1,0,0 (90 deg around world)
-		
+															//todo recalc
 		veclight=uPlayerLightColor*light;
 		
 		
@@ -2115,7 +2138,7 @@
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		light/=1.0 + 4.2*dot(adjustedPos,adjustedPos);		//terms higher than other shaders by sqrt(2) because length
 															//of 1,0,0,0 -> 0,1,0,0 (90 deg around world)
-		
+															//todo recalc
 		veclight=uPlayerLightColor*light;
 		
 		
@@ -2261,7 +2284,7 @@
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		light/=1.0 + 4.2*dot(adjustedPos,adjustedPos);		//terms higher than other shaders by sqrt(2) because length
 															//of 1,0,0,0 -> 0,1,0,0 (90 deg around world)
-		
+															//todo recalc
 		veclight=uPlayerLightColor*light;
 		
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
@@ -2455,7 +2478,7 @@
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		light/=1.0 + 4.2*dot(adjustedPos,adjustedPos);		//terms higher than other shaders by sqrt(2) because length
 															//of 1,0,0,0 -> 0,1,0,0 (90 deg around world)
-		
+															//todo recalc
 		veclight=uPlayerLightColor*light;
 		
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
@@ -2637,7 +2660,7 @@
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		light/=1.0 + 4.2*dot(adjustedPos,adjustedPos);		//terms higher than other shaders by sqrt(2) because length
 															//of 1,0,0,0 -> 0,1,0,0 (90 deg around world)
-		
+															//todo recalc
 		veclight=uPlayerLightColor*light;
 		
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
@@ -2667,8 +2690,20 @@
 	
 	void main(void) {
 		//gl_FragColor = uColor*textureCube(uSampler, vPos);	//TODO use this (get rid of fog)
-		vec4 preGammaFragColor = vec4( vec3(fog), 1.0)*uColor*pow(textureCube(uSampler, vPos),vec4(2.2)) + (1.0-fog)*uFogColor;	//todo render cubemap with gamma 1
-		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
+		
+		vec3 preGammaFragColor = pow(textureCube(uSampler, vPos).xyz,vec3(2.2));
+		
+		//undo tone mapping . y=1/(1+x) => x=y/(1-y)
+		//seems like in practice, undoing, redoing tone mapping has little value, but guess because currently not using very bright lighting.
+		//TODO check whether still need this - 
+		
+		vec3 preToneMap = preGammaFragColor / (1.001 - preGammaFragColor);	//using 1.001 instead of 1 to prevent /0 problems
+		preToneMap = vec3(fog)*uColor.xyz*preToneMap + (1.0-fog)*uFogColor.xyz;
+		
+		//reapply tone mapping
+		preGammaFragColor = preToneMap/(1.+preToneMap);
+		
+		gl_FragColor = vec4( pow(preGammaFragColor, vec3(0.455)) , 1.0);
 	}
 </script>
 <!-- vertex shader -->
