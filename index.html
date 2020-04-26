@@ -348,11 +348,11 @@
 		
 		vec4 preGammaFragColor = vec4( fog*( veclight + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		
-		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
-		//gl_FragColor = vec4( pow(preGammaFragColor.r,0.455), pow(preGammaFragColor.g,0.455), pow(preGammaFragColor.b,0.455), pow(preGammaFragColor.a,0.455));
-		
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);
+		
+		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
+		//gl_FragColor = vec4( pow(preGammaFragColor.r,0.455), pow(preGammaFragColor.g,0.455), pow(preGammaFragColor.b,0.455), pow(preGammaFragColor.a,0.455));
 		
 		//gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		//gl_FragColor = (1.0-fog)*uFogColor;

@@ -2498,8 +2498,8 @@ function initTexture(){
 	//duocylinderObjects.voxTerrain.tex = makeTexture("img/ash_uvgrid01.jpg");
 	//duocylinderObjects.voxTerrain.tex = makeTexture("img/cretish0958.png");
 	//duocylinderObjects.voxTerrain.tex = makeTexture("img/13787.jpg");
-	//duocylinderObjects.voxTerrain.tex = makeTexture("img/2100-v1.jpg");
-	duocylinderObjects.voxTerrain.tex = makeTexture("img/4483-v7.jpg");	//rust
+	duocylinderObjects.voxTerrain.tex = makeTexture("img/2100-v1.jpg");
+	//duocylinderObjects.voxTerrain.tex = makeTexture("img/4483-v7.jpg");	//rust
 
 	duocylinderObjects.voxTerrain.hasVertColors=true;
 	duocylinderObjects.voxTerrain.usesTriplanarMapping=true;	//note that hasVertColors, usesTriplanarMapping currently equivalent (has both or neither)
@@ -2859,8 +2859,7 @@ function init(){
 		worldColorsPlain[world]=[r,g,b,1];
 		worldColors[world]=worldColorsPlain[world].map(function(elem){
 			var withGamma =Math.pow(elem,2.2);
-			return withGamma;
-			//return withGamma/(1.001-withGamma);	//undo tone mapping
+			return withGamma/(1.01-withGamma);	//undo tone mapping
 		});
 	}
 	function setPlayerLight(color){
