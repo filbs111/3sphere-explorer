@@ -14,6 +14,7 @@ var shaderProgramColored,
 	shaderProgramTexmapPerVertex,
 	shaderProgramTexmapPerPixelDiscard,
 	shaderProgramTexmapPerPixelDiscardNormalmap,
+	shaderProgramTexmapPerPixelDiscardNormalmapEfficient,
 	shaderProgramTexmapPerPixelDiscardAtmos,
 	shaderProgramTexmapPerPixelDiscardAtmosGradLight,
 	shaderProgramTexmapPerPixelDiscardAtmosExplode,
@@ -99,10 +100,16 @@ function initShaders(){
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
+					
 	shaderProgramTexmapPerPixelDiscardNormalmap = loadShader( "shader-texmap-perpixel-discard-normalmap-vs", "shader-texmap-perpixel-discard-normalmap-fs",{
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord", "aVertexTangent", "aVertexBinormal"],
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					});	//TODO add atmos shader for this.
+	shaderProgramTexmapPerPixelDiscardNormalmapEfficient = loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs",{
+					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord", "aVertexTangent", "aVertexBinormal"],
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uModelScale","uReflectorPos","uReflectorPosVShaderCopy","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
+	
 	shaderProgramTexmapPerPixelDiscardAtmos = loadShader( "shader-texmap-perpixel-discard-atmos-vs", "shader-texmap-perpixel-discard-fs",{
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord"],
 					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
@@ -1208,6 +1215,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 	mat4.multiply(lightMat, sshipMatrixShifted);
 	dropLightPos = [lightMat[12], lightMat[13], lightMat[14], lightMat[15]];
 	
+	//for debug 
+	window.lmat = lightMat;
+	
 	mat4.set(invertedWorldCamera, lightMat);
 	
 	//only use 1 drop light. should be standard pos'n if drawing same world as light, and reflected pos'n if different
@@ -1266,7 +1276,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	//gl.enableVertexAttribArray(1);	//do need tex coords
 
-	shaderSetup(shaderProgramTexmapPerPixelDiscardNormalmap, nmapTexture);
+	//shaderSetup(shaderProgramTexmapPerPixelDiscardNormalmap, nmapTexture);
+	shaderSetup(guiParams.debug.nmapUseShader2 ? shaderProgramTexmapPerPixelDiscardNormalmapEfficient : shaderProgramTexmapPerPixelDiscardNormalmap, nmapTexture);
 	
 	function shaderSetup(shader, tex){	//TODO use this more widely, possibly by pulling out to higher level. similar to performCommon4vecShaderSetup
 		activeShaderProgram = shader;
@@ -1283,6 +1294,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniform3fv(shader.uniforms.uPlayerLightColor, playerLight);
 		}
 		gl.uniform4fv(shader.uniforms.uReflectorPos, reflectorPosTransformed);
+		if (shader.uniforms.uReflectorPosVShaderCopy){gl.uniform4fv(shader.uniforms.uReflectorPosVShaderCopy, reflectorPosTransformed);}
 		gl.uniform1f(shader.uniforms.uReflectorCos, cosReflector);	
 		
 		gl.uniform3fv(shader.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
@@ -1670,6 +1682,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 		}
 		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
+		if (activeShaderProgram.uniforms.uReflectorPosVShaderCopy){gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPosVShaderCopy, reflectorPosTransformed);}
 		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 	}
@@ -1697,6 +1710,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//TODO this only 
 	//if (activeShaderProgram.uniforms.uReflectorPos){
 		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
+		if (activeShaderProgram.uniforms.uReflectorPosVShaderCopy){gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPosVShaderCopy, reflectorPosTransformed);}
 		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 	//}
 	
@@ -1784,6 +1798,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 		}
 		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
+		if (activeShaderProgram.uniforms.uReflectorPosVShaderCopy){gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPosVShaderCopy, reflectorPosTransformed);}
 		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 		
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
@@ -2121,7 +2136,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	
 	
-	var maxShockRadAng = 1;
+	var maxShockRadAng = 0.5;
 	
 	for (var ee in explosions){
 		var singleExplosion = explosions[ee];
@@ -2145,6 +2160,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 				drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
 			}
 			
+			
 			//larger shockwave, should match sound
 			var largeRadiusAng = radius * (100-singleExplosion.life)*5;	//note that speed of sound delay approximation currently used 4vec distance, not curve, so this will only match up for small distances. 5 is a guess that seems about right. TODO work out properly!
 			if (largeRadiusAng<maxShockRadAng){
@@ -2156,7 +2172,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 					drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
 				}
 			}
-			
 		}
 	}
 	
@@ -2544,7 +2559,7 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	world0:{duocylinderModel:"none",seaActive:true},
+	world0:{duocylinderModel:"none",seaActive:false},
 	world1:{duocylinderModel:"voxTerrain",seaActive:false},
 	duocylinderRotateSpeed:0,
 	seaLevel:-0.012,
@@ -2598,7 +2613,7 @@ var guiParams={
 	"atmosContrast":2.0,
 	//fogColor0:'#b2dede',
 	//fogColor0:'#b451c5',
-	fogColor0:'#aaaaaa',
+	fogColor0:'#000000',
 	fogColor1:'#000000',
 	playerLight:'#ffffff',
 	control:{
@@ -2622,7 +2637,8 @@ var guiParams={
 	},
 	debug:{
 		closestPoint:false,
-		buoys:false
+		buoys:false,
+		nmapUseShader2:true,
 	},
 	audio:{
 		volume:1,
@@ -2751,6 +2767,7 @@ function init(){
 	var debugFolder = gui.addFolder('debug');
 	debugFolder.add(guiParams.debug, "closestPoint");
 	debugFolder.add(guiParams.debug, "buoys");
+	debugFolder.add(guiParams.debug, "nmapUseShader2");
 	
 	var audioFolder = gui.addFolder('audio');
 	audioFolder.add(guiParams.audio, "volume", 0,1,0.1).onChange(MySound.setGlobalVolume);
