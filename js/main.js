@@ -13,14 +13,15 @@ var shaderProgramColored,
 	shaderProgramTexmap,
 	shaderProgramTexmapPerVertex,
 	shaderProgramTexmapPerPixelDiscard,
+	shaderProgramTexmapPerPixelDiscardNormalmapV1,
 	shaderProgramTexmapPerPixelDiscardNormalmap,
-	shaderProgramTexmapPerPixelDiscardNormalmapEfficient,
 	shaderProgramTexmapPerPixelDiscardAtmos,
 	shaderProgramTexmapPerPixelDiscardAtmosGradLight,
 	shaderProgramTexmapPerPixelDiscardAtmosExplode,
 	shaderProgramTexmapPerPixelDiscardAtmosV2,
 	shaderProgramTexmapPerPixelDiscardAtmosV2Explode,
 	shaderProgramTexmap4Vec,
+	shaderProgramTexmap4VecPerPixelDiscardNormalmap,
 	shaderProgramTexmap4VecAtmos,
 	shaderProgramTexmap4VecAtmosV2,
 	shaderProgramTexmapColor4VecAtmos,
@@ -101,11 +102,11 @@ function initShaders(){
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
 					
-	shaderProgramTexmapPerPixelDiscardNormalmap = loadShader( "shader-texmap-perpixel-discard-normalmap-vs", "shader-texmap-perpixel-discard-normalmap-fs",{
+	shaderProgramTexmapPerPixelDiscardNormalmapV1 = loadShader( "shader-texmap-perpixel-discard-normalmap-vs", "shader-texmap-perpixel-discard-normalmap-fs",{
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord", "aVertexTangent", "aVertexBinormal"],
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uModelScale","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});	//TODO add atmos shader for this.
-	shaderProgramTexmapPerPixelDiscardNormalmapEfficient = loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs",{
+	shaderProgramTexmapPerPixelDiscardNormalmap = loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs",{
 					attributes:["aVertexPosition", "aVertexNormal" , "aTextureCoord", "aVertexTangent", "aVertexBinormal"],
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uModelScale","uReflectorPos","uReflectorPosVShaderCopy","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
@@ -136,6 +137,13 @@ function initShaders(){
 					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
 					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
 					});
+	
+	//VV WIP
+	shaderProgramTexmap4VecPerPixelDiscardNormalmap = loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs",{
+					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord", "aVertexTangent", "aVertexBinormal"],
+					uniforms:["uPMatrix","uMVMatrix","uDropLightPos","uSampler","uColor","uFogColor","uReflectorPos","uReflectorPosVShaderCopy","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
+					});	
+			
 	shaderProgramTexmap4VecAtmos = loadShader( "shader-texmap-vs-4vec-atmos", "shader-texmap-fs",{
 					attributes:["aVertexPosition", "aVertexNormal", "aTextureCoord"],
 					uniforms:["uPMatrix","uMMatrix","uMVMatrix","uCameraWorldPos","uDropLightPos","uSampler","uColor","uFogColor","uAtmosThickness","uAtmosContrast","uReflectorPos","uReflectorCos","uReflectorDiffColor","uPlayerLightColor"]
@@ -274,43 +282,129 @@ function generateDataForDataMatricesScale(inputData, matsArray, scaleFact){
 	
 	var inputVertLength = inputData.vertices.length;
 	var numVerts = inputVertLength/3;	
-	var normLength = numVerts*4;
 	
-	var sourceVerts = inputData.vertices;
+	var sourceVerts;
+	
+	var inVerts = inputData.vertices;
+	var inNorms = inputData.normals;
+	var inBins = inputData.binormals;
+	var inTans = inputData.tangents;
+	
+	var sourceVerts = [];
+	var sourceNorms = [];
+	var sourceBins = [];
+	var sourceTans = [];
+	
+	var thisVert;
+	var thisNorm;
+	var thisBin;
+	var thisTan;
+	var dotp;
+	
+	//generate 4vector position, normal (,tangent, binormal) data for a single instance
+	for (var vv=0;vv<inputVertLength;vv+=3){
+		thisVert = inVerts.slice(vv, vv+3).map( elem => elem*scaleFact );
+		thisNorm = inNorms.slice(vv, vv+3);
+		
+		//something like normalise( magnitude 1 xyz normal vector, -dotp )
+		//norm vector is already normalised (input is). TODO adjust it if using non-uniform scaling (but with cube/cuboid this doesn't matter anyway)
+		dotp = thisNorm[0]*thisVert[0] + thisNorm[1]*thisVert[1] + thisNorm[2]*thisVert[2];
+		thisNorm.push(-dotp);
+		sourceNorms.push( normaliseArr(thisNorm) );
+		
+		thisVert.push(1);
+		thisVert = normaliseArr(thisVert);
+		sourceVerts.push( thisVert );
+	}
+	//TODO lose map, scale by scaleFact on 4th value before normalise
+	
+	console.log({sourceVerts:sourceVerts, sourceNorms:sourceNorms});
+	
+	/*
+	console.log("calculated normals data.");
+	console.log({scaleFact:scaleFact, sourceVerts:sourceVerts, inNorms:inNorms, sourceNorms:sourceNorms});
+	
+	//check that distance from vertex to normal is as expected (expect length sqrt(2))
+	for (var ii=0;ii<sourceVerts.length;ii++){
+		thisVert = sourceVerts[ii];
+		thisNorm = sourceNorms[ii];
+		var sumsq=0;
+		for (var jj=0;jj<thisV.length;jj++){
+			sumsq+= Math.pow( thisVert[jj]-thisNorm[jj] , 2);
+		}
+		console.log(sumsq);	//should be 2
+	}
+	*/
+	if (inBins){	//only do this if has requisite data
+		for (var vv=0;vv<inputVertLength;vv+=3){
+			thisVert = inVerts.slice(vv, vv+3).map( elem => elem*scaleFact );
+			thisBin = inBins.slice(vv, vv+3);
+			thisTan = inTans.slice(vv, vv+3);
+			dotp = thisBin[0]*thisVert[0] + thisBin[1]*thisVert[1] + thisBin[2]*thisVert[2];
+			thisBin.push(-dotp);
+			sourceBins.push( normaliseArr(thisBin) );
+			dotp = thisTan[0]*thisVert[0] + thisTan[1]*thisVert[1] + thisTan[2]*thisVert[2];
+			thisTan.push(-dotp);
+			sourceTans.push( normaliseArr(thisTan) );
+		}
+	}
+	function normaliseArr(inputArr){
+		var len = Math.hypot.apply(null, inputArr);
+	//	console.log({input:inputArr, length:len});
+		return inputArr.map(elem => elem/len);
+	}
+	
+	var sourceUvs = inputData.uvcoords;	//TODO proper projection, but if just using cubes, all verts equidistant from projection middle point, so doesn't matter
+	
 	var transformedVerts = [];
-	var sourceNorms = inputData.normals;
 	var transformedNorms = [];
-	var sourceUvs = inputData.uvcoords;
+	var transformedBins = [];
+	var transformedTans = [];
 	var copiedUvs = [];
 	var myvec4 = vec4.create();
 	
 	for (var ii=0;ii<numInstances;ii++,offset+=numVerts){
-		thisMat = matsArray[ii]; 
-						
-		for (var vv=0;vv<inputVertLength;vv+=3){
+		thisMat = matsArray[ii]; 				
+		for (var vv=0;vv<numVerts;vv++){
 			//make a copy of vertex, rotate by matrix
-			myvec4[0] = sourceVerts[vv];
-			myvec4[1] = sourceVerts[vv+1];
-			myvec4[2] = sourceVerts[vv+2];
-			myvec4[3] = 1/scaleFact;	//?? determines scale of resulting object?? seems if too big, shader messes up. perhaps assuming normalised input
-								//scaleFact might be unnecessary - maybe can just adjust w component of 4vector instead. if is necessary, should precvalc rather than scaling for all vertices
-			//vec4.normalize(myvec4);		//there isn't a function for this?!! but there is for vec3!! do manually...
-			var veclen = vec4.length(myvec4);
-			for (var cc=0;cc<4;cc++){myvec4[cc]/=veclen;}
-			//would prefer to not normalize vector - would expect to get projection consistent with 3vector shader. however, appears that current 4vec shader requires it
-											
+			thisVert = sourceVerts[vv]; 
+			myvec4[0] = thisVert[0];
+			myvec4[1] = thisVert[1];
+			myvec4[2] = thisVert[2];
+			myvec4[3] = thisVert[3];						
 			mat4.multiplyVec4(thisMat, myvec4);
 			transformedVerts.push([myvec4[0],myvec4[1],myvec4[2],myvec4[3]]);	//TODO is there a standard method to treat a vec4 like an array?
 			
 			//make a copy of normal, rotate by matrix
-			myvec4[0] = sourceNorms[vv];
-			myvec4[1] = sourceNorms[vv+1];
-			myvec4[2] = sourceNorms[vv+2];
-			myvec4[3] = 0;	//??
+			thisNorm = sourceNorms[vv];
+			myvec4[0] = thisNorm[0];
+			myvec4[1] = thisNorm[1];
+			myvec4[2] = thisNorm[2];
+			myvec4[3] = thisNorm[3];
 			mat4.multiplyVec4(thisMat, myvec4);
 			transformedNorms.push([myvec4[0],myvec4[1],myvec4[2],myvec4[3]]);	//TODO is there a standard method to treat a vec4 like an array?
-			
 		}
+		if (inBins){
+			for (var vv=0;vv<numVerts;vv++){
+				//TODO reuse code for verts, norms, bins, tans (doing the same thing for all)
+				thisBin = sourceBins[vv];
+				myvec4[0] = thisBin[0];
+				myvec4[1] = thisBin[1];
+				myvec4[2] = thisBin[2];
+				myvec4[3] = thisBin[3];						
+				mat4.multiplyVec4(thisMat, myvec4);
+				transformedBins.push([myvec4[0],myvec4[1],myvec4[2],myvec4[3]]);	
+				
+				thisTan = sourceTans[vv];
+				myvec4[0] = thisTan[0];
+				myvec4[1] = thisTan[1];
+				myvec4[2] = thisTan[2];
+				myvec4[3] = thisTan[3];						
+				mat4.multiplyVec4(thisMat, myvec4);
+				transformedTans.push([myvec4[0],myvec4[1],myvec4[2],myvec4[3]]);	
+			}
+		}
+	
 		copiedUvs.push(sourceUvs);
 		
 		outputIndexData.push(inputData.indices.map(function(elem){return elem+offset;}));
@@ -318,6 +412,8 @@ function generateDataForDataMatricesScale(inputData, matsArray, scaleFact){
 	return {	//todo check best format to output (would require change to buffer creation from data step that follows)
 		vertices:[].concat.apply([],transformedVerts),
 		normals:[].concat.apply([],transformedNorms),
+		binormals:[].concat.apply([],transformedBins),
+		tangents:[].concat.apply([],transformedTans),
 		uvcoords:[].concat.apply([],copiedUvs),
 		faces:[].concat.apply([],outputIndexData)	//todo use "indices" consistent with 3vec vertex format
 	}
@@ -374,6 +470,15 @@ function initBuffers(){
 		if (sourceData.trinormals){
 			bufferObj.vertexTriNormalBuffer= gl.createBuffer();
 			bufferArrayData(bufferObj.vertexTriNormalBuffer, sourceData.trinormals, 3);
+		}
+		
+		if (sourceData.tangents){
+			bufferObj.vertexTangentBuffer= gl.createBuffer();
+			bufferArrayData(bufferObj.vertexTangentBuffer, sourceData.tangents, 4);
+		}
+		if (sourceData.binormals){
+			bufferObj.vertexBinormalBuffer= gl.createBuffer();
+			bufferArrayData(bufferObj.vertexBinormalBuffer, sourceData.binormals, 4);
 		}
 		
 		bufferObj.vertexIndexBuffer = gl.createBuffer();
@@ -1276,8 +1381,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	//gl.enableVertexAttribArray(1);	//do need tex coords
 
-	//shaderSetup(shaderProgramTexmapPerPixelDiscardNormalmap, nmapTexture);
-	shaderSetup(guiParams.debug.nmapUseShader2 ? shaderProgramTexmapPerPixelDiscardNormalmapEfficient : shaderProgramTexmapPerPixelDiscardNormalmap, nmapTexture);
+	shaderSetup(guiParams.debug.nmapUseShader2 ? shaderProgramTexmapPerPixelDiscardNormalmap : shaderProgramTexmapPerPixelDiscardNormalmapV1, nmapTexture);
 	
 	function shaderSetup(shader, tex){	//TODO use this more widely, possibly by pulling out to higher level. similar to performCommon4vecShaderSetup
 		activeShaderProgram = shader;
@@ -1618,14 +1722,20 @@ function drawWorldScene(frameTime, isCubemapView) {
 	rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
 	mat4.identity(mMatrix);							//better to set M, V matrices and leave MV for shader?
 	rotate4mat(mMatrix, 0, 1, duocylinderSpin);
+	
 	activeShaderProgram = shaderProgramTexmap4VecAtmos;
 	gl.useProgram(activeShaderProgram);
-	performCommon4vecShaderSetup(activeShaderProgram);
-	
+	performCommon4vecShaderSetup(activeShaderProgram, "not normal map");
+
 	if (guiParams["random boxes"].singleBuffer){
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.randBoxes);
 		drawTennisBall(randBoxBuffers, activeShaderProgram);	//todo draw subset of buffer according to ui controlled number
 	}
+	
+	activeShaderProgram = shaderProgramTexmap4VecPerPixelDiscardNormalmap;
+	gl.useProgram(activeShaderProgram);
+	performCommon4vecShaderSetup(activeShaderProgram, "normal map");
+	
 	if (guiParams.drawShapes.singleBufferTowers){		//note does not yet support coloured vertices
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.darkGray);
 		drawTennisBall(towerBoxBuffers, activeShaderProgram);
@@ -1638,6 +1748,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.darkGray);
 		drawTennisBall(roadBoxBuffers, activeShaderProgram);
 	}
+	
+	activeShaderProgram = shaderProgramTexmap4VecAtmos;
+	gl.useProgram(activeShaderProgram);
+	performCommon4vecShaderSetup(activeShaderProgram, "log3");
 	
 	if (worldInfo.duocylinderModel!='none'){
 		drawDuocylinderObject(duocylinderObjects[worldInfo.duocylinderModel]);
@@ -1670,7 +1784,12 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawTennisBall(duocylinderObj, activeShaderProgram);
 	}
 	
-	function performCommon4vecShaderSetup(activeShaderProgram){	//todo move to top level? are inner functions inefficient?
+	function performCommon4vecShaderSetup(activeShaderProgram, logtag){	//todo move to top level? are inner functions inefficient?
+	
+		if (logtag){
+			document[logtag] = {about:"performCommon4vecShaderSetup", localVecFogColor:localVecFogColor, localVecReflectorDiffColor:localVecReflectorDiffColor, playerLight:playerLight, reflectorPosTransformed:reflectorPosTransformed, cosReflector:cosReflector, dropLightPos:dropLightPos};
+		}
+	
 		if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
 			gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
 		}
@@ -2281,6 +2400,15 @@ function drawTennisBall(duocylinderObj, shader){
 		gl.vertexAttribPointer(shader.attributes.aTriNormal, duocylinderObj.vertexTriNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	}
 	
+	if (duocylinderObj.vertexBinormalBuffer){
+		gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexBinormalBuffer);
+		gl.vertexAttribPointer(shader.attributes.aVertexBinormal, duocylinderObj.vertexBinormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	}
+	if (duocylinderObj.vertexTangentBuffer){
+		gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexTangentBuffer);
+		gl.vertexAttribPointer(shader.attributes.aVertexTangent, duocylinderObj.vertexTangentBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	}
+	
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, duocylinderObj.vertexIndexBuffer);
 	
 	gl.activeTexture(gl.TEXTURE0);
@@ -2520,9 +2648,9 @@ function initTexture(){
 	duocylinderObjects.voxTerrain.usesTriplanarMapping=true;	//note that hasVertColors, usesTriplanarMapping currently equivalent (has both or neither)
 	
 	randBoxBuffers.tex=texture;
-	towerBoxBuffers.tex=texture;
-	stonehengeBoxBuffers.tex=texture;
-	roadBoxBuffers.tex=texture;
+	towerBoxBuffers.tex=nmapTexture;
+	stonehengeBoxBuffers.tex=nmapTexture;
+	roadBoxBuffers.tex=nmapTexture;
 	
 	//texture = makeTexture("img/ash_uvgrid01-grey.tiny.png");	//numbered grid
 }
@@ -2565,9 +2693,9 @@ var guiParams={
 	seaLevel:-0.012,
 	drawShapes:{
 		boxes:{
-		'y=z=0':true,	//x*x+w*w=1
-		'x=z=0':true,	//y*y+w*w=1
-		'x=y=0':true,	//z*z+w*w=1
+		'y=z=0':false,	//x*x+w*w=1
+		'x=z=0':false,	//y*y+w*w=1
+		'x=y=0':false,	//z*z+w*w=1
 		'x=w=0':false,
 		'y=w=0':false,
 		'z=w=0':false
@@ -2575,13 +2703,13 @@ var guiParams={
 		teapot:false,
 		"teapot scale":0.7,
 		towers:false,
-		singleBufferTowers:false,
+		singleBufferTowers:true,
 		explodingBox:false,
 		hyperboloid:false,
 		stonehenge:false,
-		singleBufferStonehenge:false,
+		singleBufferStonehenge:true,
 		roads:false,
-		singleBufferRoads:false
+		singleBufferRoads:true
 	},
 	'random boxes':{
 		number:maxRandBoxes,	//note ui controlled value does not affect singleBuffer
@@ -2613,8 +2741,8 @@ var guiParams={
 	"atmosContrast":2.0,
 	//fogColor0:'#b2dede',
 	//fogColor0:'#b451c5',
-	fogColor0:'#000000',
-	fogColor1:'#000000',
+	fogColor0:'#bbbbcc',
+	fogColor1:'#aa8822',
 	playerLight:'#ffffff',
 	control:{
 		onRails:false,
