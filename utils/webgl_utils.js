@@ -30,7 +30,18 @@ function resizecanvas(){
 	canvas.style.height=window.innerHeight+"px";
 }
 
+var gotShaderLog = "";
+var totalShaderCompileTime = 0;
+var shaderCache = {};
+
 function getShader(gl, id) {
+	if (shaderCache[id]){	//in testing, saves ~8% of load shader time. (TODO does retaining shader cache cost much memory?)
+		window.gotShaderLog+="------ " + id + "\n";
+		return shaderCache[id];
+	}
+	
+	var startTime =performance.now();
+	
 	var shaderScript = document.getElementById(id);
 	if (!shaderScript) {
 		return null;
@@ -55,11 +66,17 @@ function getShader(gl, id) {
 		return null;
 	}
 
+	var thisCompileTime=performance.now()-startTime;
+	window.gotShaderLog+= thisCompileTime.toFixed(2) + "ms " + id + "\n";
+	
+	shaderCache[id]=shader;
 	return shader;
 }
 
 function loadShader(vs_id,fs_id, obj) {
-	var fragmentShader = getShader(gl, vs_id);		//TODO check whether shader already got
+	var startTime =performance.now();
+	
+	var fragmentShader = getShader(gl, vs_id);
 	var vertexShader = getShader(gl, fs_id);
 
 	var shaderProgram = gl.createProgram();
@@ -82,9 +99,15 @@ function loadShader(vs_id,fs_id, obj) {
 	});														//avoiding issue of not drawing if enabled but nothing bound. alternative workaround maybe 
 															//to bind a dummy thing to it.
 	obj.uniforms.forEach(function(item, index){
-		console.log("getting uniform location for " + item);
+		//console.log("getting uniform location for " + item);
 		progUniforms[item] = gl.getUniformLocation(shaderProgram, item);
 	});
 
+	var thisCompileTime=performance.now()-startTime;
+	window.gotShaderLog+= " => " + thisCompileTime.toFixed(2) + "ms\n";
+
+	
+	totalShaderCompileTime+=thisCompileTime;
+	
 	return shaderProgram;
 }
