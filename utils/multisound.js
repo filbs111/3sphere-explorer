@@ -115,7 +115,6 @@ var myAudioPlayer = (function(){
 		clockSoundInstance=clockSound.play(0,1,true);
 	}
 	clockSound = new MySound('audio/Freesound - ClockTickSound_01.wav by abyeditsound.mp3', playClockSound);
-	//clockSound = new MySound('audio/Freesound - ClockTickSound_01.wav by abyeditsound.mp3');	//turn off
 
 	//TODO rewrite/generalise (looping) sound code. 
 	var whooshSound;
@@ -130,7 +129,7 @@ var myAudioPlayer = (function(){
 	
 	gunSound.setVolume(0.2);
 	bombSound.setVolume(0.2);
-	clockSound.setVolume(1);
+	clockSound.setVolume(0);	//disabled
 	whooshSound.setVolume(1);
 	
 	return {

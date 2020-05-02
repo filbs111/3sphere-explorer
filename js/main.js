@@ -2769,7 +2769,7 @@ var guiParams={
 		nmapUseShader2:true,
 	},
 	audio:{
-		volume:1,
+		volume:0.2,
 	},
 	normalMove:0
 };
