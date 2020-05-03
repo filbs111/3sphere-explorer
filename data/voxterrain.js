@@ -197,7 +197,7 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		//can only do part of 64x64x64 this way
 		var vertices = [];
 		var smoothVertices = [];
-		var basicAvgVertices = [];
+	//	var basicAvgVertices = [];
 		var dcVertices = [];
 		var normals = [];
 		var dcNormals = [];
@@ -285,6 +285,8 @@ var voxTerrainData = (function generateVoxTerrainData(){
 			var fudgeFactor = 0.5;	//less than 1 to avoid overshoot
 			var centralPoint,gradX,gradY,gradZ,totalGradSq,sharedPart;
 			
+			//comment out creation of smoothVertices, currently unused
+		/*	
 			for (var iter=0;iter<10;iter++){
 				centralPoint = voxFunction(ii,jj,kk);
 							
@@ -305,7 +307,7 @@ var voxTerrainData = (function generateVoxTerrainData(){
 			}
 			
 			smoothVertices.push(ii/32, jj/32, kk/32);
-			
+		*/	
 			
 			var invLengthSq = 1/( totalGradSq + 0.001)
 			var invLength = Math.sqrt(invLengthSq);
@@ -313,8 +315,9 @@ var voxTerrainData = (function generateVoxTerrainData(){
 			var normalOverLength = [invLengthSq*gradX, invLengthSq*gradY, invLengthSq*gradZ];
 			normals.push(normal[0], normal[1], normal[2]);
 			
-			var grayColor = grayColorForPointAndNormal(ii,jj,kk,normal, invLength);	
-			colors.push(grayColor, grayColor, grayColor);	//TODO separate surf color for directional lighting from ambient response
+		//comment out creation of colours because currently unused
+		//	var grayColor = grayColorForPointAndNormal(ii,jj,kk,normal, invLength);	
+		//	colors.push(grayColor, grayColor, grayColor);	//TODO separate surf color for directional lighting from ambient response
 			
 			
 			//"dual contouring" ? 
@@ -590,6 +593,9 @@ var voxTerrainData = (function generateVoxTerrainData(){
 				kk_lo+=sumz/sumnum;
 			}
 			*/
+			
+			//comment out basicAvgVertices because currently unused
+			/*
 			var sums;
 			
 			//override basic average vertex if have intersection data from poly->vox (todo skip preceding code in this case)
@@ -637,10 +643,10 @@ var voxTerrainData = (function generateVoxTerrainData(){
 				sums.z+= cdata.z;
 				sums.n++;
 			}
-			
+			*/
 			//grayColor = grayColorForPointAndNormal(dcPos[0],dcPos[1],dcPos[2],dcNorm,1/sumNorm);	//wierd result since average normal is not the normal at this point! 
 			grayColor = grayColorForPointAndNormal(dcPos[0],dcPos[1],dcPos[2]);	//don't pass in normal info, calc inside function
-																				
+						
 			dcColors.push(grayColor, grayColor, grayColor);	//TODO separate surf color for directional lighting from ambient response
 		}
 
@@ -776,12 +782,12 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		*/
 		return {
 			vertices:vertices,
-			smoothVertices:smoothVertices,
-			basicAvgVertices:basicAvgVertices,
+		//	smoothVertices:smoothVertices,
+		//	basicAvgVertices:basicAvgVertices,
 			dcVertices:dcVertices,
 			normals:normals,
 			dcNormals:dcNormals,
-			colors:colors,
+		//	colors:colors,
 			dcColors:dcColors,
 		//	directionalIndices:directionalIndices,	//can be used to draw faces in 6 cube directions with separate draw calls (can use for square terrain culling, shading)
 			indices:Array.prototype.concat.apply([],directionalIndices)
