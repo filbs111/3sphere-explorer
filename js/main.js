@@ -210,9 +210,11 @@ function initShaders(){
 					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor", "uModelScale"]
 					});
 					
-	//todo do this later (when expect compiles/links to have completed)
-	getLocationsForShaders();
+	//get locations later by calling completeShaders (when expect compiles/links to have completed)
 	console.log("time to init shaders: " + ( performance.now() - initShaderTimeStart ) + "ms");
+}
+function completeShaders(){
+	getLocationsForShaders();
 }
 
 var duocylinderObjects={
@@ -2995,6 +2997,7 @@ function init(){
 	initTexture();
 	initCubemapFramebuffer();
 	initBuffers();
+	completeShaders();
 	setFog(0,guiParams.fogColor0);
 	setFog(1,guiParams.fogColor1);
 	setPlayerLight(guiParams.playerLight);
