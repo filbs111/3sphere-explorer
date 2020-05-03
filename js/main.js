@@ -37,6 +37,8 @@ var shaderProgramColored,
 	shaderProgramVertprojCubemapAtmosV2,
 	shaderProgramDecal;
 function initShaders(){	
+	var initShaderTimeStart = performance.now();
+	
 	shaderProgramFullscreenTextured = loadShader( "shader-fullscreen-vs", "shader-fullscreen-fs",{
 					attributes:["aVertexPosition"],
 					uniforms:["uSampler","uInvSize"]
@@ -207,6 +209,10 @@ function initShaders(){
 					attributes:["aVertexPosition","aTextureCoord"],
 					uniforms:["uPMatrix","uMVMatrix","uSampler","uColor", "uModelScale"]
 					});
+					
+	//todo do this later (when expect compiles/links to have completed)
+	getLocationsForShaders();
+	console.log("time to init shaders: " + ( performance.now() - initShaderTimeStart ) + "ms");
 }
 
 var duocylinderObjects={

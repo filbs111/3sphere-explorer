@@ -60,11 +60,14 @@ function getShader(gl, id) {
 
 	gl.shaderSource(shader, str);
 	gl.compileShader(shader);
-
+/*
 	if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
 		alert(gl.getShaderInfoLog(shader));
 		return null;
 	}
+*/
+	//^^ appears to force waiting for completion of compile etc - if don't call this, much faster (measured time, presumably continues to compile asynchronously)
+	// todo defer calling get compile status.
 
 	var thisCompileTime=performance.now()-startTime;
 	window.gotShaderLog+= thisCompileTime.toFixed(2) + "ms " + id + "\n";
@@ -72,6 +75,8 @@ function getShader(gl, id) {
 	shaderCache[id]=shader;
 	return shader;
 }
+
+var shadersToGetLocationsFor = [];
 
 function loadShader(vs_id,fs_id, obj) {
 	var startTime =performance.now();
@@ -84,30 +89,48 @@ function loadShader(vs_id,fs_id, obj) {
 	gl.attachShader(shaderProgram, fragmentShader);
 	gl.linkProgram(shaderProgram);
 
-	if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-		alert("Could not initialise shaders");
-	}
-
-	shaderProgram.uniforms={};
-	shaderProgram.attributes={};
-	progUniforms = shaderProgram.uniforms;
-	progAttributes = shaderProgram.attributes;
+	obj.prog = shaderProgram;
+	shadersToGetLocationsFor.push(obj);
 	
-	obj.attributes.forEach(function(item, index){
-		progAttributes[item] = gl.getAttribLocation(shaderProgram, item);
-		//gl.enableVertexAttribArray(progAttributes[item]);	//now unnecessary since enabling and disabling when prepping buffers
-	});														//avoiding issue of not drawing if enabled but nothing bound. alternative workaround maybe 
-															//to bind a dummy thing to it.
-	obj.uniforms.forEach(function(item, index){
-		//console.log("getting uniform location for " + item);
-		progUniforms[item] = gl.getUniformLocation(shaderProgram, item);
-	});
-
 	var thisCompileTime=performance.now()-startTime;
 	window.gotShaderLog+= " => " + thisCompileTime.toFixed(2) + "ms\n";
 
-	
 	totalShaderCompileTime+=thisCompileTime;
 	
+//	gl.flush();
+	
 	return shaderProgram;
+}
+
+function getLocationsForShaders(){
+	var startTime =performance.now();
+	//to be called some time after loadShader, when hope (!!) that attach, link etc have completed, because if they haven't this will block for whatever amount of time.
+	//TODO is there some property to query for shader to say whether compilation, linking complete?
+	// (webgl shaders don't have proper async - why would they? it's not like that's the way everything is done on the web.)
+	// https://stackoverflow.com/questions/51710067/webgl-async-operations
+	//TODO some more bodging to call one at a time and check that it didn't take too long, so will only block waiting for 1 shader.
+	var shaderProgram;
+	for (var obj of shadersToGetLocationsFor){
+		shaderProgram = obj.prog;
+		
+		if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+			alert("Could not initialise shaders");
+		}
+		
+		shaderProgram.uniforms={};
+		shaderProgram.attributes={};
+		
+		obj.attributes.forEach(function(item, index){
+			shaderProgram.attributes[item] = gl.getAttribLocation(shaderProgram, item);
+			//gl.enableVertexAttribArray(progAttributes[item]);	//now unnecessary since enabling and disabling when prepping buffers
+		});														//avoiding issue of not drawing if enabled but nothing bound. alternative workaround maybe 
+																//to bind a dummy thing to it.
+		obj.uniforms.forEach(function(item, index){
+			//console.log("getting uniform location for " + item);
+			shaderProgram.uniforms[item] = gl.getUniformLocation(shaderProgram, item);
+		});
+	}
+	
+	var thisTime=performance.now()-startTime;
+	window.gotShaderLog+= thisTime.toFixed(2) + " ms ATTRIBUTE GET\n";
 }
