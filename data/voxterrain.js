@@ -1052,9 +1052,15 @@ var voxTerrainData = (function generateVoxTerrainData(){
 	
 })();
 
-function sdfCornerDist(){	//basically SDF for a square/cube corner.
+function sdfCornerDistSlow(){	//basically SDF for a square/cube corner.
 	var inside = Math.min(Math.max.apply(null, arguments), 0);
 	var outside = Math.hypot.apply(null, Array.from(arguments).map(function(elem){return Math.max(elem,0);}));
+	return outside + inside;
+}
+
+function sdfCornerDist(aa,bb){	//basically SDF for a square/cube corner. assume 2 variable input
+	var inside = Math.min(Math.max(aa, bb), 0);
+	var outside = Math.hypot(Math.max(aa,0),Math.max(bb,0));
 	return outside + inside;
 }
 
