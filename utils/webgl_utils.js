@@ -89,8 +89,7 @@ function loadShader(vs_id,fs_id, obj) {
 	gl.attachShader(shaderProgram, fragmentShader);
 	gl.linkProgram(shaderProgram);
 
-	obj.prog = shaderProgram;
-	shadersToGetLocationsFor.push(obj);
+	shadersToGetLocationsFor.push(shaderProgram);
 	
 	var thisCompileTime=performance.now()-startTime;
 	window.gotShaderLog+= " => " + thisCompileTime.toFixed(2) + "ms\n";
@@ -98,8 +97,6 @@ function loadShader(vs_id,fs_id, obj) {
 	totalShaderCompileTime+=thisCompileTime;
 	
 //	gl.flush();
-	
-	shaderProgram.mydebuginfo = {vs:vs_id, fs:fs_id};
 	
 	return shaderProgram;
 }
@@ -111,9 +108,7 @@ function getLocationsForShaders(){
 	// (webgl shaders don't have proper async - why would they? it's not like that's the way everything is done on the web.)
 	// https://stackoverflow.com/questions/51710067/webgl-async-operations
 	//TODO some more bodging to call one at a time and check that it didn't take too long, so will only block waiting for 1 shader.
-	var shaderProgram;
-	for (var obj of shadersToGetLocationsFor){
-		shaderProgram = obj.prog;
+	for (var shaderProgram of shadersToGetLocationsFor){
 		
 		if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
 			alert("Could not initialise shaders");
@@ -122,18 +117,12 @@ function getLocationsForShaders(){
 		shaderProgram.uniforms={};
 		shaderProgram.attributes={};
 		
-		
 		var numActiveAttribs = gl.getProgramParameter(shaderProgram, gl.ACTIVE_ATTRIBUTES);
 		if (numActiveAttribs>0){
 			for (var aa=0;aa<numActiveAttribs;aa++){
 				var aName = gl.getActiveAttrib(shaderProgram,aa).name;
 				shaderProgram.attributes[aName] = gl.getAttribLocation(shaderProgram, aName);
 			}
-		}
-		console.log("active attributes from gl call / explicitly defined : " + numActiveAttribs + ", " + obj.attributes.length);
-		if (numActiveAttribs!=obj.attributes.length){
-			console.log("MISMATCH!");
-			console.log(shaderProgram);
 		}
 		
 		var numActiveUniforms = gl.getProgramParameter(shaderProgram, gl.ACTIVE_UNIFORMS);
@@ -143,12 +132,6 @@ function getLocationsForShaders(){
 				shaderProgram.uniforms[uName] = gl.getUniformLocation(shaderProgram, uName);
 			}
 		}
-		console.log("active uniforms from gl call / explicitly defined : " + numActiveUniforms + ", " + obj.uniforms.length);
-		if (numActiveUniforms!=obj.uniforms.length){
-			console.log("MISMATCH!");
-			console.log(shaderProgram);
-		}
-	
 	}
 	
 	var thisTime=performance.now()-startTime;
