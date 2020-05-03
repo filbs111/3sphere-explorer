@@ -99,6 +99,8 @@ function loadShader(vs_id,fs_id, obj) {
 	
 //	gl.flush();
 	
+	shaderProgram.mydebuginfo = {vs:vs_id, fs:fs_id};
+	
 	return shaderProgram;
 }
 
@@ -120,15 +122,33 @@ function getLocationsForShaders(){
 		shaderProgram.uniforms={};
 		shaderProgram.attributes={};
 		
-		obj.attributes.forEach(function(item, index){
-			shaderProgram.attributes[item] = gl.getAttribLocation(shaderProgram, item);
-			//gl.enableVertexAttribArray(progAttributes[item]);	//now unnecessary since enabling and disabling when prepping buffers
-		});														//avoiding issue of not drawing if enabled but nothing bound. alternative workaround maybe 
-																//to bind a dummy thing to it.
-		obj.uniforms.forEach(function(item, index){
-			//console.log("getting uniform location for " + item);
-			shaderProgram.uniforms[item] = gl.getUniformLocation(shaderProgram, item);
-		});
+		
+		var numActiveAttribs = gl.getProgramParameter(shaderProgram, gl.ACTIVE_ATTRIBUTES);
+		if (numActiveAttribs>0){
+			for (var aa=0;aa<numActiveAttribs;aa++){
+				var aName = gl.getActiveAttrib(shaderProgram,aa).name;
+				shaderProgram.attributes[aName] = gl.getAttribLocation(shaderProgram, aName);
+			}
+		}
+		console.log("active attributes from gl call / explicitly defined : " + numActiveAttribs + ", " + obj.attributes.length);
+		if (numActiveAttribs!=obj.attributes.length){
+			console.log("MISMATCH!");
+			console.log(shaderProgram);
+		}
+		
+		var numActiveUniforms = gl.getProgramParameter(shaderProgram, gl.ACTIVE_UNIFORMS);
+		if (numActiveUniforms>0){
+			for (var uu=0;uu<numActiveUniforms;uu++){
+				var uName = gl.getActiveUniform(shaderProgram,uu).name;
+				shaderProgram.uniforms[uName] = gl.getUniformLocation(shaderProgram, uName);
+			}
+		}
+		console.log("active uniforms from gl call / explicitly defined : " + numActiveUniforms + ", " + obj.uniforms.length);
+		if (numActiveUniforms!=obj.uniforms.length){
+			console.log("MISMATCH!");
+			console.log(shaderProgram);
+		}
+	
 	}
 	
 	var thisTime=performance.now()-startTime;
