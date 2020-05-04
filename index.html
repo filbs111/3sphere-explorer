@@ -1489,7 +1489,7 @@
 		vPortalLightPosTangentSpace.z = dot(transformedNormal, uReflectorPosVShaderCopy);
 		vPortalLightPosTangentSpace.w = dot(transformedCoord, uReflectorPosVShaderCopy);
 		
-		vec4 eyePos = vec4(vec3(0.),1.);	//??
+		vec4 eyePos = vec4(vec3(0.),1.);
 		vEyePosTangentSpace.x = dot(transformedTangent, eyePos);
 		vEyePosTangentSpace.y = dot(transformedBinormal, eyePos);
 		vEyePosTangentSpace.z = dot(transformedNormal, eyePos);
@@ -1945,6 +1945,56 @@
 	}
 </script>
 
+
+<script id="shader-texmap-perpixel-normalmap-phong-vs-4vec" type="x-shader/x-vertex">
+	attribute vec4 aVertexPosition;
+	attribute vec4 aVertexNormal;
+	attribute vec4 aVertexTangent;
+	attribute vec4 aVertexBinormal;
+	attribute vec2 aTextureCoord;
+	varying vec3 vTextureCoord;
+	uniform mat4 uMVMatrix;
+	uniform mat4 uPMatrix;
+	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
+	
+	uniform vec4 uReflectorPosVShaderCopy;
+	varying float fog;
+	
+	varying vec4 vPlayerLightPosTangentSpace;
+	varying vec4 vPortalLightPosTangentSpace;
+	varying vec4 vEyePosTangentSpace;
+	
+	varying vec4 transformedCoord;	
+	
+	void main(void) {
+		transformedCoord = uMVMatrix * aVertexPosition;
+		gl_Position = uPMatrix * transformedCoord;
+		
+		vec4 transformedNormal = uMVMatrix * aVertexNormal;
+		vec4 transformedTangent = uMVMatrix * aVertexTangent;	
+		vec4 transformedBinormal = uMVMatrix * aVertexBinormal; 
+				
+		vPlayerLightPosTangentSpace.x = dot(transformedTangent, uDropLightPos);
+		vPlayerLightPosTangentSpace.y = dot(transformedBinormal, uDropLightPos);
+		vPlayerLightPosTangentSpace.z = dot(transformedNormal, uDropLightPos);
+		vPlayerLightPosTangentSpace.w = dot(transformedCoord, uDropLightPos);
+		
+		vPortalLightPosTangentSpace.x = dot(transformedTangent, uReflectorPosVShaderCopy);
+		vPortalLightPosTangentSpace.y = dot(transformedBinormal, uReflectorPosVShaderCopy);
+		vPortalLightPosTangentSpace.z = dot(transformedNormal, uReflectorPosVShaderCopy);
+		vPortalLightPosTangentSpace.w = dot(transformedCoord, uReflectorPosVShaderCopy);
+		
+		vec4 eyePos = vec4(vec3(0.),1.);
+		vEyePosTangentSpace.x = dot(transformedTangent, eyePos);
+		vEyePosTangentSpace.y = dot(transformedBinormal, eyePos);
+		vEyePosTangentSpace.z = dot(transformedNormal, eyePos);
+		vEyePosTangentSpace.w = dot(transformedCoord, eyePos);
+		
+		fog = 0.5*(1.0 + transformedCoord.w);
+		
+		vTextureCoord = vec3( aTextureCoord.st, 1.0 );		//todo pass in unnormalised, use z tex coord for length (and normalise before passing onto frag shader)
+	}
+</script>
 
 
 <script id="shader-texmap-vs-4vec-atmos" type="x-shader/x-vertex">

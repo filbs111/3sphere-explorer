@@ -41,6 +41,7 @@ function initShaders(){
 	shaderPrograms.texmap4Vec = loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs");
 	
 	shaderPrograms.texmap4VecPerPixelDiscardNormalmap = loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs");
+	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhong = loadShader( "shader-texmap-perpixel-normalmap-phong-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-phong-fs");
 	
 	shaderPrograms.texmap4VecAtmos = loadShader( "shader-texmap-vs-4vec-atmos", "shader-texmap-fs");
 	shaderPrograms.texmap4VecAtmosV2 = loadShader( "shader-texmap-vs-4vec-atmos-v2", "shader-texmap-fs");
@@ -1594,7 +1595,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawTennisBall(randBoxBuffers, activeShaderProgram);	//todo draw subset of buffer according to ui controlled number
 	}
 	
-	activeShaderProgram = shaderPrograms.texmap4VecPerPixelDiscardNormalmap;
+	activeShaderProgram = shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhong;
 	gl.useProgram(activeShaderProgram);
 	performCommon4vecShaderSetup(activeShaderProgram, "normal map");
 	
