@@ -626,7 +626,7 @@ function drawScene(frameTime){
 	mat4.set(playerCameraInterp, offsetPlayerCamera);	
 	//mat4.set(playerCamera, offsetPlayerCamera);	
 	
-	offsetCam.setType(guiParams.cameraType);
+	offsetCam.setType(guiParams.display.cameraType);
 
 	var offsetSteps = 500;	//todo proper move thru portal taking into account path. or can make more efficient by binary search (~log(n) tests)
 	var tmp4mat = mat4.create();
@@ -713,7 +713,7 @@ function drawScene(frameTime){
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 	
-	mainCamFov = guiParams.cameraFov;
+	mainCamFov = guiParams.display.cameraFov;
 	
 	setProjectionMatrix(pMatrix, mainCamFov, gl.viewportHeight/gl.viewportWidth);	//note mouse code assumes 90 deg fov used. TODO fix.
 														//todo only update pmatrix if input variables have changed
@@ -732,15 +732,15 @@ function drawScene(frameTime){
 	//xyzmove4mat(worldCamera,[0,0,0.005]);	//forward camera
 	
 	if (reverseCamera){
-		xyzrotate4mat(worldCamera, (guiParams.flipReverseCamera? [Math.PI,0,0]:[0,Math.PI,0] ));	//flip 180
+		xyzrotate4mat(worldCamera, (guiParams.display.flipReverseCamera? [Math.PI,0,0]:[0,Math.PI,0] ));	//flip 180
 	}
 	
-	if (guiParams.renderViaTexture == "no"){
+	if (guiParams.display.renderViaTexture == "no"){
 		drawWorldScene(frameTime, false, offsetCameraContainer.world);
 	}else{
 		//draw the scene to offscreen framebuffer
 		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
-		var oversize = (guiParams.renderViaTexture == "fisheye")? 1.6 :1;	//bodge
+		var oversize = (guiParams.display.renderViaTexture == "fisheye")? 1.6 :1;	//bodge
 		var oversizedViewport = [ 2*Math.floor(oversize*gl.viewportWidth/2),  2*Math.floor(oversize*gl.viewportHeight/2)];
 		
 			document.mydebugval1 =oversizedViewport;
@@ -760,7 +760,7 @@ function drawScene(frameTime){
 		
 		//draw the simple quad object to the screen
 		var activeProg;
-		switch (guiParams.renderViaTexture){
+		switch (guiParams.display.renderViaTexture){
 			case "basic": 
 				activeProg = shaderPrograms.fullscreenTextured;break;
 			case "bennyBox":
@@ -775,7 +775,7 @@ function drawScene(frameTime){
 		
 		if (activeProg.uniforms.uInvF){	//used for fisheye
 			//gl.uniform2fv(activeProg.uniforms.uInvF, [1.0/rttView.fx, 1.0/rttView.fy]);	//todo get these values!
-			var fy = Math.tan(guiParams.cameraFov*Math.PI/360);	//todo pull from camera matrix?
+			var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
 			var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
 			gl.uniform2fv(activeProg.uniforms.uInvF, [1.0/fx, 1.0/fy]);
 		}
@@ -789,7 +789,7 @@ function drawScene(frameTime){
 		drawObjectFromBuffers(fsBuffers, activeProg);
 	}
 	
-	if (!guiParams["drop spaceship"] && guiParams.showHud){	//only draw hud if haven't dropped spaceship
+	if (!guiParams["drop spaceship"] && guiParams.display.showHud){	//only draw hud if haven't dropped spaceship
 		
 		//draw target box ?
 		//var activeShaderProgram = shaderPrograms.colored;
@@ -1159,13 +1159,13 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var reflectorPosTransformed = [worldCamera[3],worldCamera[7],worldCamera[11],worldCamera[15]];
 	var cosReflector = 1.0/Math.sqrt(1+reflectorInfo.rad*reflectorInfo.rad);
 	
-	var relevantColorShader = guiParams["atmosShader"]?(guiParams["altAtmosShader"]?shaderPrograms.coloredPerPixelDiscardAtmosV2Explode:shaderPrograms.coloredPerPixelDiscardAtmos):shaderPrograms.coloredPerPixelDiscard;
-	//var relevantTexmapShader = guiParams["atmosShader"]?shaderPrograms.texmapPerPixelDiscardAtmos:shaderPrograms.texmapPerPixelDiscard;
+	var relevantColorShader = guiParams.display.atmosShader?(guiParams.display.altAtmosShader?shaderPrograms.coloredPerPixelDiscardAtmosV2Explode:shaderPrograms.coloredPerPixelDiscardAtmos):shaderPrograms.coloredPerPixelDiscard;
+	//var relevantTexmapShader = guiParams.display.atmosShader?shaderPrograms.texmapPerPixelDiscardAtmos:shaderPrograms.texmapPerPixelDiscard;
 	
-	var relevantTexmapShader = guiParams["atmosShader"]?(guiParams["altAtmosShader"]?shaderPrograms.texmapPerPixelDiscardAtmosV2:shaderPrograms.texmapPerPixelDiscardAtmos):shaderPrograms.texmapPerPixelDiscard;
+	var relevantTexmapShader = guiParams.display.atmosShader?(guiParams.display.altAtmosShader?shaderPrograms.texmapPerPixelDiscardAtmosV2:shaderPrograms.texmapPerPixelDiscardAtmos):shaderPrograms.texmapPerPixelDiscard;
 	
-	shaderProgramColored = guiParams["perPixelLighting"]?relevantColorShader:shaderPrograms.coloredPerVertex;
-	shaderProgramTexmap = guiParams["perPixelLighting"]?relevantTexmapShader:shaderPrograms.texmapPerVertex;	
+	shaderProgramColored = guiParams.display.perPixelLighting?relevantColorShader:shaderPrograms.coloredPerVertex;
+	shaderProgramTexmap = guiParams.display.perPixelLighting?relevantTexmapShader:shaderPrograms.texmapPerVertex;	
 	
 	var dropLightPos;
 	if (!guiParams["drop spaceship"]){
@@ -1206,7 +1206,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		boxSize = 0.02;
 		boxRad = boxSize*Math.sqrt(3);
 		
-		var activeShaderProgram = guiParams["altAtmosShader"]?shaderPrograms.texmapPerPixelDiscardAtmosV2Explode:shaderPrograms.texmapPerPixelDiscardAtmosExplode;
+		var activeShaderProgram = guiParams.display.altAtmosShader?shaderPrograms.texmapPerPixelDiscardAtmosV2Explode:shaderPrograms.texmapPerPixelDiscardAtmosExplode;
 			//setup code largely shared with setting regular texmap code. todo generalise setup
 		gl.useProgram(activeShaderProgram);
 		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
@@ -1281,7 +1281,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, color);
 		drawArrayOfModels(
 			ringCellMatData,
-			(guiParams["culling"] ? boxRad: false),
+			(guiParams.display.culling ? boxRad: false),
 			cubeBuffers,
 			activeShaderProgram
 		);
@@ -1478,7 +1478,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	if (guiParams["draw 8-cell"]){
 		drawArrayOfModels(
 			cellMatData.d8,
-			(guiParams["culling"] ? Math.sqrt(3): false),
+			(guiParams.display.culling ? Math.sqrt(3): false),
 			(guiParams["subdiv frames"] ? cubeFrameSubdivBuffers: cubeFrameBuffers)
 		);	
 	}
@@ -1490,7 +1490,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		drawArrayOfModels(
 			cellMatData.d16,
-			(guiParams["culling"] ? 1.73: false),
+			(guiParams.display.culling ? 1.73: false),
 			(guiParams["subdiv frames"]? tetraFrameSubdivBuffers: tetraFrameBuffers)
 		);
 	}
@@ -1503,7 +1503,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 		drawArrayOfModels(
 			cellMatData.d24.cells,
-			(guiParams["culling"] ? 1: false),
+			(guiParams.display.culling ? 1: false),
 			(guiParams["subdiv frames"] ? octoFrameSubdivBuffers : octoFrameBuffers)
 		);	
 	}
@@ -1532,7 +1532,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [dodecaScale,dodecaScale,dodecaScale]);
 		drawArrayOfModels(
 			cellMatData.d120[sortId],
-			(guiParams["culling"] ? cullVal: false),
+			(guiParams.display.culling ? cullVal: false),
 			dodecaFrameBuffers
 		);
 	}
@@ -1543,7 +1543,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		drawArrayOfModels(
 			cellMatData.d600[sortId],
-			(guiParams["culling"] ? 0.355: false),
+			(guiParams.display.culling ? 0.355: false),
 			(guiParams["subdiv frames"]? tetraFrameSubdivBuffers: tetraFrameBuffers)
 		);
 	}
@@ -1629,11 +1629,11 @@ function drawWorldScene(frameTime, isCubemapView) {
 			if (duocylinderObj.hasVertColors){
 				activeShaderProgram = shaderPrograms.texmapColor4VecAtmos;	//not variants implemented
 			}else{
-				activeShaderProgram = duocylinderObj.useMapproject? (guiParams["atmosShader"]?(guiParams["altAtmosShader"]?shaderPrograms.texmap4VecMapprojectAtmosV2:shaderPrograms.texmap4VecMapprojectAtmos):shaderPrograms.texmap4VecMapproject) : (guiParams["atmosShader"]?(guiParams["altAtmosShader"]?shaderPrograms.texmap4VecAtmosV2:shaderPrograms.texmap4VecAtmos):shaderPrograms.texmap4Vec);
+				activeShaderProgram = duocylinderObj.useMapproject? (guiParams.display.atmosShader?(guiParams.display.altAtmosShader?shaderPrograms.texmap4VecMapprojectAtmosV2:shaderPrograms.texmap4VecMapprojectAtmos):shaderPrograms.texmap4VecMapproject) : (guiParams.display.atmosShader?(guiParams.display.altAtmosShader?shaderPrograms.texmap4VecAtmosV2:shaderPrograms.texmap4VecAtmos):shaderPrograms.texmap4Vec);
 			}
 			gl.useProgram(activeShaderProgram);
 		}else{
-			activeShaderProgram = guiParams["atmosShader"]? (guiParams["altAtmosShader"]?shaderPrograms.duocylinderSeaAtmosV2:shaderPrograms.duocylinderSeaAtmos):shaderPrograms.duocylinderSea;
+			activeShaderProgram = guiParams.display.atmosShader? (guiParams.display.altAtmosShader?shaderPrograms.duocylinderSeaAtmosV2:shaderPrograms.duocylinderSeaAtmos):shaderPrograms.duocylinderSea;
 			gl.useProgram(activeShaderProgram);
 			gl.uniform1f(activeShaderProgram.uniforms.uTime, seaTime);			
 			gl.uniform1f(activeShaderProgram.uniforms.uZeroLevel, zeroLevel);
@@ -1955,7 +1955,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			activeShaderProgram = shaderProgramCubemap;
 			break;
 			case 'vertex projection':
-			activeShaderProgram = guiParams["atmosShader"]?(guiParams["altAtmosShader"]?shaderPrograms.vertprojCubemapAtmosV2:shaderPrograms.vertprojCubemapAtmos):shaderPrograms.vertprojCubemap;
+			activeShaderProgram = guiParams.display.atmosShader?(guiParams.display.altAtmosShader?shaderPrograms.vertprojCubemapAtmosV2:shaderPrograms.vertprojCubemapAtmos):shaderPrograms.vertprojCubemap;
 			break;
 		}
 		gl.useProgram(activeShaderProgram);
@@ -2341,10 +2341,10 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 		gl.uniform4fv(shaderProg.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
 	}
 	if (shaderProg.uniforms.uAtmosContrast){	//todo do less often (at least query ui less often)
-		gl.uniform1f(shaderProg.uniforms.uAtmosContrast, guiParams.atmosContrast);
+		gl.uniform1f(shaderProg.uniforms.uAtmosContrast, guiParams.display.atmosContrast);
 	}
 	if (shaderProg.uniforms.uAtmosThickness){	//todo do less often (at least query ui less often)
-		gl.uniform1f(shaderProg.uniforms.uAtmosThickness, guiParams.atmosThickness);
+		gl.uniform1f(shaderProg.uniforms.uAtmosThickness, guiParams.display.atmosThickness);
 	}
 	
 	gl.uniformMatrix4fv(shaderProg.uniforms.uPMatrix, false, pMatrix);
@@ -2404,10 +2404,10 @@ function setMatrixUniforms(shaderProgram) {
     gl.uniformMatrix4fv(shaderProgram.uniforms.uMVMatrix, false, mvMatrix);
 	if (shaderProgram.uniforms.uMMatrix){gl.uniformMatrix4fv(shaderProgram.uniforms.uMMatrix, false, mMatrix);}
 	if (shaderProgram.uniforms.uAtmosContrast){	//todo do less often (at least query ui less often)
-		gl.uniform1f(shaderProgram.uniforms.uAtmosContrast, guiParams.atmosContrast);
+		gl.uniform1f(shaderProgram.uniforms.uAtmosContrast, guiParams.display.atmosContrast);
 	}
 	if (shaderProgram.uniforms.uAtmosThickness){	//todo do less often (at least query ui less often)
-		gl.uniform1f(shaderProgram.uniforms.uAtmosThickness, guiParams.atmosThickness);
+		gl.uniform1f(shaderProgram.uniforms.uAtmosThickness, guiParams.display.atmosThickness);
 	}
 }
 
@@ -2596,12 +2596,6 @@ var guiParams={
 		scale:0.03
 	},
 	"targeting":"off",
-	"culling":true,
-	"perPixelLighting":true,
-	"atmosShader":true,
-	"altAtmosShader":false,
-	"atmosThickness":0.2,
-	"atmosContrast":2.0,
 	//fogColor0:'#b2dede',
 	//fogColor0:'#b451c5',
 	fogColor0:'#bbbbcc',
@@ -2613,11 +2607,19 @@ var guiParams={
 		spinCorrection:true,
 		smoothMouse:200
 	},
-	cameraType:"far 3rd person",
-	cameraFov:115,
-	flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
-	showHud:false,
-	renderViaTexture:'bennyBox',
+	display:{
+		cameraType:"far 3rd person",
+		cameraFov:115,
+		flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
+		showHud:false,
+		renderViaTexture:'bennyBox',
+		perPixelLighting:true,
+		atmosShader:true,
+		altAtmosShader:false,
+		atmosThickness:0.2,
+		atmosContrast:2.0,
+		culling:true
+	},
 	reflector:{
 		draw:true,
 		cmFacesUpdated:6,
@@ -2630,6 +2632,7 @@ var guiParams={
 		closestPoint:false,
 		buoys:false,
 		nmapUseShader2:true,
+		showSpeedOverlay:false
 	},
 	audio:{
 		volume:0.2,
@@ -2742,23 +2745,28 @@ function init(){
 	controlFolder.add(guiParams.control, 'smoothMouse', 0, 1000,50);
 	
 	var displayFolder = gui.addFolder('display');	//control and movement
-	displayFolder.add(guiParams, "cameraType", ["cockpit", "near 3rd person", "mid 3rd person", "far 3rd person", "side"]);
-	displayFolder.add(guiParams, "cameraFov", 60,130,5);
-	displayFolder.add(guiParams, "flipReverseCamera");
-	displayFolder.add(guiParams, "showHud");
-	displayFolder.add(guiParams, "renderViaTexture", ['no','basic','bennyBoxLite','bennyBox','fisheye']);
-	displayFolder.add(guiParams, "perPixelLighting");
-	displayFolder.add(guiParams, "atmosShader");
-	displayFolder.add(guiParams, "altAtmosShader");
-	displayFolder.add(guiParams, "atmosThickness", 0,0.5,0.05);
-	displayFolder.add(guiParams, "atmosContrast", -10,10,0.5);
-	displayFolder.add(guiParams, "culling");
+	displayFolder.add(guiParams.display, "cameraType", ["cockpit", "near 3rd person", "mid 3rd person", "far 3rd person", "side"]);
+	displayFolder.add(guiParams.display, "cameraFov", 60,130,5);
+	displayFolder.add(guiParams.display, "flipReverseCamera");
+	displayFolder.add(guiParams.display, "showHud");
+	displayFolder.add(guiParams.display, "renderViaTexture", ['no','basic','bennyBoxLite','bennyBox','fisheye']);
+	displayFolder.add(guiParams.display, "perPixelLighting");
+	displayFolder.add(guiParams.display, "atmosShader");
+	displayFolder.add(guiParams.display, "altAtmosShader");
+	displayFolder.add(guiParams.display, "atmosThickness", 0,0.5,0.05);
+	displayFolder.add(guiParams.display, "atmosContrast", -10,10,0.5);
+	displayFolder.add(guiParams.display, "culling");
 	displayFolder.add(guiParams, "normalMove", 0,0.02,0.001);
 	
 	var debugFolder = gui.addFolder('debug');
 	debugFolder.add(guiParams.debug, "closestPoint");
 	debugFolder.add(guiParams.debug, "buoys");
 	debugFolder.add(guiParams.debug, "nmapUseShader2");
+	debugFolder.add(guiParams.debug, "showSpeedOverlay").onChange(() => {
+		var ols = document.querySelector('#info2').style;
+		console.log(ols);
+		ols.display = (ols.display == 'block')? 'none':'block';
+		});
 	
 	var audioFolder = gui.addFolder('audio');
 	audioFolder.add(guiParams.audio, "volume", 0,1,0.1).onChange(MySound.setGlobalVolume);
@@ -3221,8 +3229,8 @@ var iterateMechanics = (function iterateMechanics(){
 			//if (Math.random()<0.05){console.log("speed : " + spd);}	//show the speed. todo proper ui
 
 			//get the current atmospheric density.
-			var atmosThick = 0.001*guiParams.atmosThickness;	//1st constant just pulled out of the air. 
-			atmosThick*=Math.pow(2.71, guiParams.atmosContrast*(playerPos[0]*playerPos[0] + playerPos[1]*playerPos[1])); //as atmosScale increases, scale height decreases
+			var atmosThick = 0.001*guiParams.display.atmosThickness;	//1st constant just pulled out of the air. 
+			atmosThick*=Math.pow(2.71, guiParams.display.atmosContrast*(playerPos[0]*playerPos[0] + playerPos[1]*playerPos[1])); //as atmosScale increases, scale height decreases
 
 			playerVelVec=scalarvectorprod(1.0-atmosThick*spd,airSpdVec).map(function(val,idx){return val+spinVelPlayerCoords[idx];});
 			
