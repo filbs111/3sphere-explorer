@@ -910,7 +910,18 @@ var voxTerrainData = (function generateVoxTerrainData(){
 	}
 	
 	function shiftedbrejao(ii,jj,kk){
-		return brejao(ii,jj,kk-6);
+		//return brejao(ii,jj,kk-6);
+		return earlyExitBrejao(ii,jj,kk-6);
+	}
+	function earlyExitBrejao(ii,jj,kk){	//attempt to speed up by fast return outside region of interest
+		var distThreshold =15;
+		var roughDist = Math.abs(kk-32) - 1.2;
+		if (roughDist>distThreshold){	//dist is -ve
+			return -roughDist;
+		}else{
+			var preciseDist = brejao(ii,jj,kk);
+			return -roughDist*(roughDist/distThreshold) + (1-(roughDist/distThreshold)) * preciseDist;
+		}
 	}
 	function brejao(ii,jj,kk){
 		ii+=128;
@@ -918,6 +929,7 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		
 		kk+=64;
 		kk%=64;
+		kk-=32;
 		
 		var ringSize = 12;
 		var ringShift = 6;
@@ -940,16 +952,16 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		//var ywave=y;
 		
 		var rad = Math.hypot(x,yplus);
-		var ringOneRad = Math.hypot( rad - ringSize, kk-32 - ringTilt*x);	//+/-x shears ring instead of rotating it. approx but simple
+		var ringOneRad = Math.hypot( rad - ringSize, kk - ringTilt*x);	//+/-x shears ring instead of rotating it. approx but simple
 		
 		rad = Math.hypot(x,yminus);
-		var ringTwoRad = Math.hypot( rad - ringSize, kk-32 + ringTilt*x);
+		var ringTwoRad = Math.hypot( rad - ringSize, kk + ringTilt*x);
 				
 		rad = Math.hypot(xplus,y);
-		var ringThreeRad = Math.hypot( rad - ringSize, kk-32 + ringTilt*y);
+		var ringThreeRad = Math.hypot( rad - ringSize, kk + ringTilt*y);
 		
 		rad = Math.hypot(xminus,y);
-		var ringFourRad = Math.hypot( rad - ringSize, kk-32 - ringTilt*y);
+		var ringFourRad = Math.hypot( rad - ringSize, kk - ringTilt*y);
 		
 		/*
 		//cap rads to discontinuity on repeat? this changes dark glitches, so guess on right track.
