@@ -3128,32 +3128,8 @@
 	uniform vec3 uModelScale;
 	uniform mat4 uPosShiftMat;
 	uniform float uPolarity;
-
-	void main(void) {
-		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));	//project 3d object onto 3sphere
-																//can avoid this by inputting 4vector positions *...
-		vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
-		fog = 0.5*(1.0 + transformedCoord.w);
-	
-		//gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0); // *... or can just use 1.0 without normalising? TODO try.
-		gl_Position = uPMatrix * transformedCoord;
-		
-		vPos = uPolarity * (uPosShiftMat*aVertexPositionNormalized).xyz;
-	}
-</script>
-
-
-<script id="shader-cubemap-vertproj-vs" type="x-shader/x-vertex">
-	attribute vec3 aVertexPosition;
-	uniform mat4 uMVMatrix;
-	uniform mat4 uPMatrix;
-	varying vec3 vPos;
-	varying float fog;	//TODO remove (fog should be applied at cubemap generation (unless fog is exponential decay)
-	uniform vec3 uModelScale;
-	uniform mat4 uPosShiftMat;
+#ifdef VERTPROJ
 	uniform vec3 uCentrePosScaled;	//this is position of cubemap centre point in unprojected model space
-	uniform float uPolarity;
-	
 	void main(void) {
 		float csq = dot(uCentrePosScaled,uCentrePosScaled);
 		float cdotp = dot(uCentrePosScaled, -aVertexPosition);
@@ -3161,10 +3137,15 @@
 		vec3 scaledVertexPosition = aVertexPosition*a;
 	
 		vec4 aVertexPositionNormalized = normalize(vec4( uModelScale*(scaledVertexPosition-uCentrePosScaled), 1.0));	
-		
+#else
+	void main(void) {
+		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));	//project 3d object onto 3sphere
+																//can avoid this by inputting 4vector positions *...
+#endif
 		vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
 		fog = 0.5*(1.0 + transformedCoord.w);
 	
+		//gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0); // *... or can just use 1.0 without normalising? TODO try.
 		gl_Position = uPMatrix * transformedCoord;
 		
 		vPos = uPolarity * (uPosShiftMat*aVertexPositionNormalized).xyz;

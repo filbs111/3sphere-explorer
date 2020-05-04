@@ -59,7 +59,7 @@ function initShaders(){
 					
 	shaderPrograms.cubemap = loadShader( "shader-cubemap-vs", "shader-cubemap-fs");
 					
-	shaderPrograms.vertprojCubemap = loadShader( "shader-cubemap-vertproj-vs", "shader-cubemap-fs");
+	shaderPrograms.vertprojCubemap = loadShader("shader-cubemap-vs", "shader-cubemap-fs","#define VERTPROJ\n");
 	shaderPrograms.vertprojCubemapAtmos = loadShader( "shader-cubemap-vertproj-vs-atmos", "shader-cubemap-fs");
 	shaderPrograms.vertprojCubemapAtmosV2 = loadShader( "shader-cubemap-vertproj-vs-atmos-v2", "shader-cubemap-fs");
 					
@@ -1955,7 +1955,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//TODO have some variable for activeReflectorShader, avoid switch.
 		switch(guiParams.reflector.mappingType){
 			case 'projection':
-			activeShaderProgram = shaderProgramCubemap;
+			activeShaderProgram = shaderPrograms.cubemap;
 			break;
 			case 'vertex projection':
 			activeShaderProgram = guiParams.display.atmosShader?(guiParams.display.altAtmosShader?shaderPrograms.vertprojCubemapAtmosV2:shaderPrograms.vertprojCubemapAtmos):shaderPrograms.vertprojCubemap;

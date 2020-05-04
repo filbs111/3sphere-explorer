@@ -34,10 +34,12 @@ var gotShaderLog = "";
 var totalShaderCompileTime = 0;
 var shaderCache = {};
 
-function getShader(gl, id) {
-	if (shaderCache[id]){	//in testing, saves ~8% of load shader time. (TODO does retaining shader cache cost much memory?)
-		window.gotShaderLog+="------ " + id + "\n";
-		return shaderCache[id];
+function getShader(gl, id, defines) {
+	var idstring = id + ":" + defines;
+	
+	if (shaderCache[idstring]){	//in testing, saves ~8% of load shader time. (TODO does retaining shader cache cost much memory?)
+		window.gotShaderLog+="------ " + idstring + "\n";
+		return shaderCache[idstring];
 	}
 	
 	var startTime =performance.now();
@@ -47,8 +49,8 @@ function getShader(gl, id) {
 		return null;
 	}
 
-	var str = shaderScript.text;
-
+	var str = defines + shaderScript.text;
+	
 	var shader;
 	if (shaderScript.type == "x-shader/x-fragment") {
 		shader = gl.createShader(gl.FRAGMENT_SHADER);
@@ -70,19 +72,19 @@ function getShader(gl, id) {
 	// todo defer calling get compile status.
 
 	var thisCompileTime=performance.now()-startTime;
-	window.gotShaderLog+= thisCompileTime.toFixed(2) + "ms " + id + "\n";
+	window.gotShaderLog+= thisCompileTime.toFixed(2) + "ms " + idstring + "\n";
 	
-	shaderCache[id]=shader;
+	shaderCache[idstring]=shader;
 	return shader;
 }
 
 var shadersToGetLocationsFor = [];
 
-function loadShader(vs_id,fs_id, obj) {
+function loadShader(vs_id,fs_id, defines='') {
 	var startTime =performance.now();
 	
-	var fragmentShader = getShader(gl, vs_id);
-	var vertexShader = getShader(gl, fs_id);
+	var fragmentShader = getShader(gl, vs_id, defines);
+	var vertexShader = getShader(gl, fs_id, defines);
 
 	var shaderProgram = gl.createProgram();
 	gl.attachShader(shaderProgram, vertexShader);
