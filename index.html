@@ -1056,7 +1056,9 @@
 	uniform vec3 uReflectorDiffColor;
 	uniform vec4 uReflectorPos;
 	uniform float uReflectorCos;
-
+	uniform float uSpecularStrength;
+	uniform float uSpecularPower;
+	
 	varying vec4 vPlayerLightPosTangentSpace;
 	varying vec4 vPortalLightPosTangentSpace;
 	varying vec4 vEyePosTangentSpace;
@@ -1099,7 +1101,7 @@
 		
 		//float phongAmount = pow(max(dot(normalizedEyePosAdj, nmapNormal),0.),10.);	//simple glossy camera light
 		vec4 halfVec = normalize(normalizedEyePosAdj + normalizedLightPosAdj);
-		float phongAmount = 5.*pow( max(dot(halfVec, nmapNormal), 0.),10.);
+		float phongAmount = uSpecularStrength*pow( max(dot(halfVec, nmapNormal), 0.),uSpecularPower);
 		
 		light+=phongAmount;
 	

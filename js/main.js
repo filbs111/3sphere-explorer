@@ -1264,6 +1264,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 		if (shader.uniforms.uReflectorPosVShaderCopy){gl.uniform4fv(shader.uniforms.uReflectorPosVShaderCopy, reflectorPosTransformed);}
 		gl.uniform1f(shader.uniforms.uReflectorCos, cosReflector);	
 		
+		performGeneralShaderSetup(shader);
+		
 		gl.uniform3fv(shader.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
 		gl.uniform4fv(shader.uniforms.uDropLightPos, dropLightPos);
 	}
@@ -1667,6 +1669,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		if (activeShaderProgram.uniforms.uReflectorPosVShaderCopy){gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPosVShaderCopy, reflectorPosTransformed);}
 		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
+		performGeneralShaderSetup(activeShaderProgram);
 	}
 	
 	//draw objects without textures
@@ -2618,7 +2621,9 @@ var guiParams={
 		altAtmosShader:false,
 		atmosThickness:0.2,
 		atmosContrast:2.0,
-		culling:true
+		culling:true,
+		specularStrength:1.0,
+		specularPower:8.0
 	},
 	reflector:{
 		draw:true,
@@ -2756,6 +2761,8 @@ function init(){
 	displayFolder.add(guiParams.display, "atmosThickness", 0,0.5,0.05);
 	displayFolder.add(guiParams.display, "atmosContrast", -10,10,0.5);
 	displayFolder.add(guiParams.display, "culling");
+	displayFolder.add(guiParams.display, "specularStrength", 0,5,0.2);
+	displayFolder.add(guiParams.display, "specularPower", 1,20,0.5);
 	displayFolder.add(guiParams, "normalMove", 0,0.02,0.001);
 	
 	var debugFolder = gui.addFolder('debug');
@@ -4282,3 +4289,13 @@ function drawTriAxisCross(scale){
 	gl.uniform3fv(shaderProgramTexmap.uniforms.uModelScale, [scale,smallScale,smallScale]);
 	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
 };
+
+
+function performGeneralShaderSetup(shader){
+	if (shader.uniforms.uSpecularStrength){
+		gl.uniform1f(shader.uniforms.uSpecularStrength, guiParams.display.specularStrength);	
+	}
+	if (shader.uniforms.uSpecularPower){
+		gl.uniform1f(shader.uniforms.uSpecularPower, guiParams.display.specularPower);	
+	}
+}
