@@ -29,6 +29,7 @@ function initShaders(){
 					
 	shaderPrograms.texmapPerPixelDiscardNormalmapV1 = loadShader( "shader-texmap-perpixel-discard-normalmap-vs", "shader-texmap-perpixel-discard-normalmap-fs");	//TODO add atmos shader for this.
 	shaderPrograms.texmapPerPixelDiscardNormalmap = loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs");
+	shaderPrograms.texmapPerPixelDiscardNormalmapPhong = loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-phong-vs", "shader-texmap-perpixel-discard-normalmap-efficient-phong-fs");
 	
 	shaderPrograms.texmapPerPixelDiscardAtmos = loadShader( "shader-texmap-perpixel-discard-atmos-vs", "shader-texmap-perpixel-discard-fs");
 	shaderPrograms.texmapPerPixelDiscardAtmosGradLight = loadShader( "shader-texmap-perpixel-discard-atmos-vs", "shader-texmap-perpixel-gradlight-discard-fs"); 	//could do more work in vert shader currently because light calculated per vertex - could just pass channel weights to frag shader...
@@ -1242,7 +1243,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	//gl.enableVertexAttribArray(1);	//do need tex coords
 
-	shaderSetup(guiParams.debug.nmapUseShader2 ? shaderPrograms.texmapPerPixelDiscardNormalmap : shaderPrograms.texmapPerPixelDiscardNormalmapV1, nmapTexture);
+	shaderSetup(guiParams.debug.nmapUseShader2 ? shaderPrograms.texmapPerPixelDiscardNormalmapPhong : shaderPrograms.texmapPerPixelDiscardNormalmapV1, nmapTexture);
 	
 	function shaderSetup(shader, tex){	//TODO use this more widely, possibly by pulling out to higher level. similar to performCommon4vecShaderSetup
 		activeShaderProgram = shader;
@@ -2554,9 +2555,9 @@ var guiParams={
 	seaLevel:-0.012,
 	drawShapes:{
 		boxes:{
-		'y=z=0':false,	//x*x+w*w=1
-		'x=z=0':false,	//y*y+w*w=1
-		'x=y=0':false,	//z*z+w*w=1
+		'y=z=0':true,	//x*x+w*w=1
+		'x=z=0':true,	//y*y+w*w=1
+		'x=y=0':true,	//z*z+w*w=1
 		'x=w=0':false,
 		'y=w=0':false,
 		'z=w=0':false
@@ -2564,13 +2565,13 @@ var guiParams={
 		teapot:false,
 		"teapot scale":0.7,
 		towers:false,
-		singleBufferTowers:true,
+		singleBufferTowers:false,
 		explodingBox:false,
 		hyperboloid:false,
 		stonehenge:false,
-		singleBufferStonehenge:true,
+		singleBufferStonehenge:false,
 		roads:false,
-		singleBufferRoads:true
+		singleBufferRoads:false
 	},
 	'random boxes':{
 		number:maxRandBoxes,	//note ui controlled value does not affect singleBuffer
