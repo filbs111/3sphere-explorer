@@ -968,8 +968,6 @@
 </script>
 
 
-
-
 <script id="shader-texmap-perpixel-discard-normalmap-efficient-fs" type="x-shader/x-fragment">
 	precision mediump float;
 	varying vec3 vTextureCoord;
@@ -981,9 +979,12 @@
 	uniform vec3 uReflectorDiffColor;
 	uniform vec4 uReflectorPos;
 	uniform float uReflectorCos;
+	uniform float uSpecularStrength;
+	uniform float uSpecularPower;
 
 	varying vec4 vPlayerLightPosTangentSpace;
 	varying vec4 vPortalLightPosTangentSpace;
+	varying vec4 vEyePosTangentSpace;
 	
 	varying vec4 transformedCoord;
 
@@ -1014,84 +1015,7 @@
 		
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		
-	
-		//falloff
-	//	light/=0.1 + 5.0*(1.0-normalizedLightPos.w);				//results consistent with "inefficient" version for small distances
-		vec4 vecToLight = normalizedLightPos - vec4(vec3(0.0),1.0);	//result fully consistent with "inefficient" version, but maybe not worth extra calcs
-		light/=0.1 + 5.0*dot(vecToLight,vecToLight);
-		
-	
-		//light from portal. TODO pass in a colour for this, more complex lighting (at surface of portal, should be hemispherical light etc)
-		//this is just bodged/guessed to achieve correct behaviour at/across portal. TODO check/correct!
-		float portalLight = dot( vPortalLightPosTangentSpace, nmapNormal);
-						
-		portalLight = max(0.5*portalLight +0.5+ posCosDiff,0.0);	//unnecessary if camera pos = light pos
-
-
-		//falloff
-		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
-				
-		//guess maybe similar to some gaussian light source
-		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*adjustedColor + (1.0-fog)*uFogColor;
-
-		//tone mapping
-		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);		
-		
-		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
-	
-		gl_FragColor.a =1.0;
-	}
-</script>
-
-
-<!-- add some glossy reflection from playerLight (light from spaceship -->
-<script id="shader-texmap-perpixel-discard-normalmap-efficient-phong-fs" type="x-shader/x-fragment">
-	precision mediump float;
-	varying vec3 vTextureCoord;
-	uniform sampler2D uSampler;
-	uniform vec4 uColor;
-	uniform vec3 uPlayerLightColor;
-	varying float fog;
-	uniform vec4 uFogColor;
-	uniform vec3 uReflectorDiffColor;
-	uniform vec4 uReflectorPos;
-	uniform float uReflectorCos;
-	uniform float uSpecularStrength;
-	uniform float uSpecularPower;
-	
-	varying vec4 vPlayerLightPosTangentSpace;
-	varying vec4 vPortalLightPosTangentSpace;
-	varying vec4 vEyePosTangentSpace;
-	
-	varying vec4 transformedCoord;
-
-	void main(void) {
-		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;	//TODO is transformedcoord still needed if have vPortalLightPosTangentSpace ? 
-	
-		if (posCosDiff>0.0){
-			discard;
-		}
-		
-		vec3 texSample = texture2DProj(uSampler, vTextureCoord).xyz;
-				
-		vec3 texSampleAdjusted = texSample*vec3(2.)-vec3(1.);
-		texSampleAdjusted.xy*=0.4;	//make surface flatter.
-				
-		texSampleAdjusted = normalize(texSampleAdjusted);
-		
-		vec4 nmapNormal = vec4(texSampleAdjusted,0.0);	//trivial TODO tidy up
-		
-
-		vec4 adjustedColor = pow(uColor, vec4(2.-texSampleAdjusted.z));	//bodge - idea is to make colour deeper in recesses. (TODO special bake for this)
-	
-		
-		vec4 normalizedLightPos = normalize(vPlayerLightPosTangentSpace);
-		vec4 normalizedLightPosAdj = normalize(vec4( vPlayerLightPosTangentSpace.xyz , 0.));
-		
-		float light = dot( normalizedLightPosAdj, nmapNormal);		
-		
-		light = max(light,0.0);	//unnecessary if camera pos = light pos
-		
+#ifdef SPECULAR_ACTIVE		
 		//add specular component (currently for playerLight only)
 		//really should also take into account that light is not point source, especially relevant if apply logic to portal light too, but 
 		//	guess if surface not that shiny will work OK with assumption
@@ -1104,12 +1028,13 @@
 		float phongAmount = uSpecularStrength*pow( max(dot(halfVec, nmapNormal), 0.),uSpecularPower);
 		
 		light+=phongAmount;
-	
+#endif		
 		//falloff
 	//	light/=0.1 + 5.0*(1.0-normalizedLightPos.w);				//results consistent with "inefficient" version for small distances
 		vec4 vecToLight = normalizedLightPos - vec4(vec3(0.0),1.0);	//result fully consistent with "inefficient" version, but maybe not worth extra calcs
 		light/=0.1 + 5.0*dot(vecToLight,vecToLight);
-			
+		
+	
 		//light from portal. TODO pass in a colour for this, more complex lighting (at surface of portal, should be hemispherical light etc)
 		//this is just bodged/guessed to achieve correct behaviour at/across portal. TODO check/correct!
 		float portalLight = dot( vPortalLightPosTangentSpace, nmapNormal);
@@ -1131,9 +1056,6 @@
 		gl_FragColor.a =1.0;
 	}
 </script>
-
-
-
 
 
 <script id="shader-texmap-perpixel-gradlight-discard-fs" type="x-shader/x-fragment">
@@ -1383,6 +1305,7 @@
 	}
 </script>
 
+
 <script id="shader-texmap-perpixel-discard-normalmap-efficient-vs" type="x-shader/x-vertex">
 	attribute vec3 aVertexPosition;
 	attribute vec3 aVertexNormal;
@@ -1399,6 +1322,7 @@
 	
 	varying vec4 vPlayerLightPosTangentSpace;
 	varying vec4 vPortalLightPosTangentSpace;
+	varying vec4 vEyePosTangentSpace;			//does this get skipped automatically if not used?
 	
 	varying vec4 transformedCoord;
 	
@@ -1431,66 +1355,8 @@
 		vPortalLightPosTangentSpace.y = dot(transformedBinormal, uReflectorPosVShaderCopy);
 		vPortalLightPosTangentSpace.z = dot(transformedNormal, uReflectorPosVShaderCopy);
 		vPortalLightPosTangentSpace.w = dot(transformedCoord, uReflectorPosVShaderCopy);
-		
-		fog = 0.5*(1.0 + transformedCoord.w);
-		
-		float myZ = aVertexPositionNormalized.w;
-		vTextureCoord = vec3( aTextureCoord.st*myZ, myZ );
-	}
-</script>
 
-
-
-<script id="shader-texmap-perpixel-discard-normalmap-efficient-phong-vs" type="x-shader/x-vertex">
-	attribute vec3 aVertexPosition;
-	attribute vec3 aVertexNormal;
-	attribute vec2 aTextureCoord;
-	attribute vec3 aVertexTangent;
-	attribute vec3 aVertexBinormal;
-	varying vec3 vTextureCoord;
-	uniform mat4 uMVMatrix;
-	uniform mat4 uPMatrix;
-	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
-	varying float fog;
-	uniform vec3 uModelScale;
-	uniform vec4 uReflectorPosVShaderCopy;	//TODO not this! shouldn't need in both. unsure why need different name. limitation of webgl, or bad assumption in shader loading func?
-	
-	varying vec4 vPlayerLightPosTangentSpace;
-	varying vec4 vPortalLightPosTangentSpace;
-	varying vec4 vEyePosTangentSpace;
-	
-	varying vec4 transformedCoord;
-	
-	void main(void) {
-		vec3 scaledPos = uModelScale*aVertexPosition;
-		vec4 aVertexPositionNormalized = normalize(vec4(scaledPos, 1.0));
-		transformedCoord = uMVMatrix * aVertexPositionNormalized;
-		
-		gl_Position = uPMatrix * transformedCoord;
-
-		//transform by normal/tangent/bitangent. TODO use matrix formulation. 3x3 or 4x4? (adjustedPos is a 4vector. ??)
-		//this is "efficient" version that moves some work from frag to vertex shader.
-		//note could transform the position of lighting objects instead of transforming pos,normal,binormal,tangent, which might be still more efficient.
-		//currently not equvalent results - this seems too dim where light very close to object surface.
-		
-		vec4 untransformedNormal = normalize( vec4( aVertexNormal, -dot(aVertexNormal, scaledPos)));	
-		vec4 untransformedTangent = normalize( vec4( aVertexTangent, -dot(aVertexTangent, scaledPos)));	
-		vec4 untransformedBinormal = normalize( vec4( aVertexBinormal, -dot(aVertexBinormal, scaledPos)));	
-		
-		vec4 transformedNormal = uMVMatrix * untransformedNormal;
-		vec4 transformedTangent = uMVMatrix * untransformedTangent;	
-		vec4 transformedBinormal = uMVMatrix * untransformedBinormal; 
-				
-		vPlayerLightPosTangentSpace.x = dot(transformedTangent, uDropLightPos);
-		vPlayerLightPosTangentSpace.y = dot(transformedBinormal, uDropLightPos);
-		vPlayerLightPosTangentSpace.z = dot(transformedNormal, uDropLightPos);
-		vPlayerLightPosTangentSpace.w = dot(transformedCoord, uDropLightPos);
-		
-		vPortalLightPosTangentSpace.x = dot(transformedTangent, uReflectorPosVShaderCopy);
-		vPortalLightPosTangentSpace.y = dot(transformedBinormal, uReflectorPosVShaderCopy);
-		vPortalLightPosTangentSpace.z = dot(transformedNormal, uReflectorPosVShaderCopy);
-		vPortalLightPosTangentSpace.w = dot(transformedCoord, uReflectorPosVShaderCopy);
-		
+#ifdef SPECULAR_ACTIVE		
 		vec4 eyePos = vec4(vec3(0.),1.);
 		vEyePosTangentSpace.x = dot(transformedTangent, eyePos);
 		vEyePosTangentSpace.y = dot(transformedBinormal, eyePos);
@@ -1500,7 +1366,7 @@
 		//https://en.wikipedia.org/wiki/Blinn%E2%80%93Phong_reflection_model
 		//camPosTangentSpace should be normalised already (?? maybe depends on transform+TBN matrix being SO(4)? - but currently just using 3vecs (TODO is this best method?)
 		//vPlayerLightHalfwayTangentSpace = vec4(normalize(normalize(vEyePosTangentSpace.xyz) + normalize(vPortalLightPosTangentSpace.xyz)), 0.) ;	//TODO should normalisation take place after interpolation? 	//seems interpolation doesn't work well for this. maybe some trick can do. for now do normalisation in frag shader
-		
+#endif	
 		fog = 0.5*(1.0 + transformedCoord.w);
 		
 		float myZ = aVertexPositionNormalized.w;
@@ -1920,50 +1786,6 @@
 	
 	varying vec4 vPlayerLightPosTangentSpace;
 	varying vec4 vPortalLightPosTangentSpace;
-
-	varying vec4 transformedCoord;	
-	
-	void main(void) {
-		transformedCoord = uMVMatrix * aVertexPosition;
-		gl_Position = uPMatrix * transformedCoord;
-		
-		vec4 transformedNormal = uMVMatrix * aVertexNormal;
-		vec4 transformedTangent = uMVMatrix * aVertexTangent;	
-		vec4 transformedBinormal = uMVMatrix * aVertexBinormal; 
-				
-		vPlayerLightPosTangentSpace.x = dot(transformedTangent, uDropLightPos);
-		vPlayerLightPosTangentSpace.y = dot(transformedBinormal, uDropLightPos);
-		vPlayerLightPosTangentSpace.z = dot(transformedNormal, uDropLightPos);
-		vPlayerLightPosTangentSpace.w = dot(transformedCoord, uDropLightPos);
-		
-		vPortalLightPosTangentSpace.x = dot(transformedTangent, uReflectorPosVShaderCopy);
-		vPortalLightPosTangentSpace.y = dot(transformedBinormal, uReflectorPosVShaderCopy);
-		vPortalLightPosTangentSpace.z = dot(transformedNormal, uReflectorPosVShaderCopy);
-		vPortalLightPosTangentSpace.w = dot(transformedCoord, uReflectorPosVShaderCopy);
-		
-		fog = 0.5*(1.0 + transformedCoord.w);
-		
-		vTextureCoord = vec3( aTextureCoord.st, 1.0 );		//todo pass in unnormalised, use z tex coord for length (and normalise before passing onto frag shader)
-	}
-</script>
-
-
-<script id="shader-texmap-perpixel-normalmap-phong-vs-4vec" type="x-shader/x-vertex">
-	attribute vec4 aVertexPosition;
-	attribute vec4 aVertexNormal;
-	attribute vec4 aVertexTangent;
-	attribute vec4 aVertexBinormal;
-	attribute vec2 aTextureCoord;
-	varying vec3 vTextureCoord;
-	uniform mat4 uMVMatrix;
-	uniform mat4 uPMatrix;
-	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
-	
-	uniform vec4 uReflectorPosVShaderCopy;
-	varying float fog;
-	
-	varying vec4 vPlayerLightPosTangentSpace;
-	varying vec4 vPortalLightPosTangentSpace;
 	varying vec4 vEyePosTangentSpace;
 	
 	varying vec4 transformedCoord;	
@@ -1985,13 +1807,13 @@
 		vPortalLightPosTangentSpace.y = dot(transformedBinormal, uReflectorPosVShaderCopy);
 		vPortalLightPosTangentSpace.z = dot(transformedNormal, uReflectorPosVShaderCopy);
 		vPortalLightPosTangentSpace.w = dot(transformedCoord, uReflectorPosVShaderCopy);
-		
+#ifdef SPECULAR_ACTIVE		
 		vec4 eyePos = vec4(vec3(0.),1.);
 		vEyePosTangentSpace.x = dot(transformedTangent, eyePos);
 		vEyePosTangentSpace.y = dot(transformedBinormal, eyePos);
 		vEyePosTangentSpace.z = dot(transformedNormal, eyePos);
 		vEyePosTangentSpace.w = dot(transformedCoord, eyePos);
-		
+#endif		
 		fog = 0.5*(1.0 + transformedCoord.w);
 		
 		vTextureCoord = vec3( aTextureCoord.st, 1.0 );		//todo pass in unnormalised, use z tex coord for length (and normalise before passing onto frag shader)

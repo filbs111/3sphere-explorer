@@ -29,7 +29,7 @@ function initShaders(){
 					
 	shaderPrograms.texmapPerPixelDiscardNormalmapV1 = loadShader( "shader-texmap-perpixel-discard-normalmap-vs", "shader-texmap-perpixel-discard-normalmap-fs");	//TODO add atmos shader for this.
 	shaderPrograms.texmapPerPixelDiscardNormalmap = loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs");
-	shaderPrograms.texmapPerPixelDiscardNormalmapPhong = loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-phong-vs", "shader-texmap-perpixel-discard-normalmap-efficient-phong-fs");
+	shaderPrograms.texmapPerPixelDiscardNormalmapPhong = loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", "#define SPECULAR_ACTIVE\n");
 	
 	shaderPrograms.texmapPerPixelDiscardAtmos = loadShader( "shader-texmap-perpixel-discard-atmos-vs", "shader-texmap-perpixel-discard-fs");
 	shaderPrograms.texmapPerPixelDiscardAtmosGradLight = loadShader( "shader-texmap-perpixel-discard-atmos-vs", "shader-texmap-perpixel-gradlight-discard-fs"); 	//could do more work in vert shader currently because light calculated per vertex - could just pass channel weights to frag shader...
@@ -41,7 +41,7 @@ function initShaders(){
 	shaderPrograms.texmap4Vec = loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs");
 	
 	shaderPrograms.texmap4VecPerPixelDiscardNormalmap = loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs");
-	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhong = loadShader( "shader-texmap-perpixel-normalmap-phong-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-phong-fs");
+	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhong = loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", "#define SPECULAR_ACTIVE\n");
 	
 	shaderPrograms.texmap4VecAtmos = loadShader( "shader-texmap-vs-4vec-atmos", "shader-texmap-fs");
 	shaderPrograms.texmap4VecAtmosV2 = loadShader( "shader-texmap-vs-4vec-atmos-v2", "shader-texmap-fs");
@@ -1244,7 +1244,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	//gl.enableVertexAttribArray(1);	//do need tex coords
 
-	shaderSetup(guiParams.debug.nmapUseShader2 ? shaderPrograms.texmapPerPixelDiscardNormalmapPhong : shaderPrograms.texmapPerPixelDiscardNormalmapV1, nmapTexture);
+	shaderSetup(guiParams.debug.nmapUseShader2 ? (guiParams.display.useSpecular ? shaderPrograms.texmapPerPixelDiscardNormalmapPhong : shaderPrograms.texmapPerPixelDiscardNormalmap) : shaderPrograms.texmapPerPixelDiscardNormalmapV1, nmapTexture);
 	
 	function shaderSetup(shader, tex){	//TODO use this more widely, possibly by pulling out to higher level. similar to performCommon4vecShaderSetup
 		activeShaderProgram = shader;
@@ -1597,7 +1597,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawTennisBall(randBoxBuffers, activeShaderProgram);	//todo draw subset of buffer according to ui controlled number
 	}
 	
-	activeShaderProgram = shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhong;
+	activeShaderProgram = guiParams.display.useSpecular ? shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhong : shaderPrograms.texmap4VecPerPixelDiscardNormalmap;
 	gl.useProgram(activeShaderProgram);
 	performCommon4vecShaderSetup(activeShaderProgram, "normal map");
 	
@@ -2569,13 +2569,13 @@ var guiParams={
 		teapot:false,
 		"teapot scale":0.7,
 		towers:false,
-		singleBufferTowers:false,
+		singleBufferTowers:true,
 		explodingBox:false,
 		hyperboloid:false,
 		stonehenge:false,
-		singleBufferStonehenge:false,
+		singleBufferStonehenge:true,
 		roads:false,
-		singleBufferRoads:false
+		singleBufferRoads:true
 	},
 	'random boxes':{
 		number:maxRandBoxes,	//note ui controlled value does not affect singleBuffer
@@ -2622,6 +2622,7 @@ var guiParams={
 		atmosThickness:0.2,
 		atmosContrast:2.0,
 		culling:true,
+		useSpecular:true,
 		specularStrength:1.0,
 		specularPower:8.0
 	},
@@ -2761,6 +2762,7 @@ function init(){
 	displayFolder.add(guiParams.display, "atmosThickness", 0,0.5,0.05);
 	displayFolder.add(guiParams.display, "atmosContrast", -10,10,0.5);
 	displayFolder.add(guiParams.display, "culling");
+	displayFolder.add(guiParams.display, "useSpecular");
 	displayFolder.add(guiParams.display, "specularStrength", 0,5,0.2);
 	displayFolder.add(guiParams.display, "specularPower", 1,20,0.5);
 	displayFolder.add(guiParams, "normalMove", 0,0.02,0.001);

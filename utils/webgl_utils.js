@@ -62,12 +62,12 @@ function getShader(gl, id, defines) {
 
 	gl.shaderSource(shader, str);
 	gl.compileShader(shader);
-/*
+
 	if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
 		alert(gl.getShaderInfoLog(shader));
 		return null;
 	}
-*/
+
 	//^^ appears to force waiting for completion of compile etc - if don't call this, much faster (measured time, presumably continues to compile asynchronously)
 	// todo defer calling get compile status.
 
