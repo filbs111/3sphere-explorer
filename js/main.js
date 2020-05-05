@@ -17,7 +17,6 @@ function initShaders(){
 	shaderPrograms.coloredPerPixelDiscard = loadShader( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs");
 	shaderPrograms.coloredPerPixelDiscardAtmos = loadShader( "shader-perpixel-discard-vs-atmos", "shader-perpixel-discard-fs");
 	shaderPrograms.coloredPerPixelDiscardAtmosV2 = loadShader( "shader-perpixel-discard-vs-atmos-v2", "shader-perpixel-discard-fs");
-	shaderPrograms.coloredPerPixelDiscardAtmosV2Explode = loadShader( "shader-perpixel-discard-vs-atmos-v2-explode", "shader-perpixel-discard-fs");
 
 	shaderPrograms.coloredPerPixelTransparentDiscard = loadShader( "shader-perpixel-transparent-discard-vs", "shader-perpixel-transparent-discard-fs");
 	
@@ -1165,7 +1164,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var reflectorPosTransformed = [worldCamera[3],worldCamera[7],worldCamera[11],worldCamera[15]];
 	var cosReflector = 1.0/Math.sqrt(1+reflectorInfo.rad*reflectorInfo.rad);
 	
-	var relevantColorShader = guiParams.display.atmosShader?(guiParams.display.altAtmosShader?shaderPrograms.coloredPerPixelDiscardAtmosV2Explode:shaderPrograms.coloredPerPixelDiscardAtmos):shaderPrograms.coloredPerPixelDiscard;
+	var relevantColorShader = guiParams.display.atmosShader?(guiParams.display.altAtmosShader?shaderPrograms.coloredPerPixelDiscardAtmosV2:shaderPrograms.coloredPerPixelDiscardAtmos):shaderPrograms.coloredPerPixelDiscard;
 	//var relevantTexmapShader = guiParams.display.atmosShader?shaderPrograms.texmapPerPixelDiscardAtmos:shaderPrograms.texmapPerPixelDiscard;
 	
 	var relevantTexmapShader = guiParams.display.atmosShader?(guiParams.display.altAtmosShader?shaderPrograms.texmapPerPixelDiscardAtmosV2:shaderPrograms.texmapPerPixelDiscardAtmos):shaderPrograms.texmapPerPixelDiscard;
