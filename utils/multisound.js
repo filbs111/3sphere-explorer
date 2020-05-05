@@ -92,12 +92,17 @@ function IndivSound(gainNode, delayNode, pannerNode){
 	this.lastSet = 0;		//set less frequently for smoother playback (may notice with smoother sounds)
 }
 IndivSound.prototype.setAll = function(settings){
-	var thisScheduledAudioRampTime = audiocontext.currentTime + 0.1;
-	if (thisScheduledAudioRampTime > this.lastSet + 0.05){  //workaround for inability to cancel cancelScheduledValues due to buggy firefox
-		this.lastSet =  thisScheduledAudioRampTime;
-		this.delayNode.delayTime.linearRampToValueAtTime(settings.delay, thisScheduledAudioRampTime);
-		this.gainNode.gain.linearRampToValueAtTime(settings.gain, thisScheduledAudioRampTime);
-		this.pannerNode.pan.linearRampToValueAtTime(settings.pan, thisScheduledAudioRampTime);
+	try{
+		var thisScheduledAudioRampTime = audiocontext.currentTime + 0.1;
+		if (thisScheduledAudioRampTime > this.lastSet + 0.05){  //workaround for inability to cancel cancelScheduledValues due to buggy firefox
+			this.lastSet =  thisScheduledAudioRampTime;
+			this.delayNode.delayTime.linearRampToValueAtTime(settings.delay, thisScheduledAudioRampTime);
+			this.gainNode.gain.linearRampToValueAtTime(settings.gain, thisScheduledAudioRampTime);
+			this.pannerNode.pan.linearRampToValueAtTime(settings.pan, thisScheduledAudioRampTime);
+		}
+	} catch(err){	//linearRampToValueAtTime fails if input value is "non finite". should know more when this happens again 
+		alert("caught an error in IndivSound.setAll , see logs");
+		console.log({error:err, settings:settings});
 	}
 }
 
