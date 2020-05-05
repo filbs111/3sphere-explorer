@@ -1256,10 +1256,13 @@ function drawWorldScene(frameTime, isCubemapView) {
 		activeShaderProgram = shader;
 		gl.useProgram(shader);	//todo use function variable
 		
-		gl.activeTexture(gl.TEXTURE0);	//TODO should nmap, other textures use tex #s? (to reduce switching?)
-		bind2dTextureIfRequired(tex);
-
-		gl.uniform4fv(shader.uniforms.uFogColor, localVecFogColor);
+		if (tex){
+			gl.activeTexture(gl.TEXTURE0);	//TODO should nmap, other textures use tex #s? (to reduce switching?)
+			bind2dTextureIfRequired(tex);
+		}
+		if (shader.uniforms.uFogColor){
+			gl.uniform4fv(shader.uniforms.uFogColor, localVecFogColor);
+		}
 		if (shader.uniforms.uReflectorDiffColor){
 				gl.uniform3fv(shader.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
 		}
@@ -1273,7 +1276,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 		performGeneralShaderSetup(shader);
 		
 		gl.uniform3fv(shader.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
-		gl.uniform4fv(shader.uniforms.uDropLightPos, dropLightPos);
+		if (shader.uniforms.uDropLightPos){
+			gl.uniform4fv(shader.uniforms.uDropLightPos, dropLightPos);
+		}
 	}
 	
 	
@@ -2003,7 +2008,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//draw bullets
 	var transpShadProg = shaderPrograms.coloredPerPixelTransparentDiscard;
 	//var transpShadProg = shaderPrograms.coloredPerPixelDiscard;
-	gl.useProgram(transpShadProg);
+	shaderSetup(transpShadProg);
 	
 	prepBuffersForDrawing(sphereBuffers, transpShadProg);
 	targetRad=0.0125;
