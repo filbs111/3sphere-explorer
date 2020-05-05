@@ -272,14 +272,20 @@ function generateDataForDataMatricesScale(inputData, matsArray, scaleFact){
 		
 		outputIndexData.push(inputData.indices.map(function(elem){return elem+offset;}));
 	}
-	return {	//todo check best format to output (would require change to buffer creation from data step that follows)
+	
+	var toReturn = {	//todo check best format to output (would require change to buffer creation from data step that follows)
 		vertices:[].concat.apply([],transformedVerts),
 		normals:[].concat.apply([],transformedNorms),
-		binormals:[].concat.apply([],transformedBins),
-		tangents:[].concat.apply([],transformedTans),
 		uvcoords:[].concat.apply([],copiedUvs),
 		faces:[].concat.apply([],outputIndexData)	//todo use "indices" consistent with 3vec vertex format
 	}
+	
+	if (inBins){
+		toReturn.binormals=[].concat.apply([],transformedBins);
+		toReturn.tangents=[].concat.apply([],transformedTans);
+	}
+	
+	return toReturn;
 }
 
 var fsData = {
@@ -2266,11 +2272,11 @@ function drawTennisBall(duocylinderObj, shader){
 		gl.vertexAttribPointer(shader.attributes.aTriNormal, duocylinderObj.vertexTriNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	}
 	
-	if (duocylinderObj.vertexBinormalBuffer){
+	if (duocylinderObj.vertexBinormalBuffer && shader.attributes.aVertexBinormal){
 		gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexBinormalBuffer);
 		gl.vertexAttribPointer(shader.attributes.aVertexBinormal, duocylinderObj.vertexBinormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	}
-	if (duocylinderObj.vertexTangentBuffer){
+	if (duocylinderObj.vertexTangentBuffer && shader.attributes.aVertexTangent){
 		gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexTangentBuffer);
 		gl.vertexAttribPointer(shader.attributes.aVertexTangent, duocylinderObj.vertexTangentBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	}
