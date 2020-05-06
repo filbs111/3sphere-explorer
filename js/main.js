@@ -61,9 +61,9 @@ function initShaders(){
 	
 	//shaderPrograms.duocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-flat-fs");
 	shaderPrograms.duocylinderSea = {
-		constant:loadShader( "shader-texmap-vs-duocylinder-sea", "shader-texmap-fs"),
-		atmos:loadShader( "shader-texmap-vs-duocylinder-sea-atmos", "shader-texmap-fs"),
-		atmos_v2:loadShader( "shader-texmap-vs-duocylinder-sea-atmos-v2", "shader-texmap-fs")
+		constant:loadShader( "shader-texmap-vs-duocylinder-sea", "shader-texmap-fs", ['ATMOS_CONSTANT']),
+		atmos:   loadShader( "shader-texmap-vs-duocylinder-sea", "shader-texmap-fs", ['ATMOS_ONE','CONST_ITERS 64.0']),
+		atmos_v2:loadShader( "shader-texmap-vs-duocylinder-sea", "shader-texmap-fs", ['ATMOS_TWO'])
 	};
 					
 	shaderPrograms.cubemap = loadShader( "shader-cubemap-vs", "shader-cubemap-fs");
