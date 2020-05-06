@@ -80,11 +80,11 @@ function getShader(gl, id, defines) {
 
 var shadersToGetLocationsFor = [];
 
-function loadShader(vs_id,fs_id, defines='') {
+function loadShader(vs_id,fs_id, vs_defines='', fs_defines='') {
 	var startTime =performance.now();
 	
-	var fragmentShader = getShader(gl, vs_id, defines);
-	var vertexShader = getShader(gl, fs_id, defines);
+	var fragmentShader = getShader(gl, vs_id, vs_defines);
+	var vertexShader = getShader(gl, fs_id, fs_defines);
 
 	var shaderProgram = gl.createProgram();
 	gl.attachShader(shaderProgram, vertexShader);

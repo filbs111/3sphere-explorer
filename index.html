@@ -2881,9 +2881,16 @@
 	uniform vec3 uModelScale;
 	uniform mat4 uPosShiftMat;
 	uniform float uPolarity;
-#ifdef VERTPROJ
-	uniform vec3 uCentrePosScaled;	//this is position of cubemap centre point in unprojected model space
+
+	uniform float uAtmosThickness;
+	uniform float uAtmosContrast;	//atmos variants specific
+	uniform mat4 uMMatrix;
+	uniform vec4 uCameraWorldPos;
+
+	uniform vec3 uCentrePosScaled;	//vertproj specific. this is position of cubemap centre point in unprojected model space
+
 	void main(void) {
+#ifdef VERTPROJ
 		float csq = dot(uCentrePosScaled,uCentrePosScaled);
 		float cdotp = dot(uCentrePosScaled, -aVertexPosition);
 		float a = pow((1.0-csq)+cdotp*cdotp, 0.5) - cdotp;
@@ -2891,49 +2898,17 @@
 	
 		vec4 aVertexPositionNormalized = normalize(vec4( uModelScale*(scaledVertexPosition-uCentrePosScaled), 1.0));	
 #else
-	void main(void) {
 		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));	//project 3d object onto 3sphere
 																//can avoid this by inputting 4vector positions *...
 #endif
 		vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
+
+#ifdef ATMOS_CONSTANT
 		fog = 0.5*(1.0 + transformedCoord.w);
-	
-		//gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0); // *... or can just use 1.0 without normalising? TODO try.
-		gl_Position = uPMatrix * transformedCoord;
-		
-		vPos = uPolarity * (uPosShiftMat*aVertexPositionNormalized).xyz;
-	}
-</script>
-
-
-<script id="shader-cubemap-vertproj-vs-atmos" type="x-shader/x-vertex">
-	#define CONST_ITERS 64.0
-	
-	attribute vec3 aVertexPosition;
-	uniform float uAtmosThickness;
-	uniform float uAtmosContrast;
-	uniform mat4 uMMatrix;
-	uniform mat4 uMVMatrix;
-	uniform mat4 uPMatrix;
-	uniform vec4 uCameraWorldPos;
-	varying vec3 vPos;
-	varying float fog;	//TODO remove (fog should be applied at cubemap generation (unless fog is exponential decay)
-	uniform vec3 uModelScale;
-	uniform mat4 uPosShiftMat;
-	uniform vec3 uCentrePosScaled;	//this is position of cubemap centre point in unprojected model space
-	uniform float uPolarity;
-	
-	void main(void) {
-		float csq = dot(uCentrePosScaled,uCentrePosScaled);
-		float cdotp = dot(uCentrePosScaled, aVertexPosition);
-		float a = pow((1.0-csq)+cdotp*cdotp, 0.5) + cdotp;
-		vec3 scaledVertexPosition = aVertexPosition*a;
-	
-		vec4 aVertexPositionNormalized = normalize(vec4( uModelScale*(scaledVertexPosition-uCentrePosScaled), 1.0));	
-		
-		vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
+#else
 		vec4 worldCoord = uMMatrix * aVertexPositionNormalized;
-
+#endif
+#ifdef ATMOS_ONE
 		//calculcate position on surface of portal if camera is inside portal. 
 		//todo can this be calculated more efficiently along with other terms?
 		//float fudgeSizeVal = 0.953; 	//above this w component inside portal. expect this for portal scale =0.3 because root(1-0.3*0.3). 
@@ -2997,41 +2972,9 @@
 		}
 		total*= maxDoubleAngOverIters*exp(uAtmosContrast*(constTerm));	
 		fog = exp(-uAtmosThickness*total/2.0);
-	
-		gl_Position = uPMatrix * transformedCoord;
-		
-		vPos = uPolarity * (uPosShiftMat*aVertexPositionNormalized).xyz;
-	}
-</script>
 
-
-<script id="shader-cubemap-vertproj-vs-atmos-v2" type="x-shader/x-vertex">
-	attribute vec3 aVertexPosition;
-	uniform float uAtmosThickness;
-	uniform float uAtmosContrast;
-	uniform mat4 uMMatrix;
-	uniform mat4 uMVMatrix;
-	uniform mat4 uPMatrix;
-	uniform vec4 uCameraWorldPos;
-	varying vec3 vPos;
-	varying float fog;	//TODO remove (fog should be applied at cubemap generation (unless fog is exponential decay)
-	uniform vec3 uModelScale;
-	uniform mat4 uPosShiftMat;
-	uniform vec3 uCentrePosScaled;	//this is position of cubemap centre point in unprojected model space
-	uniform float uPolarity;
-	
-	void main(void) {
-		float csq = dot(uCentrePosScaled,uCentrePosScaled);
-		float cdotp = dot(uCentrePosScaled, -aVertexPosition);
-		float a = pow((1.0-csq)+cdotp*cdotp, 0.5) - cdotp;
-		vec3 scaledVertexPosition = aVertexPosition*a;
-	
-		vec4 aVertexPositionNormalized = normalize(vec4( uModelScale*(scaledVertexPosition-uCentrePosScaled), 1.0));	
-		
-		vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
-		vec4 worldCoord = uMMatrix * aVertexPositionNormalized;
-
-		
+#endif
+#ifdef ATMOS_TWO
 		float dotProd = dot(uCameraWorldPos,worldCoord);
 		
 		vec4 normalDirection = normalize(worldCoord - dotProd*uCameraWorldPos);	//point 90 deg around world from camera, in direction of worldCoord
@@ -3069,15 +3012,13 @@
 
 		float total=integral*exp(uAtmosContrast*constTerm);
 		fog = exp(-uAtmosThickness*total/2.0);
-		
+#endif
 	
+		//gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0); // *... or can just use 1.0 without normalising? TODO try.
 		gl_Position = uPMatrix * transformedCoord;
-		
 		vPos = uPolarity * (uPosShiftMat*aVertexPositionNormalized).xyz;
 	}
 </script>
-
-
 
 
 <script type="text/javascript" src="js/main.js"></script>
