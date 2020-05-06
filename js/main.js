@@ -14,9 +14,11 @@ function initShaders(){
 		
 	shaderPrograms.coloredPerVertex = loadShader( "shader-simple-vs", "shader-simple-fs");
 	//shaderPrograms.coloredPerPixel = loadShader( "shader-perpixel-vs", "shader-perpixel-fs");		//unused
-	shaderPrograms.coloredPerPixelDiscard = loadShader( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs");
-	shaderPrograms.coloredPerPixelDiscardAtmos = loadShader( "shader-perpixel-discard-vs-atmos", "shader-perpixel-discard-fs");
-	shaderPrograms.coloredPerPixelDiscardAtmosV2 = loadShader( "shader-perpixel-discard-vs-atmos-v2", "shader-perpixel-discard-fs");
+	shaderPrograms.coloredPerPixelDiscard = {
+		constant:loadShader( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs"),
+		atmos:loadShader( "shader-perpixel-discard-vs-atmos", "shader-perpixel-discard-fs"),
+		atmos_v2: loadShader( "shader-perpixel-discard-vs-atmos-v2", "shader-perpixel-discard-fs")
+	};
 
 	shaderPrograms.coloredPerPixelTransparentDiscard = loadShader( "shader-perpixel-transparent-discard-vs", "shader-perpixel-transparent-discard-fs");
 	
@@ -24,43 +26,53 @@ function initShaders(){
 					
 	//shaderPrograms.texmapPerPixel = loadShader( "shader-texmap-perpixel-vs", "shader-texmap-perpixel-fs");
 	
-	shaderPrograms.texmapPerPixelDiscard = loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs");
+	shaderPrograms.texmapPerPixelDiscard = {
+		constant:loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs"),
+		atmos:loadShader( "shader-texmap-perpixel-discard-atmos-vs", "shader-texmap-perpixel-discard-fs"),
+		atmos_v2:loadShader( "shader-texmap-perpixel-discard-atmos-v2-vs", "shader-texmap-perpixel-discard-fs")
+	};
 					
 	shaderPrograms.texmapPerPixelDiscardNormalmapV1 = loadShader( "shader-texmap-perpixel-discard-normalmap-vs", "shader-texmap-perpixel-discard-normalmap-fs");	//TODO add atmos shader for this.
 	shaderPrograms.texmapPerPixelDiscardNormalmap = loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs");
 	shaderPrograms.texmapPerPixelDiscardNormalmapPhong = loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", "#define SPECULAR_ACTIVE\n");
 	
-	shaderPrograms.texmapPerPixelDiscardAtmos = loadShader( "shader-texmap-perpixel-discard-atmos-vs", "shader-texmap-perpixel-discard-fs");
 	shaderPrograms.texmapPerPixelDiscardAtmosGradLight = loadShader( "shader-texmap-perpixel-discard-atmos-vs", "shader-texmap-perpixel-gradlight-discard-fs"); 	//could do more work in vert shader currently because light calculated per vertex - could just pass channel weights to frag shader...
-	shaderPrograms.texmapPerPixelDiscardAtmosExplode = loadShader( "shader-texmap-perpixel-discard-atmos-vertvel-vs", "shader-texmap-perpixel-discard-fs");
-	
-	shaderPrograms.texmapPerPixelDiscardAtmosV2 = loadShader( "shader-texmap-perpixel-discard-atmos-v2-vs", "shader-texmap-perpixel-discard-fs");
-	shaderPrograms.texmapPerPixelDiscardAtmosV2Explode = loadShader( "shader-texmap-perpixel-discard-atmos-v2-vertvel-vs", "shader-texmap-perpixel-discard-fs");
+	shaderPrograms.texmapPerPixelDiscardAtmosExplode = {
+		atmos:loadShader( "shader-texmap-perpixel-discard-atmos-vertvel-vs", "shader-texmap-perpixel-discard-fs"),
+		atmos_v2:loadShader( "shader-texmap-perpixel-discard-atmos-v2-vertvel-vs", "shader-texmap-perpixel-discard-fs")
+	};
 					
-	shaderPrograms.texmap4Vec = loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs");
+	shaderPrograms.texmap4Vec = {
+		constant:loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs"),
+		atmos:loadShader( "shader-texmap-vs-4vec-atmos", "shader-texmap-fs"),
+		atmos_v2:loadShader( "shader-texmap-vs-4vec-atmos-v2", "shader-texmap-fs")
+	};
 	
 	shaderPrograms.texmap4VecPerPixelDiscardNormalmap = loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs");
 	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhong = loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", "#define SPECULAR_ACTIVE\n");
-	
-	shaderPrograms.texmap4VecAtmos = loadShader( "shader-texmap-vs-4vec-atmos", "shader-texmap-fs");
-	shaderPrograms.texmap4VecAtmosV2 = loadShader( "shader-texmap-vs-4vec-atmos-v2", "shader-texmap-fs");
 		
 	shaderPrograms.texmapColor4VecAtmos = loadShader( "shader-texmap-color-triplanar-vs-4vec-atmos", "shader-texmap-triplanar-fs");
 	
-	shaderPrograms.texmap4VecMapproject = loadShader( "shader-texmap-vs-4vec-mapproject", "shader-texmap-fs-mapproject");
-	shaderPrograms.texmap4VecMapprojectAtmos = loadShader( "shader-texmap-vs-4vec-mapproject-atmos", "shader-texmap-fs-mapproject");
-	shaderPrograms.texmap4VecMapprojectAtmosV2 = loadShader( "shader-texmap-vs-4vec-mapproject-atmos-v2", "shader-texmap-fs-mapproject");
+	shaderPrograms.texmap4VecMapproject = {
+		constant:loadShader( "shader-texmap-vs-4vec-mapproject", "shader-texmap-fs-mapproject"),
+		atmos:loadShader( "shader-texmap-vs-4vec-mapproject-atmos", "shader-texmap-fs-mapproject"),
+		atmos_v2:loadShader( "shader-texmap-vs-4vec-mapproject-atmos-v2", "shader-texmap-fs-mapproject")
+	};
 	
 	//shaderPrograms.duocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-flat-fs");
-	shaderPrograms.duocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-texmap-fs");
-	shaderPrograms.duocylinderSeaAtmos = loadShader( "shader-texmap-vs-duocylinder-sea-atmos", "shader-texmap-fs");
-	shaderPrograms.duocylinderSeaAtmosV2 = loadShader( "shader-texmap-vs-duocylinder-sea-atmos-v2", "shader-texmap-fs");
+	shaderPrograms.duocylinderSea = {
+		constant:loadShader( "shader-texmap-vs-duocylinder-sea", "shader-texmap-fs"),
+		atmos:loadShader( "shader-texmap-vs-duocylinder-sea-atmos", "shader-texmap-fs"),
+		atmos_v2:loadShader( "shader-texmap-vs-duocylinder-sea-atmos-v2", "shader-texmap-fs")
+	};
 					
 	shaderPrograms.cubemap = loadShader( "shader-cubemap-vs", "shader-cubemap-fs");
 					
-	shaderPrograms.vertprojCubemap = loadShader("shader-cubemap-vs", "shader-cubemap-fs","#define VERTPROJ\n");
-	shaderPrograms.vertprojCubemapAtmos = loadShader( "shader-cubemap-vertproj-vs-atmos", "shader-cubemap-fs");
-	shaderPrograms.vertprojCubemapAtmosV2 = loadShader( "shader-cubemap-vertproj-vs-atmos-v2", "shader-cubemap-fs");
+	shaderPrograms.vertprojCubemap = {
+		constant:loadShader("shader-cubemap-vs", "shader-cubemap-fs","#define VERTPROJ\n"),	
+		atmos:loadShader( "shader-cubemap-vertproj-vs-atmos", "shader-cubemap-fs"),
+		atmos_v2:loadShader( "shader-cubemap-vertproj-vs-atmos-v2", "shader-cubemap-fs")
+	};
 					
 	shaderPrograms.decal = loadShader( "shader-decal-vs", "shader-decal-fs");
 					
@@ -1163,11 +1175,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//position of reflector in frame of camera (after MVMatrix transformation)
 	var reflectorPosTransformed = [worldCamera[3],worldCamera[7],worldCamera[11],worldCamera[15]];
 	var cosReflector = 1.0/Math.sqrt(1+reflectorInfo.rad*reflectorInfo.rad);
-	
-	var relevantColorShader = guiParams.display.atmosShader?(guiParams.display.altAtmosShader?shaderPrograms.coloredPerPixelDiscardAtmosV2:shaderPrograms.coloredPerPixelDiscardAtmos):shaderPrograms.coloredPerPixelDiscard;
-	//var relevantTexmapShader = guiParams.display.atmosShader?shaderPrograms.texmapPerPixelDiscardAtmos:shaderPrograms.texmapPerPixelDiscard;
-	
-	var relevantTexmapShader = guiParams.display.atmosShader?(guiParams.display.altAtmosShader?shaderPrograms.texmapPerPixelDiscardAtmosV2:shaderPrograms.texmapPerPixelDiscardAtmos):shaderPrograms.texmapPerPixelDiscard;
+		
+	var relevantColorShader = shaderPrograms.coloredPerPixelDiscard[ guiParams.display.atmosShader ];
+	var relevantTexmapShader = shaderPrograms.texmapPerPixelDiscard[ guiParams.display.atmosShader ];
 	
 	shaderProgramColored = guiParams.display.perPixelLighting?relevantColorShader:shaderPrograms.coloredPerVertex;
 	shaderProgramTexmap = guiParams.display.perPixelLighting?relevantTexmapShader:shaderPrograms.texmapPerVertex;	
@@ -1211,7 +1221,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 		boxSize = 0.02;
 		boxRad = boxSize*Math.sqrt(3);
 		
-		var activeShaderProgram = guiParams.display.altAtmosShader?shaderPrograms.texmapPerPixelDiscardAtmosV2Explode:shaderPrograms.texmapPerPixelDiscardAtmosExplode;
+		//var activeShaderProgram = shaderPrograms.texmapPerPixelDiscardAtmosExplode[ guiParams.display.atmosShader ];	//TODO implement constant option
+		var activeShaderProgram = shaderPrograms.texmapPerPixelDiscardAtmosExplode.atmos;	//temporarily hard code to something that works
 			//setup code largely shared with setting regular texmap code. todo generalise setup
 		gl.useProgram(activeShaderProgram);
 		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
@@ -1598,7 +1609,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	mat4.identity(mMatrix);							//better to set M, V matrices and leave MV for shader?
 	rotate4mat(mMatrix, 0, 1, duocylinderSpin);
 	
-	activeShaderProgram = shaderPrograms.texmap4VecAtmos;
+	activeShaderProgram = shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ];
 	gl.useProgram(activeShaderProgram);
 	performCommon4vecShaderSetup(activeShaderProgram, "not normal map");
 
@@ -1624,7 +1635,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawTennisBall(roadBoxBuffers, activeShaderProgram);
 	}
 	
-	activeShaderProgram = shaderPrograms.texmap4VecAtmos;
+	activeShaderProgram = shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ];
 	gl.useProgram(activeShaderProgram);
 	performCommon4vecShaderSetup(activeShaderProgram, "log3");
 	
@@ -1641,11 +1652,11 @@ function drawWorldScene(frameTime, isCubemapView) {
 			if (duocylinderObj.hasVertColors){
 				activeShaderProgram = shaderPrograms.texmapColor4VecAtmos;	//not variants implemented
 			}else{
-				activeShaderProgram = duocylinderObj.useMapproject? (guiParams.display.atmosShader?(guiParams.display.altAtmosShader?shaderPrograms.texmap4VecMapprojectAtmosV2:shaderPrograms.texmap4VecMapprojectAtmos):shaderPrograms.texmap4VecMapproject) : (guiParams.display.atmosShader?(guiParams.display.altAtmosShader?shaderPrograms.texmap4VecAtmosV2:shaderPrograms.texmap4VecAtmos):shaderPrograms.texmap4Vec);
+				activeShaderProgram = duocylinderObj.useMapproject? shaderPrograms.texmap4VecMapproject[ guiParams.display.atmosShader ] : shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ] ;
 			}
 			gl.useProgram(activeShaderProgram);
 		}else{
-			activeShaderProgram = guiParams.display.atmosShader? (guiParams.display.altAtmosShader?shaderPrograms.duocylinderSeaAtmosV2:shaderPrograms.duocylinderSeaAtmos):shaderPrograms.duocylinderSea;
+			activeShaderProgram = shaderPrograms.duocylinderSea[ guiParams.display.atmosShader ];
 			gl.useProgram(activeShaderProgram);
 			gl.uniform1f(activeShaderProgram.uniforms.uTime, seaTime);			
 			gl.uniform1f(activeShaderProgram.uniforms.uZeroLevel, zeroLevel);
@@ -1660,7 +1671,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	}
 	
 	function performCommon4vecShaderSetup(activeShaderProgram, logtag){	//todo move to top level? are inner functions inefficient?
-	
+				
 		if (logtag){
 			document[logtag] = {about:"performCommon4vecShaderSetup", localVecFogColor:localVecFogColor, localVecReflectorDiffColor:localVecReflectorDiffColor, playerLight:playerLight, reflectorPosTransformed:reflectorPosTransformed, cosReflector:cosReflector, dropLightPos:dropLightPos};
 		}
@@ -1968,7 +1979,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			activeShaderProgram = shaderPrograms.cubemap;
 			break;
 			case 'vertex projection':
-			activeShaderProgram = guiParams.display.atmosShader?(guiParams.display.altAtmosShader?shaderPrograms.vertprojCubemapAtmosV2:shaderPrograms.vertprojCubemapAtmos):shaderPrograms.vertprojCubemap;
+			activeShaderProgram = shaderPrograms.vertprojCubemap[ guiParams.display.atmosShader ];
 			break;
 		}
 		gl.useProgram(activeShaderProgram);
@@ -2627,8 +2638,7 @@ var guiParams={
 		showHud:false,
 		renderViaTexture:'bennyBox',
 		perPixelLighting:true,
-		atmosShader:true,
-		altAtmosShader:false,
+		atmosShader:"atmos",
 		atmosThickness:0.2,
 		atmosContrast:2.0,
 		culling:true,
@@ -2767,8 +2777,7 @@ function init(){
 	displayFolder.add(guiParams.display, "showHud");
 	displayFolder.add(guiParams.display, "renderViaTexture", ['no','basic','bennyBoxLite','bennyBox','fisheye']);
 	displayFolder.add(guiParams.display, "perPixelLighting");
-	displayFolder.add(guiParams.display, "atmosShader");
-	displayFolder.add(guiParams.display, "altAtmosShader");
+	displayFolder.add(guiParams.display, "atmosShader", ['constant','atmos','atmos_v2']);	//basic is constant (contrast=0) 
 	displayFolder.add(guiParams.display, "atmosThickness", 0,0.5,0.05);
 	displayFolder.add(guiParams.display, "atmosContrast", -10,10,0.5);
 	displayFolder.add(guiParams.display, "culling");
