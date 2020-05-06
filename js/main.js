@@ -34,7 +34,7 @@ function initShaders(){
 					
 	shaderPrograms.texmapPerPixelDiscardNormalmapV1 = loadShader( "shader-texmap-perpixel-discard-normalmap-vs", "shader-texmap-perpixel-discard-normalmap-fs");	//TODO add atmos shader for this.
 	shaderPrograms.texmapPerPixelDiscardNormalmap = loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs");
-	shaderPrograms.texmapPerPixelDiscardNormalmapPhong = loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", "#define SPECULAR_ACTIVE\n", "#define SPECULAR_ACTIVE\n");
+	shaderPrograms.texmapPerPixelDiscardNormalmapPhong = loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE'], ['SPECULAR_ACTIVE']);
 	
 	shaderPrograms.texmapPerPixelDiscardAtmosGradLight = loadShader( "shader-texmap-perpixel-discard-atmos-vs", "shader-texmap-perpixel-gradlight-discard-fs"); 	//could do more work in vert shader currently because light calculated per vertex - could just pass channel weights to frag shader...
 	shaderPrograms.texmapPerPixelDiscardAtmosExplode = {
@@ -49,7 +49,7 @@ function initShaders(){
 	};
 	
 	shaderPrograms.texmap4VecPerPixelDiscardNormalmap = loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs");
-	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhong = loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", "#define SPECULAR_ACTIVE\n", "#define SPECULAR_ACTIVE\n");
+	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhong = loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE'], ['SPECULAR_ACTIVE']);
 		
 	shaderPrograms.texmapColor4VecAtmos = loadShader( "shader-texmap-color-triplanar-vs-4vec-atmos", "shader-texmap-triplanar-fs");
 	
@@ -69,9 +69,9 @@ function initShaders(){
 	shaderPrograms.cubemap = loadShader( "shader-cubemap-vs", "shader-cubemap-fs");
 					
 	shaderPrograms.vertprojCubemap = {
-		constant:loadShader("shader-cubemap-vs", "shader-cubemap-fs","#define VERTPROJ\n#define ATMOS_CONSTANT\n"),	
-		atmos:loadShader( "shader-cubemap-vs", "shader-cubemap-fs","#define VERTPROJ\n#define ATMOS_ONE\n#define CONST_ITERS 64.0\n"),
-		atmos_v2:loadShader( "shader-cubemap-vs", "shader-cubemap-fs","#define VERTPROJ\n#define ATMOS_TWO\n")
+		constant:loadShader( "shader-cubemap-vs", "shader-cubemap-fs", ['VERTPROJ','ATMOS_CONSTANT']),	
+		atmos:   loadShader( "shader-cubemap-vs", "shader-cubemap-fs", ['VERTPROJ','ATMOS_ONE','CONST_ITERS 64.0']),
+		atmos_v2:loadShader( "shader-cubemap-vs", "shader-cubemap-fs", ['VERTPROJ','ATMOS_TWO'])
 	};
 					
 	shaderPrograms.decal = loadShader( "shader-decal-vs", "shader-decal-fs");

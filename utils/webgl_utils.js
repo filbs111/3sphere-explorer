@@ -34,9 +34,9 @@ var gotShaderLog = "";
 var totalShaderCompileTime = 0;
 var shaderCache = {};
 
-function getShader(gl, id, defines) {
-	var idstring = id + ":" + defines;
-	
+function getShader(gl, id, defines = []) {
+	var idstring = id + ":" + defines.join(';');
+		
 	if (shaderCache[idstring]){	//in testing, saves ~8% of load shader time. (TODO does retaining shader cache cost much memory?)
 		window.gotShaderLog+="------ " + idstring + "\n";
 		return shaderCache[idstring];
@@ -46,11 +46,12 @@ function getShader(gl, id, defines) {
 	
 	var shaderScript = document.getElementById(id);
 	if (!shaderScript) {
+		console.log("no shader script of id " + id);
 		return null;
 	}
 
-	var str = defines + shaderScript.text;
-	
+	var str = defines.map(elem => "#define " + elem + "\n").join('') + shaderScript.text;
+		
 	var shader;
 	if (shaderScript.type == "x-shader/x-fragment") {
 		shader = gl.createShader(gl.FRAGMENT_SHADER);
@@ -80,7 +81,7 @@ function getShader(gl, id, defines) {
 
 var shadersToGetLocationsFor = [];
 
-function loadShader(vs_id,fs_id, vs_defines='', fs_defines='') {
+function loadShader(vs_id,fs_id, vs_defines, fs_defines) {
 	var startTime =performance.now();
 	
 	var fragmentShader = getShader(gl, vs_id, vs_defines);
