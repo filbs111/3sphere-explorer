@@ -38,9 +38,9 @@ function initShaders(){
 	
 	shaderPrograms.texmapPerPixelDiscardAtmosGradLight = loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-gradlight-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0']); 	//could do more work in vert shader currently because light calculated per vertex - could just pass channel weights to frag shader...
 	shaderPrograms.texmapPerPixelDiscardAtmosExplode = {
-		constant:loadShader( "shader-texmap-perpixel-discard-vertvel-vs", "shader-texmap-perpixel-discard-fs", ['ATMOS_CONSTANT']),
-		atmos:   loadShader( "shader-texmap-perpixel-discard-vertvel-vs", "shader-texmap-perpixel-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-discard-vertvel-vs", "shader-texmap-perpixel-discard-fs", ['ATMOS_TWO'])
+		constant:loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['VERTVEL_ACTIVE','ATMOS_CONSTANT']),
+		atmos:   loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['VERTVEL_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['VERTVEL_ACTIVE','ATMOS_TWO'])
 	};
 					
 	shaderPrograms.texmap4Vec = {
