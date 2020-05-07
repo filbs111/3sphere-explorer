@@ -15,9 +15,9 @@ function initShaders(){
 	shaderPrograms.coloredPerVertex = loadShader( "shader-simple-vs", "shader-simple-fs");
 	//shaderPrograms.coloredPerPixel = loadShader( "shader-perpixel-vs", "shader-perpixel-fs");		//unused
 	shaderPrograms.coloredPerPixelDiscard = {
-		constant:loadShader( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs"),
-		atmos:loadShader( "shader-perpixel-discard-vs-atmos", "shader-perpixel-discard-fs"),
-		atmos_v2: loadShader( "shader-perpixel-discard-vs-atmos-v2", "shader-perpixel-discard-fs")
+		constant:loadShader( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs", ['ATMOS_CONSTANT']),
+		atmos:   loadShader( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0']),
+		atmos_v2:loadShader( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs", ['ATMOS_TWO'])
 	};
 
 	shaderPrograms.coloredPerPixelTransparentDiscard = loadShader( "shader-perpixel-transparent-discard-vs", "shader-perpixel-transparent-discard-fs");
@@ -27,25 +27,26 @@ function initShaders(){
 	//shaderPrograms.texmapPerPixel = loadShader( "shader-texmap-perpixel-vs", "shader-texmap-perpixel-fs");
 	
 	shaderPrograms.texmapPerPixelDiscard = {
-		constant:loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs"),
-		atmos:loadShader( "shader-texmap-perpixel-discard-atmos-vs", "shader-texmap-perpixel-discard-fs"),
-		atmos_v2:loadShader( "shader-texmap-perpixel-discard-atmos-v2-vs", "shader-texmap-perpixel-discard-fs")
+		constant:loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['ATMOS_CONSTANT']),
+		atmos:   loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['ATMOS_TWO'])
 	};
 					
 	shaderPrograms.texmapPerPixelDiscardNormalmapV1 = loadShader( "shader-texmap-perpixel-discard-normalmap-vs", "shader-texmap-perpixel-discard-normalmap-fs");	//TODO add atmos shader for this.
 	shaderPrograms.texmapPerPixelDiscardNormalmap = loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs");
 	shaderPrograms.texmapPerPixelDiscardNormalmapPhong = loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE'], ['SPECULAR_ACTIVE']);
 	
-	shaderPrograms.texmapPerPixelDiscardAtmosGradLight = loadShader( "shader-texmap-perpixel-discard-atmos-vs", "shader-texmap-perpixel-gradlight-discard-fs"); 	//could do more work in vert shader currently because light calculated per vertex - could just pass channel weights to frag shader...
+	shaderPrograms.texmapPerPixelDiscardAtmosGradLight = loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-gradlight-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0']); 	//could do more work in vert shader currently because light calculated per vertex - could just pass channel weights to frag shader...
 	shaderPrograms.texmapPerPixelDiscardAtmosExplode = {
-		atmos:loadShader( "shader-texmap-perpixel-discard-atmos-vertvel-vs", "shader-texmap-perpixel-discard-fs"),
-		atmos_v2:loadShader( "shader-texmap-perpixel-discard-atmos-v2-vertvel-vs", "shader-texmap-perpixel-discard-fs")
+		constant:loadShader( "shader-texmap-perpixel-discard-vertvel-vs", "shader-texmap-perpixel-discard-fs", ['ATMOS_CONSTANT']),
+		atmos:   loadShader( "shader-texmap-perpixel-discard-vertvel-vs", "shader-texmap-perpixel-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-discard-vertvel-vs", "shader-texmap-perpixel-discard-fs", ['ATMOS_TWO'])
 	};
 					
 	shaderPrograms.texmap4Vec = {
-		constant:loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs"),
-		atmos:loadShader( "shader-texmap-vs-4vec-atmos", "shader-texmap-fs"),
-		atmos_v2:loadShader( "shader-texmap-vs-4vec-atmos-v2", "shader-texmap-fs")
+		constant:loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['ATMOS_CONSTANT']),
+		atmos:   loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['ATMOS_ONE','CONST_ITERS 64.0']),
+		atmos_v2:loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['ATMOS_TWO'])
 	};
 	
 	shaderPrograms.texmap4VecPerPixelDiscardNormalmap = loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs");
@@ -54,9 +55,9 @@ function initShaders(){
 	shaderPrograms.texmapColor4VecAtmos = loadShader( "shader-texmap-color-triplanar-vs-4vec-atmos", "shader-texmap-triplanar-fs");
 	
 	shaderPrograms.texmap4VecMapproject = {
-		constant:loadShader( "shader-texmap-vs-4vec-mapproject", "shader-texmap-fs-mapproject"),
-		atmos:loadShader( "shader-texmap-vs-4vec-mapproject-atmos", "shader-texmap-fs-mapproject"),
-		atmos_v2:loadShader( "shader-texmap-vs-4vec-mapproject-atmos-v2", "shader-texmap-fs-mapproject")
+		constant:loadShader( "shader-texmap-vs-4vec-mapproject", "shader-texmap-fs-mapproject", ['ATMOS_CONSTANT']),
+		atmos:   loadShader( "shader-texmap-vs-4vec-mapproject", "shader-texmap-fs-mapproject", ['ATMOS_ONE','CONST_ITERS 64.0']),
+		atmos_v2:loadShader( "shader-texmap-vs-4vec-mapproject", "shader-texmap-fs-mapproject", ['ATMOS_TWO'])
 	};
 	
 	//shaderPrograms.duocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-flat-fs");
@@ -1221,8 +1222,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		boxSize = 0.02;
 		boxRad = boxSize*Math.sqrt(3);
 		
-		//var activeShaderProgram = shaderPrograms.texmapPerPixelDiscardAtmosExplode[ guiParams.display.atmosShader ];	//TODO implement constant option
-		var activeShaderProgram = shaderPrograms.texmapPerPixelDiscardAtmosExplode.atmos;	//temporarily hard code to something that works
+		var activeShaderProgram = shaderPrograms.texmapPerPixelDiscardAtmosExplode[ guiParams.display.atmosShader ];
 			//setup code largely shared with setting regular texmap code. todo generalise setup
 		gl.useProgram(activeShaderProgram);
 		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
@@ -1353,6 +1353,12 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}
 	}
 	
+	//switch to non-normal map version to draw some objects.
+	activeShaderProgram=shaderProgramTexmap;
+	shaderSetup(activeShaderProgram, texture);
+	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
+	prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
+	
 	if (guiParams.drawShapes.stonehenge){	
 		for (var bb of duocylinderBoxInfo.stonehenge.list){
 			drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, cubeBuffers, invertedWorldCameraDuocylinderFrame);
@@ -1366,7 +1372,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	}
 	
 	//switch to non-normalmap shader
-	shaderSetup(shaderProgramTexmap, texture);
+//	shaderSetup(shaderProgramTexmap, texture);
 	
 	var worldInfo = (colorsSwitch==0) ? guiParams.world0 : guiParams.world1;	//todo use array
 	
