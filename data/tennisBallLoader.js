@@ -62,25 +62,101 @@ function loadGridData(toLoad){
 		
 		var smallOffset = 0.0001;
 		var vertsalong = get4vecfrom3vec(
-			0.25*xo + smallOffset*nx,
-			0.25*yo + smallOffset*ny,
-			0.25*zo + smallOffset*nz
+			0.25*(xo + smallOffset*nx),
+			0.25*(yo + smallOffset*ny),
+			0.25*(zo + smallOffset*nz)
 			);
 			
 		//take difference and normalise
 		var difference = [];
-		var sumsq=0;
 		for (var cc=0;cc<4;cc++){
-			var diff = vertsalong[cc] - outverts[cc];
-			sumsq += diff*diff;
-			difference[cc]=diff;
+			difference[cc] = vertsalong[cc] - outverts[cc];
 		}
-		var divisor=Math.sqrt(sumsq);
+		var divisor=Math.hypot.apply(null,difference);
+		
 		for (var cc=0;cc<4;cc++){
 			newnorms.push(difference[cc]/divisor);
 		}
+	}
+	
+	if (toLoad.binormals){
+		var binormals = toLoad.binormals;
+		var newbinormals = [];
+		var tangents = toLoad.tangents;
+		var newtangents = [];
+
+		//note duplication of outverts = get4vecfrom3vec... here. TODO tidy up/generalise
 		
-		function get4vecfrom3vec(x,y,z){
+		//TODO check that (near "zero" height), terrain is uniformly scaled from 3vec to 4vec
+		//TODO more correct to map all vertices into 4vec space and calculate tangents, binormals there, normals from cross products.
+		// that nouniform scaling shouldn't matter
+		
+		for (var vv=0;vv<gridVertdataLen;vv+=3){
+			var yo = verts[vv];
+			var zo = verts[vv+1];
+			var xo = verts[vv+2];
+			
+			var outverts = get4vecfrom3vec(0.25*xo,0.25*yo,0.25*zo);	//scale things down so can use 4x4 grid of these
+			
+			var by = binormals[vv];
+			var bz = binormals[vv+1];
+			var bx = binormals[vv+2];
+			
+			//simple way to calc norms - move a little along normal, subtract this from original value, normalise the result.
+			//probably can express as a derivative wrt normal movment, then normalise result, but this way is easier.
+			
+			var smallOffset = 0.0001;
+			var vertsalong = get4vecfrom3vec(
+				0.25*(xo + smallOffset*bx),
+				0.25*(yo + smallOffset*by),
+				0.25*(zo + smallOffset*bz)
+				);
+				
+			//take difference and normalise
+			var difference = [];
+			for (var cc=0;cc<4;cc++){
+				difference[cc] = vertsalong[cc] - outverts[cc];
+			}
+			var divisor=Math.hypot.apply(null,difference);
+			
+			for (var cc=0;cc<4;cc++){
+				newbinormals.push(difference[cc]/divisor);
+			}
+			
+			
+			
+			var ty = tangents[vv];
+			var tz = tangents[vv+1];
+			var tx = tangents[vv+2];
+			
+			//simple way to calc norms - move a little along normal, subtract this from original value, normalise the result.
+			//probably can express as a derivative wrt normal movment, then normalise result, but this way is easier.
+			
+			var smallOffset = 0.0001;
+			var vertsalong = get4vecfrom3vec(
+				0.25*(xo + smallOffset*tx),
+				0.25*(yo + smallOffset*ty),
+				0.25*(zo + smallOffset*tz)
+				);
+				
+			//take difference and normalise
+			var difference = [];
+			for (var cc=0;cc<4;cc++){
+				difference[cc] = vertsalong[cc] - outverts[cc];
+			}
+			var divisor=Math.hypot.apply(null,difference);
+			
+			for (var cc=0;cc<4;cc++){
+				newtangents.push(difference[cc]/divisor);
+			}
+			
+			
+			
+		}
+	
+	}
+	
+	function get4vecfrom3vec(x,y,z){
 			var ang1 = 2*Math.PI * x;
 			var ang2 = 2*Math.PI * y;
 			var cylr = Math.PI * (0.25+ z);
@@ -88,9 +164,10 @@ function loadGridData(toLoad){
 			var cr = Math.cos(cylr);
 			return [ cr * Math.sin(ang1), cr * Math.cos(ang1), sr * Math.sin(ang2), sr * Math.cos(ang2) ];
 		}
-		
-	}
+	
+	
 	toLoad.vertices = newverts;
 	toLoad.normals = newnorms;
-
+	toLoad.binormals = newbinormals;
+	toLoad.tangents = newtangents;
 };

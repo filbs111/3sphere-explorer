@@ -78,7 +78,11 @@ function initShaders(){
 		atmos:   loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['MAPPROJECT_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['MAPPROJECT_ACTIVE']),
 		atmos_v2:loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['MAPPROJECT_ACTIVE','ATMOS_TWO'], ['MAPPROJECT_ACTIVE'])
 	};
-	
+	shaderPrograms.texmap4VecMapprojectDiscardNormalmap = {
+		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['MAPPROJECT_ACTIVE','ATMOS_CONSTANT'], ['MAPPROJECT_ACTIVE']),
+		atmos   :loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['MAPPROJECT_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['MAPPROJECT_ACTIVE']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['MAPPROJECT_ACTIVE','ATMOS_TWO'], ['MAPPROJECT_ACTIVE'])
+	}
 	//shaderPrograms.duocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-flat-fs");
 	shaderPrograms.duocylinderSea = {
 		constant:loadShader( "shader-texmap-vs-duocylinder-sea", "shader-texmap-fs", ['ATMOS_CONSTANT']),
@@ -1677,7 +1681,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 			if (duocylinderObj.hasVertColors){
 				activeShaderProgram = shaderPrograms.texmapColor4VecAtmos;	//not variants implemented
 			}else{
-				activeShaderProgram = duocylinderObj.useMapproject? shaderPrograms.texmap4VecMapproject[ guiParams.display.atmosShader ] : shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ] ;
+				//activeShaderProgram = duocylinderObj.useMapproject? shaderPrograms.texmap4VecMapproject[ guiParams.display.atmosShader ] : shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ] ;
+				activeShaderProgram = duocylinderObj.useMapproject? shaderPrograms.texmap4VecMapprojectDiscardNormalmap[ guiParams.display.atmosShader ] : shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ] ;
 			}
 			gl.useProgram(activeShaderProgram);
 		}else{
@@ -2539,7 +2544,8 @@ function initTexture(){
 	duocylinderObjects.grid.tex = makeTexture("img/grid-omni.png");
 	duocylinderObjects.terrain.tex = makeTexture("data/terrain/turbulent-seamless.png");
 	//duocylinderObjects.procTerrain.tex = texture;
-	duocylinderObjects.procTerrain.tex = makeTexture("img/14131-diffuse.jpg");  //sand
+	//duocylinderObjects.procTerrain.tex = makeTexture("img/14131-diffuse.jpg");  //sand
+	duocylinderObjects.procTerrain.tex = nmapTexture;
 
 	duocylinderObjects.procTerrain.useMapproject = true;
 	

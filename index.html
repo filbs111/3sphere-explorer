@@ -785,8 +785,10 @@
 
 
 <script id="shader-texmap-perpixel-discard-normalmap-efficient-fs" type="x-shader/x-fragment">
+	#define CONST_TAU 6.2831853
+	#define CONST_REPS 16.0
+
 	precision mediump float;
-	varying vec3 vTextureCoord;
 	uniform sampler2D uSampler;
 	uniform vec4 uColor;
 	uniform vec3 uPlayerLightColor;
@@ -803,6 +805,8 @@
 	varying vec4 vEyePosTangentSpace;
 
 	varying vec4 transformedCoord;
+	varying vec3 vTextureCoord;
+	varying vec4 vVertexPos;
 
 	void main(void) {
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;	//TODO is transformedcoord still needed if have vPortalLightPosTangentSpace ? 
@@ -811,7 +815,12 @@
 			discard;
 		}
 		
+#ifdef MAPPROJECT_ACTIVE
+		vec2 newTexCoord = vec2( atan(vVertexPos.x,vVertexPos.y)*CONST_REPS/CONST_TAU, atan(vVertexPos.z,vVertexPos.w)*CONST_REPS/CONST_TAU);
+		vec3 texSample = texture2D(uSampler, newTexCoord).xyz;
+#else
 		vec3 texSample = texture2DProj(uSampler, vTextureCoord).xyz;
+#endif
 				
 		vec3 texSampleAdjusted = texSample*vec3(2.)-vec3(1.);
 		texSampleAdjusted.xy*=0.4;	//make surface flatter.
@@ -1477,13 +1486,12 @@
 
 
 <!-- vertex shader with tex coords and 4vector input positions (instead of projected 3vectors.)-->
-<script id="shader-texmap-perpixel-normalmap-vs-4vec" type="x-shader/x-vertex">
+<script id="shader-texmap-perpixel-normalmap-vs-4vec" type="x-shader/x-vertex">	
 	attribute vec4 aVertexPosition;
 	attribute vec4 aVertexNormal;
 	attribute vec4 aVertexTangent;
 	attribute vec4 aVertexBinormal;
 	attribute vec2 aTextureCoord;
-	varying vec3 vTextureCoord;
 	uniform float uAtmosThickness;
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
@@ -1500,6 +1508,8 @@
 	varying vec4 vEyePosTangentSpace;
 	
 	varying vec4 transformedCoord;	
+	varying vec3 vTextureCoord;
+	varying vec4 vVertexPos;
 	
 	void main(void) {
 		transformedCoord = uMVMatrix * aVertexPosition;
@@ -1580,7 +1590,12 @@
 		fog = exp(-uAtmosThickness*total/2.0);
 #endif
 		
-		vTextureCoord = vec3( aTextureCoord.st, 1.0 );		//todo pass in unnormalised, use z tex coord for length (and normalise before passing onto frag shader)
+#ifdef MAPPROJECT_ACTIVE
+		vVertexPos = aVertexPosition;	//pass through for atan tex mapping (overriding uv)
+#else
+		vTextureCoord = vec3( aTextureCoord, 1.0 );	//todo pass in unnormalised, use z tex coord for length (and normalise before passing onto frag shader)
+#endif
+
 	}
 </script>
 

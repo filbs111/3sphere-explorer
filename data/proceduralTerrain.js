@@ -126,6 +126,8 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 
 	var vertices = [];
 	var normals = [];	//might be able to use 2d gradient instead of 3d normal. for consistency with other shaders just use 3vec
+	var binormals = [];
+	var tangents = [];
 	var indices = [];
 	var uvcoords=[];
 	//create vertices first. for 3-sphere grid, loops, so different (here have vertices on opposite sides (and 4 corners) that share z-position
@@ -160,6 +162,17 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 			normals.push(invmag);
 			normals.push(invmag*nz);
 			
+			//binormals, tangents. guess use normalised. TODO check. note these are not perpendicular to eachother (unless terrain level)
+			invmag = 1/Math.sqrt(1+nx*nx);
+			binormals.push(invmag);
+			binormals.push(-invmag*nx);
+			binormals.push(0);
+			
+			invmag = 1/Math.sqrt(1+nz*nz);
+			tangents.push(0);
+			tangents.push(-invmag*nz);
+			tangents.push(invmag);
+			
 			//tmp - for use in existing shader, requires some uv coord. since grid will wrap, this is not ideal - might reproject texture later, but for time being, just stick something here.
 			uvcoords.push(8*ii/gridSize);
 			uvcoords.push(8*jj/gridSize);
@@ -183,5 +196,5 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 	function lookupIndex(xx,yy){
 		return (xx&terrainSizeMinusOne)+gridSize*(yy&terrainSizeMinusOne)
 	}
-	return {vertices:vertices, normals:normals, uvcoords:uvcoords, faces:indices};
+	return {vertices:vertices, normals:normals, binormals:binormals, tangents:tangents, uvcoords:uvcoords, faces:indices};
 })(procTerrainSize);
