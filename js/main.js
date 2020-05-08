@@ -74,9 +74,9 @@ function initShaders(){
 	shaderPrograms.texmapColor4VecAtmos = loadShader( "shader-texmap-color-triplanar-vs-4vec-atmos", "shader-texmap-triplanar-fs");
 	
 	shaderPrograms.texmap4VecMapproject = {
-		constant:loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs-mapproject", ['MAPPROJECT_ACTIVE','ATMOS_CONSTANT']),
-		atmos:   loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs-mapproject", ['MAPPROJECT_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0']),
-		atmos_v2:loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs-mapproject", ['MAPPROJECT_ACTIVE','ATMOS_TWO'])
+		constant:loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['MAPPROJECT_ACTIVE','ATMOS_CONSTANT'], ['MAPPROJECT_ACTIVE']),
+		atmos:   loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['MAPPROJECT_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['MAPPROJECT_ACTIVE']),
+		atmos_v2:loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['MAPPROJECT_ACTIVE','ATMOS_TWO'], ['MAPPROJECT_ACTIVE'])
 	};
 	
 	//shaderPrograms.duocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-flat-fs");
