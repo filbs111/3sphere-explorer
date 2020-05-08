@@ -825,7 +825,7 @@
 	varying vec4 vPlayerLightPosTangentSpace;
 	varying vec4 vPortalLightPosTangentSpace;
 	varying vec4 vEyePosTangentSpace;
-	
+
 	varying vec4 transformedCoord;
 
 	void main(void) {
@@ -1071,8 +1071,12 @@
 	attribute vec3 aVertexTangent;
 	attribute vec3 aVertexBinormal;
 	varying vec3 vTextureCoord;
+	uniform float uAtmosThickness;
+	uniform float uAtmosContrast;
+	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
+	uniform vec4 uCameraWorldPos;
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 	varying float fog;
 	uniform vec3 uModelScale;
@@ -1106,8 +1110,61 @@
 			//is there is a neat calculation? are the results any different?
 		*/
 		adjustedPos = transformedCoord - uDropLightPos;
+
+#ifdef ATMOS_CONSTANT		
+		fog = 0.5*(1.0 + transformedCoord.w);		
+#else		
+		vec4 worldCoord = uMMatrix * aVertexPositionNormalized;
 		
-		fog = 0.5*(1.0 + transformedCoord.w);
+		float dotProd = dot(uCameraWorldPos,worldCoord);
+		
+		vec4 normalDirection = normalize(worldCoord - dotProd*uCameraWorldPos);	//point 90 deg around world from camera, in direction of worldCoord
+		
+		float partOne = dot(uCameraWorldPos.xy, uCameraWorldPos.xy);
+		float partTwo = dot(normalDirection.xy, normalDirection.xy);
+		float constTerm = (partOne+partTwo)/2.0;
+		float cos2Term = (partOne-partTwo)/2.0;
+		float sin2Term = dot(uCameraWorldPos.xy, normalDirection.xy);
+		float shiftAngle = atan(cos2Term,sin2Term);
+		
+		//float magTerm = sqrt(cos2Term*cos2Term+sin2Term*sin2Term);
+		float magTerm = length(vec2(cos2Term, sin2Term));
+		
+		float maxDoubleAng = 2.0*acos(dotProd);
+#endif
+#ifdef ATMOS_ONE
+		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
+		float total=0.0;
+		for (float aa=0.0;aa<CONST_ITERS;aa++){
+			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
+			total+= exp(uAtmosContrast*rsq);
+		}
+		total*= maxDoubleAngOverIters*exp(uAtmosContrast*(constTerm));	
+		fog = exp(-uAtmosThickness*total/2.0);
+#endif
+#ifdef ATMOS_TWO
+		float kk = magTerm * uAtmosContrast;
+		float ksq = kk*kk;
+
+		float maxA = maxDoubleAng+shiftAngle;
+
+		float kcxa = kk*cos(maxA);
+		float kcxb = kk*cos(shiftAngle);
+		float ksxa = kk*sin(maxA);
+		float ksxb = kk*sin(shiftAngle);
+		float kcxasq=kcxa*kcxa;
+		float kcxbsq=kcxb*kcxb;
+		
+		float integral=(1.0+ksq/4.0 + ksq*ksq/64.0)*(maxA -shiftAngle);
+		integral-= (1.0+ksq/8.0)*(kcxa-kcxb);
+		integral-=(ksq/48.0+0.25)*(kcxa*ksxa - kcxb*ksxb);
+		integral+=(kcxa*kcxasq - kcxb*kcxbsq)*(4.0/72.0);
+		integral-=ksq*(kcxa -kcxb)*(3.0/72.0);
+		integral+=(4.0/768.0)*((2.0*kcxasq-ksq)*kcxa*ksxa -(2.0*kcxbsq-ksq)*kcxb*ksxb);
+
+		float total=integral*exp(uAtmosContrast*constTerm);
+		fog = exp(-uAtmosThickness*total/2.0);
+#endif
 		
 		float myZ = aVertexPositionNormalized.w;
 		vTextureCoord = vec3( aTextureCoord.st*myZ, myZ );
@@ -1122,8 +1179,12 @@
 	attribute vec3 aVertexTangent;
 	attribute vec3 aVertexBinormal;
 	varying vec3 vTextureCoord;
+	uniform float uAtmosThickness;
+	uniform float uAtmosContrast;
+	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
+	uniform vec4 uCameraWorldPos;
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 	varying float fog;
 	uniform vec3 uModelScale;
@@ -1176,7 +1237,61 @@
 		//camPosTangentSpace should be normalised already (?? maybe depends on transform+TBN matrix being SO(4)? - but currently just using 3vecs (TODO is this best method?)
 		//vPlayerLightHalfwayTangentSpace = vec4(normalize(normalize(vEyePosTangentSpace.xyz) + normalize(vPortalLightPosTangentSpace.xyz)), 0.) ;	//TODO should normalisation take place after interpolation? 	//seems interpolation doesn't work well for this. maybe some trick can do. for now do normalisation in frag shader
 #endif	
+
+#ifdef ATMOS_CONSTANT		
 		fog = 0.5*(1.0 + transformedCoord.w);
+#else		
+		vec4 worldCoord = uMMatrix * aVertexPositionNormalized;
+		
+		float dotProd = dot(uCameraWorldPos,worldCoord);
+		
+		vec4 normalDirection = normalize(worldCoord - dotProd*uCameraWorldPos);	//point 90 deg around world from camera, in direction of worldCoord
+		
+		float partOne = dot(uCameraWorldPos.xy, uCameraWorldPos.xy);
+		float partTwo = dot(normalDirection.xy, normalDirection.xy);
+		float constTerm = (partOne+partTwo)/2.0;
+		float cos2Term = (partOne-partTwo)/2.0;
+		float sin2Term = dot(uCameraWorldPos.xy, normalDirection.xy);
+		float shiftAngle = atan(cos2Term,sin2Term);
+		
+		//float magTerm = sqrt(cos2Term*cos2Term+sin2Term*sin2Term);
+		float magTerm = length(vec2(cos2Term, sin2Term));
+		
+		float maxDoubleAng = 2.0*acos(dotProd);
+#endif
+#ifdef ATMOS_ONE
+		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
+		float total=0.0;
+		for (float aa=0.0;aa<CONST_ITERS;aa++){
+			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
+			total+= exp(uAtmosContrast*rsq);
+		}
+		total*= maxDoubleAngOverIters*exp(uAtmosContrast*(constTerm));	
+		fog = exp(-uAtmosThickness*total/2.0);
+#endif
+#ifdef ATMOS_TWO
+		float kk = magTerm * uAtmosContrast;
+		float ksq = kk*kk;
+
+		float maxA = maxDoubleAng+shiftAngle;
+
+		float kcxa = kk*cos(maxA);
+		float kcxb = kk*cos(shiftAngle);
+		float ksxa = kk*sin(maxA);
+		float ksxb = kk*sin(shiftAngle);
+		float kcxasq=kcxa*kcxa;
+		float kcxbsq=kcxb*kcxb;
+		
+		float integral=(1.0+ksq/4.0 + ksq*ksq/64.0)*(maxA -shiftAngle);
+		integral-= (1.0+ksq/8.0)*(kcxa-kcxb);
+		integral-=(ksq/48.0+0.25)*(kcxa*ksxa - kcxb*ksxb);
+		integral+=(kcxa*kcxasq - kcxb*kcxbsq)*(4.0/72.0);
+		integral-=ksq*(kcxa -kcxb)*(3.0/72.0);
+		integral+=(4.0/768.0)*((2.0*kcxasq-ksq)*kcxa*ksxa -(2.0*kcxbsq-ksq)*kcxb*ksxb);
+
+		float total=integral*exp(uAtmosContrast*constTerm);
+		fog = exp(-uAtmosThickness*total/2.0);
+#endif
 		
 		float myZ = aVertexPositionNormalized.w;
 		vTextureCoord = vec3( aTextureCoord.st*myZ, myZ );
@@ -1387,8 +1502,12 @@
 	attribute vec4 aVertexBinormal;
 	attribute vec2 aTextureCoord;
 	varying vec3 vTextureCoord;
+	uniform float uAtmosThickness;
+	uniform float uAtmosContrast;
+	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
+	uniform vec4 uCameraWorldPos;	//used for atmos calcs. TODO can this be combined with/ used for eyepos calculation (used for specular)?
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 	
 	uniform vec4 uReflectorPosVShaderCopy;
@@ -1424,7 +1543,60 @@
 		vEyePosTangentSpace.z = dot(transformedNormal, eyePos);
 		vEyePosTangentSpace.w = dot(transformedCoord, eyePos);
 #endif		
+
+#ifdef ATMOS_CONSTANT		
 		fog = 0.5*(1.0 + transformedCoord.w);
+#else
+		vec4 worldCoord = uMMatrix * aVertexPosition;
+		float dotProd = dot(uCameraWorldPos,worldCoord);
+		
+		vec4 normalDirection = normalize(worldCoord - dotProd*uCameraWorldPos);	//point 90 deg around world from camera, in direction of worldCoord
+		
+		float partOne = dot(uCameraWorldPos.xy, uCameraWorldPos.xy);
+		float partTwo = dot(normalDirection.xy, normalDirection.xy);
+		float constTerm = (partOne+partTwo)/2.0;
+		float cos2Term = (partOne-partTwo)/2.0;
+		float sin2Term = dot(uCameraWorldPos.xy, normalDirection.xy);
+		float shiftAngle = atan(cos2Term,sin2Term);
+		//float magTerm = sqrt(cos2Term*cos2Term+sin2Term*sin2Term);
+		float magTerm = length(vec2(cos2Term, sin2Term));
+		
+		float maxDoubleAng = 2.0*acos(dotProd);
+#endif
+#ifdef ATMOS_ONE
+		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
+		
+		float total=0.0;
+		for (float aa=0.0;aa<CONST_ITERS;aa++){
+			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
+			total+= exp(uAtmosContrast*rsq);
+		}
+		total*= maxDoubleAngOverIters*exp(uAtmosContrast*(constTerm));	
+		fog = exp(-uAtmosThickness*total/2.0);
+#endif
+#ifdef ATMOS_TWO
+		float kk = magTerm * uAtmosContrast;
+		float ksq = kk*kk;
+
+		float maxA = maxDoubleAng+shiftAngle;
+
+		float kcxa = kk*cos(maxA);
+		float kcxb = kk*cos(shiftAngle);
+		float ksxa = kk*sin(maxA);
+		float ksxb = kk*sin(shiftAngle);
+		float kcxasq=kcxa*kcxa;
+		float kcxbsq=kcxb*kcxb;
+		
+		float integral=(1.0+ksq/4.0 + ksq*ksq/64.0)*(maxA -shiftAngle);
+		integral-= (1.0+ksq/8.0)*(kcxa-kcxb);
+		integral-=(ksq/48.0+0.25)*(kcxa*ksxa - kcxb*ksxb);
+		integral+=(kcxa*kcxasq - kcxb*kcxbsq)*(4.0/72.0);
+		integral-=ksq*(kcxa -kcxb)*(3.0/72.0);
+		integral+=(4.0/768.0)*((2.0*kcxasq-ksq)*kcxa*ksxa -(2.0*kcxbsq-ksq)*kcxb*ksxb);
+
+		float total=integral*exp(uAtmosContrast*constTerm);
+		fog = exp(-uAtmosThickness*total/2.0);
+#endif
 		
 		vTextureCoord = vec3( aTextureCoord.st, 1.0 );		//todo pass in unnormalised, use z tex coord for length (and normalise before passing onto frag shader)
 	}
