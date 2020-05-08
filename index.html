@@ -1491,7 +1491,6 @@
 
 #ifdef MAPPROJECT_ACTIVE
 		vVertexPos = aVertexPosition;	//pass through for atan tex mapping (overriding uv)
-		veclight += dot(vec2(0.), aTextureCoord);	//seems must use aTextureCoord for something that the compiler wont optimise away, or things break!! TODO not pass in aTextureCoord when unneeded.
 #else
 		vTextureCoord = vec3( aTextureCoord, 1.0 );	
 #endif
