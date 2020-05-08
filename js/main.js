@@ -48,7 +48,7 @@ function initShaders(){
 		atmos_v2:loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','ATMOS_TWO'], ['SPECULAR_ACTIVE'])
 	};
 	shaderPrograms.texmapPerPixelDiscardAtmosGradLight = loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-gradlight-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0']); 	//could do more work in vert shader currently because light calculated per vertex - could just pass channel weights to frag shader...
-	shaderPrograms.texmapPerPixelDiscardAtmosExplode = {
+	shaderPrograms.texmapPerPixelDiscardExplode = {
 		constant:loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['VERTVEL_ACTIVE','ATMOS_CONSTANT']),
 		atmos:   loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['VERTVEL_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0']),
 		atmos_v2:loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['VERTVEL_ACTIVE','ATMOS_TWO'])
@@ -74,9 +74,9 @@ function initShaders(){
 	shaderPrograms.texmapColor4VecAtmos = loadShader( "shader-texmap-color-triplanar-vs-4vec-atmos", "shader-texmap-triplanar-fs");
 	
 	shaderPrograms.texmap4VecMapproject = {
-		constant:loadShader( "shader-texmap-vs-4vec-mapproject", "shader-texmap-fs-mapproject", ['ATMOS_CONSTANT']),
-		atmos:   loadShader( "shader-texmap-vs-4vec-mapproject", "shader-texmap-fs-mapproject", ['ATMOS_ONE','CONST_ITERS 64.0']),
-		atmos_v2:loadShader( "shader-texmap-vs-4vec-mapproject", "shader-texmap-fs-mapproject", ['ATMOS_TWO'])
+		constant:loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs-mapproject", ['MAPPROJECT_ACTIVE','ATMOS_CONSTANT']),
+		atmos:   loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs-mapproject", ['MAPPROJECT_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0']),
+		atmos_v2:loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs-mapproject", ['MAPPROJECT_ACTIVE','ATMOS_TWO'])
 	};
 	
 	//shaderPrograms.duocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-flat-fs");
@@ -1241,7 +1241,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		boxSize = 0.02;
 		boxRad = boxSize*Math.sqrt(3);
 		
-		var activeShaderProgram = shaderPrograms.texmapPerPixelDiscardAtmosExplode[ guiParams.display.atmosShader ];
+		var activeShaderProgram = shaderPrograms.texmapPerPixelDiscardExplode[ guiParams.display.atmosShader ];
 			//setup code largely shared with setting regular texmap code. todo generalise setup
 		gl.useProgram(activeShaderProgram);
 		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
@@ -2599,7 +2599,7 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	world0:{duocylinderModel:"none",seaActive:false},
+	world0:{duocylinderModel:"procTerrain",seaActive:false},
 	world1:{duocylinderModel:"voxTerrain",seaActive:false},
 	duocylinderRotateSpeed:0,
 	seaLevel:-0.012,
