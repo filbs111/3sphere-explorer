@@ -48,6 +48,8 @@ function terrainGetHeightFor4VecPos(vec){
 	
 	var interpolatedHeight = getInterpHeightForAB(aa,bb);
 	
+//	interpolatedHeight*=Math.sqrt(2);	//fudge factor. TODO figure out if this is true height (think "true" height is before multtiply)
+	
 //	console.log("height : " + getInterpHeightForAB(aa,bb));
 	//return {a:-a, b:Math.PI*1.5 -b , h:terrainGetHeight(aa,bb)};	//position such that will draw on landscape
 	return {a:-a, b:Math.PI*1.5 -b , h:(Math.PI/4)*interpolatedHeight};
@@ -66,6 +68,8 @@ function getHeightAboveTerrainFor4VecPos(vec){
 	var bb=multiplier*decentMod(b + duocylinderSpin,2*Math.PI);
 	var h = (Math.PI/4)*getInterpHeightForAB(aa,bb);
 	
+	h*=Math.sqrt(2);	//fudge factor. TODO figure out if this is true height (think "true" height is before multtiply)
+	
 	return c-h;
 }
 
@@ -80,7 +84,9 @@ var terrainHeightData = (function generateTerrainHeightData(){
 		var dataForI = [];
 		allData.push(dataForI);
 		for (jj=0;jj<procTerrainSize;jj++){
-			dataForI.push(terrainPrecalcHeight(ii,jj));
+			//dataForI.push(terrainPrecalcHeight(ii,jj));
+			//dataForI.push(terrainPrecalcHeightCastellated(ii,jj));
+			dataForI.push(terrainPrecalcHeight111(ii,jj));
 		}
 	}
 	return allData;
@@ -104,6 +110,31 @@ var terrainHeightData = (function generateTerrainHeightData(){
 		
 		return height;
 	}
+	
+	function terrainPrecalcHeightCastellated(ii,jj){		
+		var reps = 16;
+		//var halfheight = 0.5/reps;
+		var halfheight = 0.5/reps;	//seems to make about square, but just a guess
+		var tmpsf = 2*Math.PI*reps/procTerrainSize;	//don't really need to use sine for this, but easy to change later
+		var sini = Math.sin(ii*tmpsf);
+		var sinj = 1; // Math.sin(jj*tmpsf);
+		
+		var chequersine = sini*sinj;
+		return (chequersine>0) ?halfheight:-halfheight;	//shows that assumption that 3vec to 4vec scales isotropically is out by ~ factor 2
+		//return halfheight*Math.tanh(chequersine*5);
+	}
+	
+	function terrainPrecalcHeight111(ii,jj){		
+		var iiupdown = Math.abs(ii%16 - 8);
+		var jjupdown = 0;	//Math.abs(jj%16 - 8);
+		
+		var height = (4/procTerrainSize)*Math.max(iiupdown, jjupdown);	//AFAIK grid squares are 4 wide
+	
+		return height;
+		//return Math.sqrt(2)*height;	//this makes zigzag "square" if comment out fudge factor multiplications (same commit)
+	}
+	
+	
 })();
 
 function terrainGetHeight(ii,jj){
@@ -116,8 +147,6 @@ function terrainGetHeight(ii,jj){
 	}
 	return terrainHeightData[ii][jj];
 }
-
-
 
 var proceduralTerrainData = (function generateGridData(gridSize){
 	var terrainSizeMinusOne=gridSize-1;
@@ -150,7 +179,7 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 
 	//generate gradient/normal data.
 	var nx,nz,ninvmag;
-	var twiceSquareSize = 8/gridSize;
+	var twiceSquareSize = 8/gridSize;	//think this maybe some dumb thing whereby 4vec mapping stuff designed for -1 to +1, with 4x4 tiles. see duocylinderObjects.grid  
 	for (var ii=0;ii<gridSize;ii++){
 		for (var jj=0;jj<gridSize;jj++){
 			nx= -vertex2dData[(ii+1)&terrainSizeMinusOne][jj] + vertex2dData[(ii-1)&terrainSizeMinusOne][jj];
@@ -178,7 +207,7 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 			uvcoords.push(8*jj/gridSize);
 		}
 	}
-	
+		
 	//triangle strip data
 	for (var ii=0;ii<gridSize;ii++){
 		indices.push(lookupIndex(ii,0));	//duplicate vert at start of strip

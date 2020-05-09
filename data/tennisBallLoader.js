@@ -156,10 +156,27 @@ function loadGridData(toLoad){
 	
 	}
 	
+	//test get4vecfrom3vec - check that is "square" for small displacements
+	var centre4vec = get4vecfrom3vec(0,0,0);
+	var xshift4vec = get4vecfrom3vec(0.01,0,0);
+	var yshift4vec = get4vecfrom3vec(0,0.01,0);
+	var zshift4vec = get4vecfrom3vec(0,0,0.01);
+	
+	console.log("TESTING get4vecfrom3vec");
+	printDifference(centre4vec, centre4vec);
+	printDifference(centre4vec, xshift4vec);
+	printDifference(centre4vec, yshift4vec);
+	printDifference(centre4vec, zshift4vec);
+	
+	function printDifference(v1,v2){
+		var vdifference = v1.map(function(elem, ii){return elem-v2[ii];});
+		console.log(Math.hypot.apply(null, vdifference));
+	}
+	
 	function get4vecfrom3vec(x,y,z){
 			var ang1 = 2*Math.PI * x;
 			var ang2 = 2*Math.PI * y;
-			var cylr = Math.PI * (0.25+ z);
+			var cylr = Math.PI * (0.25+ z*Math.sqrt(2));
 			var sr = Math.sin(cylr);
 			var cr = Math.cos(cylr);
 			return [ cr * Math.sin(ang1), cr * Math.cos(ang1), sr * Math.sin(ang2), sr * Math.cos(ang2) ];

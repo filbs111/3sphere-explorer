@@ -96,9 +96,9 @@ var voxTerrainData = (function generateVoxTerrainData(){
 	//var voxFunction = perlinfunctionTwoSided;
 	//var voxFunction = perlinfunctionTwoLevel;
 	//var voxFunction = perlinfunctionSpiral;
-	//var voxFunction = balls;
+	var voxFunction = balls;
 	//var voxFunction = brejao;
-	var voxFunction = shiftedbrejao;
+	//var voxFunction = shiftedbrejao;
 	//var voxFunction = longHolesTwo;
 	makeVoxdataForFunc(voxFunction);
 	
@@ -115,7 +115,8 @@ var voxTerrainData = (function generateVoxTerrainData(){
 	
 		var aa=multiplier*decentMod(a,Math.PI);		//vox terrain currently repeated 2x2 squares
 		var bb=multiplier*decentMod(b + duocylinderSpin,Math.PI);
-		var cc=(0.5+c*2/Math.PI)*64;
+		//var cc=(0.5+c*2/Math.PI)*64;
+		var cc=(0.5+c*Math.sqrt(2)/Math.PI)*64;
 	
 		return voxFunction(aa,bb,cc);
 	}
@@ -151,7 +152,8 @@ var voxTerrainData = (function generateVoxTerrainData(){
 	
 		var aa=multiplier*decentMod(a,Math.PI);		//vox terrain currently repeated 2x2 squares
 		var bb=multiplier*decentMod(b + duocylinderSpin,Math.PI);
-		var cc= 32 +c*2*multiplier;
+		//var cc= 32 +c*2*multiplier;
+		var cc= 32 +c*Math.sqrt(2)*multiplier;
 		
 		//next test, attempt to convert back to 4vector input from aa,bb,cc
 		//return get4vecForABCDCCoords(aa/multiplier, bb/multiplier-duocylinderSpin , (cc-32)/(2*multiplier));
@@ -889,13 +891,13 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		ii%=64;
 		jj%=64;
 		kk%=64;
-		var sinscale=4/Math.PI;
 		
 		kk-=32;
 		ii = ii%8 -4;
 		jj = jj%8 -4;
 		
-		return - 0.5*ii*ii - 0.5*jj*jj - kk*kk/Math.PI + 4;
+		//return - 0.5*ii*ii - 0.5*jj*jj - kk*kk/Math.PI + 4;
+		return - 0.5*ii*ii - 0.5*jj*jj - 0.5*kk*kk + 4;
 	}
 	
 	function wierdBeans(ii,jj,kk){
@@ -911,7 +913,7 @@ var voxTerrainData = (function generateVoxTerrainData(){
 	
 	function shiftedbrejao(ii,jj,kk){
 		//return brejao(ii,jj,kk-6);
-		return earlyExitBrejao(ii,jj,kk-6);
+		return earlyExitBrejao(ii,jj,kk-4);
 	}
 	function earlyExitBrejao(ii,jj,kk){	//attempt to speed up by fast return outside region of interest
 		var distThreshold =15;
