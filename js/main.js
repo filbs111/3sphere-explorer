@@ -70,6 +70,16 @@ function initShaders(){
 		atmos:   loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['SPECULAR_ACTIVE']),
 		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','ATMOS_TWO'], ['SPECULAR_ACTIVE'])
 	};
+	shaderPrograms.texmap4VecPerPixelDiscardNormalmapVcolor = {
+		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','ATMOS_CONSTANT'], ['VCOLOR']),
+		atmos:   loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','ATMOS_ONE','CONST_ITERS 64.0'], ['VCOLOR']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','ATMOS_TWO'], ['VCOLOR'])
+	};
+	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolor = {
+		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_CONSTANT'], ['VCOLOR','SPECULAR_ACTIVE']),
+		atmos:   loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['VCOLOR','SPECULAR_ACTIVE']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_TWO'], ['VCOLOR','SPECULAR_ACTIVE'])
+	};
 		
 	shaderPrograms.texmapColor4VecAtmos = loadShader( "shader-texmap-color-triplanar-vs-4vec-atmos", "shader-texmap-triplanar-fs");
 	
@@ -173,13 +183,16 @@ var maxRandBoxes = 8192;
 //var maxRandBoxes = 50;	//tmp smaller to make startup faster?
 var randomMats = [];	//some random poses. used for "dust motes". really only positions required, but flexible, can use for random boxes/whatever 		
 
-function generateDataForDataMatricesScale(inputData, matsArray, scaleFact){
-	var numInstances = matsArray.length;
+function generateDataForDataMatricesScale(inputData, infoArray, scaleFact){
+	var numInstances = infoArray.length;
 	
+	var matsArray = infoArray.map(elem=>elem.matrix);	//inefficient but easy to read
+	var colorsArray = infoArray.map(elem=>elem.color||[1.0,1.0,1.0,1.0]);	//wasteful if no colours provided
+	var outputColorData = [];
 	//make a big buffer with multiple copies of an object, pre-transformed by matrices.
 	//cubes have 36 vertices, so can do 65536/24 = 2730 cubes in 1 draw call.
 	//could make smooth cubes with 8 verts -> 8192, or octohedra with 6 verts -> 10922
-	var thisMat;
+	var thisMat, thisColor;
 	
 	var outputIndexData = [];
 	var offset=0;
@@ -268,7 +281,8 @@ function generateDataForDataMatricesScale(inputData, matsArray, scaleFact){
 	var myvec4 = vec4.create();
 	
 	for (var ii=0;ii<numInstances;ii++,offset+=numVerts){
-		thisMat = matsArray[ii]; 				
+		thisMat = matsArray[ii];
+		thisColor = colorsArray[ii].slice(0,3);	//ignore 4th colour
 		for (var vv=0;vv<numVerts;vv++){
 			//make a copy of vertex, rotate by matrix
 			thisVert = sourceVerts[vv]; 
@@ -312,13 +326,18 @@ function generateDataForDataMatricesScale(inputData, matsArray, scaleFact){
 		copiedUvs.push(sourceUvs);
 		
 		outputIndexData.push(inputData.indices.map(function(elem){return elem+offset;}));
+		
+		for (var vv=0;vv<numVerts;vv++){
+			outputColorData.push(thisColor);
+		}
 	}
 	
 	var toReturn = {	//todo check best format to output (would require change to buffer creation from data step that follows)
 		vertices:[].concat.apply([],transformedVerts),
 		normals:[].concat.apply([],transformedNorms),
 		uvcoords:[].concat.apply([],copiedUvs),
-		faces:[].concat.apply([],outputIndexData)	//todo use "indices" consistent with 3vec vertex format
+		faces:[].concat.apply([],outputIndexData),	//todo use "indices" consistent with 3vec vertex format
+		colors:[].concat.apply([],outputColorData)
 	}
 	
 	if (inBins){
@@ -461,7 +480,7 @@ function initBuffers(){
 		randomMats.push(thisMat);
 	}
 	
-	var randBoxData = generateDataForDataMatricesScale(smoothCubeData, randomMats, 0.001);	//TODO ensure none inside portal radius. (4vec vertex shader doesn't discard pixels)
+	var randBoxData = generateDataForDataMatricesScale(smoothCubeData, randomMats.map(elem => {return {matrix:elem};}), 0.001);	//TODO ensure none inside portal radius. (4vec vertex shader doesn't discard pixels)
 	
 	//console.log("randBoxData:");
 	//console.log(randBoxData);
@@ -469,17 +488,17 @@ function initBuffers(){
 	randBoxBuffers.divs=1;	//because reusing duocylinder drawing function
 	randBoxBuffers.step=0;	//unused
 	
-	var towerBoxData = generateDataForDataMatricesScale(levelCubeData, duocylinderBoxInfo.towerblocks.list.map(function(elem){return elem.matrix;}), duocylinderSurfaceBoxScale);
+	var towerBoxData = generateDataForDataMatricesScale(levelCubeData, duocylinderBoxInfo.towerblocks.list, duocylinderSurfaceBoxScale);
 	loadDuocylinderBufferData(towerBoxBuffers, towerBoxData);	//TODO rename func so not specific to duocylinder - generally is for 4vec vertex data.
 	towerBoxBuffers.divs=1;	//because reusing duocylinder drawing function
 	towerBoxBuffers.step=0;	//unused
 	
-	var stonehengeBoxData = generateDataForDataMatricesScale(levelCubeData, duocylinderBoxInfo.stonehenge.list.map(function(elem){return elem.matrix;}), duocylinderSurfaceBoxScale);
+	var stonehengeBoxData = generateDataForDataMatricesScale(levelCubeData, duocylinderBoxInfo.stonehenge.list, duocylinderSurfaceBoxScale);
 	loadDuocylinderBufferData(stonehengeBoxBuffers, stonehengeBoxData);	//TODO rename func so not specific to duocylinder - generally is for 4vec vertex data.
 	stonehengeBoxBuffers.divs=1;	//because reusing duocylinder drawing function
 	stonehengeBoxBuffers.step=0;	//unused
 	
-	var roadBoxData = generateDataForDataMatricesScale(levelCubeData, duocylinderBoxInfo.roads.list.map(function(elem){return elem.matrix;}), duocylinderSurfaceBoxScale);
+	var roadBoxData = generateDataForDataMatricesScale(levelCubeData, duocylinderBoxInfo.roads.list, duocylinderSurfaceBoxScale);
 	loadDuocylinderBufferData(roadBoxBuffers, roadBoxData);	//TODO rename func so not specific to duocylinder - generally is for 4vec vertex data.
 	roadBoxBuffers.divs=1;	//because reusing duocylinder drawing function
 	roadBoxBuffers.step=0;	//unused
@@ -1653,18 +1672,23 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawTennisBall(randBoxBuffers, activeShaderProgram);	//todo draw subset of buffer according to ui controlled number
 	}
 	
-	activeShaderProgram = guiParams.display.useSpecular ? shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscardNormalmap[ guiParams.display.atmosShader ];
+	activeShaderProgram = guiParams.display.useSpecular ? shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolor[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscardNormalmapVcolor[ guiParams.display.atmosShader ];
 	gl.useProgram(activeShaderProgram);
 	performCommon4vecShaderSetup(activeShaderProgram, "normal map");
 	
-	if (guiParams.drawShapes.singleBufferTowers){		//note does not yet support coloured vertices
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.darkGray);
+	if (guiParams.drawShapes.singleBufferTowers){
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);	//uColor is redundant here since have vertex colors. TODO lose it?
 		drawTennisBall(towerBoxBuffers, activeShaderProgram);
 	}
 	if (guiParams.drawShapes.singleBufferStonehenge){
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.gray);
 		drawTennisBall(stonehengeBoxBuffers, activeShaderProgram);
 	}
+	
+	activeShaderProgram = guiParams.display.useSpecular ? shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscardNormalmap[ guiParams.display.atmosShader ];
+	gl.useProgram(activeShaderProgram);
+	performCommon4vecShaderSetup(activeShaderProgram, "normal map");
+	
 	if (guiParams.drawShapes.singleBufferRoads){
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.darkGray);
 		drawTennisBall(roadBoxBuffers, activeShaderProgram);
@@ -2306,9 +2330,10 @@ function drawTennisBall(duocylinderObj, shader){
 		gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.normalBuffer);
 		gl.vertexAttribPointer(shader.attributes.aVertexNormal, duocylinderObj.normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	}
-	if (duocylinderObj.vertexColorBuffer){
+	if (duocylinderObj.vertexColorBuffer && shader.attributes.aVertexColor){
 		gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexColorBuffer);
 		gl.vertexAttribPointer(shader.attributes.aVertexColor, duocylinderObj.vertexColorBuffer.itemSize, gl.FLOAT, false, 0, 0);
+		//return;	// test
 	}
 	if (duocylinderObj.vertexTextureCoordBuffer && shader.attributes.aTextureCoord){	//not used in duocylinder-sea
 		gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexTextureCoordBuffer);
@@ -2532,7 +2557,7 @@ function setupScene() {
 	playerCamera.qPair = [[1,0,0,0],[1,0,0,0]];
 	
 	//start player off outside of boxes
-	xyzmove4mat(playerCamera,[0,1,-1]);	//left, down, 
+	xyzmove4mat(playerCamera,[0,0,-1]);	//left, down, 
 	
 	targetMatrix = cellMatData.d16[0];
 }
@@ -2611,15 +2636,15 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	world0:{duocylinderModel:"procTerrain",seaActive:false},
+	world0:{duocylinderModel:"grid",seaActive:false},
 	world1:{duocylinderModel:"voxTerrain",seaActive:false},
 	duocylinderRotateSpeed:0,
 	seaLevel:-0.012,
 	drawShapes:{
 		boxes:{
-		'y=z=0':true,	//x*x+w*w=1
-		'x=z=0':true,	//y*y+w*w=1
-		'x=y=0':true,	//z*z+w*w=1
+		'y=z=0':false,	//x*x+w*w=1
+		'x=z=0':false,	//y*y+w*w=1
+		'x=y=0':false,	//z*z+w*w=1
 		'x=w=0':false,
 		'y=w=0':false,
 		'z=w=0':false

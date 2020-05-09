@@ -807,6 +807,7 @@
 	varying vec4 transformedCoord;
 	varying vec3 vTextureCoord;
 	varying vec4 vVertexPos;
+	varying vec4 vColor;
 
 	void main(void) {
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;	//TODO is transformedcoord still needed if have vPortalLightPosTangentSpace ? 
@@ -829,9 +830,11 @@
 		
 		vec4 nmapNormal = vec4(texSampleAdjusted,0.0);	//trivial TODO tidy up
 		
-
+#ifdef VCOLOR
+		vec4 adjustedColor = pow(uColor*vColor, vec4(2.-texSampleAdjusted.z));
+#else
 		vec4 adjustedColor = pow(uColor, vec4(2.-texSampleAdjusted.z));	//bodge - idea is to make colour deeper in recesses. (TODO special bake for this)
-	
+#endif
 		
 		vec4 normalizedLightPos = normalize(vPlayerLightPosTangentSpace);
 		vec4 normalizedLightPosAdj = normalize(vec4( vPlayerLightPosTangentSpace.xyz , 0.0));
@@ -1163,6 +1166,7 @@
 	attribute vec2 aTextureCoord;
 	attribute vec3 aVertexTangent;
 	attribute vec3 aVertexBinormal;
+	attribute vec3 aVertexColor;
 	varying vec3 vTextureCoord;
 	uniform float uAtmosThickness;
 	uniform float uAtmosContrast;
@@ -1492,6 +1496,7 @@
 	attribute vec4 aVertexTangent;
 	attribute vec4 aVertexBinormal;
 	attribute vec2 aTextureCoord;
+	attribute vec3 aVertexColor;	//TODO make consistent vec3 /vec4
 	uniform float uAtmosThickness;
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
@@ -1510,6 +1515,7 @@
 	varying vec4 transformedCoord;	
 	varying vec3 vTextureCoord;
 	varying vec4 vVertexPos;
+	varying vec4 vColor;
 	
 	void main(void) {
 		transformedCoord = uMVMatrix * aVertexPosition;
@@ -1534,7 +1540,11 @@
 		vEyePosTangentSpace.y = dot(transformedBinormal, eyePos);
 		vEyePosTangentSpace.z = dot(transformedNormal, eyePos);
 		vEyePosTangentSpace.w = dot(transformedCoord, eyePos);
-#endif		
+#endif
+
+#ifdef VCOLOR
+		vColor = vec4(aVertexColor,1.);	//TODO multiply by uColor in vert shader
+#endif
 
 #ifdef ATMOS_CONSTANT		
 		fog = 0.5*(1.0 + transformedCoord.w);
