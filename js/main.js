@@ -1727,7 +1727,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 				activeShaderProgram = shaderPrograms.texmapColor4VecAtmos;	//not variants implemented
 			}else{
 				//activeShaderProgram = duocylinderObj.useMapproject? shaderPrograms.texmap4VecMapproject[ guiParams.display.atmosShader ] : shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ] ;
-				activeShaderProgram = duocylinderObj.useMapproject? shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ] ;
+				activeShaderProgram = duocylinderObj.useMapproject? shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscardPhong[ guiParams.display.atmosShader ] ;
 			}
 			gl.useProgram(activeShaderProgram);
 		}else{
