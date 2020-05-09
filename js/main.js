@@ -68,10 +68,20 @@ function initShaders(){
 		atmos:   loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0']),
 		atmos_v2:loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['ATMOS_TWO'])
 	};
+	shaderPrograms.texmap4VecPerPixelDiscardVcolor = {
+		constant:loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['VCOLOR','ATMOS_CONSTANT'],['VCOLOR']),
+		atmos:   loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['VCOLOR','ATMOS_ONE','CONST_ITERS 64.0'],['VCOLOR']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['VCOLOR','ATMOS_TWO'],['VCOLOR'])
+	};
 	shaderPrograms.texmap4VecPerPixelDiscardPhong = {
 		constant:loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['ATMOS_CONSTANT'], ['SPECULAR_ACTIVE']),
 		atmos:   loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0'], ['SPECULAR_ACTIVE']),
 		atmos_v2:loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['ATMOS_TWO'], ['SPECULAR_ACTIVE'])
+	};
+	shaderPrograms.texmap4VecPerPixelDiscardPhongVcolor = {
+		constant:loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['VCOLOR','ATMOS_CONSTANT'], ['VCOLOR','SPECULAR_ACTIVE']),
+		atmos:   loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['VCOLOR','ATMOS_ONE','CONST_ITERS 64.0'], ['VCOLOR','SPECULAR_ACTIVE']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['VCOLOR','ATMOS_TWO'], ['VCOLOR','SPECULAR_ACTIVE'])
 	};
 	shaderPrograms.texmap4VecPerPixelDiscardNormalmap = {
 		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['ATMOS_CONSTANT']),
@@ -1677,7 +1687,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	mat4.identity(mMatrix);							//better to set M, V matrices and leave MV for shader?
 	rotate4mat(mMatrix, 0, 1, duocylinderSpin);
 	
-	activeShaderProgram = guiParams.display.perPixelLighting? (guiParams.display.useSpecular ? shaderPrograms.texmap4VecPerPixelDiscardPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscard[ guiParams.display.atmosShader ]): shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ];
+	activeShaderProgram = guiParams.display.perPixelLighting? (guiParams.display.useSpecular ? shaderPrograms.texmap4VecPerPixelDiscardPhongVcolor[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscardVcolor[ guiParams.display.atmosShader ]): shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ];
 	gl.useProgram(activeShaderProgram);
 	performCommon4vecShaderSetup(activeShaderProgram, "not normal map");
 
@@ -2670,8 +2680,8 @@ var guiParams={
 		singleBufferTowers:true,
 		explodingBox:false,
 		hyperboloid:false,
-		stonehenge:true,
-		singleBufferStonehenge:false,
+		stonehenge:false,
+		singleBufferStonehenge:true,
 		roads:false,
 		singleBufferRoads:true
 	},

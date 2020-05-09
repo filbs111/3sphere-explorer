@@ -684,7 +684,8 @@
 	varying vec4 adjustedPos;
 	varying vec4 transformedNormal;	
 	varying vec4 transformedCoord;	
-		
+	varying vec4 vColor;
+	
 	void main(void) {
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
 	
@@ -713,9 +714,15 @@
 		portalLight = max(0.5*portalLight +0.5+ posCosDiff,0.0);	//unnecessary if camera pos = light pos
 		//falloff
 		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
-				
+
+#ifdef VCOLOR
+		vec4 adjustedColor = uColor*vColor;	//TODO this logid in vert shader
+#else
+		vec4 adjustedColor = uColor;
+#endif		
+		
 		//guess maybe similar to some gaussian light source
-		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
+		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*adjustedColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
@@ -1506,6 +1513,7 @@
 	attribute vec4 aVertexPosition;
 	attribute vec4 aVertexNormal;
 	attribute vec2 aTextureCoord;
+	attribute vec3 aVertexColor;	//TODO make consistent vec3 /vec4
 	uniform float uAtmosThickness;
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
@@ -1523,7 +1531,7 @@
 	varying vec4 transformedCoord;
 	varying vec4 transformedNormal;
 	varying vec3 vTextureCoord;
-
+	varying vec4 vColor;
 	varying vec4 adjustedPos;
 
 	void main(void) {
@@ -1583,6 +1591,10 @@
 		fog = exp(-uAtmosThickness*total/2.0);
 #endif
 		transformedNormal = uMVMatrix * aVertexNormal;
+		
+#ifdef VCOLOR
+		vColor = vec4(aVertexColor,1.);	//TODO multiply by uColor in vert shader
+#endif
 		
 		adjustedPos = transformedCoord - uDropLightPos;
 		

@@ -60,15 +60,20 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 	
 	currentboxInfo=boxInfoStonehenge;
 	
-	var shcolor = [0.9,0.4,0.1,1.0];
+	function randColor(){
+		var coherentShift = Math.random()*0.05;
+		return [0.9+coherentShift+Math.random()*0.05,
+				0.6+coherentShift+Math.random()*0.03,
+				0.1+coherentShift+Math.random()*0.01,1.0];
+	}
 	
 	var stepSize= Math.PI*2/31;
 	for (var ii=0;ii<31;ii++){	//doesn't quite meet up. probably exact is 10*PI
 		for (var hi=0;hi<4;hi++){
-			addBoxData(ii*stepSize +10,ii*stepSize,hi*0.05, shcolor, Math.PI/4 + 0.2);	//tiny extra twist so stonehenge diagonal monorail thing looks ok  
+			addBoxData(ii*stepSize +10,ii*stepSize,hi*0.05, randColor(), Math.PI/4 + 0.2);	//tiny extra twist so stonehenge diagonal monorail thing looks ok  
 		}
 		for (var kk=0.125;kk<1;kk+=0.25){
-			addBoxData((ii+kk)*stepSize +10,(ii+kk)*stepSize,4*0.05, shcolor,Math.PI/4 + 0.2);
+			addBoxData((ii+kk)*stepSize +10,(ii+kk)*stepSize,4*0.05, randColor(),Math.PI/4 + 0.2);
 		}
 	}
 	
