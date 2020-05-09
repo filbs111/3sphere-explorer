@@ -82,7 +82,13 @@ function initShaders(){
 		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['MAPPROJECT_ACTIVE','ATMOS_CONSTANT'], ['MAPPROJECT_ACTIVE']),
 		atmos   :loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['MAPPROJECT_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['MAPPROJECT_ACTIVE']),
 		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['MAPPROJECT_ACTIVE','ATMOS_TWO'], ['MAPPROJECT_ACTIVE'])
-	}
+	};
+	shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhong = {
+		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','ATMOS_CONSTANT'], ['SPECULAR_ACTIVE','MAPPROJECT_ACTIVE']),
+		atmos   :loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['SPECULAR_ACTIVE','MAPPROJECT_ACTIVE']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','ATMOS_TWO'], ['SPECULAR_ACTIVE','MAPPROJECT_ACTIVE'])
+	};
+	
 	//shaderPrograms.duocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-flat-fs");
 	shaderPrograms.duocylinderSea = {
 		constant:loadShader( "shader-texmap-vs-duocylinder-sea", "shader-texmap-fs", ['ATMOS_CONSTANT']),
@@ -1682,7 +1688,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 				activeShaderProgram = shaderPrograms.texmapColor4VecAtmos;	//not variants implemented
 			}else{
 				//activeShaderProgram = duocylinderObj.useMapproject? shaderPrograms.texmap4VecMapproject[ guiParams.display.atmosShader ] : shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ] ;
-				activeShaderProgram = duocylinderObj.useMapproject? shaderPrograms.texmap4VecMapprojectDiscardNormalmap[ guiParams.display.atmosShader ] : shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ] ;
+				activeShaderProgram = duocylinderObj.useMapproject? shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ] ;
 			}
 			gl.useProgram(activeShaderProgram);
 		}else{
