@@ -31,6 +31,11 @@ function initShaders(){
 		atmos:   loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0']),
 		atmos_v2:loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['ATMOS_TWO'])
 	};
+	shaderPrograms.texmapPerPixelDiscardPhong = {
+		constant:loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['ATMOS_CONSTANT'],['SPECULAR_ACTIVE']),
+		atmos:   loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0'],['SPECULAR_ACTIVE']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['ATMOS_TWO'],['SPECULAR_ACTIVE'])
+	};
 					
 	shaderPrograms.texmapPerPixelDiscardNormalmapV1 = {
 		constant:loadShader( "shader-texmap-perpixel-discard-normalmap-vs", "shader-texmap-perpixel-discard-normalmap-fs", ['ATMOS_CONSTANT']),
@@ -83,12 +88,12 @@ function initShaders(){
 		
 	shaderPrograms.texmapColor4VecAtmos = loadShader( "shader-texmap-color-triplanar-vs-4vec-atmos", "shader-texmap-triplanar-fs");
 	
-	shaderPrograms.texmap4VecMapproject = {
+	shaderPrograms.texmap4VecMapproject = {	//per vertex lighting
 		constant:loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['MAPPROJECT_ACTIVE','ATMOS_CONSTANT'], ['MAPPROJECT_ACTIVE']),
 		atmos:   loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['MAPPROJECT_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['MAPPROJECT_ACTIVE']),
 		atmos_v2:loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['MAPPROJECT_ACTIVE','ATMOS_TWO'], ['MAPPROJECT_ACTIVE'])
 	};
-	shaderPrograms.texmap4VecMapprojectDiscardNormalmap = {
+	shaderPrograms.texmap4VecMapprojectDiscardNormalmap = {	//per pixel tangent space lighting
 		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['MAPPROJECT_ACTIVE','ATMOS_CONSTANT'], ['MAPPROJECT_ACTIVE']),
 		atmos   :loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['MAPPROJECT_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['MAPPROJECT_ACTIVE']),
 		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['MAPPROJECT_ACTIVE','ATMOS_TWO'], ['MAPPROJECT_ACTIVE'])
@@ -1226,7 +1231,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var cosReflector = 1.0/Math.sqrt(1+reflectorInfo.rad*reflectorInfo.rad);
 		
 	var relevantColorShader = shaderPrograms.coloredPerPixelDiscard[ guiParams.display.atmosShader ];
-	var relevantTexmapShader = shaderPrograms.texmapPerPixelDiscard[ guiParams.display.atmosShader ];
+	//var relevantTexmapShader = shaderPrograms.texmapPerPixelDiscard[ guiParams.display.atmosShader ];
+	var relevantTexmapShader = shaderPrograms.texmapPerPixelDiscardPhong[ guiParams.display.atmosShader ];
 	
 	shaderProgramColored = guiParams.display.perPixelLighting?relevantColorShader:shaderPrograms.coloredPerVertex;
 	shaderProgramTexmap = guiParams.display.perPixelLighting?relevantTexmapShader:shaderPrograms.texmapPerVertex;	
@@ -2655,8 +2661,8 @@ var guiParams={
 		singleBufferTowers:true,
 		explodingBox:false,
 		hyperboloid:false,
-		stonehenge:false,
-		singleBufferStonehenge:true,
+		stonehenge:true,
+		singleBufferStonehenge:false,
 		roads:false,
 		singleBufferRoads:true
 	},

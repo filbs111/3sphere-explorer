@@ -679,6 +679,8 @@
 	uniform vec3 uReflectorDiffColor;
 	uniform vec4 uReflectorPos;
 	uniform float uReflectorCos;
+	uniform float uSpecularStrength;
+	uniform float uSpecularPower;
 	varying vec4 adjustedPos;
 	varying vec4 transformedNormal;	
 	varying vec4 transformedCoord;	
@@ -692,6 +694,16 @@
 	
 		float light = -dot( normalize(adjustedPos), transformedNormal);
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
+		
+#ifdef SPECULAR_ACTIVE
+	//other specular implementation is in tangent space.
+	//this uses 4vecs. guessed but appears to work fine.
+	vec4 eyePos = vec4(0.,0.,0.,1.);
+	vec4 halfVec = normalize( normalize(transformedCoord-eyePos) + normalize(adjustedPos));
+	float phongAmount = uSpecularStrength*pow( max(-dot(halfVec, transformedNormal), 0.),uSpecularPower);
+	light+=phongAmount;
+#endif
+		
 		//falloff
 		light/=0.1 + 5.0*dot(adjustedPos,adjustedPos);
 
