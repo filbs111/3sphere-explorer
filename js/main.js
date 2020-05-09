@@ -25,7 +25,6 @@ function initShaders(){
 	shaderPrograms.texmapPerVertex = loadShader( "shader-texmap-vs", "shader-texmap-fs");
 					
 	//shaderPrograms.texmapPerPixel = loadShader( "shader-texmap-perpixel-vs", "shader-texmap-perpixel-fs");
-	
 	shaderPrograms.texmapPerPixelDiscard = {
 		constant:loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['ATMOS_CONSTANT']),
 		atmos:   loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0']),
@@ -64,7 +63,16 @@ function initShaders(){
 		atmos:   loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['ATMOS_ONE','CONST_ITERS 64.0']),
 		atmos_v2:loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['ATMOS_TWO'])
 	};
-	
+	shaderPrograms.texmap4VecPerPixelDiscard = {
+		constant:loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['ATMOS_CONSTANT']),
+		atmos:   loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['ATMOS_TWO'])
+	};
+	shaderPrograms.texmap4VecPerPixelDiscardPhong = {
+		constant:loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['ATMOS_CONSTANT'], ['SPECULAR_ACTIVE']),
+		atmos:   loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0'], ['SPECULAR_ACTIVE']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['ATMOS_TWO'], ['SPECULAR_ACTIVE'])
+	};
 	shaderPrograms.texmap4VecPerPixelDiscardNormalmap = {
 		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['ATMOS_CONSTANT']),
 		atmos   :loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['ATMOS_ONE','CONST_ITERS 64.0']),
@@ -1232,7 +1240,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 	var relevantColorShader = shaderPrograms.coloredPerPixelDiscard[ guiParams.display.atmosShader ];
 	//var relevantTexmapShader = shaderPrograms.texmapPerPixelDiscard[ guiParams.display.atmosShader ];
-	var relevantTexmapShader = shaderPrograms.texmapPerPixelDiscardPhong[ guiParams.display.atmosShader ];
+	var relevantTexmapShader = guiParams.display.useSpecular? shaderPrograms.texmapPerPixelDiscardPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmapPerPixelDiscard[ guiParams.display.atmosShader ];
 	
 	shaderProgramColored = guiParams.display.perPixelLighting?relevantColorShader:shaderPrograms.coloredPerVertex;
 	shaderProgramTexmap = guiParams.display.perPixelLighting?relevantTexmapShader:shaderPrograms.texmapPerVertex;	
@@ -1669,13 +1677,18 @@ function drawWorldScene(frameTime, isCubemapView) {
 	mat4.identity(mMatrix);							//better to set M, V matrices and leave MV for shader?
 	rotate4mat(mMatrix, 0, 1, duocylinderSpin);
 	
-	activeShaderProgram = shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ];
+	activeShaderProgram = guiParams.display.perPixelLighting? (guiParams.display.useSpecular ? shaderPrograms.texmap4VecPerPixelDiscardPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscard[ guiParams.display.atmosShader ]): shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ];
 	gl.useProgram(activeShaderProgram);
 	performCommon4vecShaderSetup(activeShaderProgram, "not normal map");
 
 	if (guiParams["random boxes"].singleBuffer){
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.randBoxes);
 		drawTennisBall(randBoxBuffers, activeShaderProgram);	//todo draw subset of buffer according to ui controlled number
+	}
+	
+	if (guiParams.drawShapes.singleBufferStonehenge){
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.gray);
+		drawTennisBall(stonehengeBoxBuffers, activeShaderProgram);
 	}
 	
 	activeShaderProgram = guiParams.display.useSpecular ? shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolor[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscardNormalmapVcolor[ guiParams.display.atmosShader ];
@@ -1685,10 +1698,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 	if (guiParams.drawShapes.singleBufferTowers){
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);	//uColor is redundant here since have vertex colors. TODO lose it?
 		drawTennisBall(towerBoxBuffers, activeShaderProgram);
-	}
-	if (guiParams.drawShapes.singleBufferStonehenge){
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.gray);
-		drawTennisBall(stonehengeBoxBuffers, activeShaderProgram);
 	}
 	
 	activeShaderProgram = guiParams.display.useSpecular ? shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscardNormalmap[ guiParams.display.atmosShader ];
@@ -2604,7 +2613,7 @@ function initTexture(){
 	
 	randBoxBuffers.tex=texture;
 	towerBoxBuffers.tex=nmapTexture;
-	stonehengeBoxBuffers.tex=nmapTexture;
+	stonehengeBoxBuffers.tex=texture;
 	roadBoxBuffers.tex=nmapTexture;
 	
 	//texture = makeTexture("img/ash_uvgrid01-grey.tiny.png");	//numbered grid
