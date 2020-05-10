@@ -128,6 +128,16 @@ function initShaders(){
 		atmos:   loadShader( "shader-texmap-vs-duocylinder-sea", "shader-texmap-fs", ['ATMOS_ONE','CONST_ITERS 64.0']),
 		atmos_v2:loadShader( "shader-texmap-vs-duocylinder-sea", "shader-texmap-fs", ['ATMOS_TWO'])
 	};
+	shaderPrograms.duocylinderSeaPerPixelDiscard = {
+		constant:loadShader( "shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['ATMOS_CONSTANT']),
+		atmos:   loadShader( "shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['ATMOS_TWO'])
+	};
+	shaderPrograms.duocylinderSeaPerPixelDiscardPhong = {
+		constant:loadShader( "shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['ATMOS_CONSTANT', ['SPECULAR_ACTIVE']]),
+		atmos:   loadShader( "shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0'], ['SPECULAR_ACTIVE']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['ATMOS_TWO'], ['SPECULAR_ACTIVE'])
+	};
 					
 	shaderPrograms.cubemap = loadShader( "shader-cubemap-vs", "shader-cubemap-fs");
 					
@@ -1741,7 +1751,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			}
 			gl.useProgram(activeShaderProgram);
 		}else{
-			activeShaderProgram = shaderPrograms.duocylinderSea[ guiParams.display.atmosShader ];
+			activeShaderProgram = guiParams.display.perPixelLighting? ( guiParams.display.useSpecular? shaderPrograms.duocylinderSeaPerPixelDiscardPhong[ guiParams.display.atmosShader ] :shaderPrograms.duocylinderSeaPerPixelDiscard[ guiParams.display.atmosShader ]) : shaderPrograms.duocylinderSea[ guiParams.display.atmosShader ];
 			gl.useProgram(activeShaderProgram);
 			gl.uniform1f(activeShaderProgram.uniforms.uTime, seaTime);			
 			gl.uniform1f(activeShaderProgram.uniforms.uZeroLevel, zeroLevel);
