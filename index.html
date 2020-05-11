@@ -1189,8 +1189,16 @@
 	varying vec3 vTextureCoord;
 	uniform float uAtmosThickness;
 	uniform float uAtmosContrast;
-	uniform mat4 uMMatrix;
+#ifdef VS_MATMULT
+	uniform mat4 uVMatrix;
+#else
 	uniform mat4 uMVMatrix;
+#endif
+#ifdef INSTANCED
+	attribute mat4 uMMatrix;	//note still using u prefix so can share code with non instanced version
+#else
+	uniform mat4 uMMatrix;
+#endif
 	uniform mat4 uPMatrix;
 	uniform vec4 uCameraWorldPos;
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
@@ -1207,7 +1215,14 @@
 	void main(void) {
 		vec3 scaledPos = uModelScale*aVertexPosition;
 		vec4 aVertexPositionNormalized = normalize(vec4(scaledPos, 1.0));
-		transformedCoord = uMVMatrix * aVertexPositionNormalized;
+		
+#ifdef VS_MATMULT
+		mat4 MVMatrix = uVMatrix * uMMatrix;
+#else
+		mat4 MVMatrix = uMVMatrix;
+#endif
+		
+		transformedCoord = MVMatrix * aVertexPositionNormalized;
 		
 		gl_Position = uPMatrix * transformedCoord;
 
@@ -1220,9 +1235,9 @@
 		vec4 untransformedTangent = normalize( vec4( aVertexTangent, -dot(aVertexTangent, scaledPos)));	
 		vec4 untransformedBinormal = normalize( vec4( aVertexBinormal, -dot(aVertexBinormal, scaledPos)));	
 		
-		vec4 transformedNormal = uMVMatrix * untransformedNormal;
-		vec4 transformedTangent = uMVMatrix * untransformedTangent;	
-		vec4 transformedBinormal = uMVMatrix * untransformedBinormal; 
+		vec4 transformedNormal = MVMatrix * untransformedNormal;
+		vec4 transformedTangent = MVMatrix * untransformedTangent;	
+		vec4 transformedBinormal = MVMatrix * untransformedBinormal; 
 				
 		vPlayerLightPosTangentSpace.x = dot(transformedTangent, uDropLightPos);
 		vPlayerLightPosTangentSpace.y = dot(transformedBinormal, uDropLightPos);

@@ -2,8 +2,9 @@ var shaderPrograms={};
 
 var shaderProgramColored,	//these are variables that are set to different shaders during running, but could just as well go inside shaderPrograms.
 	shaderProgramTexmap;	//but keeping separate for now so know that all shaderPrograms.something are unchanging
-							
-	
+
+var angle_ext;
+
 function initShaders(){	
 	var initShaderTimeStart = performance.now();
 	
@@ -51,6 +52,19 @@ function initShaders(){
 		atmos:   loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['SPECULAR_ACTIVE']),
 		atmos_v2:loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','ATMOS_TWO'], ['SPECULAR_ACTIVE'])
 	};
+	
+	shaderPrograms.texmapPerPixelDiscardNormalmapPhongVsMatmult = {
+		constant:loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VS_MATMULT','SPECULAR_ACTIVE','ATMOS_CONSTANT'], ['SPECULAR_ACTIVE']),
+		atmos:   loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VS_MATMULT','SPECULAR_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['SPECULAR_ACTIVE']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VS_MATMULT','SPECULAR_ACTIVE','ATMOS_TWO'], ['SPECULAR_ACTIVE'])
+	};
+	shaderPrograms.texmapPerPixelDiscardNormalmapPhongInstanced = {
+		constant:loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['INSTANCED','VS_MATMULT','SPECULAR_ACTIVE','ATMOS_CONSTANT'], ['SPECULAR_ACTIVE']),
+		atmos:   loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['INSTANCED','VS_MATMULT','SPECULAR_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['SPECULAR_ACTIVE']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['INSTANCED','VS_MATMULT','SPECULAR_ACTIVE','ATMOS_TWO'], ['SPECULAR_ACTIVE'])
+	};
+	
+	
 	shaderPrograms.texmapPerPixelDiscardAtmosGradLight = loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-gradlight-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0']); 	//could do more work in vert shader currently because light calculated per vertex - could just pass channel weights to frag shader...
 	shaderPrograms.texmapPerPixelDiscardExplode = {
 		constant:loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['VERTVEL_ACTIVE','ATMOS_CONSTANT']),
@@ -537,10 +551,14 @@ function initBuffers(){
 	roadBoxBuffers.step=0;	//unused
 	
 	function bufferArrayData(buffer, arr, size){
+		 bufferArrayDataF32(buffer, new Float32Array(arr), size);
+	}
+	function bufferArrayDataF32(buffer, f32arr, size){
+		//console.log("size:" + size);
 		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(arr), gl.STATIC_DRAW);
+		gl.bufferData(gl.ARRAY_BUFFER, f32arr, gl.STATIC_DRAW);
 		buffer.itemSize = size;
-		buffer.numItems = arr.length / size;
+		buffer.numItems = f32arr.length / size;
 		console.log("buffered. numitems: " + buffer.numItems);
 	}
 	
@@ -573,6 +591,53 @@ function initBuffers(){
 		bufferObj.vertexIndexBuffer.itemSize = 3;
 		bufferObj.vertexIndexBuffer.numItems = sourceData.indices.length;
 	}
+	
+	//make a matrix buffer for instanced drawing of random boxes
+	var numMats = randomMats.length;
+	//var matrixF32Arr = new Float32Array(numMats*16);
+	console.log("buffering matrix in bits!!!!!!!!");
+	var matrixF32ArrA = new Float32Array(numMats*4);
+	var matrixF32ArrB = new Float32Array(numMats*4);
+	var matrixF32ArrC = new Float32Array(numMats*4);
+	var matrixF32ArrD = new Float32Array(numMats*4);
+	
+	//transponse mats ?? - shouldn't really make any difference. these are just random so4s
+	var transpMat = mat4.create();
+	
+	for (var ii=0,pp=0;ii<numMats;ii++,pp+=4){
+		//matrixF32Arr.set(randomMats[ii],pp);
+		
+		mat4.set(randomMats[ii], transpMat);
+		
+		//hazard a guess that getting rows from wrong place so that ends up non "square" matrix. therefore might repeat mats and hope to get a 
+		//mat4.set(randomMats[Math.floor(ii/5)], transpMat);	//this gets something interesting happening!! seems like strike wrong or something
+		
+	//	mat4.transpose(transpMat);
+		
+		matrixF32ArrA.set(transpMat.slice(0,4),pp);
+		matrixF32ArrB.set(transpMat.slice(4,8),pp);
+		matrixF32ArrC.set(transpMat.slice(8,12),pp);
+		matrixF32ArrD.set(transpMat.slice(12,16),pp);
+	}
+	
+	console.log("made f32 arrs");
+	console.log(matrixF32ArrA);
+	console.log(matrixF32ArrB);
+	console.log(matrixF32ArrC);
+	console.log(matrixF32ArrD);
+	
+	//randBoxBuffers.mats = gl.createBuffer();
+	//bufferArrayData(randBoxBuffers.mats, matrixF32Arr, 16);	//note that piggybacking on buffer object that's used in a different drawing mode - "singleBuffer", wheras mats are used for instanced drawing mode
+	//above seems like doesn't work. should pass matrices by 4 vectors. perhaps buffers should be like that too...
+	//TODO this properly with stride etc? at least do neatly
+	randBoxBuffers.matA = gl.createBuffer();
+	randBoxBuffers.matB = gl.createBuffer();
+	randBoxBuffers.matC = gl.createBuffer();
+	randBoxBuffers.matD = gl.createBuffer();
+	bufferArrayDataF32(randBoxBuffers.matA, matrixF32ArrA, 4);
+	bufferArrayDataF32(randBoxBuffers.matB, matrixF32ArrB, 4);
+	bufferArrayDataF32(randBoxBuffers.matC, matrixF32ArrC, 4);
+	bufferArrayDataF32(randBoxBuffers.matD, matrixF32ArrD, 4);
 	
 	function loadBlenderExport(meshToLoad){
 		return {
@@ -1398,7 +1463,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var numRandomBoxes = guiParams['random boxes'].number;
 	
 	if (numRandomBoxes>0){
-		if (!guiParams['random boxes'].singleBuffer){
+		if (guiParams['random boxes'].drawType == 'indiv'){
 			gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.randBoxes);
 			
 			boxSize = guiParams['random boxes'].size;
@@ -1410,6 +1475,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			numRandomBoxes = Math.min(randomMats.length, numRandomBoxes);	//TODO check this doesn't happen/ make obvious error!
 			
 			prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
+			
 			for (var ii=0;ii<numRandomBoxes;ii++){
 				var thisMat = randomMats[ii];
 				mat4.set(invertedWorldCamera, mvMatrix);
@@ -1422,7 +1488,109 @@ function drawWorldScene(frameTime, isCubemapView) {
 				}
 			}
 		}
+		
+		//don't calculate mvMatrix and pass it in, do it in the shader instead (pass in world camera or inverted world camera)
+		if (guiParams['random boxes'].drawType == 'indivVsMatmult'){
+			
+			shaderSetup(shaderPrograms.texmapPerPixelDiscardNormalmapPhongVsMatmult[ guiParams.display.atmosShader ]);
+			
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.randBoxes);
+			
+			boxSize = guiParams['random boxes'].size;
+			boxRad = boxSize*Math.sqrt(3);
+			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
+			
+		//	var criticalWPos = Math.cos(Math.atan(guiParams.reflector.scale) + Math.atan(boxRad));
+			
+			numRandomBoxes = Math.min(randomMats.length, numRandomBoxes);	//TODO check this doesn't happen/ make obvious error!
+			
+			prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
+			
+			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uVMatrix, false, invertedWorldCamera);	//TODO what to pass in??
+			//gl.uniformMatrix4fv(activeShaderProgram.uniforms.uVMatrix, false, worldCamera);	//TODO what to pass in??
+			
+			for (var ii=0;ii<numRandomBoxes;ii++){
+				var thisMat = randomMats[ii];
+				mat4.set(invertedWorldCamera, mvMatrix);	//only using mvMatrix for f-cull. can render without this, but with indiv draw culls, frust cull is beneficial
+				mat4.multiply(mvMatrix, thisMat);
+				
+			//	if (thisMat[15]>criticalWPos){continue;}	//don't draw boxes too close to portal
+				if (frustrumCull(mvMatrix,boxRad)){
+					mat4.set(thisMat, mMatrix);
+					drawObjectFromPreppedBuffersVsMatmult(cubeBuffers, activeShaderProgram);
+				}
+			}
+		}
+		
+		if (guiParams['random boxes'].drawType == 'instancedArrays'){
+			shaderSetup(shaderPrograms.texmapPerPixelDiscardNormalmapPhongInstanced[ guiParams.display.atmosShader ]);
+			
+			//gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.randBoxes);
+			gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.red);
+			boxSize = guiParams['random boxes'].size;
+			boxRad = boxSize*Math.sqrt(3);
+			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
+			
+			//numRandomBoxes = Math.min(randomMats.length, numRandomBoxes);	//todo figure out how to draw part of array of boxes. also for "singleBuffer" version
+			
+			prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
+			
+			var attrIdx = activeShaderProgram.attributes.uMMatrix;
+			
+			window.attrIdx = attrIdx;
+			
+			gl.enableVertexAttribArray(attrIdx);	//duplicates some work currently in prepBuffersForDrawing
+			gl.enableVertexAttribArray(attrIdx+1);
+			gl.enableVertexAttribArray(attrIdx+2);
+			gl.enableVertexAttribArray(attrIdx+3);
+			
+			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uVMatrix, false, invertedWorldCamera);
+			
+			//gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.mats);
+			//gl.vertexAttribPointer(activeShaderProgram.attributes.uMMatrix, randBoxBuffers.mats.itemSize, gl.FLOAT, false, 0, 0);	//can't send a matrix all at once
+		//	gl.vertexAttribPointer(activeShaderProgram.attributes.uMMatrix, 4, gl.FLOAT, false, 12*4, 0);	//https://community.khronos.org/t/how-to-specify-a-matrix-vertex-attribute/54102/3
+		//	gl.vertexAttribPointer(activeShaderProgram.attributes.uMMatrix+1, 4, gl.FLOAT, false, 12*4, 4*4);	
+		//	gl.vertexAttribPointer(activeShaderProgram.attributes.uMMatrix+2, 4, gl.FLOAT, false, 12*4, 8*4);
+		//	gl.vertexAttribPointer(activeShaderProgram.attributes.uMMatrix+3, 4, gl.FLOAT, false, 12*4, 12*4);
+			/*
+			gl.vertexAttribPointer(activeShaderProgram.attributes.uMMatrix, 4, gl.FLOAT, false, 12, 0);	//https://community.khronos.org/t/how-to-specify-a-matrix-vertex-attribute/54102/3
+			gl.vertexAttribPointer(activeShaderProgram.attributes.uMMatrix+1, 4, gl.FLOAT, false, 12, 4);	
+			gl.vertexAttribPointer(activeShaderProgram.attributes.uMMatrix+2, 4, gl.FLOAT, false, 12, 8);
+			gl.vertexAttribPointer(activeShaderProgram.attributes.uMMatrix+3, 4, gl.FLOAT, false, 12, 12);
+			*/
+			
+			angle_ext.vertexAttribDivisorANGLE(attrIdx, 1);
+			angle_ext.vertexAttribDivisorANGLE(attrIdx+1, 1);
+			angle_ext.vertexAttribDivisorANGLE(attrIdx+2, 1);
+			angle_ext.vertexAttribDivisorANGLE(attrIdx+3, 1);
+			
+			gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.matA);
+			gl.vertexAttribPointer(attrIdx, 4, gl.FLOAT, false, 0, 0);	//https://community.khronos.org/t/how-to-specify-a-matrix-vertex-attribute/54102/3
+			gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.matB);
+			gl.vertexAttribPointer(attrIdx+1, 4, gl.FLOAT, false, 0, 0);
+			gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.matC);
+			gl.vertexAttribPointer(attrIdx+2, 4, gl.FLOAT, false, 0, 0);
+			gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.matD);
+			gl.vertexAttribPointer(attrIdx+3, 4, gl.FLOAT, false, 0, 0);
+			
+			//angle_ext.drawElementsInstancedANGLE(gl.TRIANGLES, cubeBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, 8192);	//TODO use gui num boxes?
+										//DO NOT SET THIS HIGH ON CHROME! works great on firefox, think tanks chrome because due to whatever bug using the right matrices, huge overdraw
+			
+			angle_ext.drawElementsInstancedANGLE(gl.TRIANGLES, cubeBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, 100);	//very low count - to avoid tanking framerate in chrome (bug in extension?)
+					//TODO is consecutive attribute pointers for a matrix not guaranteed? TODO with bodging a matrix together from vectors in vshader.
+			
+			//switch off again??
+			angle_ext.vertexAttribDivisorANGLE(attrIdx, 0);
+			angle_ext.vertexAttribDivisorANGLE(attrIdx+1, 0);
+			angle_ext.vertexAttribDivisorANGLE(attrIdx+2, 0);
+			angle_ext.vertexAttribDivisorANGLE(attrIdx+3, 0);
+			
+		}
 	}
+	
+	//switch back to previous shader (may already be using this depending on which drawType used for 'random boxes'
+	shaderSetup(guiParams.debug.nmapUseShader2 ? (guiParams.display.useSpecular ? shaderPrograms.texmapPerPixelDiscardNormalmapPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmapPerPixelDiscardNormalmap[ guiParams.display.atmosShader ]) : shaderPrograms.texmapPerPixelDiscardNormalmapV1[ guiParams.display.atmosShader ], nmapTexture);
+	
 	
 	
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
@@ -1701,7 +1869,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	gl.useProgram(activeShaderProgram);
 	performCommon4vecShaderSetup(activeShaderProgram, "not normal map");
 
-	if (guiParams["random boxes"].singleBuffer){
+	if (guiParams["random boxes"].drawType == 'singleBuffer'){
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.randBoxes);
 		drawTennisBall(randBoxBuffers, activeShaderProgram);	//todo draw subset of buffer according to ui controlled number
 	}
@@ -2347,11 +2515,11 @@ function enableDisableAttributes(shaderProg){
 	//avoid issue where if object with a lot of attributes has a shader loaded and enableVertexAttribArray was called,
 	//and nothing is bound to it, won't draw anything. 
 	//just disable lots (TODO keep track of which are enabled and enable/disable as required
-	for (var ii=0;ii<8;ii++){
+	for (var ii=0;ii<16;ii++){
 		gl.disableVertexAttribArray(ii);
 	}
 	Object.keys(shaderProg.attributes).forEach(function(item, index){
-		gl.enableVertexAttribArray(gl.getAttribLocation(shaderProg, item));
+		gl.enableVertexAttribArray(gl.getAttribLocation(shaderProg, item));	//TODO is this slow??
 	});
 }
 
@@ -2421,7 +2589,7 @@ function drawObjectFromBuffers(bufferObj, shaderProg, usesCubeMap){
 	drawObjectFromPreppedBuffers(bufferObj, shaderProg);
 }
 function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
-	enableDisableAttributes(shaderProg);
+	enableDisableAttributes(shaderProg);	//TODO more this to shadersetup!!
 	
 	gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexPositionBuffer);
     gl.vertexAttribPointer(shaderProg.attributes.aVertexPosition, bufferObj.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
@@ -2469,12 +2637,21 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 	
 	gl.uniformMatrix4fv(shaderProg.uniforms.uPMatrix, false, pMatrix);
 }
-function drawObjectFromPreppedBuffers(bufferObj, shaderProg){
+function drawObjectFromPreppedBuffers(bufferObj, shaderProg, skipM){
+	//skipM = skipM | false;
+	//skipM = false;
 	gl.uniformMatrix4fv(shaderProg.uniforms.uMVMatrix, false, mvMatrix);
-	if (shaderProg.uniforms.uMMatrix){gl.uniformMatrix4fv(shaderProg.uniforms.uMMatrix, false, mMatrix);}
+	//if (shaderProg.uniforms.uMMatrix  && (!skipM)){gl.uniformMatrix4fv(shaderProg.uniforms.uMMatrix, false, mMatrix);}
+	if (shaderProg.uniforms.uMMatrix  ){gl.uniformMatrix4fv(shaderProg.uniforms.uMMatrix, false, mMatrix);}
 	gl.drawElements(gl.TRIANGLES, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 	//gl.drawElements(gl.LINES, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 }
+
+function drawObjectFromPreppedBuffersVsMatmult(bufferObj, shaderProg){
+	gl.uniformMatrix4fv(shaderProg.uniforms.uMMatrix, false, mMatrix);
+	gl.drawElements(gl.TRIANGLES, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+}
+
 
 var bind2dTextureIfRequired = (function createBind2dTextureIfRequiredFunction(){
 	var currentlyBoundTexture=null;
@@ -2671,7 +2848,7 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	world0:{duocylinderModel:"grid",seaActive:false},
+	world0:{duocylinderModel:"none",seaActive:false},
 	world1:{duocylinderModel:"voxTerrain",seaActive:false},
 	duocylinderRotateSpeed:0,
 	seaLevel:-0.012,
@@ -2699,7 +2876,7 @@ var guiParams={
 		number:maxRandBoxes,	//note ui controlled value does not affect singleBuffer
 		size:0.01,
 		collision:false,
-		singleBuffer:true
+		drawType:'indiv'
 	},
 	"draw 5-cell":false,
 	"subdiv frames":true,
@@ -2827,10 +3004,10 @@ function init(){
 		boxesFolder.add(guiParams.drawShapes.boxes, shape );
 	}
 	var randBoxesFolder = drawShapesFolder.addFolder("random boxes");
-	randBoxesFolder.add(guiParams["random boxes"],"number",0,maxRandBoxes,20);
+	randBoxesFolder.add(guiParams["random boxes"],"number",0,maxRandBoxes,64);
 	randBoxesFolder.add(guiParams["random boxes"],"size",0.001,0.01,0.001);
 	randBoxesFolder.add(guiParams["random boxes"],"collision");
-	randBoxesFolder.add(guiParams["random boxes"],"singleBuffer");
+	randBoxesFolder.add(guiParams["random boxes"],"drawType", ["singleBuffer","indiv","indivVsMatmult","instancedArrays"]);
 	drawShapesFolder.add(guiParams.drawShapes,"teapot");
 	drawShapesFolder.add(guiParams.drawShapes,"teapot scale",0.2,2.0,0.05);
 	drawShapesFolder.add(guiParams.drawShapes,"towers");
@@ -2980,6 +3157,8 @@ function init(){
 	canvas.addEventListener("touchmove", handleTouchMove, false);
 	
 	initGL();
+	angle_ext = gl.getExtension("ANGLE_instanced_arrays");							
+	
 	initTextureFramebuffer();
 	initShaders();
 	initTexture();
