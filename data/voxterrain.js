@@ -62,16 +62,16 @@ function getMatForABCDCCoords(a,b,c){
 	
 	//see moveToDuocylinderAB (called from drawPreppedBufferOnDuocylinder without further shenanigans)
 
-	mat4.identity(tmpRelativeMat);
-	xyzrotate4mat(tmpRelativeMat, [0,0,a]);
-	zmove4mat(tmpRelativeMat, b);
-	xmove4mat(tmpRelativeMat, Math.PI/4 - c );	//or ymove - should check what way up want models to be. PI/4 is onto surface of duocylinder
+	mat4.identity(tmpRelativeMatForVox);
+	xyzrotate4mat(tmpRelativeMatForVox, [0,0,a]);
+	zmove4mat(tmpRelativeMatForVox, b);
+	xmove4mat(tmpRelativeMatForVox, Math.PI/4 - c );	//or ymove - should check what way up want models to be. PI/4 is onto surface of duocylinder
 			//even this doesn't work!! suspect maybe something to do with mvMatrix
 	
 	voxlog("getMatForABCDCCoords");
-	voxlog(tmpRelativeMat.slice(12));
+	voxlog(tmpRelativeMatForVox.slice(12));
 			
-	return tmpRelativeMat;
+	return tmpRelativeMatForVox;
 }
 function get4vecForABCDCCoords(a,b,c){	//simple version first!
 	voxlog("get4vecForABCDCCoords");
@@ -93,10 +93,12 @@ var voxTerrainData = (function generateVoxTerrainData(){
 	}
 
 	//var voxFunction = sinesfunctionthree;
-	//var voxFunction = perlinfunctionTwoSided;
+	var voxFunction = perlinfunctionTwoSided;
 	//var voxFunction = perlinfunctionTwoLevel;
 	//var voxFunction = perlinfunctionSpiral;
-	var voxFunction = balls;
+	//var voxFunction = balls;
+	//var voxFunction = oddBalls;	//this is not continuous so does not play nicely with collision. useful for testing
+	//var voxFunction = wierdBeans;
 	//var voxFunction = brejao;
 	//var voxFunction = shiftedbrejao;
 	//var voxFunction = longHolesTwo;
@@ -900,6 +902,21 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		return - 0.5*ii*ii - 0.5*jj*jj - 0.5*kk*kk + 4;
 	}
 	
+	function oddBalls(ii,jj,kk){
+		ii%=64;
+		jj%=64;
+		kk%=64;
+		
+		ballSize = 1+jj*0.1;
+		
+		kk-=32;
+		ii = ii%8 -4;
+		jj = jj%8 -4;
+		
+		//return - 0.5*ii*ii - 0.5*jj*jj - kk*kk/Math.PI + 4;
+		return - 0.5*ii*ii - 0.5*jj*jj - 0.5*kk*kk + ballSize;
+	}
+	
 	function wierdBeans(ii,jj,kk){
 		ii%=32;
 		jj%=32;
@@ -935,8 +952,8 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		
 		var ringSize = 12;
 		var ringShift = 6;
-		var ringTilt = 0.35;
-		//var ringTilt = 0.5;
+		//var ringTilt = 0.35;
+		var ringTilt = 0.7;
 		//var ringTilt = 0;
 		
 		var x = ii%32 - 16;
@@ -1143,3 +1160,32 @@ function wrapPerlin(ii,jj,kk,wrapscale){
 	
 	return sum/8;	//not equivalent to wrapping perlin - generally result will be smaller.
 }
+
+
+var tmpRelativeMatForVox = mat4.create();	//does same job as tmpRelativeMat but use new variable to avoid trouble with changing file order etc
+
+//put a load of particles on voxel surface
+//gradient descent. maybe quite slow, uneven distribution 
+//faster method might : look at created mesh (triangles). can do equal are probability
+var voxSurfaceParticleMats = (function(){
+	var mats=[];
+	var nummats = 8192;
+	for (nn=0;nn<nummats;nn++){
+		var this4vec = random_quaternion();
+		var thisABC;
+		for (var step=0;step<10;step++){	//only 1 step leads to nice accidental randomness effect
+			estSurfPoint = voxClosestPoint(this4vec);
+			thisABC = estSurfPoint.abc;
+			this4vec = get4vecForABCDCCoords(thisABC.a,thisABC.b,thisABC.c)
+		}
+		
+		//get a matrix for this position. TODO align to surface
+		//use something very similar to main.js:moveToDuocylinderAB, but signs, offsets differ
+		var thisMat = mat4.identity();
+		xyzrotate4mat(thisMat, [0,0, Math.PI/2-thisABC.b]);
+		zmove4mat(thisMat, thisABC.a);
+		xmove4mat(thisMat, Math.PI/4 - thisABC.c);	//or ymove - should check what way up want models to be. PI/4 is onto surface of duocylinder
+		mats.push(thisMat);
+	}
+	return mats;
+})();

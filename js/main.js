@@ -611,7 +611,8 @@ function initBuffers(){
 	var thisMat;
 	for (var ii=0,pp=0;ii<numMats;ii++,pp+=4){
 		//matrixF32Arr.set(randomMats[ii],pp);
-		thisMat=randomMats[ii];
+		//thisMat=randomMats[ii];
+		thisMat=voxSurfaceParticleMats[ii] || randomMats[ii];
 		matrixF32ArrA.set(thisMat.slice(0,4),pp);
 		matrixF32ArrB.set(thisMat.slice(4,8),pp);
 		matrixF32ArrC.set(thisMat.slice(8,12),pp);
@@ -3352,7 +3353,7 @@ var iterateMechanics = (function iterateMechanics(){
 		//note singleBuffer version not implemented, though this could be done by updating vertex data etc (expect relatively inefficient)
 		//this just proves concept of updating buffers in realtime
 		//to be more efficient to achieve this demo effect, could just put velocity as instance attribute, move in shader. could extend by only updating buffer to set velocity/start position matrix on change of velocity.
-		var matsToMove = 200;
+		var matsToMove = 0;	//200;	//TO ui control
 		var moveVec = [0,0,timeElapsed*0.0002];
 		//try modifiying a random box, see if live updating webgl buffers works for instanced rendering
 		for (var ii=0;ii<matsToMove;ii++){
