@@ -1457,8 +1457,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 
 	
-	
-	var numRandomBoxes = guiParams['random boxes'].number;
+	numRandomBoxes = Math.min(randomMats.length, guiParams['random boxes'].number);	//TODO check this doesn't happen/ make obvious error!
 	
 	if (numRandomBoxes>0){
 		if (guiParams['random boxes'].drawType == 'indiv'){
@@ -1469,9 +1468,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
 			
 		//	var criticalWPos = Math.cos(Math.atan(guiParams.reflector.scale) + Math.atan(boxRad));
-			
-			numRandomBoxes = Math.min(randomMats.length, numRandomBoxes);	//TODO check this doesn't happen/ make obvious error!
-			
+						
 			prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
 			
 			for (var ii=0;ii<numRandomBoxes;ii++){
@@ -1499,8 +1496,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
 			
 		//	var criticalWPos = Math.cos(Math.atan(guiParams.reflector.scale) + Math.atan(boxRad));
-			
-			numRandomBoxes = Math.min(randomMats.length, numRandomBoxes);	//TODO check this doesn't happen/ make obvious error!
 			
 			prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
 			
@@ -1587,7 +1582,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.matD);
 			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixD, 4, gl.FLOAT, false, 0, 0);
 			
-			angle_ext.drawElementsInstancedANGLE(gl.TRIANGLES, cubeBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, 8192);	//TODO use gui num boxes?
+			angle_ext.drawElementsInstancedANGLE(gl.TRIANGLES, cubeBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, numRandomBoxes);
 										//DO NOT SET THIS HIGH ON CHROME! works great on firefox, think tanks chrome because due to whatever bug using the right matrices, huge overdraw
 			
 			//angle_ext.drawElementsInstancedANGLE(gl.TRIANGLES, cubeBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, 100);	//very low count - to avoid tanking framerate in chrome (bug in extension?)
