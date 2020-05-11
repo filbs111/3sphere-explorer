@@ -612,7 +612,8 @@ function initBuffers(){
 	for (var ii=0,pp=0;ii<numMats;ii++,pp+=4){
 		//matrixF32Arr.set(randomMats[ii],pp);
 		//thisMat=randomMats[ii];
-		thisMat=voxSurfaceParticleMats[ii] || randomMats[ii];
+		//thisMat=voxSurfaceParticleMats[ii] || randomMats[ii];
+		thisMat=procTerrainSurfaceParticleMats[ii] || randomMats[ii];
 		matrixF32ArrA.set(thisMat.slice(0,4),pp);
 		matrixF32ArrB.set(thisMat.slice(4,8),pp);
 		matrixF32ArrC.set(thisMat.slice(8,12),pp);
@@ -3264,7 +3265,6 @@ for (var ang=0;ang<5;ang++){
 	dodecaDirs.push([[-yValDirection*Math.cos(angRad),xzValDirection, -yValDirection*Math.sin(angRad)], [Math.sin(angRad),0,-Math.cos(angRad)]]);
 }
 
-var duocylinderSpin = 0;
 var reverseCamera=false;
 var currentThrustInput = [0,0,0];
 var iterateMechanics = (function iterateMechanics(){

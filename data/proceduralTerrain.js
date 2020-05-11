@@ -227,3 +227,21 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 	}
 	return {vertices:vertices, normals:normals, binormals:binormals, tangents:tangents, uvcoords:uvcoords, faces:indices};
 })(procTerrainSize);
+
+var procTerrainSurfaceParticleMats = (function(){
+	var mats=[];
+	var nummats = 8192;
+	for (nn=0;nn<nummats;nn++){
+		var this4vec = random_quaternion();
+		var thinfo = terrainGetHeightFor4VecPos(this4vec);	//note this returns coords and height. to do this for 4vec is quite inefficient. TODO create random xy coords and get height.
+		
+		//get a matrix for this position. TODO align to surface
+		//use something very similar to main.js:moveToDuocylinderAB, and to generate voxSurfaceParticleMats, but signs, offsets differ. TODO sort out mess!!
+		var thisMat = mat4.identity();
+		xyzrotate4mat(thisMat, [0,0, thinfo.b]);
+		zmove4mat(thisMat, thinfo.a);
+		xmove4mat(thisMat, Math.PI/4 - Math.sqrt(2)*thinfo.h);	//or ymove - should check what way up want models to be. PI/4 is onto surface of duocylinder
+		mats.push(thisMat);
+	}
+	return mats;
+})();
