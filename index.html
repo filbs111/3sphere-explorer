@@ -1195,7 +1195,11 @@
 	uniform mat4 uMVMatrix;
 #endif
 #ifdef INSTANCED
-	attribute mat4 uMMatrix;	//note still using u prefix so can share code with non instanced version
+//	attribute mat4 uMMatrix;	//note still using u prefix so can share code with non instanced version
+	attribute vec4 aMMatrixA;
+	attribute vec4 aMMatrixB;
+	attribute vec4 aMMatrixC;
+	attribute vec4 aMMatrixD;
 #else
 	uniform mat4 uMMatrix;
 #endif
@@ -1215,6 +1219,11 @@
 	void main(void) {
 		vec3 scaledPos = uModelScale*aVertexPosition;
 		vec4 aVertexPositionNormalized = normalize(vec4(scaledPos, 1.0));
+		
+#ifdef INSTANCED
+	//bodge together a matrix from input vectors because suspect chrome bug
+		mat4 uMMatrix = mat4( aMMatrixA, aMMatrixB, aMMatrixC, aMMatrixD );
+#endif		
 		
 #ifdef VS_MATMULT
 		mat4 MVMatrix = uVMatrix * uMMatrix;

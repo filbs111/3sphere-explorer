@@ -1535,6 +1535,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			
 			prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
 			
+			/*
 			var attrIdx = activeShaderProgram.attributes.uMMatrix;
 			
 			window.attrIdx = attrIdx;
@@ -1543,7 +1544,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.enableVertexAttribArray(attrIdx+1);
 			gl.enableVertexAttribArray(attrIdx+2);
 			gl.enableVertexAttribArray(attrIdx+3);
-			
+			*/
 			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uVMatrix, false, invertedWorldCamera);
 			
 			//gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.mats);
@@ -1558,7 +1559,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.vertexAttribPointer(activeShaderProgram.attributes.uMMatrix+2, 4, gl.FLOAT, false, 12, 8);
 			gl.vertexAttribPointer(activeShaderProgram.attributes.uMMatrix+3, 4, gl.FLOAT, false, 12, 12);
 			*/
-			
+			/*
 			angle_ext.vertexAttribDivisorANGLE(attrIdx, 1);
 			angle_ext.vertexAttribDivisorANGLE(attrIdx+1, 1);
 			angle_ext.vertexAttribDivisorANGLE(attrIdx+2, 1);
@@ -1572,19 +1573,43 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.vertexAttribPointer(attrIdx+2, 4, gl.FLOAT, false, 0, 0);
 			gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.matD);
 			gl.vertexAttribPointer(attrIdx+3, 4, gl.FLOAT, false, 0, 0);
+			*/
 			
-			//angle_ext.drawElementsInstancedANGLE(gl.TRIANGLES, cubeBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, 8192);	//TODO use gui num boxes?
+			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aMMatrixA, 1);
+			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aMMatrixB, 1);
+			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aMMatrixC, 1);
+			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aMMatrixD, 1)
+			
+			gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.matA);
+			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixA, 4, gl.FLOAT, false, 0, 0);	//https://community.khronos.org/t/how-to-specify-a-matrix-vertex-attribute/54102/3
+			gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.matB);
+			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixB, 4, gl.FLOAT, false, 0, 0);
+			gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.matC);
+			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixC, 4, gl.FLOAT, false, 0, 0);
+			gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.matD);
+			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixD, 4, gl.FLOAT, false, 0, 0);
+			
+			angle_ext.drawElementsInstancedANGLE(gl.TRIANGLES, cubeBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, 8192);	//TODO use gui num boxes?
 										//DO NOT SET THIS HIGH ON CHROME! works great on firefox, think tanks chrome because due to whatever bug using the right matrices, huge overdraw
 			
-			angle_ext.drawElementsInstancedANGLE(gl.TRIANGLES, cubeBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, 100);	//very low count - to avoid tanking framerate in chrome (bug in extension?)
+			//angle_ext.drawElementsInstancedANGLE(gl.TRIANGLES, cubeBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, 100);	//very low count - to avoid tanking framerate in chrome (bug in extension?)
 					//TODO is consecutive attribute pointers for a matrix not guaranteed? TODO with bodging a matrix together from vectors in vshader.
 			
 			//switch off again??
+			/*
 			angle_ext.vertexAttribDivisorANGLE(attrIdx, 0);
 			angle_ext.vertexAttribDivisorANGLE(attrIdx+1, 0);
 			angle_ext.vertexAttribDivisorANGLE(attrIdx+2, 0);
 			angle_ext.vertexAttribDivisorANGLE(attrIdx+3, 0);
+			*/
 			
+			//this appears to be unnecessary - maybe only relevant when drawing using angle ext.
+			/*
+			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aMMatrixA, 0);
+			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aMMatrixB, 0);
+			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aMMatrixC, 0);
+			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aMMatrixD, 0);
+			*/
 		}
 	}
 	
@@ -2876,7 +2901,7 @@ var guiParams={
 		number:maxRandBoxes,	//note ui controlled value does not affect singleBuffer
 		size:0.01,
 		collision:false,
-		drawType:'indiv'
+		drawType:'instancedArrays'
 	},
 	"draw 5-cell":false,
 	"subdiv frames":true,
