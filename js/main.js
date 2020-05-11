@@ -5,6 +5,24 @@ var shaderProgramColored,	//these are variables that are set to different shader
 
 var angle_ext;
 
+function bufferArrayData(buffer, arr, size){
+	 bufferArrayDataF32(buffer, new Float32Array(arr), size);
+}
+function bufferArrayDataF32(buffer, f32arr, size){
+	//console.log("size:" + size);
+	gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+	gl.bufferData(gl.ARRAY_BUFFER, f32arr, gl.STATIC_DRAW);
+	buffer.itemSize = size;
+	buffer.numItems = f32arr.length / size;
+	console.log("buffered. numitems: " + buffer.numItems);
+}
+
+function bufferArraySubDataF32(buffer, offs, f32arr){
+	gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+	gl.bufferSubData(gl.ARRAY_BUFFER, offs, f32arr);
+	console.log("buffered. numitems: " + buffer.numItems);
+}
+
 function initShaders(){	
 	var initShaderTimeStart = performance.now();
 	
@@ -550,18 +568,6 @@ function initBuffers(){
 	roadBoxBuffers.divs=1;	//because reusing duocylinder drawing function
 	roadBoxBuffers.step=0;	//unused
 	
-	function bufferArrayData(buffer, arr, size){
-		 bufferArrayDataF32(buffer, new Float32Array(arr), size);
-	}
-	function bufferArrayDataF32(buffer, f32arr, size){
-		//console.log("size:" + size);
-		gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-		gl.bufferData(gl.ARRAY_BUFFER, f32arr, gl.STATIC_DRAW);
-		buffer.itemSize = size;
-		buffer.numItems = f32arr.length / size;
-		console.log("buffered. numitems: " + buffer.numItems);
-	}
-	
 	function loadBufferData(bufferObj, sourceData){
 		bufferObj.vertexPositionBuffer = gl.createBuffer();
 		bufferArrayData(bufferObj.vertexPositionBuffer, sourceData.vertices, 3);
@@ -602,22 +608,14 @@ function initBuffers(){
 	var matrixF32ArrD = new Float32Array(numMats*4);
 	
 	//transponse mats ?? - shouldn't really make any difference. these are just random so4s
-	var transpMat = mat4.create();
-	
+	var thisMat;
 	for (var ii=0,pp=0;ii<numMats;ii++,pp+=4){
 		//matrixF32Arr.set(randomMats[ii],pp);
-		
-		mat4.set(randomMats[ii], transpMat);
-		
-		//hazard a guess that getting rows from wrong place so that ends up non "square" matrix. therefore might repeat mats and hope to get a 
-		//mat4.set(randomMats[Math.floor(ii/5)], transpMat);	//this gets something interesting happening!! seems like strike wrong or something
-		
-	//	mat4.transpose(transpMat);
-		
-		matrixF32ArrA.set(transpMat.slice(0,4),pp);
-		matrixF32ArrB.set(transpMat.slice(4,8),pp);
-		matrixF32ArrC.set(transpMat.slice(8,12),pp);
-		matrixF32ArrD.set(transpMat.slice(12,16),pp);
+		thisMat=randomMats[ii];
+		matrixF32ArrA.set(thisMat.slice(0,4),pp);
+		matrixF32ArrB.set(thisMat.slice(4,8),pp);
+		matrixF32ArrC.set(thisMat.slice(8,12),pp);
+		matrixF32ArrD.set(thisMat.slice(12,16),pp);
 	}
 	
 	console.log("made f32 arrs");
@@ -3352,6 +3350,45 @@ var iterateMechanics = (function iterateMechanics(){
 		var timeElapsed = Math.min(nowTime - lastTime, 50);	//ms. 50ms -> slowdown if drop below 20fps 
 		//console.log("time elapsed: " + timeElapsed);
 		lastTime=nowTime;
+		
+		
+		
+		//move random boxes about
+		//note singleBuffer version not implemented, though this could be done by updating vertex data etc (expect relatively inefficient)
+		//this just proves concept of updating buffers in realtime
+		//to be more efficient to achieve this demo effect, could just put velocity as instance attribute, move in shader. could extend by only updating buffer to set velocity/start position matrix on change of velocity.
+		var matsToMove = 200;
+		var moveVec = [0,0,timeElapsed*0.0002];
+		//try modifiying a random box, see if live updating webgl buffers works for instanced rendering
+		for (var ii=0;ii<matsToMove;ii++){
+			xyzmove4mat(randomMats[ii],moveVec);	//this maybe slow part
+		}
+		
+		if (guiParams["random boxes"].drawType=='instancedArrays'){
+			//this copypasted from elsewhere. todo cleaner
+			var matrixF32ArrA = new Float32Array(matsToMove*4);
+			var matrixF32ArrB = new Float32Array(matsToMove*4);
+			var matrixF32ArrC = new Float32Array(matsToMove*4);
+			var matrixF32ArrD = new Float32Array(matsToMove*4);
+			
+			var thisMat;
+			for (var ii=0,pp=0;ii<matsToMove;ii++,pp+=4){
+				//matrixF32Arr.set(randomMats[ii],pp);
+				thisMat=randomMats[ii];
+				matrixF32ArrA.set(thisMat.slice(0,4),pp);
+				matrixF32ArrB.set(thisMat.slice(4,8),pp);
+				matrixF32ArrC.set(thisMat.slice(8,12),pp);
+				matrixF32ArrD.set(thisMat.slice(12,16),pp);
+			}
+			
+			bufferArraySubDataF32(randBoxBuffers.matA, 0, matrixF32ArrA);
+			bufferArraySubDataF32(randBoxBuffers.matB, 0, matrixF32ArrB);
+			bufferArraySubDataF32(randBoxBuffers.matC, 0, matrixF32ArrC);
+			bufferArraySubDataF32(randBoxBuffers.matD, 0, matrixF32ArrD);
+		}
+		
+		
+		
 		
 		duoCylinderAngVelConst = guiParams.duocylinderRotateSpeed;
 		
