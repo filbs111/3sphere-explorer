@@ -2967,6 +2967,7 @@ var guiParams={
 };
 var settings = {
 	playerBallRad:0.01,
+	characterBallRad:0.001
 }
 
 var worldColors=[];
@@ -3657,7 +3658,7 @@ var iterateMechanics = (function iterateMechanics(){
 				
 				distanceForTerrainNoise = getHeightAboveTerrainFor4VecPos(playerPos);	//TODO actual distance using surface normal (IIRC this is simple vertical height above terrain)
 
-				processTerrainCollisionForBall(playerCentreBallData, settings.playerBallRad);
+				processTerrainCollisionForBall(playerCentreBallData, guiParams["drop spaceship"] ? settings.characterBallRad : settings.playerBallRad);
 				/*
 				for (var legnum=0;legnum<landingLegData.length;legnum++){
 					var landingLeg = landingLegData[legnum];
