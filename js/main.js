@@ -3272,6 +3272,8 @@ for (var ang=0;ang<5;ang++){
 	dodecaDirs.push([[-yValDirection*Math.cos(angRad),xzValDirection, -yValDirection*Math.sin(angRad)], [Math.sin(angRad),0,-Math.cos(angRad)]]);
 }
 
+var debugRoll=0
+
 var reverseCamera=false;
 var currentThrustInput = [0,0,0];
 var iterateMechanics = (function iterateMechanics(){
@@ -3478,6 +3480,21 @@ var iterateMechanics = (function iterateMechanics(){
 		}
 		
 		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
+		
+			//auto-roll upright. with view to using for character controller
+			//could put this outside stepspeed if didn't decay towards 0 roll (could do immediately like do with spinCorrection
+			if (true){
+				//get position of point "above" player by zeroing x,y components of player position. get this in player frame/ dot with player side vector...
+				//var pointAbovePlayer = [ 
+				
+				debugRoll = playerCamera[14]*playerCamera[2] + playerCamera[15]*playerCamera[3];
+					//this works because playerCamera 0 thru 3 represents the player's "side" position in the world - ie move quarter way around world from player in sideways direction
+					//and playerCamera 12 thru 15 represents player's position in the world.
+				rotatePlayer([0,0,-debugRoll*0.1]);
+					//todo check interaction with manual roll - appears jerky
+			}
+		
+		
 			var fractionToMove = 1;
 			if (guiParams.control.smoothMouse == 0 ){
 				fractionToKeep=0;
@@ -3579,6 +3596,8 @@ var iterateMechanics = (function iterateMechanics(){
 			var spd = Math.hypot.apply(null, airSpdVec);
 			
 			infoToShow+=", airspd:" + spd.toFixed(2);
+			infoToShow+=", sshipMat:" + Array.from(sshipMatrix).map(elem=>elem.toFixed(3)).join(",");	//toFixed doesn't work right on float32 array so use Array.from first
+			infoToShow+=" debugRoll: " + debugRoll;
 			document.querySelector("#info2").innerHTML = infoToShow;
 			
 			//want to be able to steer in the air. todo properly - guess maybe wants "lift" from wings, but easiest implementation guess is to increase drag for lateral velocity.
