@@ -3638,17 +3638,20 @@ var iterateMechanics = (function iterateMechanics(){
 				
 				distanceForTerrainNoise = getHeightAboveTerrainFor4VecPos(playerPos);	//TODO actual distance using surface normal (IIRC this is simple vertical height above terrain)
 
+				processTerrainCollisionForBall(playerCentreBallData, settings.playerBallRad);
+				/*
 				for (var legnum=0;legnum<landingLegData.length;legnum++){
-					var landingLeg = landingLegData[legnum]
+					var landingLeg = landingLegData[legnum];
+					processTerrainCollisionForBall(landingLeg, 0.001);
+				}
+				*/
+				function processTerrainCollisionForBall(landingLeg, ballSize){	//0.005 reasonable ballSize for centre of player model. smaller for landing legs
 					var legPosPlayerFrame=landingLeg.pos;
 					var suspensionHeight=landingLeg.suspHeight;
 								
 					var landingLegMat = mat4.create(playerCamera);
 					xyzmove4mat(landingLegMat, legPosPlayerFrame);
 					var legPos = [landingLegMat[12],landingLegMat[13],landingLegMat[14],landingLegMat[15]];	
-	
-					//copied from elsewhere
-					var ballSize = 0.001;	//0.005 reasonable for centre of player model. smaller for landing legs
 					
 					//simple spring force terrain collision - 
 					//lookup height above terrain, subtract some value (height above terrain where restoring force goes to zero - basically maximum extension of landing legs. apply sprint force upward to player proportional to this amount.
