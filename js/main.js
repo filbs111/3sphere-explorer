@@ -2957,7 +2957,8 @@ var guiParams={
 		closestPoint:false,
 		buoys:false,
 		nmapUseShader2:true,
-		showSpeedOverlay:false
+		showSpeedOverlay:false,
+		emitFire:false
 	},
 	audio:{
 		volume:0.2,
@@ -3094,6 +3095,7 @@ function init(){
 		console.log(ols);
 		ols.display = (ols.display == 'block')? 'none':'block';
 		});
+	debugFolder.add(guiParams.debug, "emitFire");
 	
 	var audioFolder = gui.addFolder('audio');
 	audioFolder.add(guiParams.audio, "volume", 0,1,0.1).onChange(MySound.setGlobalVolume);
@@ -3607,6 +3609,16 @@ var iterateMechanics = (function iterateMechanics(){
 				if (keyThing.keystate(71) ||( activeGp && activeGp.buttons[gpSettings.fireButton].value) || (pointerLocked && mouseInfo.buttons&1)){	//G key or joypad button or LMB (pointer locked)
 					fireGun();
 					autoFireCountdown=autoFireCountdownStartVal;
+				}
+			}
+			
+			//particle stream
+			if (guiParams.debug.emitFire){
+				if (Math.random()<0.5){
+					//making a new matrix is inefficient - expect better if reused a temp matrix, copied it into buffer
+					var newm4 = mat4.create(sshipMatrix);
+					xyzmove4mat(newm4, [1,1,1].map(elem => {return 0.012*elem*(Math.random()-0.5)}));	//square uniform distibution
+					new Explosion({matrix:newm4,world:sshipWorld}, 0.0001, [0.2,0.06,0.06]);
 				}
 			}
 			
