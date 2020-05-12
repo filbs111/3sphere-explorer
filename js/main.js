@@ -14,13 +14,11 @@ function bufferArrayDataF32(buffer, f32arr, size){
 	gl.bufferData(gl.ARRAY_BUFFER, f32arr, gl.STATIC_DRAW);
 	buffer.itemSize = size;
 	buffer.numItems = f32arr.length / size;
-	console.log("buffered. numitems: " + buffer.numItems);
 }
 
 function bufferArraySubDataF32(buffer, offs, f32arr){
 	gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
 	gl.bufferSubData(gl.ARRAY_BUFFER, offs, f32arr);
-	console.log("buffered. numitems: " + buffer.numItems);
 }
 
 function initShaders(){	
@@ -598,46 +596,51 @@ function initBuffers(){
 		bufferObj.vertexIndexBuffer.numItems = sourceData.indices.length;
 	}
 	
-	//make a matrix buffer for instanced drawing of random boxes
-	var numMats = randomMats.length;
-	//var matrixF32Arr = new Float32Array(numMats*16);
-	console.log("buffering matrix in bits!!!!!!!!");
-	var matrixF32ArrA = new Float32Array(numMats*4);
-	var matrixF32ArrB = new Float32Array(numMats*4);
-	var matrixF32ArrC = new Float32Array(numMats*4);
-	var matrixF32ArrD = new Float32Array(numMats*4);
 	
-	//transponse mats ?? - shouldn't really make any difference. these are just random so4s
-	var thisMat;
-	for (var ii=0,pp=0;ii<numMats;ii++,pp+=4){
-		//matrixF32Arr.set(randomMats[ii],pp);
-		//thisMat=randomMats[ii];
-		//thisMat=voxSurfaceParticleMats[ii] || randomMats[ii];
-		thisMat=procTerrainSurfaceParticleMats[ii] || randomMats[ii];
-		matrixF32ArrA.set(thisMat.slice(0,4),pp);
-		matrixF32ArrB.set(thisMat.slice(4,8),pp);
-		matrixF32ArrC.set(thisMat.slice(8,12),pp);
-		matrixF32ArrD.set(thisMat.slice(12,16),pp);
+	randBoxBuffers.randMatrixBuffers = glBufferMatrixUniformDataForInstancedDrawing(randomMats);
+	randBoxBuffers.procTerrainMatrixBuffers = glBufferMatrixUniformDataForInstancedDrawing(procTerrainSurfaceParticleMats);
+	randBoxBuffers.voxTerrainMatrixBuffers = glBufferMatrixUniformDataForInstancedDrawing(voxSurfaceParticleMats);
+	
+	function glBufferMatrixUniformDataForInstancedDrawing(sourceMatArr){
+		//make a matrix buffer for instanced drawing of random boxes
+		var numMats = sourceMatArr.length;
+		//var matrixF32Arr = new Float32Array(numMats*16);
+		console.log("buffering matrix in bits!!!!!!!!");
+		var matrixF32ArrA = new Float32Array(numMats*4);
+		var matrixF32ArrB = new Float32Array(numMats*4);
+		var matrixF32ArrC = new Float32Array(numMats*4);
+		var matrixF32ArrD = new Float32Array(numMats*4);
+		
+		var thisMat;
+		for (var ii=0,pp=0;ii<numMats;ii++,pp+=4){
+			thisMat=sourceMatArr[ii];
+			matrixF32ArrA.set(thisMat.slice(0,4),pp);
+			matrixF32ArrB.set(thisMat.slice(4,8),pp);
+			matrixF32ArrC.set(thisMat.slice(8,12),pp);
+			matrixF32ArrD.set(thisMat.slice(12,16),pp);
+		}
+		/*
+		console.log("made f32 arrs");
+		console.log(matrixF32ArrA);
+		console.log(matrixF32ArrB);
+		console.log(matrixF32ArrC);
+		console.log(matrixF32ArrD);
+		*/
+		//randBoxBuffers.mats = gl.createBuffer();
+		//bufferArrayData(randBoxBuffers.mats, matrixF32Arr, 16);	//note that piggybacking on buffer object that's used in a different drawing mode - "singleBuffer", wheras mats are used for instanced drawing mode
+		//above seems like doesn't work. should pass matrices by 4 vectors. perhaps buffers should be like that too...
+		//TODO this properly with stride etc? at least do neatly
+		var matA = gl.createBuffer();
+		var matB = gl.createBuffer();
+		var matC = gl.createBuffer();
+		var matD = gl.createBuffer();
+		bufferArrayDataF32(matA, matrixF32ArrA, 4);
+		bufferArrayDataF32(matB, matrixF32ArrB, 4);
+		bufferArrayDataF32(matC, matrixF32ArrC, 4);
+		bufferArrayDataF32(matD, matrixF32ArrD, 4);
+		
+		return {a:matA, b:matB, c:matC, d:matD};
 	}
-	
-	console.log("made f32 arrs");
-	console.log(matrixF32ArrA);
-	console.log(matrixF32ArrB);
-	console.log(matrixF32ArrC);
-	console.log(matrixF32ArrD);
-	
-	//randBoxBuffers.mats = gl.createBuffer();
-	//bufferArrayData(randBoxBuffers.mats, matrixF32Arr, 16);	//note that piggybacking on buffer object that's used in a different drawing mode - "singleBuffer", wheras mats are used for instanced drawing mode
-	//above seems like doesn't work. should pass matrices by 4 vectors. perhaps buffers should be like that too...
-	//TODO this properly with stride etc? at least do neatly
-	randBoxBuffers.matA = gl.createBuffer();
-	randBoxBuffers.matB = gl.createBuffer();
-	randBoxBuffers.matC = gl.createBuffer();
-	randBoxBuffers.matD = gl.createBuffer();
-	bufferArrayDataF32(randBoxBuffers.matA, matrixF32ArrA, 4);
-	bufferArrayDataF32(randBoxBuffers.matB, matrixF32ArrB, 4);
-	bufferArrayDataF32(randBoxBuffers.matC, matrixF32ArrC, 4);
-	bufferArrayDataF32(randBoxBuffers.matD, matrixF32ArrD, 4);
 	
 	function loadBlenderExport(meshToLoad){
 		return {
@@ -1299,7 +1302,7 @@ function updateGunTargeting(matrix){
 var lgMat;
 
 function drawWorldScene(frameTime, isCubemapView) {
-		
+	var worldInfo = (colorsSwitch==0) ? guiParams.world0 : guiParams.world1;	//todo use array
 	var colorsSwitch = ((isCubemapView && guiParams.reflector.isPortal)?1:0)^offsetCameraContainer.world;
 	
 	var localVecFogColor = worldColors[colorsSwitch];
@@ -1530,6 +1533,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 			
 			prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
 			
+			var matrixBuffers = randBoxBuffers.randMatrixBuffers;	//todo neater selection code (array of terrain types?) TODO select mats array for other drawing types (eg indivVsMatmult)
+			if (worldInfo.duocylinderModel == 'procTerrain') {matrixBuffers = randBoxBuffers.procTerrainMatrixBuffers;}
+			if (worldInfo.duocylinderModel == 'voxTerrain') {matrixBuffers = randBoxBuffers.voxTerrainMatrixBuffers;}
+			
 			/*
 			var attrIdx = activeShaderProgram.attributes.uMMatrix;
 			
@@ -1560,13 +1567,13 @@ function drawWorldScene(frameTime, isCubemapView) {
 			angle_ext.vertexAttribDivisorANGLE(attrIdx+2, 1);
 			angle_ext.vertexAttribDivisorANGLE(attrIdx+3, 1);
 			
-			gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.matA);
+			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffers.a);
 			gl.vertexAttribPointer(attrIdx, 4, gl.FLOAT, false, 0, 0);	//https://community.khronos.org/t/how-to-specify-a-matrix-vertex-attribute/54102/3
-			gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.matB);
+			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffers.b);
 			gl.vertexAttribPointer(attrIdx+1, 4, gl.FLOAT, false, 0, 0);
-			gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.matC);
+			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffers.c);
 			gl.vertexAttribPointer(attrIdx+2, 4, gl.FLOAT, false, 0, 0);
-			gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.matD);
+			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffers.d);
 			gl.vertexAttribPointer(attrIdx+3, 4, gl.FLOAT, false, 0, 0);
 			*/
 			
@@ -1575,13 +1582,13 @@ function drawWorldScene(frameTime, isCubemapView) {
 			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aMMatrixC, 1);
 			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aMMatrixD, 1)
 			
-			gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.matA);
+			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffers.a);
 			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixA, 4, gl.FLOAT, false, 0, 0);	//https://community.khronos.org/t/how-to-specify-a-matrix-vertex-attribute/54102/3
-			gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.matB);
+			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffers.b);
 			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixB, 4, gl.FLOAT, false, 0, 0);
-			gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.matC);
+			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffers.c);
 			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixC, 4, gl.FLOAT, false, 0, 0);
-			gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.matD);
+			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffers.d);
 			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixD, 4, gl.FLOAT, false, 0, 0);
 			
 			angle_ext.drawElementsInstancedANGLE(gl.TRIANGLES, cubeBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, numRandomBoxes);
@@ -1643,8 +1650,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	//switch to non-normalmap shader
 //	shaderSetup(shaderProgramTexmap, texture);
-	
-	var worldInfo = (colorsSwitch==0) ? guiParams.world0 : guiParams.world1;	//todo use array
 	
 	var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//copied from elsewhere
 		
@@ -3353,7 +3358,7 @@ var iterateMechanics = (function iterateMechanics(){
 		//note singleBuffer version not implemented, though this could be done by updating vertex data etc (expect relatively inefficient)
 		//this just proves concept of updating buffers in realtime
 		//to be more efficient to achieve this demo effect, could just put velocity as instance attribute, move in shader. could extend by only updating buffer to set velocity/start position matrix on change of velocity.
-		var matsToMove = 0;	//200;	//TO ui control
+		var matsToMove = 200;	//TO ui control. note only affects drawing when these boxes are displayed.
 		var moveVec = [0,0,timeElapsed*0.0002];
 		//try modifiying a random box, see if live updating webgl buffers works for instanced rendering
 		for (var ii=0;ii<matsToMove;ii++){
@@ -3377,10 +3382,10 @@ var iterateMechanics = (function iterateMechanics(){
 				matrixF32ArrD.set(thisMat.slice(12,16),pp);
 			}
 			
-			bufferArraySubDataF32(randBoxBuffers.matA, 0, matrixF32ArrA);
-			bufferArraySubDataF32(randBoxBuffers.matB, 0, matrixF32ArrB);
-			bufferArraySubDataF32(randBoxBuffers.matC, 0, matrixF32ArrC);
-			bufferArraySubDataF32(randBoxBuffers.matD, 0, matrixF32ArrD);
+			bufferArraySubDataF32(randBoxBuffers.randMatrixBuffers.a, 0, matrixF32ArrA);
+			bufferArraySubDataF32(randBoxBuffers.randMatrixBuffers.b, 0, matrixF32ArrB);
+			bufferArraySubDataF32(randBoxBuffers.randMatrixBuffers.c, 0, matrixF32ArrC);
+			bufferArraySubDataF32(randBoxBuffers.randMatrixBuffers.d, 0, matrixF32ArrD);
 		}
 		
 		
