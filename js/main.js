@@ -2901,7 +2901,8 @@ var guiParams={
 		number:maxRandBoxes,	//note ui controlled value does not affect singleBuffer
 		size:0.01,
 		collision:false,
-		drawType:'instancedArrays'
+		drawType:'instancedArrays',
+		numToMove:0
 	},
 	"draw 5-cell":false,
 	"subdiv frames":true,
@@ -3036,6 +3037,7 @@ function init(){
 	randBoxesFolder.add(guiParams["random boxes"],"size",0.001,0.01,0.001);
 	randBoxesFolder.add(guiParams["random boxes"],"collision");
 	randBoxesFolder.add(guiParams["random boxes"],"drawType", ["singleBuffer","indiv","indivVsMatmult","instancedArrays"]);
+	randBoxesFolder.add(guiParams["random boxes"],"numToMove", 0,maxRandBoxes,64);
 	drawShapesFolder.add(guiParams.drawShapes,"teapot");
 	drawShapesFolder.add(guiParams.drawShapes,"teapot scale",0.2,2.0,0.05);
 	drawShapesFolder.add(guiParams.drawShapes,"towers");
@@ -3365,7 +3367,7 @@ var iterateMechanics = (function iterateMechanics(){
 		//note singleBuffer version not implemented, though this could be done by updating vertex data etc (expect relatively inefficient)
 		//this just proves concept of updating buffers in realtime
 		//to be more efficient to achieve this demo effect, could just put velocity as instance attribute, move in shader. could extend by only updating buffer to set velocity/start position matrix on change of velocity.
-		var matsToMove = 200;	//TO ui control. note only affects drawing when these boxes are displayed.
+		var matsToMove = guiParams['random boxes'].numToMove;	//TO ui control. note only affects drawing when these boxes are displayed.
 		var moveVec = [0,0,timeElapsed*0.0002];
 		//try modifiying a random box, see if live updating webgl buffers works for instanced rendering
 		for (var ii=0;ii<matsToMove;ii++){
@@ -3620,6 +3622,7 @@ var iterateMechanics = (function iterateMechanics(){
 			//TODO better aerodynamic model - would like decent "steerability" without too much slowdown when completely sideways.
 			airSpdVec[0]*=0.996;	//left/right
 			airSpdVec[1]*=0.996;	//up/down
+				//TODO squared speed drag for these?
 			
 			if (guiParams.control.handbrake){
 				for (var cc=0;cc<3;cc++){
