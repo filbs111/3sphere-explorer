@@ -2944,7 +2944,7 @@ var guiParams={
 		onRails:false,
 		handbrake:false,
 		spinCorrection:true,
-		sriMechStr:0.1,
+		sriMechStr:1,
 		smoothMouse:200
 	},
 	display:{
@@ -3086,7 +3086,7 @@ function init(){
 	controlFolder.add(guiParams.control, "onRails");
 	controlFolder.add(guiParams.control, "handbrake");
 	controlFolder.add(guiParams.control, "spinCorrection");
-	controlFolder.add(guiParams.control, "sriMechStr",0,0.5,0.05);
+	controlFolder.add(guiParams.control, "sriMechStr",0,5,0.5);
 	controlFolder.add(guiParams.control, 'lockPointer');
 	controlFolder.add(guiParams.control, 'smoothMouse', 0, 1000,50);
 	
@@ -3521,9 +3521,7 @@ var iterateMechanics = (function iterateMechanics(){
 				var xxplusyy = playerCamera[12]*playerCamera[12] + playerCamera[13]*playerCamera[13];
 				var multFactor = 4*xxplusyy*(1-xxplusyy);
 				
-				rotatePlayer([0,0,-debugRoll*guiParams.control.sriMechStr*multFactor]);
-
-					//todo fix jerky appearance. guess due to interpolation. (guess should use force instead of direct angle change for collisions to work better anyway)
+				playerAngVelVec[2]+=debugRoll*guiParams.control.sriMechStr*multFactor
 			}
 		
 		
