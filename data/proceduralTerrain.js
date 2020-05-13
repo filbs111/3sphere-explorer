@@ -97,8 +97,9 @@ var terrainHeightData = (function generateTerrainHeightData(){
 		allData.push(dataForI);
 		for (jj=0;jj<procTerrainSize;jj++){
 			//dataForI.push(terrainPrecalcHeight(ii,jj));
+			dataForI.push(terrainPrecalcHeightPerlin(ii,jj));
 			//dataForI.push(terrainPrecalcHeightCastellated(ii,jj));
-			dataForI.push(terrainPrecalcHeight111(ii,jj));
+			//dataForI.push(terrainPrecalcHeight111(ii,jj));
 		}
 	}
 	return allData;
@@ -146,6 +147,18 @@ var terrainHeightData = (function generateTerrainHeightData(){
 		//return Math.sqrt(2)*height;	//this makes zigzag "square" if comment out fudge factor multiplications (same commit)
 	}
 	
+	
+	function terrainPrecalcHeightPerlin(ii,jj){			//todo perlin generator for correct scale?
+		return 2.8*sumPerlinWrap(ii/64,jj/64,0,2);
+		//noise.perlin3 is quite odd. noise.perlin3(0,0,n) returns 0 always, suggesting doesn't treat all coords the same. TODO own perlin!!
+															
+		//noise.perlin3 seems to be 0 for any integer coords, eg (0,0,0), (1,2,3) etc, but (0.5,0,0) does not match (1.5,0,0) etc
+		//appears to truly wrap every 256 
+				
+		//todo make something more efficient, should make small random grid, then make one 2x larger, adding tiled contribution from smaller grid, and so on. that way have something live 256x256 calls, instead of 256x256xoctaves. (check how slow this function is now)
+		
+		//suspect that high detail (octaves) data might be nothing here due to sampling
+	}
 	
 })();
 
