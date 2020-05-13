@@ -113,7 +113,10 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		
 		var a = -Math.atan2(vec[2],vec[3]);	//note the - here, not used in procTerrain
 		var b = Math.atan2(vec[0],vec[1]);
-		var c = -0.5*Math.asin( (vec[0]*vec[0] + vec[1]*vec[1]) - (vec[2]*vec[2] + vec[3]*vec[3]));	//this height of 4vec that can be compared to landscape height
+		
+		var sineVal = (vec[0]*vec[0] + vec[1]*vec[1]) - (vec[2]*vec[2] + vec[3]*vec[3]);
+		sineVal = Math.max(Math.min(sineVal,1),-1);
+		var c = -0.5*Math.asin(sineVal);	//this height of 4vec that can be compared to landscape height
 	
 		var aa=multiplier*decentMod(a,Math.PI);		//vox terrain currently repeated 2x2 squares
 		var bb=multiplier*decentMod(b + duocylinderSpin,Math.PI);
@@ -125,7 +128,9 @@ var voxTerrainData = (function generateVoxTerrainData(){
 	voxABCFor4vec = function(vec){	//just testing
 		var a = -Math.atan2(vec[2],vec[3]);	//note the - here, not used in procTerrain
 		var b = Math.atan2(vec[0],vec[1]);
-		var c = -0.5*Math.asin( (vec[0]*vec[0] + vec[1]*vec[1]) - (vec[2]*vec[2] + vec[3]*vec[3]));	//this height of 4vec that can be compared to landscape height
+		var sineVal = (vec[0]*vec[0] + vec[1]*vec[1]) - (vec[2]*vec[2] + vec[3]*vec[3]);
+		sineVal = Math.max(Math.min(sineVal,1),-1);
+		var c = -0.5*Math.asin(sineVal);	//this height of 4vec that can be compared to landscape height
 		return {a:a,b:b,c:c}
 	}
 	voxClosestPoint = function(vec){	//return a 4vec position of (approximate) closest point on surface to the input point.

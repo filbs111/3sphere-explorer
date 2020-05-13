@@ -4,13 +4,14 @@ var procTerrainSize=256;
 function getInterpHeightForAB(aa,bb){
 	
 	if (aa!=aa || bb!=bb){
-		console.log("NaN input to getInterpHeightForAB");
+	//	console.log("NaN input to getInterpHeightForAB");
 		console.log(aa, bb);
+		return -1;	//todo what should return here? (really should never get here, best to look at where this is called)
 	}
 	
 	//interpolate height. currently this func used for realtime height detection and mesh creation, and this should make latter slower, but unimportant.
-	var aaFloor = Math.floor(aa);
-	var bbFloor = Math.floor(bb);
+	var aaFloor = Math.floor(aa);	//%procTerrainSize;	//use % if get problems here (previously aa, bb could be procTerrainSize
+	var bbFloor = Math.floor(bb);	//%procTerrainSize;
 	var aaCeil = (aaFloor + 1)%procTerrainSize;	//&255 maybe faster
 	var bbCeil = (bbFloor + 1)%procTerrainSize;
 	var aaRemainder = aa-aaFloor;
@@ -19,8 +20,10 @@ function getInterpHeightForAB(aa,bb){
 	//check for bad input
 	//seems that NaN gets in here (aa,bb)
 	if ( aaFloor<0 || bbFloor<0 || aaCeil<0 || bbCeil<0 || aaFloor>=procTerrainSize || bbFloor>=procTerrainSize || aaCeil>=procTerrainSize || bbCeil>=procTerrainSize){
-		console.log("bad input!");
-		console.log({aa:aa, bb:bb, aaFloor:aaFloor, bbFloor:bbFloor, aaCeil:aaCeil, bbCeil:bbCeil});
+	//	console.log("bad input!");
+		console.log({aa:aa, bb:bb, aaFloor:aaFloor, bbFloor:bbFloor, aaCeil:aaCeil, bbCeil:bbCeil, procTerrainSize:procTerrainSize});
+		//this results in a bug so return something! seems that is looking up index 256
+		return -1;
 	}
 	
 	return (1-aaRemainder)*((1-bbRemainder)*terrainGetHeight(aaFloor,bbFloor) + bbRemainder*terrainGetHeight(aaFloor,bbCeil)) +
@@ -34,16 +37,20 @@ function terrainGetHeightFor4VecPos(vec){
 	var b = Math.atan2(vec[0],vec[1]);
 	
 	//TODO interpolation across polygon. initially just reuse equation used to generate terrain grid data.
-	var aa=multiplier*decentMod(a,2*Math.PI);
-	var bb=multiplier*decentMod(b + duocylinderSpin,2*Math.PI);
+	//var aa=multiplier*decentMod(a,2*Math.PI);
+	//var bb=multiplier*decentMod(b + duocylinderSpin,2*Math.PI);
+	var aa=decentMod(multiplier*a,procTerrainSize);
+	var bb=decentMod(multiplier*b,procTerrainSize);
 	
 	if (vec[0]!=vec[0] || vec[1]!=vec[1] || vec[2]!=vec[2]){	//things can go wrong here with fast collision with boxes
 		console.log("NaN vector input to terrainGetHeightFor4VecPos");
 		console.log(vec);
+		return {a:0, b:0 , h:-1};	//todo what should return here? 
 	}
 	if (aa!=aa || bb!=bb){
 		console.log("NaN ab in terrainGetHeightFor4VecPos");
 		console.log(aa, bb);
+		return {a:0, b:0 , h:-1};	//todo what should return here? 
 	}
 	
 	var interpolatedHeight = getInterpHeightForAB(aa,bb);
@@ -61,11 +68,16 @@ function getHeightAboveTerrainFor4VecPos(vec){
 	var a = Math.atan2(vec[2],vec[3]);
 	var b = Math.atan2(vec[0],vec[1]);
 	
-	var c = -0.5*Math.asin( (vec[0]*vec[0] + vec[1]*vec[1]) - (vec[2]*vec[2] + vec[3]*vec[3]));	//this height of 4vec that can be compared to landscape height
+	var sineVal = (vec[0]*vec[0] + vec[1]*vec[1]) - (vec[2]*vec[2] + vec[3]*vec[3]);
+	sineVal = Math.max(Math.min(sineVal,1),-1);	//will be screwed if this is >1 / <-1 .
+	
+	var c = -0.5*Math.asin( sineVal );	//this height of 4vec that can be compared to landscape height
 	
 	//TODO interpolation across polygon. initially just reuse equation used to generate terrain grid data.
-	var aa=multiplier*decentMod(a,2*Math.PI);
-	var bb=multiplier*decentMod(b + duocylinderSpin,2*Math.PI);
+	//var aa=multiplier*decentMod(a,2*Math.PI);
+	//var bb=multiplier*decentMod(b + duocylinderSpin,2*Math.PI);
+	var aa=decentMod(multiplier*a,procTerrainSize);
+	var bb=decentMod(multiplier*(b + duocylinderSpin),procTerrainSize);
 	var h = (Math.PI/4)*getInterpHeightForAB(aa,bb);
 	
 	h*=Math.sqrt(2);	//fudge factor. TODO figure out if this is true height (think "true" height is before multtiply)
@@ -75,7 +87,7 @@ function getHeightAboveTerrainFor4VecPos(vec){
 
 function decentMod(num,toModBy){	//handle crappy nature of mod function (gives -ve if -ve)
 	var returnnum = num%toModBy;
-	return returnnum>0? returnnum : returnnum+toModBy;
+	return returnnum<0? returnnum+toModBy: returnnum;
 }
 
 var terrainHeightData = (function generateTerrainHeightData(){
