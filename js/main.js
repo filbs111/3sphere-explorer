@@ -2851,6 +2851,13 @@ function initTexture(){
 
 function makeTexture(src) {	//to do OO
 	var texture = gl.createTexture();
+	
+	bind2dTextureIfRequired(texture);	//dummy 1 pixel image to avoid error logs. https://stackoverflow.com/questions/21954036/dartweb-gl-render-warning-texture-bound-to-texture-unit-0-is-not-renderable
+		//(TODO better to wait for load, or use single shared 1pix texture (bind2dTextureIfRequired to check that texture loaded, by flag on texture? if not loaded, bind the shared summy image?
+		//TODO progressive detail load?
+	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+              new Uint8Array([255, 0, 255, 255])); // magenta. should be obvious when tex not loaded.
+	
 	texture.image = new Image();
 	texture.image.onload = function(){
 		bind2dTextureIfRequired(texture);
