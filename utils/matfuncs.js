@@ -37,7 +37,7 @@ var matPool = (function makeMatPool(){
 function xyzmove4mat(mat, movevector){
 	if (mat.qPair){
 		mat.qPair = multiply_qpairs( mat.qPair, makemovequatpair(scalarvectorprod(0.5,movevector)) );
-		convert_quats_to_4matrix(mat.qPair, playerCamera);	//this func now sets a matrix passed in to be equivalent to qpair
+		convert_quats_to_4matrix(mat.qPair, mat);	//this func now sets a matrix passed in to be equivalent to qpair
 		return;
 	}
 	

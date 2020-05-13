@@ -539,7 +539,15 @@ function initBuffers(){
 	loadBufferData(hyperboloidBuffers, hyperboloidData);
 
 	for (var ii=0;ii<maxRandBoxes;ii++){
-		thisMat = convert_quats_to_4matrix(random_quat_pair(), mat4.create());
+		//thisMat = convert_quats_to_4matrix(random_quat_pair(), mat4.create());
+	
+		//using qpair fixes bug where boxes that are moved a lot render black when close to the camera, expect because 4matrix gets bent out of shape
+		//this has performance overhead. TODO speed up. faster qpair code? use qpairs in shader? periodically fix matrix? just keep a static unmoved matrix, move this by increasing amount every frame (applicable to special case of these straight line moving boxes)?
+	
+		var thisQpair = random_quat_pair();
+		thisMat = convert_quats_to_4matrix(thisQpair, mat4.create());
+		thisMat.qPair = thisQpair;
+	
 		randomMats.push(thisMat);
 	}
 	
@@ -2804,6 +2812,7 @@ var texture,hudTexture,hudTextureSmallCircles,hudTexturePlus,hudTextureX,hudText
 function initTexture(){
 	texture = makeTexture("img/0033.jpg");
 	nmapTexture = makeTexture("img/images.squarespace-cdn.com.png");	//button cushion
+	//nmapTexture = makeTexture("img/no-git/5512-normal.jpg");
 	hudTexture = makeTexture("img/circles.png");
 	hudTextureSmallCircles = makeTexture("img/smallcircles.png");
 	hudTexturePlus = makeTexture("img/plus.png");
