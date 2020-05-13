@@ -2928,6 +2928,7 @@ var guiParams={
 		onRails:false,
 		handbrake:false,
 		spinCorrection:true,
+		sriMechStr:0.1,
 		smoothMouse:200
 	},
 	display:{
@@ -3068,6 +3069,7 @@ function init(){
 	controlFolder.add(guiParams.control, "onRails");
 	controlFolder.add(guiParams.control, "handbrake");
 	controlFolder.add(guiParams.control, "spinCorrection");
+	controlFolder.add(guiParams.control, "sriMechStr",0,0.5,0.05);
 	controlFolder.add(guiParams.control, 'lockPointer');
 	controlFolder.add(guiParams.control, 'smoothMouse', 0, 1000,50);
 	
@@ -3491,8 +3493,20 @@ var iterateMechanics = (function iterateMechanics(){
 				debugRoll = playerCamera[14]*playerCamera[2] + playerCamera[15]*playerCamera[3];
 					//this works because playerCamera 0 thru 3 represents the player's "side" position in the world - ie move quarter way around world from player in sideways direction
 					//and playerCamera 12 thru 15 represents player's position in the world.
-				rotatePlayer([0,0,-debugRoll*0.1]);
-					//todo check interaction with manual roll - appears jerky
+					//not ideal - will be nothing when y=z=0.
+				//debugRoll-= playerCamera[12]*playerCamera[0] + playerCamera[13]*playerCamera[1];	//similar to above but this part -> when x=y=0
+				debugRoll-= playerCamera[12]*playerCamera[0] + playerCamera[13]*playerCamera[1];	//similar to above but this part -> when x=y=0
+
+				//multiply by factor that describes how far from top/bottom "poles" (x=y=0, w=z=0) are.
+				//something like 1 -(x*x + y*y - z*z - w*w)^2
+				//since x*x + y*y + z*z + w*w = 1, get 
+				//	1 - ( 2*(x*x + y*y) - 1)^2  = 4(x*x+y*y)^2 - 4(x*x+y*y)
+				var xxplusyy = playerCamera[12]*playerCamera[12] + playerCamera[13]*playerCamera[13];
+				var multFactor = 4*xxplusyy*(1-xxplusyy);
+				
+				rotatePlayer([0,0,-debugRoll*guiParams.control.sriMechStr*multFactor]);
+
+					//todo fix jerky appearance. guess due to interpolation. (guess should use force instead of direct angle change for collisions to work better anyway)
 			}
 		
 		
