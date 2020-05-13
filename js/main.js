@@ -2812,7 +2812,6 @@ var texture,hudTexture,hudTextureSmallCircles,hudTexturePlus,hudTextureX,hudText
 function initTexture(){
 	texture = makeTexture("img/0033.jpg");
 	nmapTexture = makeTexture("img/images.squarespace-cdn.com.png");	//button cushion
-	//nmapTexture = makeTexture("img/no-git/5512-normal.jpg");
 	hudTexture = makeTexture("img/circles.png");
 	hudTextureSmallCircles = makeTexture("img/smallcircles.png");
 	hudTexturePlus = makeTexture("img/plus.png");
