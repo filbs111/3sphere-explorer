@@ -1478,7 +1478,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			
 			for (var ii=0;ii<numRandomBoxes;ii++){
 				var thisMat = randomMats[ii];
-				mat4.set(invertedWorldCamera, mvMatrix);
+				mat4.set(invertedWorldCameraDuocylinderFrame, mvMatrix);
 				mat4.multiply(mvMatrix, thisMat);
 				
 			//	if (thisMat[15]>criticalWPos){continue;}	//don't draw boxes too close to portal
@@ -1504,12 +1504,12 @@ function drawWorldScene(frameTime, isCubemapView) {
 			
 			prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
 			
-			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uVMatrix, false, invertedWorldCamera);	//TODO what to pass in??
+			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uVMatrix, false, invertedWorldCameraDuocylinderFrame);	//TODO what to pass in??
 			//gl.uniformMatrix4fv(activeShaderProgram.uniforms.uVMatrix, false, worldCamera);	//TODO what to pass in??
 			
 			for (var ii=0;ii<numRandomBoxes;ii++){
 				var thisMat = randomMats[ii];
-				mat4.set(invertedWorldCamera, mvMatrix);	//only using mvMatrix for f-cull. can render without this, but with indiv draw culls, frust cull is beneficial
+				mat4.set(invertedWorldCameraDuocylinderFrame, mvMatrix);	//only using mvMatrix for f-cull. can render without this, but with indiv draw culls, frust cull is beneficial
 				mat4.multiply(mvMatrix, thisMat);
 				
 			//	if (thisMat[15]>criticalWPos){continue;}	//don't draw boxes too close to portal
@@ -1547,7 +1547,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.enableVertexAttribArray(attrIdx+2);
 			gl.enableVertexAttribArray(attrIdx+3);
 			*/
-			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uVMatrix, false, invertedWorldCamera);
+			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uVMatrix, false, invertedWorldCameraDuocylinderFrame);
 			
 			//gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.mats);
 			//gl.vertexAttribPointer(activeShaderProgram.attributes.uMMatrix, randBoxBuffers.mats.itemSize, gl.FLOAT, false, 0, 0);	//can't send a matrix all at once
