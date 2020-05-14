@@ -1425,7 +1425,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.useProgram(shader);	//todo use function variable
 		
 		if (tex){
-			gl.activeTexture(gl.TEXTURE0);	//TODO should nmap, other textures use tex #s? (to reduce switching?)
 			bind2dTextureIfRequired(tex);
 		}
 		if (shader.uniforms.uFogColor){
@@ -2088,7 +2087,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 		activeShaderProgram = shaderPrograms.texmapPerPixelDiscardAtmosGradLight;
 		gl.useProgram(activeShaderProgram);
 		
-		gl.activeTexture(gl.TEXTURE0);
 		bind2dTextureIfRequired(sshipTexture);	
 		
 		//set uniforms - todo generalise this code (using for many shaders)
@@ -2595,7 +2593,6 @@ function drawTennisBall(duocylinderObj, shader){
 	
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, duocylinderObj.vertexIndexBuffer);
 	
-	gl.activeTexture(gl.TEXTURE0);
 	bind2dTextureIfRequired(duocylinderObj.tex);
 	gl.uniform1i(shader.uniforms.uSampler, 0);
 	
@@ -2646,7 +2643,6 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 	if (bufferObj.vertexTextureCoordBuffer){
 		gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexTextureCoordBuffer);
 		gl.vertexAttribPointer(shaderProg.attributes.aTextureCoord, bufferObj.vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
-		//gl.activeTexture(gl.TEXTURE0);
 		//bind2dTextureIfRequired(texture);
 		gl.uniform1i(shaderProg.uniforms.uSampler, 0);
 	}
@@ -2687,12 +2683,15 @@ function drawObjectFromPreppedBuffersVsMatmult(bufferObj, shaderProg){
 
 
 var bind2dTextureIfRequired = (function createBind2dTextureIfRequiredFunction(){
-	var currentlyBoundTexture=null;
-	return function(texToBind){	//todo specify texture index. maybe combine with setting texture index so can automatically keep textures loaded
+	var currentlyBoundTextures=[];
+	var currentBoundTex;
+	return function(texToBind, texId = gl.TEXTURE0){	//TODO use different texture indices to keep textures loaded?
 								//curently just assuming using tex 0, already set as active texture (is set active texture a fast gl call?)
-		if (texToBind != currentlyBoundTexture){
+		currentBoundTex = currentlyBoundTextures[texId];	//note that ids typically high numbers. gl.TEXTURE0 and so on. seem to be consecutive numbers but don't know if guaranteed.
+		if (texToBind != currentBoundTex){
+			gl.activeTexture(texId);
 			gl.bindTexture(gl.TEXTURE_2D, texToBind);
-			currentlyBoundTexture = texToBind;
+			currentlyBoundTextures[texId] = texToBind;
 		}
 	}
 })();
@@ -2852,7 +2851,8 @@ function initTexture(){
 function makeTexture(src) {	//to do OO
 	var texture = gl.createTexture();
 	
-	bind2dTextureIfRequired(texture);	//dummy 1 pixel image to avoid error logs. https://stackoverflow.com/questions/21954036/dartweb-gl-render-warning-texture-bound-to-texture-unit-0-is-not-renderable
+	bind2dTextureIfRequired(texture);	//TODO is this necessary? or should just set activetexture?
+	//dummy 1 pixel image to avoid error logs. https://stackoverflow.com/questions/21954036/dartweb-gl-render-warning-texture-bound-to-texture-unit-0-is-not-renderable
 		//(TODO better to wait for load, or use single shared 1pix texture (bind2dTextureIfRequired to check that texture loaded, by flag on texture? if not loaded, bind the shared summy image?
 		//TODO progressive detail load?
 	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
