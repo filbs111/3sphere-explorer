@@ -151,6 +151,11 @@ function initShaders(){
 		atmos   :loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['SPECULAR_ACTIVE','MAPPROJECT_ACTIVE']),
 		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','ATMOS_TWO'], ['SPECULAR_ACTIVE','MAPPROJECT_ACTIVE'])
 	};
+	shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongAndDiffuse = {
+		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','ATMOS_CONSTANT'], ['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE']),
+		atmos   :loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','ATMOS_TWO'], ['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE'])
+	};
 	
 	//shaderPrograms.duocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-flat-fs");
 	shaderPrograms.duocylinderSea = {
@@ -929,7 +934,7 @@ function drawScene(frameTime){
 		gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);	//TODO check whether necessary to keep setting this
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);	//TODO check whether need this - should be redrawing everything so could just disable z check
 		
-		gl.activeTexture(gl.TEXTURE0);
+		//gl.activeTexture(gl.TEXTURE0);
 		bind2dTextureIfRequired(rttTexture);	
 		//gl.bindTexture(gl.TEXTURE_2D, rttTexture);	//set just drawn texture as active for drawing to screen
 		
@@ -1947,7 +1952,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 				activeShaderProgram = shaderPrograms.texmapColor4VecAtmos;	//not variants implemented
 			}else{
 				//activeShaderProgram = duocylinderObj.useMapproject? shaderPrograms.texmap4VecMapproject[ guiParams.display.atmosShader ] : shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ] ;
-				activeShaderProgram = duocylinderObj.useMapproject? ( guiParams.display.useSpecular? shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecMapprojectDiscardNormalmap[ guiParams.display.atmosShader ] ) : ( guiParams.display.useSpecular? shaderPrograms.texmap4VecPerPixelDiscardPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscard[ guiParams.display.atmosShader ]);
+				activeShaderProgram = duocylinderObj.useMapproject? ( guiParams.display.useSpecular? shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongAndDiffuse[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecMapprojectDiscardNormalmap[ guiParams.display.atmosShader ] ) : ( guiParams.display.useSpecular? shaderPrograms.texmap4VecPerPixelDiscardPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscard[ guiParams.display.atmosShader ]);
 			}
 			gl.useProgram(activeShaderProgram);
 		}else{
@@ -2596,6 +2601,11 @@ function drawTennisBall(duocylinderObj, shader){
 	bind2dTextureIfRequired(duocylinderObj.tex);
 	gl.uniform1i(shader.uniforms.uSampler, 0);
 	
+	if (shader.uniforms.uSamplerB){
+		bind2dTextureIfRequired(duocylinderObj.texB, gl.TEXTURE2);
+		gl.uniform1i(shader.uniforms.uSamplerB, 2);
+	}
+	
 	//for (var side=0;side<2;side++){	//draw 2 sides
 		for (var xg=0;xg<duocylinderObj.divs;xg+=1){		//
 			for (var yg=0;yg<duocylinderObj.divs;yg+=1){	//TODO precalc cells array better than grids here.
@@ -2645,6 +2655,9 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 		gl.vertexAttribPointer(shaderProg.attributes.aTextureCoord, bufferObj.vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
 		//bind2dTextureIfRequired(texture);
 		gl.uniform1i(shaderProg.uniforms.uSampler, 0);
+	}
+	if (shaderProg.uniforms.uSamplerB){
+		gl.uniform1i(shaderProg.uniforms.uSamplerB, 2);	//avoid slot 1 because using this for cubemap.
 	}
 	
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
@@ -2806,11 +2819,14 @@ function setupScene() {
 	targetMatrix = cellMatData.d16[0];
 }
 
-var texture,hudTexture,hudTextureSmallCircles,hudTexturePlus,hudTextureX,hudTextureBox,sshipTexture,nmapTexture;
+var texture,diffuseTexture,hudTexture,hudTextureSmallCircles,hudTexturePlus,hudTextureX,hudTextureBox,sshipTexture,nmapTexture;
 
 function initTexture(){
 	texture = makeTexture("img/0033.jpg");
-	nmapTexture = makeTexture("img/images.squarespace-cdn.com.png");	//button cushion
+	
+	//nmapTexture = makeTexture("img/images.squarespace-cdn.com.png");	//button cushion
+	diffuseTexture = makeTexture("img/4431-diffuse.jpg",false);nmapTexture = makeTexture("img/4431-normal.jpg",false);	//concrete blocks
+	
 	hudTexture = makeTexture("img/circles.png");
 	hudTextureSmallCircles = makeTexture("img/smallcircles.png");
 	hudTexturePlus = makeTexture("img/plus.png");
@@ -2821,6 +2837,7 @@ function initTexture(){
 	//duocylinderObjects.procTerrain.tex = texture;
 	//duocylinderObjects.procTerrain.tex = makeTexture("img/14131-diffuse.jpg");  //sand
 	duocylinderObjects.procTerrain.tex = nmapTexture;
+	duocylinderObjects.procTerrain.texB = diffuseTexture;
 
 	duocylinderObjects.procTerrain.useMapproject = true;
 	
@@ -2848,10 +2865,10 @@ function initTexture(){
 	//texture = makeTexture("img/ash_uvgrid01-grey.tiny.png");	//numbered grid
 }
 
-function makeTexture(src) {	//to do OO
+function makeTexture(src, yFlip = true) {	//to do OO
 	var texture = gl.createTexture();
-	
-	bind2dTextureIfRequired(texture);	//TODO is this necessary? or should just set activetexture?
+		
+	bind2dTextureIfRequired(texture);
 	//dummy 1 pixel image to avoid error logs. https://stackoverflow.com/questions/21954036/dartweb-gl-render-warning-texture-bound-to-texture-unit-0-is-not-renderable
 		//(TODO better to wait for load, or use single shared 1pix texture (bind2dTextureIfRequired to check that texture loaded, by flag on texture? if not loaded, bind the shared summy image?
 		//TODO progressive detail load?
@@ -2861,8 +2878,8 @@ function makeTexture(src) {	//to do OO
 	texture.image = new Image();
 	texture.image.onload = function(){
 		bind2dTextureIfRequired(texture);
-		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-		
+		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, yFlip);
+
 		gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);	//linear colorspace grad light texture (TODO handle other texture differently?)
 		
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
@@ -2870,7 +2887,7 @@ function makeTexture(src) {	//to do OO
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
 		//gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 		gl.generateMipmap(gl.TEXTURE_2D);
-		bind2dTextureIfRequired(null);
+		bind2dTextureIfRequired(null);	//AFAIK this is just good practice to unwanted side effect bugs
 	};	
 	texture.image.src = src;
 	return texture;
@@ -2913,7 +2930,7 @@ var guiParams={
 		singleBufferRoads:true
 	},
 	'random boxes':{
-		number:maxRandBoxes,	//note ui controlled value does not affect singleBuffer
+		number:0,	//maxRandBoxes,	//note ui controlled value does not affect singleBuffer
 		size:0.01,
 		collision:false,
 		drawType:'instancedArrays',

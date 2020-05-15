@@ -810,6 +810,7 @@
 
 	precision mediump float;
 	uniform sampler2D uSampler;
+	uniform sampler2D uSamplerB;
 	uniform vec4 uColor;
 	uniform vec3 uPlayerLightColor;
 	varying float fog;
@@ -854,6 +855,11 @@
 		vec4 adjustedColor = pow(uColor*vColor, vec4(2.-texSampleAdjusted.z));
 #else
 		vec4 adjustedColor = pow(uColor, vec4(2.-texSampleAdjusted.z));	//bodge - idea is to make colour deeper in recesses. (TODO special bake for this)
+#endif
+
+#ifdef DIFFUSE_TEX_ACTIVE
+		//adjustedColor*=texture2D(uSamplerB, newTexCoord);	//hope that 4th component is 1 (opaque). note currently only used in conjunction with MAPPROJECT_ACTIVE
+		adjustedColor*=pow(texture2D(uSamplerB, newTexCoord),vec4(2.2));	//convert rgb to linear. this is inefficient and expect interpolation won't work right. todo figure out how to use properly, or convert to linear before using in shader.
 #endif
 		
 		vec4 normalizedLightPos = normalize(vPlayerLightPosTangentSpace);
