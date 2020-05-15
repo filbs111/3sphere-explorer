@@ -222,7 +222,7 @@ var gunBuffers={};
 var icoballBuffers={};
 var hyperboloidBuffers={};
 
-var sshipModelScale=0.0002;
+var sshipModelScale=0.0001;
 var duocylinderSurfaceBoxScale = 0.025;
 
 var landingLegData=[
@@ -751,22 +751,22 @@ var offsetCam = (function(){
 	var offsetVec;
 	var offsetVecReverse;
 	var targetForType = {
-		"near 3rd person":[0,-0.0075,-0.005],
-		"mid 3rd person":[0,-0.01,-0.015],
-		"far 3rd person":[0,-0.02,-0.025],	
-		"cockpit":[0,0,0.0015],
-		"side":[0.006,0,0.0025]
+		"near 3rd person":[0,-37.5,-25],	//TODO reduce code duplication. do scalar vector product targetForType time?
+		"mid 3rd person":[0,-50,-75],
+		"far 3rd person":[0,-100,-125],	
+		"cockpit":[0,0,11.5],
+		"side":[30,0,12.5]
 	}
 	var targetForTypeReverse = {
-		"near 3rd person":[0,-0.0075,0.005],
-		"mid 3rd person":[0,-0.0075,0.0075],
-		"far 3rd person":[0,-0.02,0.03],
-		//"far 3rd person":[0,0,0.02],
-		"cockpit":[0,0,-0.01],
-		"side":[0.006,0,0.0025]
+		"near 3rd person":[0,-37.5,25],
+		"mid 3rd person":[0,-37.5,37.5],
+		"far 3rd person":[0,-100,150],
+		//"far 3rd person":[0,0,100],
+		"cockpit":[0,0,-50],
+		"side":[30,0,12.5]
 	}
-	var offsetVecTarget = targetForType["far 3rd person"];
-	var offsetVecTargetReverse = targetForTypeReverse["far 3rd person"];
+	var offsetVecTarget = targetForType["far 3rd person"].map(x=>sshipModelScale*x);
+	var offsetVecTargetReverse = targetForTypeReverse["far 3rd person"].map(x=>sshipModelScale*x);
 	offsetVec = offsetVecTarget;
 	offsetVecReverse = offsetVecTargetReverse;
 
@@ -778,8 +778,8 @@ var offsetCam = (function(){
 			return reverseCamera ? offsetVecReverse : offsetVec;
 		},
 		setType: function(type){
-			offsetVecTarget = targetForType[type];
-			offsetVecTargetReverse = targetForTypeReverse[type];
+			offsetVecTarget = targetForType[type].map(x=>sshipModelScale*x);
+			offsetVecTargetReverse = targetForTypeReverse[type].map(x=>sshipModelScale*x);
 		},
 		iterate: function(){
 			offsetVec = offsetVec.map(function(val,ii){return val*mult1+offsetVecTarget[ii]*mult2;})
@@ -2348,81 +2348,81 @@ function drawWorldScene(frameTime, isCubemapView) {
 		var inverseSshipMat = mat4.create(sshipMatrix);
 		mat4.transpose(inverseSshipMat);
 		
-		var thrustrad = 0.0008;
-		var thrustlong = 0.0004;
+		var thrustrad = 4;
+		var thrustlong = 2;
 		
 		//gl.uniform4fv(transpShadProg.uniforms.uColor, colorArrs.blue);
 			//draw "thrusters". TODO make look better, brightness according to analog input, "playerlight" to match (direction+magnitude)
 			//should be a custom 3d model or shader. engine nozzles can be solid, non transparent, with colour that changes with thrust. combine with transparent exhaust effect
 			//current implementation is inefficient with lots of overdraw, gl calls.
-		var separation=0.0002;	//distance between thrust discs (squashed spheres)
+		var separation=1;	//distance between thrust discs (squashed spheres)
 		var opacStep=0.08;
 		//var thrustTaper= -0.00003;
-		var thrustTaper= 0.00002;
+		var thrustTaper= 0.1;
 		if (currentThrustInput[2]>0){					//rearward thrusters
-			for (var oo=-0.0077, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo-=separation,rr-=thrustTaper){
-				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [rr,rr,thrustlong]);
+			for (var oo=-38.5, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo-=separation,rr-=thrustTaper){
+				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [rr,rr,thrustlong].map(x=>x*sshipModelScale));
 				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
-				drawLandingBall([0.0057,0.0036,oo], matrix);	//	left ,down	,fwd
-				drawLandingBall([0.0057,-0.0036,oo], matrix);
-				drawLandingBall([-0.0057,0.0036,oo], matrix);
-				drawLandingBall([-0.0057,-0.0036,oo], matrix);
+				drawLandingBall([28.5,18,oo], matrix);	//	left ,down	,fwd
+				drawLandingBall([28.5,-18,oo], matrix);
+				drawLandingBall([-28.5,18,oo], matrix);
+				drawLandingBall([-28.5,-18,oo], matrix);
 			}
 		}
 		if (currentThrustInput[2]<0){				//forward thrusters
-			for (var oo=0.0036, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo+=separation,rr-=thrustTaper){
-				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [rr,rr,thrustlong]);
+			for (var oo=18, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo+=separation,rr-=thrustTaper){
+				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [rr,rr,thrustlong].map(x=>x*sshipModelScale));
 				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
-				drawLandingBall([0.0057,0.0036,oo], matrix);
-				drawLandingBall([0.0057,-0.0036,oo], matrix);		
-				drawLandingBall([-0.0057,0.0036,oo], matrix);		
-				drawLandingBall([-0.0057,-0.0036,oo]);
+				drawLandingBall([28.5,18,oo], matrix);
+				drawLandingBall([28.5,-18,oo], matrix);		
+				drawLandingBall([-28.5,18,oo], matrix);		
+				drawLandingBall([-28.5,-18,oo]);
 			}
 		}
 		if (currentThrustInput[0]<0){				//left
-			for (var oo=0.007, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo+=separation,rr-=thrustTaper){
-				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [thrustlong,rr,rr]);
+			for (var oo=35, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo+=separation,rr-=thrustTaper){
+				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [thrustlong,rr,rr].map(x=>x*sshipModelScale));
 				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
-				drawLandingBall([oo,0.0035,0.0025]);
-				drawLandingBall([oo,-0.0035,0.0025]);
-				drawLandingBall([oo,0.0035,-0.0065]);
-				drawLandingBall([oo,-0.0035,-0.0065]);
+				drawLandingBall([oo,17.5,12.5]);
+				drawLandingBall([oo,-17.5,12.5]);
+				drawLandingBall([oo,17.5,-32.5]);
+				drawLandingBall([oo,-17.5,-32.5]);
 			}
 		}
 		if (currentThrustInput[0]>0){				//right
-			for (var oo=-0.007, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo-=separation,rr-=thrustTaper){
-				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [thrustlong,rr,rr]);
+			for (var oo=-35, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo-=separation,rr-=thrustTaper){
+				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [thrustlong,rr,rr].map(x=>x*sshipModelScale));
 				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
-				drawLandingBall([oo,0.0035,0.0025]);
-				drawLandingBall([oo,-0.0035,0.0025]);
-				drawLandingBall([oo,0.0035,-0.0065]);
-				drawLandingBall([oo,-0.0035,-0.0065]);
+				drawLandingBall([oo,17.5,12.5]);
+				drawLandingBall([oo,-17.5,12.5]);
+				drawLandingBall([oo,17.5,-32.5]);
+				drawLandingBall([oo,-17.5,-32.5]);
 			}
 		}
 		if (currentThrustInput[1]>0){				//top
-			for (var oo=-0.0045, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo-=separation,rr-=thrustTaper){
-				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [rr,thrustlong,rr]);
+			for (var oo=-22.5, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo-=separation,rr-=thrustTaper){
+				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [rr,thrustlong,rr].map(x=>x*sshipModelScale));
 				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
-				drawLandingBall([0.006,oo,0.0025]);
-				drawLandingBall([-0.006,oo,0.0025]);
-				drawLandingBall([0.006,oo,-0.0065]);
-				drawLandingBall([-0.006,oo,-0.0065]);
+				drawLandingBall([30,oo,12.5]);
+				drawLandingBall([-30,oo,12.5]);
+				drawLandingBall([30,oo,-32.5]);
+				drawLandingBall([-30,oo,-32.5]);
 			}
 		}
 		if (currentThrustInput[1]<0){				//bottom
-			for (var oo=0.0045, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo+=separation,rr-=thrustTaper){
-				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [rr,thrustlong,rr]);
+			for (var oo=22.5, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo+=separation,rr-=thrustTaper){
+				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [rr,thrustlong,rr].map(x=>x*sshipModelScale));
 				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
-				drawLandingBall([0.006,oo,0.0025]);
-				drawLandingBall([-0.006,oo,0.0025]);
-				drawLandingBall([0.006,oo,-0.0065]);
-				drawLandingBall([-0.006,oo,-0.0065]);
+				drawLandingBall([30,oo,12.5]);
+				drawLandingBall([-30,oo,12.5]);
+				drawLandingBall([30,oo,-32.5]);
+				drawLandingBall([-30,oo,-32.5]);
 			}
 		}
 		
 		function drawLandingBall(posn){	//this is duplicated from elsewhere, but should be changed
 			lgMat = mat4.create(sshipMatrix);
-			xyzmove4mat(lgMat, posn);
+			xyzmove4mat(lgMat, posn.map(x=>x*sshipModelScale));
 			
 			//mat4.set(invertedWorldCamera, mvMatrix);	//no shift version
 			//mat4.multiply(mvMatrix, lgMat);
