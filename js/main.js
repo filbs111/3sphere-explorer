@@ -1726,12 +1726,15 @@ function drawWorldScene(frameTime, isCubemapView) {
 		mat4.multiply(mvMatrix, collisionTestObjMat);
 		mat4.set(collisionTestObjMat, mMatrix);
 		var testObjScale=0.001;
+		
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.cyan);
 		drawTriAxisCross(testObjScale*20);
 		
 		//draw object centred on object colliding with to see if anything happening!
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix, collisionTestObj2Mat);
 		mat4.set(collisionTestObj2Mat, mMatrix);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.magenta);
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [2*testObjScale,2*testObjScale,2*testObjScale]);
 		drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
 		//draw object shifted by normal
@@ -2738,6 +2741,7 @@ var voxCollisionDebugMat = mat4.create();	//in player frame, showing where the c
 var lastVoxPenetration = 0;
 
 var closestBoxDist=100;	//initialise to arbitrarily large. TODO store point so pan sound	
+var closestBoxInfo;
 
 function setMatrixUniforms(shaderProgram) {
     gl.uniformMatrix4fv(shaderProgram.uniforms.uPMatrix, false, pMatrix);
@@ -3817,12 +3821,6 @@ var iterateMechanics = (function iterateMechanics(){
 			adjustedDist = Math.min(adjustedDist,2);	//clamp. (TODO set value to max delay). prevents log spam
 			myAudioPlayer.setWhooshSound({delay:adjustedDist, gain:vol*spdFactor, pan:panForTerrainNoise});
 			
-			//whoosh for boxes, closest point calculation done inside collision function
-			adjustedDist = Math.hypot(closestBoxDist,terrainNoiseRad);
-			vol = terrainNoiseRad/adjustedDist;
-			adjustedDist = Math.min(adjustedDist,2);	//clamp. (TODO set value to max delay). prevents log spam
-			myAudioPlayer.setWhooshSoundBox({delay:adjustedDist, gain:vol*spdFactor, pan:0});	//todo pan
-			
 			
 			
 			//apply same forces for other items. 
@@ -3835,9 +3833,16 @@ var iterateMechanics = (function iterateMechanics(){
 			var playerMatrixTransposedDCRefFrame=mat4.create(playerMatrixTransposed);	//in frame of duocylinder
 			rotate4mat(playerMatrixTransposedDCRefFrame, 0, 1, duocylinderSpin);
 			
+			
+			
+			
+			
+			
+			
 			currentPen = Math.max(currentPen,0);	//TODO better place for this? box penetration should not be -ve
 
 			closestBoxDist =100; //used for thwop noise. initialise to arbitrarily large. TODO store point so pan sound
+			closestBoxInfo={box:-1};
 			
 			if (guiParams.drawShapes.stonehenge || guiParams.drawShapes.singleBufferStonehenge){
 				processBoxCollisionsForBoxInfoAllPoints(duocylinderBoxInfo.stonehenge);
@@ -3849,6 +3854,28 @@ var iterateMechanics = (function iterateMechanics(){
 				processBoxCollisionsForBoxInfoAllPoints(duocylinderBoxInfo.roads);
 			}
 			
+			//whoosh for boxes, using result from closest point calculation done inside collision function
+			var distanceForBoxNoise = 100;
+			var panForBoxNoise = 0;
+			if (closestBoxInfo && closestBoxInfo.box!=-1){	//TODO something better - calc pan/dist in place calculate box dist. then can just initialise to something (large dist, 0 pan), not need if statement here.
+			
+				mat4.set(playerMatrixTransposedDCRefFrame, tmpRelativeMat);
+				mat4.multiply(tmpRelativeMat, closestBoxInfo.box.matrix);
+				xyzmove4mat(tmpRelativeMat, closestBoxInfo.surfPoint);
+				distanceForBoxNoise = distBetween4mats(tmpRelativeMat, identMat);
+			
+				var soundSize = 0.002;
+				panForBoxNoise = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));
+			}
+			
+			adjustedDist = Math.hypot(distanceForBoxNoise,terrainNoiseRad)
+			var vol = terrainNoiseRad/adjustedDist;
+			
+			vol = terrainNoiseRad/adjustedDist;
+			adjustedDist = Math.min(adjustedDist,2);	//clamp. (TODO set value to max delay). prevents log spam
+			myAudioPlayer.setWhooshSoundBox({delay:adjustedDist, gain:vol*spdFactor, pan:panForBoxNoise});	
+			
+			
 			function processBoxCollisionsForBoxInfoAllPoints(boxInfo){
 				processBoxCollisionsForBoxInfo(boxInfo, playerCentreBallData, settings.playerBallRad, true, true);
 						
@@ -3859,9 +3886,7 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			function processBoxCollisionsForBoxInfo(boxInfo, landingLeg, collisionBallSize, drawDebugStuff, useForThwop){
 				var pointOffset = landingLeg.pos.map(function(elem){return -elem;});	//why reversed? probably optimisable. TODO untangle signs!
-				
-				var closestBoxDistThisBox = closestBoxDist;
-				
+								
 				var relativeMat = mat4.identity();
 				var boxArrs = boxInfo.gridContents;
 				for (var gs of gridSqs){	//TODO get gridSqs
@@ -3912,10 +3937,14 @@ var iterateMechanics = (function iterateMechanics(){
 						
 						//rounded box. TODO 1st check within bounding box of the rounded box.
 						var vectorFromBox = relativePos.map(function(elem){return elem>0 ? Math.max(elem - projectedBoxSize,0) : Math.min(elem + projectedBoxSize,0);});
-						var distSqFromBox = vectorFromBox[0]*vectorFromBox[0]+vectorFromBox[1]*vectorFromBox[1]+vectorFromBox[2]*vectorFromBox[2];
-						var distFromBox = Math.sqrt(distSqFromBox);		//todo handle distSqFromBox =0 (centre of collision ball is inside box) - can happen if moving fast, cover collisionBallSize in 1 step. currently results in passing thru box)
+						var surfacePoint = vectorFromBox.map((elem,ii)=>{return elem-relativePos[ii];});
+						var distFromBox = Math.hypot.apply(null, vectorFromBox.slice(0,3));		//todo handle distSqFromBox =0 (centre of collision ball is inside box) - can happen if moving fast, cover collisionBallSize in 1 step. currently results in passing thru box)
 						
-						closestBoxDistThisBox = Math.min(closestBoxDistThisBox, distFromBox);
+						if (useForThwop && (distFromBox < closestBoxDist)){
+							closestBoxInfo.box=bb;
+							closestBoxInfo.surfPoint=surfacePoint;
+							closestBoxDist = distFromBox;
+						}
 						
 						//if (Math.max(Math.abs(relativePos[0]),
 						//			Math.abs(relativePos[1]),
@@ -3981,8 +4010,8 @@ var iterateMechanics = (function iterateMechanics(){
 								xyzmove4mat(collisionTestObj4Mat, [-relativePosB[0],-relativePosB[1],-relativePosB[2]]);
 								//TODO account for duocylinder rotation (currently assuming unrotated)
 								
-								mat4.set(playerCamera, collisionTestObj5Mat);
-								xyzmove4mat(collisionTestObj5Mat, [-relativePosC[0],-relativePosC[1],-relativePosC[2]]);
+								mat4.set(bb.matrix, collisionTestObj5Mat);
+								xyzmove4mat(collisionTestObj5Mat, surfacePoint);
 							}
 							
 							//apply force in this direction
@@ -4007,10 +4036,6 @@ var iterateMechanics = (function iterateMechanics(){
 						
 					}
 				
-				}
-				
-				if (useForThwop){
-					closestBoxDist = closestBoxDistThisBox;
 				}
 			}
 			
