@@ -2345,7 +2345,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	function drawThrusters(matrix){
 			//this is duplicated from elsewhere. TODO generalise/reuse
-		var inverseSshipMat = mat4.create(sshipMatrixNoInterp); //todo persist this matrix/ store inverseSshipMat*gunMatrix
+		var inverseSshipMat = mat4.create(sshipMatrix);
 		mat4.transpose(inverseSshipMat);
 		
 		var thrustrad = 0.0008;
@@ -3108,6 +3108,7 @@ function init(){
 	var displayFolder = gui.addFolder('display');	//control and movement
 	displayFolder.add(guiParams.display, "cameraType", ["cockpit", "near 3rd person", "mid 3rd person", "far 3rd person", "side"]);
 	displayFolder.add(guiParams.display, "cameraFov", 60,130,5);
+	displayFolder.add(guiParams.display, "cameraFov", 60,160,5);
 	displayFolder.add(guiParams.display, "flipReverseCamera");
 	displayFolder.add(guiParams.display, "showHud");
 	displayFolder.add(guiParams.display, "renderViaTexture", ['no','basic','bennyBoxLite','bennyBox','fisheye']);
