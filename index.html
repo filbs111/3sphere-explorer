@@ -858,8 +858,12 @@
 #endif
 
 #ifdef DIFFUSE_TEX_ACTIVE
+#ifdef MAPPROJECT_ACTIVE
 		//adjustedColor*=texture2D(uSamplerB, newTexCoord);	//hope that 4th component is 1 (opaque). note currently only used in conjunction with MAPPROJECT_ACTIVE
 		adjustedColor*=pow(texture2D(uSamplerB, newTexCoord),vec4(2.2));	//convert rgb to linear. this is inefficient and expect interpolation won't work right. todo figure out how to use properly, or convert to linear before using in shader.
+#else
+		adjustedColor*=pow(texture2DProj(uSamplerB, vTextureCoord),vec4(2.2));
+#endif
 #endif
 		
 		vec4 normalizedLightPos = normalize(vPlayerLightPosTangentSpace);

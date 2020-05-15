@@ -118,20 +118,20 @@ function initShaders(){
 		atmos   :loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['ATMOS_ONE','CONST_ITERS 64.0']),
 		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['ATMOS_TWO'])
 	};
-	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhong = {
-		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','ATMOS_CONSTANT'], ['SPECULAR_ACTIVE']),
-		atmos:   loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['SPECULAR_ACTIVE']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','ATMOS_TWO'], ['SPECULAR_ACTIVE'])
+	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongAndDiffuse = {
+		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','ATMOS_CONSTANT'], ['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE']),
+		atmos:   loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','ATMOS_TWO'], ['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE'])
 	};
 	shaderPrograms.texmap4VecPerPixelDiscardNormalmapVcolor = {
 		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','ATMOS_CONSTANT'], ['VCOLOR']),
 		atmos:   loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','ATMOS_ONE','CONST_ITERS 64.0'], ['VCOLOR']),
 		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','ATMOS_TWO'], ['VCOLOR'])
 	};
-	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolor = {
-		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_CONSTANT'], ['VCOLOR','SPECULAR_ACTIVE']),
-		atmos:   loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['VCOLOR','SPECULAR_ACTIVE']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_TWO'], ['VCOLOR','SPECULAR_ACTIVE'])
+	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse = {
+		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_CONSTANT'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE']),
+		atmos:   loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_TWO'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE'])
 	};
 		
 	shaderPrograms.texmapColor4VecAtmos = loadShader( "shader-texmap-color-triplanar-vs-4vec-atmos", "shader-texmap-triplanar-fs");
@@ -1412,7 +1412,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		mat4.multiply(mvMatrix,teapotMatrix);
 		mat4.set(teapotMatrix, mMatrix);
 		
-		gl.activeTexture(gl.TEXTURE0);
+		//gl.activeTexture(gl.TEXTURE0);
 		bind2dTextureIfRequired(texture);
 		
 		drawObjectFromBuffers(explodingCubeBuffers, activeShaderProgram);	
@@ -1916,7 +1916,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawTennisBall(stonehengeBoxBuffers, activeShaderProgram);
 	}
 	
-	activeShaderProgram = guiParams.display.useSpecular ? shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolor[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscardNormalmapVcolor[ guiParams.display.atmosShader ];
+	activeShaderProgram = guiParams.display.useSpecular ? shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscardNormalmapVcolor[ guiParams.display.atmosShader ];
 	gl.useProgram(activeShaderProgram);
 	performCommon4vecShaderSetup(activeShaderProgram, "normal map");
 	
@@ -1925,7 +1925,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawTennisBall(towerBoxBuffers, activeShaderProgram);
 	}
 	
-	activeShaderProgram = guiParams.display.useSpecular ? shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscardNormalmap[ guiParams.display.atmosShader ];
+	activeShaderProgram = guiParams.display.useSpecular ? shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongAndDiffuse[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscardNormalmap[ guiParams.display.atmosShader ];
 	gl.useProgram(activeShaderProgram);
 	performCommon4vecShaderSetup(activeShaderProgram, "normal map");
 	
@@ -2602,6 +2602,7 @@ function drawTennisBall(duocylinderObj, shader){
 	gl.uniform1i(shader.uniforms.uSampler, 0);
 	
 	if (shader.uniforms.uSamplerB){
+		//console.log("binding tex 2");
 		bind2dTextureIfRequired(duocylinderObj.texB, gl.TEXTURE2);
 		gl.uniform1i(shader.uniforms.uSamplerB, 2);
 	}
@@ -2655,9 +2656,6 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 		gl.vertexAttribPointer(shaderProg.attributes.aTextureCoord, bufferObj.vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
 		//bind2dTextureIfRequired(texture);
 		gl.uniform1i(shaderProg.uniforms.uSampler, 0);
-	}
-	if (shaderProg.uniforms.uSamplerB){
-		gl.uniform1i(shaderProg.uniforms.uSamplerB, 2);	//avoid slot 1 because using this for cubemap.
 	}
 	
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
@@ -2858,9 +2856,9 @@ function initTexture(){
 	duocylinderObjects.voxTerrain.usesTriplanarMapping=true;	//note that hasVertColors, usesTriplanarMapping currently equivalent (has both or neither)
 	
 	randBoxBuffers.tex=texture;
-	towerBoxBuffers.tex=nmapTexture;
-	stonehengeBoxBuffers.tex=texture;
-	roadBoxBuffers.tex=nmapTexture;
+	towerBoxBuffers.tex=nmapTexture;towerBoxBuffers.texB=diffuseTexture;
+	stonehengeBoxBuffers.tex=texture;stonehengeBoxBuffers.texB=diffuseTexture;
+	roadBoxBuffers.tex=nmapTexture;roadBoxBuffers.texB=diffuseTexture;
 	
 	//texture = makeTexture("img/ash_uvgrid01-grey.tiny.png");	//numbered grid
 }
