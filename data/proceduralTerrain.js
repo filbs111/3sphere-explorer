@@ -128,7 +128,7 @@ function terrainGetNearPointFor4VecPos(vec){	//returns estimated point in procTe
 	
 	//estimate closest point. to do this properly should use grid separation specific to this height, but for simplicity, assume close to zero level.
 	//get a surface normal by normalising (gx,gy,gridsize)
-	var tnormal = [ hinfo.grad[0], hinfo.grad[1], 1/multiplier ];	//this depends on terrain scaling - is 1 height same as 1 across? guess maybe a factor root 2 here, or pi etc? see what terrainGetHeightFor4VecPos returns... TODO check
+	var tnormal = [ hinfo.grad[0], hinfo.grad[1], 0.4/multiplier ];	//0.4 is a fudge/guess. this depends on terrain scaling - is 1 height same as 1 across? guess maybe a factor root 2 here, or pi etc? see what terrainGetHeightFor4VecPos returns... TODO check.
 	var normLen = Math.hypot.apply(null,tnormal);	
 	tnormal = tnormal.map(x=>x/normLen);	//normalise  (todo normLen with *altitude)
 	
