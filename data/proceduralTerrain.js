@@ -1,6 +1,22 @@
 var terrainCollisionTestBoxPos={a:0,b:0,h:0};
 var procTerrainSize=256;
 
+function getFourHeights(aaFloor,bbFloor){
+	var aaCeil = (aaFloor + 1)%procTerrainSize;	//&255 maybe faster
+	var bbCeil = (bbFloor + 1)%procTerrainSize;
+	
+	//check for bad input
+	//seems that NaN gets in here (aa,bb)
+	if ( aaFloor<0 || bbFloor<0 || aaCeil<0 || bbCeil<0 || aaFloor>=procTerrainSize || bbFloor>=procTerrainSize || aaCeil>=procTerrainSize || bbCeil>=procTerrainSize){
+	//	console.log("bad input!");
+		console.log({aa:aa, bb:bb, aaFloor:aaFloor, bbFloor:bbFloor, aaCeil:aaCeil, bbCeil:bbCeil, procTerrainSize:procTerrainSize});
+		//this results in a bug so return something! seems that is looking up index 256
+		return -1;	//returning this will cause problems.
+	}
+	
+	return [terrainGetHeight(aaFloor,bbFloor),terrainGetHeight(aaFloor,bbCeil),terrainGetHeight(aaCeil,bbFloor),terrainGetHeight(aaCeil,bbCeil)];
+}
+
 function getInterpHeightForAB(aa,bb){
 	
 	if (aa!=aa || bb!=bb){
@@ -12,26 +28,42 @@ function getInterpHeightForAB(aa,bb){
 	//interpolate height. currently this func used for realtime height detection and mesh creation, and this should make latter slower, but unimportant.
 	var aaFloor = Math.floor(aa);	//%procTerrainSize;	//use % if get problems here (previously aa, bb could be procTerrainSize
 	var bbFloor = Math.floor(bb);	//%procTerrainSize;
-	var aaCeil = (aaFloor + 1)%procTerrainSize;	//&255 maybe faster
-	var bbCeil = (bbFloor + 1)%procTerrainSize;
+	
+	var heights = getFourHeights(aaFloor, bbFloor);
+	
 	var aaRemainder = aa-aaFloor;
 	var bbRemainder = bb-bbFloor;
 	
-	//check for bad input
-	//seems that NaN gets in here (aa,bb)
-	if ( aaFloor<0 || bbFloor<0 || aaCeil<0 || bbCeil<0 || aaFloor>=procTerrainSize || bbFloor>=procTerrainSize || aaCeil>=procTerrainSize || bbCeil>=procTerrainSize){
-	//	console.log("bad input!");
-		console.log({aa:aa, bb:bb, aaFloor:aaFloor, bbFloor:bbFloor, aaCeil:aaCeil, bbCeil:bbCeil, procTerrainSize:procTerrainSize});
-		//this results in a bug so return something! seems that is looking up index 256
-		return -1;
-	}
-	
-	return (1-aaRemainder)*((1-bbRemainder)*terrainGetHeight(aaFloor,bbFloor) + bbRemainder*terrainGetHeight(aaFloor,bbCeil)) +
-									aaRemainder*((1-bbRemainder)*terrainGetHeight(aaCeil,bbFloor) + bbRemainder*terrainGetHeight(aaCeil,bbCeil));
+	return (1-aaRemainder)*((1-bbRemainder)*heights[0] + bbRemainder*heights[1]) +
+									aaRemainder*((1-bbRemainder)*heights[2] + bbRemainder*heights[3]);
 							//interpolation that assumes doubly ruled squares. TODO two triangles to match mesh
 }
 
-function terrainGetHeightFor4VecPos(vec){
+function getInterpHeightAndGradForAB(aa,bb){
+	if (aa!=aa || bb!=bb){
+	//	console.log("NaN input to getInterpHeightForAB");
+		console.log(aa, bb);
+		return -1;	//todo what should return here? (really should never get here, best to look at where this is called)
+	}
+	
+	//interpolate height. currently this func used for realtime height detection and mesh creation, and this should make latter slower, but unimportant.
+	var aaFloor = Math.floor(aa);	//%procTerrainSize;	//use % if get problems here (previously aa, bb could be procTerrainSize
+	var bbFloor = Math.floor(bb);	//%procTerrainSize;
+	
+	var heights = getFourHeights(aaFloor, bbFloor);
+	
+	var aaRemainder = aa-aaFloor;
+	var bbRemainder = bb-bbFloor;
+	
+	var centreHeight = (1-aaRemainder)*((1-bbRemainder)*heights[0] + bbRemainder*heights[1]) +
+									aaRemainder*((1-bbRemainder)*heights[2] + bbRemainder*heights[3]);
+							//interpolation that assumes doubly ruled squares. TODO two triangles to match mesh
+	var grad = [ (1-bbRemainder)*(heights[2] - heights[0])+ bbRemainder*(heights[3] - heights[1]), (1-aaRemainder)*(heights[1] - heights[0]) + aaRemainder*(heights[3] - heights[2])];
+	return {centreHeight:centreHeight, grad:grad};
+	
+}
+
+function terrainGetHeightFor4VecPos(vec){	//returns point in procTerrain space directly below the input 4vector
 	var multiplier = procTerrainSize/(2*Math.PI);	//TODO don't require enter same number here and elsewhere (gridSize)
 	var a = Math.atan2(vec[2],vec[3]);
 	var b = Math.atan2(vec[0],vec[1]);
@@ -63,6 +95,55 @@ function terrainGetHeightFor4VecPos(vec){
 	//return {a:-a, b:Math.PI*1.5 -b , h: -0.5*Math.asin( (vec[0]*vec[0] + vec[1]*vec[1]) - (vec[2]*vec[2] + vec[3]*vec[3]))};	//position such that will draw at input 4vec position
 }
 
+function terrainGetNearPointFor4VecPos(vec){	//returns estimated point in procTerrain space nearest the input 4vector
+	var multiplier = procTerrainSize/(2*Math.PI);	//TODO don't require enter same number here and elsewhere (gridSize)
+	var a = Math.atan2(vec[2],vec[3]);
+	var b = Math.atan2(vec[0],vec[1]);
+	
+	//TODO interpolation across polygon. initially just reuse equation used to generate terrain grid data.
+	//var aa=multiplier*decentMod(a,2*Math.PI);
+	//var bb=multiplier*decentMod(b + duocylinderSpin,2*Math.PI);
+	var aa=decentMod(multiplier*a,procTerrainSize);
+	var bb=decentMod(multiplier*(b + duocylinderSpin),procTerrainSize);
+	
+	if (vec[0]!=vec[0] || vec[1]!=vec[1] || vec[2]!=vec[2]){	//things can go wrong here with fast collision with boxes
+		console.log("NaN vector input to terrainGetHeightFor4VecPos");
+		console.log(vec);
+		return {a:0, b:0 , h:-1};	//todo what should return here? 
+	}
+	if (aa!=aa || bb!=bb){
+		console.log("NaN ab in terrainGetHeightFor4VecPos");
+		console.log(aa, bb);
+		return {a:0, b:0 , h:-1};	//todo what should return here? 
+	}
+	
+	var sineVal = (vec[0]*vec[0] + vec[1]*vec[1]) - (vec[2]*vec[2] + vec[3]*vec[3]);
+	sineVal = Math.max(Math.min(sineVal,1),-1);	//will be screwed if this is >1 / <-1 .
+	var c = -0.5*Math.asin( sineVal );	//this height of 4vec that can be compared to landscape height
+
+	var hinfo = getInterpHeightAndGradForAB(aa,bb);
+	
+	var h = (Math.PI/4)*hinfo.centreHeight*Math.sqrt(2);
+	var altitude = c-h;
+	
+	//estimate closest point. to do this properly should use grid separation specific to this height, but for simplicity, assume close to zero level.
+	//get a surface normal by normalising (gx,gy,gridsize)
+	var tnormal = [ hinfo.grad[0], hinfo.grad[1], 1/multiplier ];	//this depends on terrain scaling - is 1 height same as 1 across? guess maybe a factor root 2 here, or pi etc? see what terrainGetHeightFor4VecPos returns... TODO check
+	var normLen = Math.hypot.apply(null,tnormal);	
+	tnormal = tnormal.map(x=>x/normLen);	//normalise  (todo normLen with *altitude)
+	
+	//console.log(tnormal);
+	testTnormal = {norm:tnormal, len:normLen};
+	
+	//return {a:-a+tnormal[0]*altitude, b:Math.PI*1.5 -b +tnormal[1]*altitude , h:(Math.PI/4)*hinfo.centreHeight};	//TODO do h correctly
+	//return {a:-a+tnormal[0]*altitude, b:Math.PI*1.5 -b +tnormal[1]*altitude , h:c/Math.sqrt(2)};	// height just return input
+	return {a:-a-tnormal[0]*altitude, b:Math.PI*1.5 -b -tnormal[1]*altitude , h:(c - tnormal[2]*altitude) /Math.sqrt(2)};	// h
+	
+	
+}
+
+var testTnormal;
+
 function getHeightAboveTerrainFor4VecPos(vec){
 	var multiplier = procTerrainSize/(2*Math.PI);	//TODO don't require enter same number here and elsewhere (gridSize)
 	var a = Math.atan2(vec[2],vec[3]);
@@ -91,7 +172,8 @@ function getNearestTerrainPosMatFor4VecPos(posVec){
 	//this should give decent results for slowly varying gradient. but where there are sharp changes in gradient (which is the case assuming linear interpolation between grid points), may notice problems.
 
 	//for sanity check, get point directly below player. should be able to calc distance to this repro existing behaviour
-	var abhPos = terrainGetHeightFor4VecPos(posVec);
+	//var abhPos = terrainGetHeightFor4VecPos(posVec);
+	var abhPos = terrainGetNearPointFor4VecPos(posVec);
 		//convert this to 4vec space, using function in voxterrain.js (todo generalise). 
 		//todo account for duocylinder spin
 
@@ -109,18 +191,22 @@ var terrainHeightData = (function generateTerrainHeightData(){
 		var dataForI = [];
 		allData.push(dataForI);
 		for (jj=0;jj<procTerrainSize;jj++){
-			//dataForI.push(terrainPrecalcHeight(ii,jj));
-			dataForI.push(terrainPrecalcHeightPerlin(ii,jj));
+			dataForI.push(terrainPrecalcHeight(ii,jj));
+			//dataForI.push(terrainPrecalcHeightTest(ii,jj));
+		//	dataForI.push(terrainPrecalcHeightPerlin(ii,jj));
 			//dataForI.push(terrainPrecalcHeightCastellated(ii,jj));
 			//dataForI.push(terrainPrecalcHeight111(ii,jj));
 		}
 	}
+	
+	//console.log(allData);
+		
 	return allData;
 	
 	function terrainPrecalcHeight(ii,jj){		
 		//make a flat region
 		if ((ii<40) && (jj>100) && (jj<156)){
-			return 0.0;
+		//	return 0.0;
 		}
 		
 		//egg box
@@ -134,7 +220,27 @@ var terrainHeightData = (function generateTerrainHeightData(){
 		//add a big pyramid
 		//height = Math.max(0.4-0.02*Math.max(Math.abs(ii-20),Math.abs(jj-20)), height);
 		
-		return height;
+		return 5*height;
+	}
+	
+	function terrainPrecalcHeightTest(ii,jj){		
+		//make a flat region
+		if ((ii<40) && (jj>100) && (jj<156)){
+			return 0.2;
+		}
+		
+		//egg box
+		var tmpsf = 2*Math.PI*5/procTerrainSize;
+		var height = 0.025*Math.sin(ii*tmpsf)*Math.sin(jj*tmpsf);
+		//var height = 0.2*Math.sin(jj*jj*tmpsf*0.005);		//sorted out for ii. todo jj. test terrain patterns?
+		//var height = 0.000004*((jj*ii)%10000);
+		
+		//height = 2*Math.max(height,-0.1);	//raise deep parts to "sea" level
+		
+		//add a big pyramid
+		//height = Math.max(0.4-0.02*Math.max(Math.abs(ii-20),Math.abs(jj-20)), height);
+		
+		return 5*height;
 	}
 	
 	function terrainPrecalcHeightCastellated(ii,jj){		
@@ -162,7 +268,7 @@ var terrainHeightData = (function generateTerrainHeightData(){
 	
 	
 	function terrainPrecalcHeightPerlin(ii,jj){			//todo perlin generator for correct scale?
-		return 2.8*sumPerlinWrap(ii/64,jj/64,0,2);
+		var hi = 2.8*sumPerlinWrap(ii/64,jj/64,0,2);
 		//noise.perlin3 is quite odd. noise.perlin3(0,0,n) returns 0 always, suggesting doesn't treat all coords the same. TODO own perlin!!
 															
 		//noise.perlin3 seems to be 0 for any integer coords, eg (0,0,0), (1,2,3) etc, but (0.5,0,0) does not match (1.5,0,0) etc
@@ -171,6 +277,13 @@ var terrainHeightData = (function generateTerrainHeightData(){
 		//todo make something more efficient, should make small random grid, then make one 2x larger, adding tiled contribution from smaller grid, and so on. that way have something live 256x256 calls, instead of 256x256xoctaves. (check how slow this function is now)
 		
 		//suspect that high detail (octaves) data might be nothing here due to sampling
+	
+	//make a raised region
+		if ((ii<40) && (jj>100) && (jj<156)){
+			hi += 0.05;
+		}
+	
+		return hi;
 	}
 	
 })();
