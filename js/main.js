@@ -3123,7 +3123,6 @@ function init(){
 	var displayFolder = gui.addFolder('display');	//control and movement
 	displayFolder.add(guiParams.display, "cameraType", ["cockpit", "near 3rd person", "mid 3rd person", "far 3rd person", "side"]);
 	displayFolder.add(guiParams.display, "cameraFov", 60,130,5);
-	displayFolder.add(guiParams.display, "cameraFov", 60,160,5);
 	displayFolder.add(guiParams.display, "flipReverseCamera");
 	displayFolder.add(guiParams.display, "showHud");
 	displayFolder.add(guiParams.display, "renderViaTexture", ['no','basic','bennyBoxLite','bennyBox','fisheye']);
@@ -3749,6 +3748,8 @@ var iterateMechanics = (function iterateMechanics(){
 					//find length from this to position in player space.
 					var lengthToNearest = Math.hypot.apply(null, nearestPos.map((elem,ii)=>{return elem-legPos[ii];}));
 					myDebugStr = "suspensionHeightNow: " + suspensionHeightNow.toFixed(4) + ", lengthToNearest: " + lengthToNearest.toFixed(4);
+					
+					suspensionHeightNow = lengthToNearest;	//override suspension height with new distance. improves collision detection (barring glitches if break assumptions - eg might collide with phantom terrain if have abrupt steep wall...) . reaction force will remain upwards with just this change.
 					
 					
 					suspensionHeightNow = Math.max(Math.min(-suspensionHeightNow,0) + ballSize, 0);	//capped
