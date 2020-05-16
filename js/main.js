@@ -6,6 +6,7 @@ var shaderProgramColored,	//these are variables that are set to different shader
 var angle_ext;
 
 var myDebugStr = "TEST INFO TO GO HERE";
+var myfisheyedebug;
 
 function bufferArrayData(buffer, arr, size){
 	 bufferArrayDataF32(buffer, new Float32Array(arr), size);
@@ -922,11 +923,39 @@ function drawScene(frameTime){
 		drawWorldScene(frameTime, false, offsetCameraContainer.world);
 	}else{
 		
+		var fisheyeParams={};
 		
 		if (guiParams.display.renderViaTexture == "fisheye"){
 			//draw scene to a offscreen
 			gl.bindFramebuffer(gl.FRAMEBUFFER, rttFisheyeView.framebuffer);
-			var oversize =1.6;	//bodge TODO correct, preset size.
+			
+			var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
+			var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
+			
+			var uF = [fx, fy];
+			var uVarOne = guiParams.display.uVarOne;
+			
+			//see shader file for derivation of oversize calculation
+			var sumInvSqs = uF[0]*uF[0] + uF[1]*uF[1];
+			var oversizeRHS = 0.25 - uVarOne*2*sumInvSqs;
+			var oversize;
+			if (oversizeRHS<=0){
+				oversize = 4.0;	//cap it. TODO ensure this can't happen? (control diag fov by UI?) does this happen?
+				console.log("OVERSIZE RHS NEGATIVE OR ZERO!");
+			}else{
+				oversize = Math.sqrt(oversizeRHS) + 0.5;
+			}
+			//cap oversize so doesn't kill computer!!
+			//note this is good for a proof of concept/ testing fisheye cam for gameplay, but 4x oversize (basically rendering 8k for 2k result) makes computer quite noisy! should use 2/4 panel/cubemap method if want a large FOV.
+			oversize = Math.min(oversize,4.0);
+			
+			fisheyeParams.uInvF = uF.map(elem=>1/elem);
+			fisheyeParams.uVarOne = uVarOne;
+			fisheyeParams.uOversize = oversize;
+			
+			myfisheyedebug = fisheyeParams;	//TODO remove
+			
+			
 			var oversizedViewport = [ 2*Math.floor(oversize*gl.viewportWidth/2),  2*Math.floor(oversize*gl.viewportHeight/2)];
 			gl.viewport( 0,0, oversizedViewport[0], oversizedViewport[1] );
 			setRttSize( rttFisheyeView, oversizedViewport[0], oversizedViewport[1] );	//todo stop setting this repeatedly
@@ -951,12 +980,12 @@ function drawScene(frameTime){
 			enableDisableAttributes(activeProg);
 			gl.cullFace(gl.BACK);
 			
-			if (activeProg.uniforms.uInvF){	//used for fisheye TODO lose IF?
-				//gl.uniform2fv(activeProg.uniforms.uInvF, [1.0/rttView.fx, 1.0/rttView.fy]);	//todo get these values!
-				var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
-				var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
-				gl.uniform2fv(activeProg.uniforms.uInvF, [1.0/fx, 1.0/fy]);
-			}
+			//if (activeProg.uniforms.uInvF){	//used for fisheye TODO lose IF?
+			gl.uniform2fv(activeProg.uniforms.uInvF, fisheyeParams.uInvF);
+			//}
+			gl.uniform1f(activeProg.uniforms.uVarOne, fisheyeParams.uVarOne);
+			gl.uniform1f(activeProg.uniforms.uOversize, fisheyeParams.uOversize);
+			
 			gl.uniform1i(activeProg.uniforms.uSampler, 0);		
 			gl.uniform2fv(activeProg.uniforms.uInvSize, [1/gl.viewportWidth , 1/gl.viewportHeight]);		
 			drawObjectFromBuffers(fsBuffers, activeProg);
@@ -2994,11 +3023,12 @@ var guiParams={
 		smoothMouse:200
 	},
 	display:{
-		cameraType:"far 3rd person",
-		cameraFov:115,
+		cameraType:"mid 3rd person",
+		cameraFov:140,
+		uVarOne:-0.01,
 		flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
 		showHud:false,
-		renderViaTexture:'bennyBox',
+		renderViaTexture:'fisheye',
 		perPixelLighting:true,
 		atmosShader:"atmos",
 		atmosThickness:0.2,
@@ -3140,7 +3170,8 @@ function init(){
 	
 	var displayFolder = gui.addFolder('display');	//control and movement
 	displayFolder.add(guiParams.display, "cameraType", ["cockpit", "near 3rd person", "mid 3rd person", "far 3rd person", "side"]);
-	displayFolder.add(guiParams.display, "cameraFov", 60,140,5);
+	displayFolder.add(guiParams.display, "cameraFov", 60,165,5);
+	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.005);
 	displayFolder.add(guiParams.display, "flipReverseCamera");
 	displayFolder.add(guiParams.display, "showHud");
 	displayFolder.add(guiParams.display, "renderViaTexture", ['no','basic','bennyBoxLite','bennyBox','fisheye']);
