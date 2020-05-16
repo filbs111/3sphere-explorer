@@ -3011,7 +3011,7 @@ var guiParams={
 	normalMove:0
 };
 var settings = {
-	playerBallRad:0.01,
+	playerBallRad:0.006,
 	characterBallRad:0.001
 }
 
@@ -3760,9 +3760,31 @@ var iterateMechanics = (function iterateMechanics(){
 					landingLeg.suspHeight = suspensionHeightNow;
 														
 					//apply force to player, "up" wrt duocylinder
+					/*
 					for (var cc=0;cc<3;cc++){
 						playerVelVec[cc]+=suspensionForce*radialPlayerCoords[cc];	//radialPlayerCoords will be a bit different for landing legs but assume same since small displacement
 					}
+					*/
+					
+					//get the position of the closest point in the player frame. really only need to rotate the position vector by player matrix
+					var relevantMat = mat4.create();	//just for testing
+					mat4.set(playerCamera, relevantMat);
+					mat4.transpose(relevantMat);
+					var nearestPosPlayerFrame = [];
+					for (var cc=0;cc<3;cc++){
+						nearestPosPlayerFrame[cc]=relevantMat[cc]*nearestPos[0] +  relevantMat[cc+4]*nearestPos[1] +  relevantMat[cc+8]*nearestPos[2] +  relevantMat[cc+12]*nearestPos[3];
+					}
+					//normalise it 
+					var distNearestPointPlayerFrame = Math.hypot.apply(null, nearestPosPlayerFrame);	//this should recalculate existing vec
+					myDebugStr += ", distNearestPointPlayerFrame: " + distNearestPointPlayerFrame.toFixed(4);
+					nearestPosPlayerFrame = nearestPosPlayerFrame.map(elem=>elem/distNearestPointPlayerFrame);	//normalise
+					
+					for (var cc=0;cc<3;cc++){
+						playerVelVec[cc]+=suspensionForce*nearestPosPlayerFrame[cc];
+						
+					}
+					
+					
 					
 					//fake force is directly up (assumes upward terrain normal). should still cause tripod to conform to surface by appling torque from this upward force. 
 					//to find torque for a leg, want to do cross product of leg position with duocylinder up direction (in frame of player). 
