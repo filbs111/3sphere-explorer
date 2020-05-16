@@ -40,7 +40,7 @@ function terrainGetHeightFor4VecPos(vec){
 	//var aa=multiplier*decentMod(a,2*Math.PI);
 	//var bb=multiplier*decentMod(b + duocylinderSpin,2*Math.PI);
 	var aa=decentMod(multiplier*a,procTerrainSize);
-	var bb=decentMod(multiplier*b,procTerrainSize);
+	var bb=decentMod(multiplier*(b + duocylinderSpin),procTerrainSize);
 	
 	if (vec[0]!=vec[0] || vec[1]!=vec[1] || vec[2]!=vec[2]){	//things can go wrong here with fast collision with boxes
 		console.log("NaN vector input to terrainGetHeightFor4VecPos");
@@ -83,6 +83,19 @@ function getHeightAboveTerrainFor4VecPos(vec){
 	h*=Math.sqrt(2);	//fudge factor. TODO figure out if this is true height (think "true" height is before multtiply)
 	
 	return c-h;
+}
+
+//function getNearestTerrain4VecPosFor4VecPos(posVec){
+function getNearestTerrainPosMatFor4VecPos(posVec){
+	//find height above terrain, gradient here. estimate nearest surface point assuming constant gradient
+	//this should give decent results for slowly varying gradient. but where there are sharp changes in gradient (which is the case assuming linear interpolation between grid points), may notice problems.
+
+	//for sanity check, get point directly below player. should be able to calc distance to this repro existing behaviour
+	var abhPos = terrainGetHeightFor4VecPos(posVec);
+		//convert this to 4vec space, using function in voxterrain.js (todo generalise). 
+		//todo account for duocylinder spin
+
+	return getMatForABCDCCoords(abhPos.a,Math.PI*1.5 - abhPos.b,abhPos.h*Math.sqrt(2));	//note Math.PI*1.5 - ... , *Math.sqrt(2) because vox, procterrain stuff is inconsistent
 }
 
 function decentMod(num,toModBy){	//handle crappy nature of mod function (gives -ve if -ve)

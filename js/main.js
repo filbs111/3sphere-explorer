@@ -5,6 +5,8 @@ var shaderProgramColored,	//these are variables that are set to different shader
 
 var angle_ext;
 
+var myDebugStr = "TEST INFO TO GO HERE";
+
 function bufferArrayData(buffer, arr, size){
 	 bufferArrayDataF32(buffer, new Float32Array(arr), size);
 }
@@ -1757,6 +1759,12 @@ function drawWorldScene(frameTime, isCubemapView) {
 		mat4.multiply(mvMatrix, collisionTestObj5Mat);
 		mat4.set(collisionTestObj5Mat, mMatrix);
 		drawTriAxisCross(0.02);
+		
+		//procTerrain
+		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.multiply(mvMatrix, procTerrainNearestPointTestMat);
+		mat4.set(procTerrainNearestPointTestMat, mMatrix);
+		drawTriAxisCross(0.02);
 	}
 	
 	function drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, buffers, invertedCamera){
@@ -2991,7 +2999,7 @@ var guiParams={
 		moveAway:0.0005
 	},
 	debug:{
-		closestPoint:false,
+		closestPoint:true,
 		buoys:false,
 		nmapUseShader2:true,
 		showSpeedOverlay:false,
@@ -3031,6 +3039,8 @@ var collisionTestObj2Mat = mat4.identity();
 var collisionTestObj3Mat = mat4.identity();
 var collisionTestObj4Mat = mat4.identity();
 var collisionTestObj5Mat = mat4.identity();
+
+var procTerrainNearestPointTestMat = mat4.identity();
 
 function init(){
 
@@ -3649,7 +3659,9 @@ var iterateMechanics = (function iterateMechanics(){
 			infoToShow+=", airspd:" + spd.toFixed(2);
 			infoToShow+=", sshipMat:" + Array.from(sshipMatrix).map(elem=>elem.toFixed(3)).join(",");	//toFixed doesn't work right on float32 array so use Array.from first
 			infoToShow+=" debugRoll: " + debugRoll;
-			document.querySelector("#info2").innerHTML = infoToShow;
+			
+		//	document.querySelector("#info2").innerHTML = infoToShow;
+			document.querySelector("#info2").innerHTML = myDebugStr;
 			
 			//want to be able to steer in the air. todo properly - guess maybe wants "lift" from wings, but easiest implementation guess is to increase drag for lateral velocity.
 			//would like for both left/right, up/down velocity, but to test, try getting just one - like a aeroplane.
@@ -3725,8 +3737,20 @@ var iterateMechanics = (function iterateMechanics(){
 					var legPos = [landingLegMat[12],landingLegMat[13],landingLegMat[14],landingLegMat[15]];	
 					
 					//simple spring force terrain collision - 
-					//lookup height above terrain, subtract some value (height above terrain where restoring force goes to zero - basically maximum extension of landing legs. apply sprint force upward to player proportional to this amount.
+					//lookup height above terrain, subtract some value (height above terrain where restoring force goes to zero - basically maximum extension of landing legs. apply spring force upward to player proportional to this amount.
 					var suspensionHeightNow = getHeightAboveTerrainFor4VecPos(legPos);
+					
+					//get nearest point on terrain. could do this in terrain space, but to be reliable, testable, find nearest 4vec position, find this position in player frame.
+					//note this matrix "jiggles" when duocylinder rotating due to interpolation (other test mats that don't jiggle probably are in duocylinder rotating frame space)
+					var nearestPosMat = getNearestTerrainPosMatFor4VecPos(legPos);
+					var nearestPos = nearestPosMat.slice(12);
+					mat4.set(nearestPosMat, procTerrainNearestPointTestMat);
+					
+					//find length from this to position in player space.
+					var lengthToNearest = Math.hypot.apply(null, nearestPos.map((elem,ii)=>{return elem-legPos[ii];}));
+					myDebugStr = "suspensionHeightNow: " + suspensionHeightNow.toFixed(4) + ", lengthToNearest: " + lengthToNearest.toFixed(4);
+					
+					
 					suspensionHeightNow = Math.max(Math.min(-suspensionHeightNow,0) + ballSize, 0);	//capped
 					var suspensionVel = suspensionHeightNow-suspensionHeight;
 					var suspensionForce = 20*suspensionHeightNow+ 150*suspensionVel;	
