@@ -2972,7 +2972,7 @@ var guiParams={
 		onRails:false,
 		handbrake:false,
 		spinCorrection:true,
-		sriMechStr:1,
+		sriMechStr:0,
 		smoothMouse:200
 	},
 	display:{
@@ -3721,12 +3721,12 @@ var iterateMechanics = (function iterateMechanics(){
 				//distanceForTerrainNoise = getHeightAboveTerrainFor4VecPos(playerPos);	//TODO actual distance using surface normal (IIRC this is simple vertical height above terrain)
 
 				processTerrainCollisionForBall(playerCentreBallData, guiParams["drop spaceship"] ? settings.characterBallRad : settings.playerBallRad, true);
-				/*
+				
 				for (var legnum=0;legnum<landingLegData.length;legnum++){
 					var landingLeg = landingLegData[legnum];
 					processTerrainCollisionForBall(landingLeg, 0.001);
 				}
-				*/
+				
 				function processTerrainCollisionForBall(landingLeg, ballSize, useForThwop){	//0.005 reasonable ballSize for centre of player model. smaller for landing legs
 					var legPosPlayerFrame=landingLeg.pos;
 					var suspensionHeight=landingLeg.suspHeight;
@@ -3743,7 +3743,6 @@ var iterateMechanics = (function iterateMechanics(){
 					//note this matrix "jiggles" when duocylinder rotating due to interpolation (other test mats that don't jiggle probably are in duocylinder rotating frame space)
 					var nearestPosMat = getNearestTerrainPosMatFor4VecPos(legPos);
 					var nearestPos = nearestPosMat.slice(12);
-					mat4.set(nearestPosMat, procTerrainNearestPointTestMat);
 					
 					//find length from this to position in player space.
 					var lengthToNearest = Math.hypot.apply(null, nearestPos.map((elem,ii)=>{return elem-legPos[ii];}));
@@ -3768,7 +3767,7 @@ var iterateMechanics = (function iterateMechanics(){
 					
 					//get the position of the closest point in the player frame. really only need to rotate the position vector by player matrix
 					var relevantMat = mat4.create();	//just for testing
-					mat4.set(playerCamera, relevantMat);
+					mat4.set(landingLegMat, relevantMat);
 					mat4.transpose(relevantMat);
 					var nearestPosPlayerFrame = [];
 					for (var cc=0;cc<3;cc++){
@@ -3779,30 +3778,26 @@ var iterateMechanics = (function iterateMechanics(){
 					myDebugStr += ", distNearestPointPlayerFrame: " + distNearestPointPlayerFrame.toFixed(4);
 					
 					if (useForThwop){
+						mat4.set(nearestPosMat, procTerrainNearestPointTestMat);	//for visual debugging (TODO display object for each contact)
+					
 						distanceForTerrainNoise = distNearestPointPlayerFrame;	//assumes only 1 thing used for thwop
 						var soundSize = 0.002;	//reduced this below noiseRad so get more pan
 						panForTerrainNoise = Math.tanh(nearestPosPlayerFrame[0]/Math.hypot(soundSize,nearestPosPlayerFrame[1],nearestPosPlayerFrame[2]));	//tanh(left/hypot(size,down,forwards)). tanh smoothly limits to +/- 1
 					}
 					nearestPosPlayerFrame = nearestPosPlayerFrame.map(elem=>elem/distNearestPointPlayerFrame);	//normalise
+					var forcePlayerFrame = nearestPosPlayerFrame.map(x=>x*suspensionForce);	//TODO combo with above
 					
 					for (var cc=0;cc<3;cc++){
-						playerVelVec[cc]+=suspensionForce*nearestPosPlayerFrame[cc];
-						
+						playerVelVec[cc]+=forcePlayerFrame[cc];
 					}
 					
-					
-					
-					//fake force is directly up (assumes upward terrain normal). should still cause tripod to conform to surface by appling torque from this upward force. 
-					//to find torque for a leg, want to do cross product of leg position with duocylinder up direction (in frame of player). 
-						//ie legPosPlayerFrame x radialPlayerCoords
-					var forcePlayerFrame = radialPlayerCoords.map(function(elem){return elem*suspensionForce;});
 					var torquePlayerFrame = [
 									legPosPlayerFrame[1]*forcePlayerFrame[2] - legPosPlayerFrame[2]*forcePlayerFrame[1],
 									legPosPlayerFrame[2]*forcePlayerFrame[0] - legPosPlayerFrame[0]*forcePlayerFrame[2],
 									legPosPlayerFrame[0]*forcePlayerFrame[1] - legPosPlayerFrame[1]*forcePlayerFrame[0]
 									];
 					for (cc=0;cc<3;cc++){
-						playerAngVelVec[cc]-=10000*torquePlayerFrame[cc];	//assumes moment of intertia of sphere/cube/similar
+						playerAngVelVec[cc]-=20000*torquePlayerFrame[cc];	//assumes moment of intertia of sphere/cube/similar
 					}
 					
 					//TODO apply force along ground normal, friction force
@@ -4082,7 +4077,7 @@ var iterateMechanics = (function iterateMechanics(){
 									legPosPlayerFrame[0]*forcePlayerFrame[1] - legPosPlayerFrame[1]*forcePlayerFrame[0]
 									];
 							for (cc=0;cc<3;cc++){
-								playerAngVelVec[cc]-=10000*torquePlayerFrame[cc];	//assumes moment of intertia of sphere/cube/similar
+								playerAngVelVec[cc]-=20000*torquePlayerFrame[cc];	//assumes moment of intertia of sphere/cube/similar
 							}
 							
 							
