@@ -921,16 +921,46 @@ function drawScene(frameTime){
 	if (guiParams.display.renderViaTexture == "no"){
 		drawWorldScene(frameTime, false, offsetCameraContainer.world);
 	}else{
+		
+		
+		if (guiParams.display.renderViaTexture == "fisheye"){
+			//draw scene to a offscreen
+			gl.bindFramebuffer(gl.FRAMEBUFFER, rttFisheyeFramebuffer);
+			var oversize =1.6;	//bodge TODO correct, preset size.
+			var oversizedViewport = [ 2*Math.floor(oversize*gl.viewportWidth/2),  2*Math.floor(oversize*gl.viewportHeight/2)];
+			gl.viewport( 0,0, oversizedViewport[0], oversizedViewport[1] );
+			setRttFisheyeSize( oversizedViewport[0], oversizedViewport[1] );	//todo stop setting this repeatedly
+			drawWorldScene(frameTime, false, offsetCameraContainer.world);
+		}
+		
 		//draw the scene to offscreen framebuffer
 		gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
-		var oversize = (guiParams.display.renderViaTexture == "fisheye")? 1.6 :1;	//bodge
-		var oversizedViewport = [ 2*Math.floor(oversize*gl.viewportWidth/2),  2*Math.floor(oversize*gl.viewportHeight/2)];
+		gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
+		setRttSize( gl.viewportWidth, gl.viewportHeight );
 		
-			document.mydebugval1 =oversizedViewport;
-		gl.viewport( 0,0, oversizedViewport[0], oversizedViewport[1] );
-		setRttSize( oversizedViewport[0], oversizedViewport[1] );
+		var activeProg;
 		
-		drawWorldScene(frameTime, false, offsetCameraContainer.world);
+		if (guiParams.display.renderViaTexture != "fisheye"){
+			drawWorldScene(frameTime, false, offsetCameraContainer.world);
+		}else{
+			//draw scene to intermediate screen
+			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+			bind2dTextureIfRequired(rttFisheyeTexture);	
+			activeProg = shaderPrograms.fullscreenTexturedFisheye;
+			gl.useProgram(activeProg);
+			enableDisableAttributes(activeProg);
+			gl.cullFace(gl.BACK);
+			
+			if (activeProg.uniforms.uInvF){	//used for fisheye TODO lose IF?
+				//gl.uniform2fv(activeProg.uniforms.uInvF, [1.0/rttView.fx, 1.0/rttView.fy]);	//todo get these values!
+				var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
+				var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
+				gl.uniform2fv(activeProg.uniforms.uInvF, [1.0/fx, 1.0/fy]);
+			}
+			gl.uniform1i(activeProg.uniforms.uSampler, 0);		
+			gl.uniform2fv(activeProg.uniforms.uInvSize, [1/gl.viewportWidth , 1/gl.viewportHeight]);		
+			drawObjectFromBuffers(fsBuffers, activeProg);
+		}
 		
 		//draw quad to screen using drawn texture
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);	//draw to screen.
@@ -942,27 +972,18 @@ function drawScene(frameTime){
 		//gl.bindTexture(gl.TEXTURE_2D, rttTexture);	//set just drawn texture as active for drawing to screen
 		
 		//draw the simple quad object to the screen
-		var activeProg;
+		
 		switch (guiParams.display.renderViaTexture){
 			case "basic": 
 				activeProg = shaderPrograms.fullscreenTextured;break;
 			case "bennyBox":
+			case "fisheye":
 				activeProg = shaderPrograms.fullscreenBennyBox;break;
 			case "bennyBoxLite":
 				activeProg = shaderPrograms.fullscreenBennyBoxLite;break;
-			case "fisheye":
-				activeProg = shaderPrograms.fullscreenTexturedFisheye;break;
 		}
 		gl.useProgram(activeProg);
 		enableDisableAttributes(activeProg);
-		
-		if (activeProg.uniforms.uInvF){	//used for fisheye
-			//gl.uniform2fv(activeProg.uniforms.uInvF, [1.0/rttView.fx, 1.0/rttView.fy]);	//todo get these values!
-			var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
-			var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
-			gl.uniform2fv(activeProg.uniforms.uInvF, [1.0/fx, 1.0/fy]);
-		}
-		
 		gl.cullFace(gl.BACK);
 		
 		//gl.activeTexture(gl.TEXTURE0);
@@ -3237,6 +3258,7 @@ function init(){
 	angle_ext = gl.getExtension("ANGLE_instanced_arrays");							
 	
 	initTextureFramebuffer();
+	initTextureFisheyeFramebuffer();
 	initShaders();
 	initTexture();
 	initCubemapFramebuffer();
@@ -4734,8 +4756,11 @@ function fireGun(){
 
 //from http://learningwebgl.com/blog/?p=1786
 var rttFramebuffer;
+var rttFisheyeFramebuffer;
 var rttTexture;
+var rttFisheyeTexture;
 var rttView={};
+var rttFisheyeView={};
 
 function setRttSize(width, height){	
 	if (rttView.sizeX == width && rttView.sizeY == height){return;}	// avoid setting again if same numbers ( has speed impact)
@@ -4761,6 +4786,33 @@ function setRttSize(width, height){
 	gl.bindRenderbuffer(gl.RENDERBUFFER, null);
 //	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
+
+//straight copy-paste to avoid problems. TODO generalise code
+function setRttFisheyeSize(width, height){	
+	if (rttFisheyeView.sizeX == width && rttFisheyeView.sizeY == height){return;}	// avoid setting again if same numbers ( has speed impact)
+																	//todo check for memory leak
+	rttFisheyeView.sizeX = width;
+	rttFisheyeView.sizeY = height;
+		
+	rttFisheyeFramebuffer.width = width;
+	rttFisheyeFramebuffer.height = height;	
+	
+	gl.bindTexture(gl.TEXTURE_2D, rttFisheyeTexture);
+	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, rttFisheyeFramebuffer.width, rttFisheyeFramebuffer.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+	var renderbuffer = gl.createRenderbuffer();
+	gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
+	gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, rttFisheyeFramebuffer.width, rttFisheyeFramebuffer.height);
+
+//	gl.bindFramebuffer(gl.FRAMEBUFFER, rttFisheyeFramebuffer);
+	
+	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, rttFisheyeTexture, 0);
+	gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, renderbuffer);
+
+	gl.bindTexture(gl.TEXTURE_2D, null);
+	gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+//	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+}
+
 
 function initTextureFramebuffer() {
 	rttFramebuffer = gl.createFramebuffer();
@@ -4794,6 +4846,28 @@ function initTextureFramebuffer() {
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	*/
 }
+
+
+//straight copy to avoid problems. refactor later.
+function initTextureFisheyeFramebuffer() {
+	rttFisheyeFramebuffer = gl.createFramebuffer();
+
+	rttFisheyeTexture = gl.createTexture();
+	gl.bindTexture(gl.TEXTURE_2D, rttFisheyeTexture);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+	//gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+
+	//gl.generateMipmap(gl.TEXTURE_2D);
+
+	gl.bindFramebuffer(gl.FRAMEBUFFER, rttFisheyeFramebuffer);
+	setRttFisheyeSize(2048, 1024);	//overwritten right away, so little point having here.
+	
+}
+
 
 function drawTriAxisCross(scale){
 	var smallScale = scale/20;
