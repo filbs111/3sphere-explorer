@@ -3718,16 +3718,16 @@ var iterateMechanics = (function iterateMechanics(){
 
 			if (worldInfo.duocylinderModel == 'procTerrain'){
 				
-				distanceForTerrainNoise = getHeightAboveTerrainFor4VecPos(playerPos);	//TODO actual distance using surface normal (IIRC this is simple vertical height above terrain)
+				//distanceForTerrainNoise = getHeightAboveTerrainFor4VecPos(playerPos);	//TODO actual distance using surface normal (IIRC this is simple vertical height above terrain)
 
-				processTerrainCollisionForBall(playerCentreBallData, guiParams["drop spaceship"] ? settings.characterBallRad : settings.playerBallRad);
+				processTerrainCollisionForBall(playerCentreBallData, guiParams["drop spaceship"] ? settings.characterBallRad : settings.playerBallRad, true);
 				/*
 				for (var legnum=0;legnum<landingLegData.length;legnum++){
 					var landingLeg = landingLegData[legnum];
 					processTerrainCollisionForBall(landingLeg, 0.001);
 				}
 				*/
-				function processTerrainCollisionForBall(landingLeg, ballSize){	//0.005 reasonable ballSize for centre of player model. smaller for landing legs
+				function processTerrainCollisionForBall(landingLeg, ballSize, useForThwop){	//0.005 reasonable ballSize for centre of player model. smaller for landing legs
 					var legPosPlayerFrame=landingLeg.pos;
 					var suspensionHeight=landingLeg.suspHeight;
 								
@@ -3777,6 +3777,12 @@ var iterateMechanics = (function iterateMechanics(){
 					//normalise it 
 					var distNearestPointPlayerFrame = Math.hypot.apply(null, nearestPosPlayerFrame);	//this should recalculate existing vec
 					myDebugStr += ", distNearestPointPlayerFrame: " + distNearestPointPlayerFrame.toFixed(4);
+					
+					if (useForThwop){
+						distanceForTerrainNoise = distNearestPointPlayerFrame;	//assumes only 1 thing used for thwop
+						var soundSize = 0.002;	//reduced this below noiseRad so get more pan
+						panForTerrainNoise = Math.tanh(nearestPosPlayerFrame[0]/Math.hypot(soundSize,nearestPosPlayerFrame[1],nearestPosPlayerFrame[2]));	//tanh(left/hypot(size,down,forwards)). tanh smoothly limits to +/- 1
+					}
 					nearestPosPlayerFrame = nearestPosPlayerFrame.map(elem=>elem/distNearestPointPlayerFrame);	//normalise
 					
 					for (var cc=0;cc<3;cc++){
