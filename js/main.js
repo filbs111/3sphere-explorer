@@ -3721,12 +3721,12 @@ var iterateMechanics = (function iterateMechanics(){
 				//distanceForTerrainNoise = getHeightAboveTerrainFor4VecPos(playerPos);	//TODO actual distance using surface normal (IIRC this is simple vertical height above terrain)
 
 				processTerrainCollisionForBall(playerCentreBallData, guiParams["drop spaceship"] ? settings.characterBallRad : settings.playerBallRad, true);
-				
+				/*
 				for (var legnum=0;legnum<landingLegData.length;legnum++){
 					var landingLeg = landingLegData[legnum];
 					processTerrainCollisionForBall(landingLeg, 0.001);
 				}
-				
+				*/
 				function processTerrainCollisionForBall(landingLeg, ballSize, useForThwop){	//0.005 reasonable ballSize for centre of player model. smaller for landing legs
 					var legPosPlayerFrame=landingLeg.pos;
 					var suspensionHeight=landingLeg.suspHeight;
