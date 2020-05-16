@@ -201,6 +201,7 @@ var duocylinderObjects={
 	};
 
 var sphereBuffers={};
+var sphereBuffersHiRes={};
 var quadBuffers={};
 var cubeBuffers={};
 var smoothCubeBuffers={};
@@ -523,8 +524,8 @@ function initBuffers(){
 	var icoballObj = loadBlenderExport(icoballdata);
 
 	//loadBufferData(sphereBuffers, makeSphereData(99,200,1)); //todo use normalized box/icosohedron,subdivided octohedron etc, triangle strips
-	loadBufferData(sphereBuffers, makeSphereData(127,255,1)); //near index limit 65536.
-	//loadBufferData(sphereBuffers, makeSphereData(49,100,1));
+	loadBufferData(sphereBuffers, makeSphereData(16,32,1));
+	loadBufferData(sphereBuffersHiRes, makeSphereData(127,255,1)); //near index limit 65536.
 	loadBufferData(quadBuffers, quadData);
 	loadBufferData(cubeBuffers, levelCubeData);
 	loadBufferData(smoothCubeBuffers, smoothCubeData);
@@ -2310,7 +2311,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			if(guiParams.reflector.mappingType == 'vertex projection'){
 				gl.uniform3fv(activeShaderProgram.uniforms.uCentrePosScaled, reflectorInfo.centreTanAngleVectorScaled	);
 			}
-			drawObjectFromBuffers(sphereBuffers, activeShaderProgram, true);
+			drawObjectFromBuffers(sphereBuffersHiRes, activeShaderProgram, true);
 		}
 		
 		activeShaderProgram = savedActiveProg;
