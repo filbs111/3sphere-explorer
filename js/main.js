@@ -2070,8 +2070,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 	}
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 
-	//gl.disableVertexAttribArray(1);	//don't need texcoords
-
 	//TODO this only 
 	//if (activeShaderProgram.uniforms.uReflectorPos){
 		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
@@ -2605,18 +2603,32 @@ function generateCullFunc(pMat){
 	}
 }
 
+var enableDisableAttributes = (function generateEnableDisableAttributesFunc(){
+	var enabledSet = new Set();
+	
+	return function(shaderProg){
+		
+		var toBeEnabled = new Set();
+		Object.keys(shaderProg.attributes).forEach(function(item, index){
+			toBeEnabled.add(gl.getAttribLocation(shaderProg, item));	//TODO store attrib locations for shader at initialisation time?
+		});
+		
+		enabledSet.forEach(item=>{
+			if (!toBeEnabled.has(item)){
+				enabledSet.delete(item);
+				gl.disableVertexAttribArray(item);	
+			}
+		});
+		
+		toBeEnabled.forEach(item=>{
+			if (!enabledSet.has(item)){
+				enabledSet.add(item);
+				gl.enableVertexAttribArray(item);	
+			}
+		});
+	};
+})();
 
-function enableDisableAttributes(shaderProg){
-	//avoid issue where if object with a lot of attributes has a shader loaded and enableVertexAttribArray was called,
-	//and nothing is bound to it, won't draw anything. 
-	//just disable lots (TODO keep track of which are enabled and enable/disable as required
-	for (var ii=0;ii<16;ii++){
-		gl.disableVertexAttribArray(ii);
-	}
-	Object.keys(shaderProg.attributes).forEach(function(item, index){
-		gl.enableVertexAttribArray(gl.getAttribLocation(shaderProg, item));	//TODO is this slow??
-	});
-}
 
 function drawTennisBall(duocylinderObj, shader){
 	enableDisableAttributes(shader);
