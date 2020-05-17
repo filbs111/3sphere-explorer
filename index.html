@@ -725,14 +725,17 @@
 			discard;
 		}
 	
-		float light = -dot( normalize(adjustedPos), transformedNormal);
+		vec4 adjustedPosNormalised = normalize(adjustedPos);
+	
+		float light = -dot( adjustedPosNormalised, transformedNormal);
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		
 #ifdef SPECULAR_ACTIVE
 	//other specular implementation is in tangent space.
 	//this uses 4vecs. guessed but appears to work fine.
 	vec4 eyePos = vec4(0.,0.,0.,1.);
-	vec4 halfVec = normalize( normalize(transformedCoord-eyePos) + normalize(adjustedPos));
+	vec4 vecToEye = normalize(transformedCoord-eyePos);
+	vec4 halfVec = normalize( vecToEye + adjustedPosNormalised);
 	float phongAmount = uSpecularStrength*pow( max(-dot(halfVec, transformedNormal), 0.),uSpecularPower);
 	light+=phongAmount;
 #endif
@@ -744,6 +747,14 @@
 		//this is just bodged/guessed to achieve correct behaviour at/across portal. TODO check/correct!
 		float portalLight = dot( uReflectorPos, transformedNormal);
 		portalLight = max(0.5*portalLight +0.5+ posCosDiff,0.0);	//unnecessary if camera pos = light pos
+
+#ifdef SPECULAR_ACTIVE
+		//TODO take into account "size" of portal light. TODO suspect this is not right - speculat much stronger in shader-texmap-perpixel-discard-normalmap-efficient-fs . suspect due to zeroing w component there
+		halfVec = normalize( vecToEye + normalize(transformedCoord-uReflectorPos));
+		phongAmount = uSpecularStrength*pow( max(-dot(halfVec, transformedNormal), 0.),uSpecularPower);
+		portalLight+=phongAmount;
+#endif
+
 		//falloff
 		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
 
@@ -922,7 +933,6 @@
 	//	light/=0.1 + 5.0*(1.0-normalizedLightPos.w);				//results consistent with "inefficient" version for small distances
 		vec4 vecToLight = normalizedLightPos - vec4(vec3(0.0),1.0);	//result fully consistent with "inefficient" version, but maybe not worth extra calcs
 		light/=0.1 + 5.0*dot(vecToLight,vecToLight);
-		
 	
 		//light from portal. TODO pass in a colour for this, more complex lighting (at surface of portal, should be hemispherical light etc)
 		//this is just bodged/guessed to achieve correct behaviour at/across portal. TODO check/correct!
@@ -930,6 +940,14 @@
 						
 		portalLight = max(0.5*portalLight +0.5+ posCosDiff,0.0);	//unnecessary if camera pos = light pos
 
+#ifdef SPECULAR_ACTIVE
+		vec4 vPortalLightPosTangentSpaceAdj = normalize(vec4( vPortalLightPosTangentSpace.xyz , 0.0));
+
+		//TODO take into account "size" of portal light
+		halfVec = normalize( normalizedEyePosAdj + vPortalLightPosTangentSpaceAdj );
+		phongAmount = uSpecularStrength*pow( max(dot(halfVec, nmapNormal), 0.),uSpecularPower);
+		portalLight+=phongAmount;
+#endif
 
 		//falloff
 		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal

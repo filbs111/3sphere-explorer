@@ -3048,7 +3048,7 @@ var guiParams={
 		culling:true,
 		useSpecular:true,
 		specularStrength:1.0,
-		specularPower:8.0
+		specularPower:20.0
 	},
 	reflector:{
 		draw:true,
@@ -3193,7 +3193,7 @@ function init(){
 	displayFolder.add(guiParams.display, "atmosContrast", -10,10,0.5);
 	displayFolder.add(guiParams.display, "culling");
 	displayFolder.add(guiParams.display, "useSpecular");
-	displayFolder.add(guiParams.display, "specularStrength", 0,5,0.2);
+	displayFolder.add(guiParams.display, "specularStrength", 0,2,0.2);
 	displayFolder.add(guiParams.display, "specularPower", 1,20,0.5);
 	displayFolder.add(guiParams, "normalMove", 0,0.02,0.001);
 	
