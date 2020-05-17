@@ -1718,7 +1718,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	if (worldInfo.duocylinderModel == 'procTerrain'){
 		terrainCollisionTestBoxPos = terrainGetHeightFor4VecPos(playerPos);		//TODO in position update (not rendering)
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.001,0.001,0.001]);
-		drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
+		drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h *Math.sqrt(2), [1.0, 0.4, 1.0, 1.0], cubeBuffers);
 	}
 	
 	if (guiParams.debug.closestPoint){
