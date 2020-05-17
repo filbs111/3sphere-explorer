@@ -1130,7 +1130,7 @@
 	varying float fog;
 	uniform vec3 uModelScale;
 	varying vec4 adjustedPos;
-	varying vec4 transformedNormal;
+	varying vec4 transformedNormal;		//note could use mat4 varying to tidy up
 	varying vec4 transformedCoord;
 	varying vec4 transformedTangent;
 	varying vec4 transformedBinormal;
@@ -1138,17 +1138,16 @@
 	void main(void) {
 		vec3 scaledPos = uModelScale*aVertexPosition;
 		vec4 aVertexPositionNormalized = normalize(vec4(scaledPos, 1.0));
-		transformedCoord = uMVMatrix * aVertexPositionNormalized;
-		
-		gl_Position = uPMatrix * transformedCoord;
-
 		vec4 untransformedNormal = normalize( vec4( aVertexNormal, -dot(aVertexNormal, scaledPos)));	
 		vec4 untransformedTangent = normalize( vec4( aVertexTangent, -dot(aVertexTangent, scaledPos)));	
 		vec4 untransformedBinormal = normalize( vec4( aVertexBinormal, -dot(aVertexBinormal, scaledPos)));	
 		
 		transformedNormal = uMVMatrix * untransformedNormal;
 		transformedTangent = uMVMatrix * untransformedTangent;	
-		transformedBinormal = uMVMatrix * untransformedBinormal; 
+		transformedBinormal = uMVMatrix * untransformedBinormal;
+		transformedCoord = uMVMatrix * aVertexPositionNormalized;
+		
+		gl_Position = uPMatrix * transformedCoord;
 		
 		/*
 		transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);	//TODO use matrix for normal, tangent, binormal
@@ -1259,8 +1258,7 @@
 	varying vec4 transformedCoord;
 	
 	void main(void) {
-		vec3 scaledPos = uModelScale*aVertexPosition;
-		vec4 aVertexPositionNormalized = normalize(vec4(scaledPos, 1.0));
+		
 		
 #ifdef INSTANCED
 	//bodge together a matrix from input vectors because suspect chrome bug
@@ -1273,39 +1271,25 @@
 		mat4 MVMatrix = uMVMatrix;
 #endif
 		
-		transformedCoord = MVMatrix * aVertexPositionNormalized;
-		
-		gl_Position = uPMatrix * transformedCoord;
-
-		//transform by normal/tangent/bitangent. TODO use matrix formulation. 3x3 or 4x4? (adjustedPos is a 4vector. ??)
+		//transform by normal/tangent/bitangent.
 		//this is "efficient" version that moves some work from frag to vertex shader.
 		//note could transform the position of lighting objects instead of transforming pos,normal,binormal,tangent, which might be still more efficient.
-		//currently not equvalent results - this seems too dim where light very close to object surface.
-		
+		vec3 scaledPos = uModelScale*aVertexPosition;
 		vec4 untransformedNormal = normalize( vec4( aVertexNormal, -dot(aVertexNormal, scaledPos)));	
 		vec4 untransformedTangent = normalize( vec4( aVertexTangent, -dot(aVertexTangent, scaledPos)));	
 		vec4 untransformedBinormal = normalize( vec4( aVertexBinormal, -dot(aVertexBinormal, scaledPos)));	
+		vec4 aVertexPositionNormalized = normalize(vec4(scaledPos, 1.0));
 		
-		vec4 transformedNormal = MVMatrix * untransformedNormal;
-		vec4 transformedTangent = MVMatrix * untransformedTangent;	
-		vec4 transformedBinormal = MVMatrix * untransformedBinormal; 
-				
-		vPlayerLightPosTangentSpace.x = dot(transformedTangent, uDropLightPos);
-		vPlayerLightPosTangentSpace.y = dot(transformedBinormal, uDropLightPos);
-		vPlayerLightPosTangentSpace.z = dot(transformedNormal, uDropLightPos);
-		vPlayerLightPosTangentSpace.w = dot(transformedCoord, uDropLightPos);
-		
-		vPortalLightPosTangentSpace.x = dot(transformedTangent, uReflectorPosVShaderCopy);
-		vPortalLightPosTangentSpace.y = dot(transformedBinormal, uReflectorPosVShaderCopy);
-		vPortalLightPosTangentSpace.z = dot(transformedNormal, uReflectorPosVShaderCopy);
-		vPortalLightPosTangentSpace.w = dot(transformedCoord, uReflectorPosVShaderCopy);
+		mat4 vertexMatrix = MVMatrix*mat4(untransformedTangent, untransformedBinormal, untransformedNormal, aVertexPositionNormalized);
 
+		transformedCoord = vertexMatrix[3];
+		gl_Position = uPMatrix * transformedCoord;
+		
+		vPlayerLightPosTangentSpace = uDropLightPos*vertexMatrix;
+		vPortalLightPosTangentSpace = uReflectorPosVShaderCopy*vertexMatrix;
+		
 #ifdef SPECULAR_ACTIVE		
-		vec4 eyePos = vec4(vec3(0.),1.);
-		vEyePosTangentSpace.x = dot(transformedTangent, eyePos);
-		vEyePosTangentSpace.y = dot(transformedBinormal, eyePos);
-		vEyePosTangentSpace.z = dot(transformedNormal, eyePos);
-		vEyePosTangentSpace.w = dot(transformedCoord, eyePos);
+		vEyePosTangentSpace = vec4(vec3(0.),1.)*vertexMatrix;
 		
 		//https://en.wikipedia.org/wiki/Blinn%E2%80%93Phong_reflection_model
 		//camPosTangentSpace should be normalised already (?? maybe depends on transform+TBN matrix being SO(4)? - but currently just using 3vecs (TODO is this best method?)
@@ -1700,28 +1684,14 @@
 	varying vec4 vColor;
 	
 	void main(void) {
-		transformedCoord = uMVMatrix * aVertexPosition;
+		mat4 vertexMatrix = uMVMatrix*mat4( aVertexTangent, aVertexBinormal, aVertexNormal, aVertexPosition);
+		transformedCoord = vertexMatrix[3];
 		gl_Position = uPMatrix * transformedCoord;
+		vPlayerLightPosTangentSpace = uDropLightPos* vertexMatrix;
+		vPortalLightPosTangentSpace = uReflectorPosVShaderCopy*vertexMatrix;
 		
-		vec4 transformedNormal = uMVMatrix * aVertexNormal;
-		vec4 transformedTangent = uMVMatrix * aVertexTangent;	
-		vec4 transformedBinormal = uMVMatrix * aVertexBinormal; 
-				
-		vPlayerLightPosTangentSpace.x = dot(transformedTangent, uDropLightPos);
-		vPlayerLightPosTangentSpace.y = dot(transformedBinormal, uDropLightPos);
-		vPlayerLightPosTangentSpace.z = dot(transformedNormal, uDropLightPos);
-		vPlayerLightPosTangentSpace.w = dot(transformedCoord, uDropLightPos);
-		
-		vPortalLightPosTangentSpace.x = dot(transformedTangent, uReflectorPosVShaderCopy);
-		vPortalLightPosTangentSpace.y = dot(transformedBinormal, uReflectorPosVShaderCopy);
-		vPortalLightPosTangentSpace.z = dot(transformedNormal, uReflectorPosVShaderCopy);
-		vPortalLightPosTangentSpace.w = dot(transformedCoord, uReflectorPosVShaderCopy);
-#ifdef SPECULAR_ACTIVE		
-		vec4 eyePos = vec4(vec3(0.),1.);
-		vEyePosTangentSpace.x = dot(transformedTangent, eyePos);
-		vEyePosTangentSpace.y = dot(transformedBinormal, eyePos);
-		vEyePosTangentSpace.z = dot(transformedNormal, eyePos);
-		vEyePosTangentSpace.w = dot(transformedCoord, eyePos);
+#ifdef SPECULAR_ACTIVE
+		vEyePosTangentSpace = vec4(vec3(0.),1.)*vertexMatrix;	//eye pos
 #endif
 
 #ifdef VCOLOR
