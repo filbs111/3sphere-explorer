@@ -310,6 +310,7 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 	var tangents = [];
 	var indices = [];
 	var uvcoords=[];
+	var colors=[];
 	//create vertices first. for 3-sphere grid, loops, so different (here have vertices on opposite sides (and 4 corners) that share z-position
 	var vertex2dData=[];
 	var thisLine;
@@ -356,6 +357,10 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 			//tmp - for use in existing shader, requires some uv coord. since grid will wrap, this is not ideal - might reproject texture later, but for time being, just stick something here.
 			uvcoords.push(8*ii/gridSize);
 			uvcoords.push(8*jj/gridSize);
+			
+			for (var cc=0;cc<4;cc++){
+				colors.push(Math.random());
+			}
 		}
 	}
 		
@@ -376,7 +381,7 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 	function lookupIndex(xx,yy){
 		return (xx&terrainSizeMinusOne)+gridSize*(yy&terrainSizeMinusOne)
 	}
-	return {vertices:vertices, normals:normals, binormals:binormals, tangents:tangents, uvcoords:uvcoords, faces:indices};
+	return {vertices:vertices, normals:normals, binormals:binormals, tangents:tangents, uvcoords:uvcoords, colors:colors, faces:indices};
 })(procTerrainSize);
 
 var procTerrainSurfaceParticleMats = (function(){

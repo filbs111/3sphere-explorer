@@ -1581,7 +1581,7 @@
 	attribute vec4 aVertexPosition;
 	attribute vec4 aVertexNormal;
 	attribute vec2 aTextureCoord;
-	attribute vec3 aVertexColor;	//TODO make consistent vec3 /vec4
+	attribute vec4 aVertexColor;
 	uniform float uAtmosThickness;
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
@@ -1661,7 +1661,7 @@
 		transformedNormal = uMVMatrix * aVertexNormal;
 		
 #ifdef VCOLOR
-		vColor = vec4(aVertexColor,1.);	//TODO multiply by uColor in vert shader
+		vColor = aVertexColor;	//TODO multiply by uColor in vert shader
 #endif
 		
 		adjustedPos = transformedCoord - uDropLightPos;

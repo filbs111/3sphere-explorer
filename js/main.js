@@ -144,15 +144,15 @@ function initShaders(){
 		atmos:   loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['MAPPROJECT_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['MAPPROJECT_ACTIVE']),
 		atmos_v2:loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['MAPPROJECT_ACTIVE','ATMOS_TWO'], ['MAPPROJECT_ACTIVE'])
 	};
-	shaderPrograms.texmap4VecMapprojectDiscardNormalmapAndDiffuse = {	//per pixel tangent space lighting
-		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['MAPPROJECT_ACTIVE','ATMOS_CONSTANT'], ['DIFFUSE_TEX_ACTIVE','MAPPROJECT_ACTIVE']),
-		atmos   :loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['MAPPROJECT_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','MAPPROJECT_ACTIVE']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['MAPPROJECT_ACTIVE','ATMOS_TWO'], ['DIFFUSE_TEX_ACTIVE','MAPPROJECT_ACTIVE'])
+	shaderPrograms.texmap4VecMapprojectDiscardNormalmapVcolorAndDiffuse = {	//per pixel tangent space lighting
+		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','MAPPROJECT_ACTIVE','ATMOS_CONSTANT'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','MAPPROJECT_ACTIVE']),
+		atmos   :loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','MAPPROJECT_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','MAPPROJECT_ACTIVE']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','MAPPROJECT_ACTIVE','ATMOS_TWO'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','MAPPROJECT_ACTIVE'])
 	};
-	shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongAndDiffuse = {
-		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','ATMOS_CONSTANT'], ['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE']),
-		atmos   :loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','ATMOS_TWO'], ['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE'])
+	shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse = {
+		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','ATMOS_CONSTANT'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE']),
+		atmos   :loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','ATMOS_TWO'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE'])
 	};
 	
 	//shaderPrograms.duocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-flat-fs");
@@ -349,7 +349,7 @@ function generateDataForDataMatricesScale(inputData, infoArray, scaleFact){
 	
 	for (var ii=0;ii<numInstances;ii++,offset+=numVerts){
 		thisMat = matsArray[ii];
-		thisColor = colorsArray[ii].slice(0,3);	//ignore 4th colour
+		thisColor = colorsArray[ii];
 		for (var vv=0;vv<numVerts;vv++){
 			//make a copy of vertex, rotate by matrix
 			thisVert = sourceVerts[vv]; 
@@ -453,7 +453,7 @@ function initBuffers(){
 			//alert("loading with colours. colors length : " + sourceData.colors.length);
 			//alert("vertices length : " + sourceData.vertices.length);
 			bufferObj.vertexColorBuffer = gl.createBuffer();
-			bufferArrayData(bufferObj.vertexColorBuffer, sourceData.colors, 3);
+			bufferArrayData(bufferObj.vertexColorBuffer, sourceData.colors, 4);
 		}
 		if (sourceData.uvcoords || sourceData.texturecoords){
 			bufferObj.vertexTextureCoordBuffer= gl.createBuffer();
@@ -2002,11 +2002,11 @@ function drawWorldScene(frameTime, isCubemapView) {
 	function drawDuocylinderObject(duocylinderObj, zeroLevel){		
 		//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
 		if (!duocylinderObj.isSea){
-			if (duocylinderObj.hasVertColors){
+			if (duocylinderObj.usesTriplanarMapping){	//means is voxTerrain.
 				activeShaderProgram = shaderPrograms.texmapColor4VecAtmos;	//not variants implemented
 			}else{
 				//activeShaderProgram = duocylinderObj.useMapproject? shaderPrograms.texmap4VecMapproject[ guiParams.display.atmosShader ] : shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ] ;
-				activeShaderProgram = duocylinderObj.useMapproject? ( guiParams.display.useSpecular? shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongAndDiffuse[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecMapprojectDiscardNormalmapAndDiffuse[ guiParams.display.atmosShader ] ) : ( guiParams.display.useSpecular? shaderPrograms.texmap4VecPerPixelDiscardPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscard[ guiParams.display.atmosShader ]);
+				activeShaderProgram = duocylinderObj.useMapproject? ( guiParams.display.useSpecular? shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecMapprojectDiscardNormalmapVcolorAndDiffuse[ guiParams.display.atmosShader ] ) : ( guiParams.display.useSpecular? shaderPrograms.texmap4VecPerPixelDiscardPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscard[ guiParams.display.atmosShader ]);
 			}
 			gl.useProgram(activeShaderProgram);
 		}else{
@@ -2919,8 +2919,7 @@ function initTexture(){
 	duocylinderObjects.voxTerrain.tex = makeTexture("img/2100-v1.jpg");
 	//duocylinderObjects.voxTerrain.tex = makeTexture("img/4483-v7.jpg");	//rust
 
-	duocylinderObjects.voxTerrain.hasVertColors=true;
-	duocylinderObjects.voxTerrain.usesTriplanarMapping=true;	//note that hasVertColors, usesTriplanarMapping currently equivalent (has both or neither)
+	duocylinderObjects.voxTerrain.usesTriplanarMapping=true;
 	
 	randBoxBuffers.tex=texture;
 	towerBoxBuffers.tex=nmapTexture;towerBoxBuffers.texB=diffuseTexture;

@@ -93,14 +93,14 @@ var voxTerrainData = (function generateVoxTerrainData(){
 	}
 
 	//var voxFunction = sinesfunctionthree;
-	var voxFunction = perlinfunctionTwoSided;
+	//var voxFunction = perlinfunctionTwoSided;
 	//var voxFunction = perlinfunctionTwoLevel;
 	//var voxFunction = perlinfunctionSpiral;
 	//var voxFunction = balls;
 	//var voxFunction = oddBalls;	//this is not continuous so does not play nicely with collision. useful for testing
 	//var voxFunction = wierdBeans;
 	//var voxFunction = brejao;
-	//var voxFunction = shiftedbrejao;
+	var voxFunction = shiftedbrejao;
 	//var voxFunction = longHolesTwo;
 	makeVoxdataForFunc(voxFunction);
 	
@@ -326,7 +326,7 @@ var voxTerrainData = (function generateVoxTerrainData(){
 			
 		//comment out creation of colours because currently unused
 		//	var grayColor = grayColorForPointAndNormal(ii,jj,kk,normal, invLength);	
-		//	colors.push(grayColor, grayColor, grayColor);	//TODO separate surf color for directional lighting from ambient response
+		//	colors.push(grayColor, grayColor, grayColor,1.0);	//TODO separate surf color for directional lighting from ambient response
 			
 			
 			//"dual contouring" ? 
@@ -656,7 +656,7 @@ var voxTerrainData = (function generateVoxTerrainData(){
 			//grayColor = grayColorForPointAndNormal(dcPos[0],dcPos[1],dcPos[2],dcNorm,1/sumNorm);	//wierd result since average normal is not the normal at this point! 
 			grayColor = grayColorForPointAndNormal(dcPos[0],dcPos[1],dcPos[2]);	//don't pass in normal info, calc inside function
 						
-			dcColors.push(grayColor, grayColor, grayColor);	//TODO separate surf color for directional lighting from ambient response
+			dcColors.push(grayColor, grayColor, grayColor, 1.0);	//TODO separate surf color for directional lighting from ambient response
 		}
 
 		
@@ -669,13 +669,13 @@ var voxTerrainData = (function generateVoxTerrainData(){
 			jj+=fudgeOffset;
 			kk+=fudgeOffset;
 		
-			//colors.push(Math.random(),Math.random(),Math.random());
+			//colors.push(Math.random(),Math.random(),Math.random(),1.0);
 			var colorScale = 6;	//scale of noise (smaller = finer)
 			//var grayColor = 0.5+0.5*noise.perlin3(ii/colorScale,jj/colorScale,kk/colorScale);	// mapt -1 to 1 -> 0 to 1
 			//var grayColor = 1.5+0.5*noise.perlin3(ii/colorScale,jj/colorScale,kk/colorScale);
 			var grayColor = 1+1*sumPerlin(ii/colorScale,jj/colorScale,kk/colorScale,1.8);
 			grayColor*=0.5;
-			//colors.push(grayColor, grayColor, grayColor);
+			//colors.push(grayColor, grayColor, grayColor, 1.0);
 			//normals.push(0,0,0); 
 			
 			//colour by local curvature. guess an equation for this.
@@ -957,8 +957,7 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		
 		var ringSize = 12;
 		var ringShift = 6;
-		//var ringTilt = 0.35;
-		var ringTilt = 0.7;
+		var ringTilt = 0.35;
 		//var ringTilt = 0;
 		
 		var x = ii%32 - 16;
