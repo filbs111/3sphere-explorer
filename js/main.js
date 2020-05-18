@@ -137,8 +137,12 @@ function initShaders(){
 		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_TWO'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE'])
 	};
 		
-	shaderPrograms.texmapColor4VecAtmos = loadShader( "shader-texmap-color-triplanar-vs-4vec-atmos", "shader-texmap-triplanar-fs");
-	
+	shaderPrograms.texmapColor4Vec = {
+		constant:loadShader( "shader-texmap-color-triplanar-vs-4vec", "shader-texmap-triplanar-fs", ['ATMOS_CONSTANT']),
+		atmos:   loadShader( "shader-texmap-color-triplanar-vs-4vec", "shader-texmap-triplanar-fs", ['ATMOS_ONE']),
+		atmos_v2:loadShader( "shader-texmap-color-triplanar-vs-4vec", "shader-texmap-triplanar-fs", ['ATMOS_TWO'])
+	}
+		
 	shaderPrograms.texmap4VecMapproject = {	//per vertex lighting
 		constant:loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['MAPPROJECT_ACTIVE','ATMOS_CONSTANT'], ['MAPPROJECT_ACTIVE']),
 		atmos:   loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['MAPPROJECT_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['MAPPROJECT_ACTIVE']),
@@ -2003,7 +2007,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
 		if (!duocylinderObj.isSea){
 			if (duocylinderObj.usesTriplanarMapping){	//means is voxTerrain.
-				activeShaderProgram = shaderPrograms.texmapColor4VecAtmos;	//not variants implemented
+				activeShaderProgram = shaderPrograms.texmapColor4Vec[ guiParams.display.atmosShader ];
 			}else{
 				//activeShaderProgram = duocylinderObj.useMapproject? shaderPrograms.texmap4VecMapproject[ guiParams.display.atmosShader ] : shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ] ;
 				activeShaderProgram = duocylinderObj.useMapproject? ( guiParams.display.useSpecular? shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecMapprojectDiscardNormalmapVcolorAndDiffuse[ guiParams.display.atmosShader ] ) : ( guiParams.display.useSpecular? shaderPrograms.texmap4VecPerPixelDiscardPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscard[ guiParams.display.atmosShader ]);
