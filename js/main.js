@@ -143,12 +143,29 @@ function initShaders(){
 		atmos:   loadShader( "shader-texmap-color-triplanar-vs-4vec", "shader-texmap-triplanar-fs", ['ATMOS_ONE']),
 		atmos_v2:loadShader( "shader-texmap-color-triplanar-vs-4vec", "shader-texmap-triplanar-fs", ['ATMOS_TWO'])
 	}
+	/*
 	shaderPrograms.triplanarPerPixel = {	//like texmap4VecPerPixelDiscard - vertex position, normal are varyings, light positions are uniform
 		constant:loadShader( "shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_CONSTANT'],['VCOLOR','SPECULAR_ACTIVE']),
 		atmos:   loadShader( "shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_ONE'],['VCOLOR','SPECULAR_ACTIVE']),
 		atmos_v2:loadShader( "shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_TWO'],['VCOLOR','SPECULAR_ACTIVE'])
 	}
-	shaderPrograms.triplanarPerPixelTwo = {	//TODO add voxTerrain normal map shaders - calculate vertexMatrix, get light positions in this frame (light positions are varyings)	
+	*/
+	shaderPrograms.triplanarPerPixel = {	//like texmap4VecPerPixelDiscard - vertex position, normal are varyings, light positions are uniform
+		constant:loadShader( "shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['ATMOS_CONSTANT']),
+		atmos:   loadShader( "shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['ATMOS_ONE']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['ATMOS_TWO'])
+	}	
+	/*
+	shaderPrograms.triplanarPerPixelTwo = {	//TODO add voxTerrain normal map shaders - calculate vertexMatrix, get light positions in this frame (light positions are varyings)
+		constant:loadShader( "shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs-BASIC", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_CONSTANT'],['VCOLOR','SPECULAR_ACTIVE']),
+		atmos:   loadShader( "shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs-BASIC", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_ONE'],['VCOLOR','SPECULAR_ACTIVE']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs-BASIC", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_TWO'],['VCOLOR','SPECULAR_ACTIVE'])
+	}
+	*/
+	shaderPrograms.triplanarPerPixelTwo = {	//TODO add voxTerrain normal map shaders - calculate vertexMatrix, get light positions in this frame (light positions are varyings)
+		constant:loadShader( "shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs", ['ATMOS_CONSTANT']),
+		atmos:   loadShader( "shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs", ['ATMOS_ONE']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs", ['ATMOS_TWO'])
 	}
 	
 	//procTerrain shaders
@@ -2016,7 +2033,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
 		if (!duocylinderObj.isSea){
 			if (duocylinderObj.usesTriplanarMapping){	//means is voxTerrain.
-				activeShaderProgram = guiParams.display.perPixelLighting? shaderPrograms.triplanarPerPixel[ guiParams.display.atmosShader ] : shaderPrograms.triplanarColor4Vec[ guiParams.display.atmosShader ];
+				//activeShaderProgram = guiParams.display.perPixelLighting? shaderPrograms.triplanarPerPixel[ guiParams.display.atmosShader ] : shaderPrograms.triplanarColor4Vec[ guiParams.display.atmosShader ];
+				activeShaderProgram = guiParams.display.perPixelLighting? shaderPrograms.triplanarPerPixelTwo[ guiParams.display.atmosShader ] : shaderPrograms.triplanarColor4Vec[ guiParams.display.atmosShader ];
 			}else{
 				//activeShaderProgram = duocylinderObj.useMapproject? shaderPrograms.texmap4VecMapproject[ guiParams.display.atmosShader ] : shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ] ;
 				activeShaderProgram = duocylinderObj.useMapproject? ( guiParams.display.useSpecular? shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecMapprojectDiscardNormalmapVcolorAndDiffuse[ guiParams.display.atmosShader ] ) : ( guiParams.display.useSpecular? shaderPrograms.texmap4VecPerPixelDiscardPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscard[ guiParams.display.atmosShader ]);
@@ -2644,7 +2662,7 @@ function drawTennisBall(duocylinderObj, shader){
 	gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexPositionBuffer);
     gl.vertexAttribPointer(shader.attributes.aVertexPosition, duocylinderObj.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	
-	if (duocylinderObj.normalBuffer){	//not used in duocylinder-sea
+	if (duocylinderObj.normalBuffer && shader.attributes.aVertexNormal){	//not used in duocylinder-sea
 		gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.normalBuffer);
 		gl.vertexAttribPointer(shader.attributes.aVertexNormal, duocylinderObj.normalBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	}
@@ -2730,7 +2748,7 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 		gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexVelocityBuffer);
 		gl.vertexAttribPointer(shaderProg.attributes.aVertexVelocity, bufferObj.vertexVelocityBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	}
-	if (bufferObj.vertexTextureCoordBuffer){
+	if (bufferObj.vertexTextureCoordBuffer && shaderProg.attributes.aTextureCoord){
 		gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexTextureCoordBuffer);
 		gl.vertexAttribPointer(shaderProg.attributes.aTextureCoord, bufferObj.vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
 		//bind2dTextureIfRequired(texture);
@@ -2982,8 +3000,8 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	world0:{duocylinderModel:"procTerrain",seaActive:false},
-	world1:{duocylinderModel:"voxTerrain",seaActive:false},
+	world0:{duocylinderModel:"voxTerrain",seaActive:false},
+	world1:{duocylinderModel:"none",seaActive:false},
 	duocylinderRotateSpeed:0,
 	seaLevel:-0.012,
 	drawShapes:{

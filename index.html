@@ -458,7 +458,8 @@
 		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
 
 #ifdef VCOLOR
-		vec4 adjustedColor = uColor*vColor;	//TODO this logid in vert shader
+		//vec4 adjustedColor = uColor*vColor;	//TODO this logid in vert shader
+		vec4 adjustedColor = uColor;	//temporarily disable this feature -seems input color data broken - some are black. reenable when fix data.
 #else
 		vec4 adjustedColor = uColor;
 #endif
@@ -477,6 +478,117 @@
 		gl_FragColor.a =1.0;
 	}
 </script>
+
+
+
+<script id="shader-texmap-perpixel-normalmap-triplanar-fs" type="x-shader/x-fragment">
+	precision mediump float;
+	uniform sampler2D uSampler;
+	uniform vec4 uColor;
+	uniform vec3 uPlayerLightColor;
+	uniform vec4 uFogColor;
+	uniform vec3 uReflectorDiffColor;
+	uniform vec4 uReflectorPos;
+	uniform float uReflectorCos;
+	uniform float uSpecularStrength;
+	uniform float uSpecularPower;
+	
+	varying float fog;
+	varying vec4 vPlayerLightPosTangentSpace;
+	varying vec4 vPortalLightPosTangentSpace;
+	varying vec4 vEyePosTangentSpace;
+	varying vec4 transformedCoord;	
+	varying vec4 vColor;
+	varying vec3 vPos;		//3vector position (before mapping onto duocyinder)
+	varying vec3 vNormal;
+	varying vec3 vTexAmounts;
+	
+	void main(void) {
+		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
+		
+		if (posCosDiff>0.0){
+			discard;
+		}
+	
+		float texOffset = 0.5;
+		/*
+		vec3 texColor = mat3(texture2D(uSampler, vec2(vPos.y, vPos.z)).xyz, texture2D(uSampler, vec2(vPos.x, vPos.z + texOffset )).xyz, texture2D(uSampler, vec2(vPos.x + texOffset, vPos.y + texOffset )).xyz) * vTexAmounts;
+		*/
+		vec3 texColor = vec3(1.);		//todo use above to combine diffuse with normal map effect
+		
+		float nmapStrength = -0.7;
+			//TODO check whether normal maps use linear or sRGB space
+			//TODO include ambient occlusion/colour map to match normal map (don't need z component of normal map anyway)
+		vec3 nmapA = vec3 ( texture2D(uSampler, vec2(vPos.y, vPos.z)).xy - vec2(0.5) , 0.0);	//TODO matrix formulation?
+		vec3 nmapB = vec3 ( texture2D(uSampler, vec2(vPos.x, vPos.z + texOffset )).xy - vec2(0.5) ,0.0);
+		vec3 nmapC = vec3 ( texture2D(uSampler, vec2(vPos.x + texOffset, vPos.y + texOffset )).xy - vec2(0.5) ,0.0);
+		//sample normal map in different directions.
+		//vec3 normsq = sqrt(vNormal*vNormal);	//maybe not exactly right - something to stop texture stretching
+		vec3 normsq = abs(vNormal);	//maybe not exactly right - something to stop texture stretching
+		
+		vec3 nmapNormal = normalize( vNormal + nmapStrength * (normsq.x*nmapA.zxy + normsq.y*nmapB.xzy + normsq.z*nmapC.xyz ) );
+		
+		
+		vec4 normalizedLightPos = normalize(vPlayerLightPosTangentSpace);
+		vec3 normalizedLightPosAdj = normalize(vPlayerLightPosTangentSpace.xyz);
+		
+		float light = dot( normalizedLightPosAdj, nmapNormal);	
+		
+		light = max(light,0.0);	//unnecessary if camera pos = light pos
+		
+#ifdef SPECULAR_ACTIVE
+		vec3 normalizedEyePosAdj = normalize(vEyePosTangentSpace.xyz);	
+		
+		//float phongAmount = pow(max(dot(normalizedEyePosAdj, nmapNormal),0.),10.);	//simple glossy camera light
+		vec3 halfVec = normalize(normalizedEyePosAdj + normalizedLightPosAdj);
+		float phongAmount = uSpecularStrength*pow( max(dot(halfVec, nmapNormal), 0.),uSpecularPower);
+		light+=phongAmount;
+#endif
+		
+		//falloff
+		//	light/=0.1 + 5.0*(1.0-normalizedLightPos.w);				//results consistent with "inefficient" version for small distances
+		vec4 vecToLight = normalizedLightPos - vec4(vec3(0.0),1.0);	//result fully consistent with "inefficient" version, but maybe not worth extra calcs
+		light/=0.1 + 5.0*dot(vecToLight,vecToLight);
+
+		//light from portal. TODO pass in a colour for this, more complex lighting (at surface of portal, should be hemispherical light etc)
+		//this is just bodged/guessed to achieve correct behaviour at/across portal. TODO check/correct!
+		vec3 vPortalLightPosTangentSpaceAdj =normalize(vPortalLightPosTangentSpace.xyz);
+		float portalLight = dot( vPortalLightPosTangentSpaceAdj, nmapNormal);
+		portalLight = max(0.5*portalLight +0.5+ posCosDiff,0.0);	//unnecessary if camera pos = light pos
+
+#ifdef SPECULAR_ACTIVE
+
+		//TODO take into account "size" of portal light
+		halfVec = normalize( normalizedEyePosAdj + vPortalLightPosTangentSpaceAdj );
+		phongAmount = uSpecularStrength*pow( max(dot(halfVec, nmapNormal), 0.),uSpecularPower);
+		portalLight+=phongAmount;
+#endif
+
+		//falloff
+		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
+
+#ifdef VCOLOR
+		//vec4 adjustedColor = uColor*vColor;	//TODO this logid in vert shader
+		vec4 adjustedColor = uColor;	//temporarily disable this feature -seems input color data broken - some are black. reenable when fix data.
+#else
+		vec4 adjustedColor = uColor;
+#endif
+		
+		//guess maybe similar to some gaussian light source
+		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*adjustedColor*vec4(texColor,1.) + (1.0-fog)*uFogColor;
+				
+		//tone mapping
+		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
+		
+		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
+		gl_FragColor.a =1.0;
+	}
+</script>
+
+
+
+
+
 
 <!-- tex mapped pix shader -->
 <script id="shader-texmap-fs" type="x-shader/x-fragment">
@@ -515,6 +627,7 @@
 		gl_FragColor.a =1.0;
 	}
 </script>
+
 
 
 
@@ -2071,6 +2184,123 @@
 		adjustedPos = transformedCoord - uDropLightPos;
 		
 		vPos = aTriCoord;
+		vTexAmounts = aTriNormal*aTriNormal;
+	}
+</script>
+<script id="shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec" type="x-shader/x-vertex">
+	//TODO determine whether more efficient to calc aVertexPosition, aVertexNormal from aTriCoord, aTriNormal here in vert shader, or precalc and pass in.
+	#define CONST_ITERS 64.0
+
+	attribute vec4 aVertexPosition;
+	attribute vec4 aVertexNormal;	//AFAIK shouldn't need this, but removing it causes rendering bug. todo find and fix
+	attribute vec4 aVertexColor;
+	//attribute vec3 aVertexColor;
+	attribute vec3 aTriCoord;
+	attribute vec3 aTriNormal;
+	uniform float uAtmosThickness;
+	uniform float uAtmosContrast;
+	uniform mat4 uMMatrix;
+	uniform mat4 uMVMatrix;
+	uniform mat4 uPMatrix;
+	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
+	uniform vec4 uCameraWorldPos;
+	uniform vec4 uReflectorPosVShaderCopy;
+	
+	varying float fog;
+	varying vec4 vPlayerLightPosTangentSpace;
+	varying vec4 vPortalLightPosTangentSpace;
+	varying vec4 vEyePosTangentSpace;
+	varying vec4 transformedCoord;
+	varying vec3 vPos;		//3vector position (before mapping onto duocyinder)
+	varying vec3 vTexAmounts;
+	varying vec4 vColor;
+	varying vec3 vNormal;	
+	
+	void main(void) {
+		//transformedCoord = uMVMatrix*(aVertexPosition + 0.0000001*aVertexNormal);
+		transformedCoord = uMVMatrix*aVertexPosition;		//should be equivalent to above
+		//calculate vectors moved quarter way around world from this vertex, in the direction of each voxel axis. this is like TBNP "vertexMatrix" matrix, for a normal in one of these directions. (true normal is aVertexNormal though)
+		// guess top/bottom world axes x=y=0, z=w=0. up/down turns x,y into z,w. sideways turns x into y and w into z
+		vec4 updownaxis = vec4( length(aVertexPosition.zw)*aVertexPosition.xy , -length(aVertexPosition.xy)*aVertexPosition.zw);	//moved up or down from vertex point (not sure sign)
+		vec4 sideaxisone = normalize( vec4(aVertexPosition.y, -aVertexPosition.x, 0.,0.));
+		vec4 sideaxistwo = normalize( vec4(0.,0., aVertexPosition.w, -aVertexPosition.z));
+		
+		mat4 vertexMatrix=uMVMatrix*mat4( sideaxisone, sideaxistwo, updownaxis, aVertexPosition);	//todo get order, signs right!!
+	
+		//transformedCoord = vertexMatrix[3];
+		//transformedCoord = uMVMatrix*aVertexPosition;		//should be equivalent to above
+		
+		gl_Position = uPMatrix * transformedCoord;
+		
+		vPlayerLightPosTangentSpace = uDropLightPos* vertexMatrix;
+		vPortalLightPosTangentSpace = uReflectorPosVShaderCopy*vertexMatrix;
+		
+#ifdef SPECULAR_ACTIVE
+		vEyePosTangentSpace = vec4(vec3(0.),1.)*vertexMatrix;	//eye pos
+#endif
+		
+		
+#ifdef ATMOS_CONSTANT		
+		fog = 0.5*(1.0 + transformedCoord.w);
+#else
+		vec4 worldCoord = uMMatrix * aVertexPosition;
+		float dotProd = dot(uCameraWorldPos,worldCoord);
+		
+		vec4 normalDirection = normalize(worldCoord - dotProd*uCameraWorldPos);	//point 90 deg around world from camera, in direction of worldCoord
+		
+		float partOne = dot(uCameraWorldPos.xy, uCameraWorldPos.xy);
+		float partTwo = dot(normalDirection.xy, normalDirection.xy);
+		float constTerm = (partOne+partTwo)/2.0;
+		float cos2Term = (partOne-partTwo)/2.0;
+		float sin2Term = dot(uCameraWorldPos.xy, normalDirection.xy);
+		float shiftAngle = atan(cos2Term,sin2Term);
+		//float magTerm = sqrt(cos2Term*cos2Term+sin2Term*sin2Term);
+		float magTerm = length(vec2(cos2Term, sin2Term));
+		
+		float maxDoubleAng = 2.0*acos(dotProd);
+#endif
+#ifdef ATMOS_ONE
+		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
+		
+		float total=0.0;
+		for (float aa=0.0;aa<CONST_ITERS;aa++){
+			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
+			total+= exp(uAtmosContrast*rsq);
+		}
+		total*= maxDoubleAngOverIters*exp(uAtmosContrast*(constTerm));	
+		fog = exp(-uAtmosThickness*total/2.0);
+#endif
+#ifdef ATMOS_TWO
+		float kk = magTerm * uAtmosContrast;
+		float ksq = kk*kk;
+
+		float maxA = maxDoubleAng+shiftAngle;
+
+		float kcxa = kk*cos(maxA);
+		float kcxb = kk*cos(shiftAngle);
+		float ksxa = kk*sin(maxA);
+		float ksxb = kk*sin(shiftAngle);
+		float kcxasq=kcxa*kcxa;
+		float kcxbsq=kcxb*kcxb;
+		
+		float integral=(1.0+ksq/4.0 + ksq*ksq/64.0)*(maxA -shiftAngle);
+		integral-= (1.0+ksq/8.0)*(kcxa-kcxb);
+		integral-=(ksq/48.0+0.25)*(kcxa*ksxa - kcxb*ksxb);
+		integral+=(kcxa*kcxasq - kcxb*kcxbsq)*(4.0/72.0);
+		integral-=ksq*(kcxa -kcxb)*(3.0/72.0);
+		integral+=(4.0/768.0)*((2.0*kcxasq-ksq)*kcxa*ksxa -(2.0*kcxbsq-ksq)*kcxb*ksxb);
+
+		float total=integral*exp(uAtmosContrast*constTerm);
+		fog = exp(-uAtmosThickness*total/2.0);
+#endif
+				
+#ifdef VCOLOR
+		vColor = aVertexColor;	//TODO multiply by uColor in vert shader
+		//vColor = vec4(aVertexColor,1.);	//TODO multiply by uColor in vert shader
+#endif
+			
+		vPos = aTriCoord;
+		vNormal = aTriNormal;
 		vTexAmounts = aTriNormal*aTriNormal;
 	}
 </script>
