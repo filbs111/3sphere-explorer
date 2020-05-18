@@ -484,6 +484,7 @@
 <script id="shader-texmap-perpixel-normalmap-triplanar-fs" type="x-shader/x-fragment">
 	precision mediump float;
 	uniform sampler2D uSampler;
+	uniform sampler2D uSamplerB;
 	uniform vec4 uColor;
 	uniform vec3 uPlayerLightColor;
 	uniform vec4 uFogColor;
@@ -511,11 +512,13 @@
 		}
 	
 		float texOffset = 0.5;
-		/*
-		vec3 texColor = mat3(texture2D(uSampler, vec2(vPos.y, vPos.z)).xyz, texture2D(uSampler, vec2(vPos.x, vPos.z + texOffset )).xyz, texture2D(uSampler, vec2(vPos.x + texOffset, vPos.y + texOffset )).xyz) * vTexAmounts;
-		*/
-		vec3 texColor = vec3(1.);		//todo use above to combine diffuse with normal map effect
 		
+#ifdef DIFFUSE_TEX_ACTIVE
+		vec3 texColor = mat3(texture2D(uSamplerB, vec2(vPos.y, vPos.z)).xyz, texture2D(uSamplerB, vec2(vPos.x, vPos.z + texOffset )).xyz, texture2D(uSamplerB, vec2(vPos.x + texOffset, vPos.y + texOffset )).xyz) * vTexAmounts;
+#else	
+		vec3 texColor = vec3(1.);		//todo use above to combine diffuse with normal map effect
+#endif
+
 		float nmapStrength = -0.7;
 			//TODO check whether normal maps use linear or sRGB space
 			//TODO include ambient occlusion/colour map to match normal map (don't need z component of normal map anyway)
