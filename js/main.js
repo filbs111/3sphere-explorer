@@ -151,9 +151,9 @@ function initShaders(){
 	}
 	*/
 	shaderPrograms.triplanarPerPixel = {	//like texmap4VecPerPixelDiscard - vertex position, normal are varyings, light positions are uniform
-		constant:loadShader( "shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['ATMOS_CONSTANT']),
-		atmos:   loadShader( "shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['ATMOS_ONE']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['ATMOS_TWO'])
+		constant:loadShader( "shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['SPECULAR_ACTIVE','ATMOS_CONSTANT'],['SPECULAR_ACTIVE']),
+		atmos:   loadShader( "shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['SPECULAR_ACTIVE','ATMOS_ONE'],['SPECULAR_ACTIVE']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['SPECULAR_ACTIVE','ATMOS_TWO'],['SPECULAR_ACTIVE'])
 	}	
 	/*
 	shaderPrograms.triplanarPerPixelTwo = {	//TODO add voxTerrain normal map shaders - calculate vertexMatrix, get light positions in this frame (light positions are varyings)
@@ -163,9 +163,9 @@ function initShaders(){
 	}
 	*/
 	shaderPrograms.triplanarPerPixelTwo = {	//TODO add voxTerrain normal map shaders - calculate vertexMatrix, get light positions in this frame (light positions are varyings)
-		constant:loadShader( "shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs", ['ATMOS_CONSTANT']),
-		atmos:   loadShader( "shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs", ['ATMOS_ONE']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs", ['ATMOS_TWO'])
+		constant:loadShader( "shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs", ['SPECULAR_ACTIVE','ATMOS_CONSTANT'],['SPECULAR_ACTIVE']),
+		atmos:   loadShader( "shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs", ['SPECULAR_ACTIVE','ATMOS_ONE'],['SPECULAR_ACTIVE']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs", ['SPECULAR_ACTIVE','ATMOS_TWO'],['SPECULAR_ACTIVE'])
 	}
 	
 	//procTerrain shaders
@@ -2918,6 +2918,8 @@ function setupScene() {
 var texture,diffuseTexture,hudTexture,hudTextureSmallCircles,hudTexturePlus,hudTextureX,hudTextureBox,sshipTexture,nmapTexture;
 
 function loadTmpFFTexture(id){
+	diffuseTexture = makeTexture("img/"+id+"/"+id+"-diffuse.jpg",false);
+	nmapTexture = makeTexture("img/"+id+"/"+id+"-normal.jpg",false);
 	
 }
 
