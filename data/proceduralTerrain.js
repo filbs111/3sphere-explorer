@@ -191,9 +191,9 @@ var terrainHeightData = (function generateTerrainHeightData(){
 		var dataForI = [];
 		allData.push(dataForI);
 		for (jj=0;jj<procTerrainSize;jj++){
-			dataForI.push(terrainPrecalcHeight(ii,jj));
+			//dataForI.push(terrainPrecalcHeight(ii,jj));
 			//dataForI.push(terrainPrecalcHeightTest(ii,jj));
-		//	dataForI.push(terrainPrecalcHeightPerlin(ii,jj));
+			dataForI.push(terrainPrecalcHeightPerlin(ii,jj));
 			//dataForI.push(terrainPrecalcHeightCastellated(ii,jj));
 			//dataForI.push(terrainPrecalcHeight111(ii,jj));
 		}
@@ -278,10 +278,10 @@ var terrainHeightData = (function generateTerrainHeightData(){
 		
 		//suspect that high detail (octaves) data might be nothing here due to sampling
 	
-	//make a raised region
-		if ((ii<40) && (jj>100) && (jj<156)){
-			hi += 0.05;
-		}
+		//make a raised region
+		//if ((ii<40) && (jj>100) && (jj<156)){
+		//	hi += 0.05;
+		//}
 	
 		return hi;
 	}
@@ -325,7 +325,12 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 			
 			vertices.push(height);	
 			vertices.push(4*jj/gridSize);	//moved to last - guess this is how laid other models out...
-			
+						
+			//var h2 = (4*height+1)/2;	//similar to tanh version
+			var h2 = (Math.tanh(10*height)+1)/2;	//tanh ensures within 0-1
+			//var colorArr = [h2, 1-h2,0,1];	//green-red
+			var colorArr = [h2, (h2+1)/2,h2/2,1];	//green-beige
+			colorArr.forEach(elem=>colors.push(elem));
 		}
 	}
 
@@ -357,10 +362,6 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 			//tmp - for use in existing shader, requires some uv coord. since grid will wrap, this is not ideal - might reproject texture later, but for time being, just stick something here.
 			uvcoords.push(8*ii/gridSize);
 			uvcoords.push(8*jj/gridSize);
-			
-			for (var cc=0;cc<4;cc++){
-				colors.push(Math.random());
-			}
 		}
 	}
 		
