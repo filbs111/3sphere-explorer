@@ -2917,11 +2917,18 @@ function setupScene() {
 
 var texture,diffuseTexture,hudTexture,hudTextureSmallCircles,hudTexturePlus,hudTextureX,hudTextureBox,sshipTexture,nmapTexture;
 
+function loadTmpFFTexture(id){
+	
+}
+
 function initTexture(){
 	texture = makeTexture("img/0033.jpg");
 	
 	//nmapTexture = makeTexture("img/images.squarespace-cdn.com.png");	//button cushion
-	diffuseTexture = makeTexture("img/4431-diffuse.jpg",false);nmapTexture = makeTexture("img/4431-normal.jpg",false);	//concrete blocks
+//	diffuseTexture = makeTexture("img/4431-diffuse.jpg",false);nmapTexture = makeTexture("img/4431-normal.jpg",false);	//concrete blocks
+	//diffuseTexture = makeTexture("img/no-git/6133-diffuse.jpg",false);nmapTexture = makeTexture("img/no-git/6133-normal.jpg",false);	//metal crate
+	//diffuseTexture = makeTexture("img/no-git/4483-diffuse.jpg",false);nmapTexture = makeTexture("img/no-git/4483-normal.jpg",false);	//rust
+	loadTmpFFTexture(11581);
 	
 	hudTexture = makeTexture("img/circles.png");
 	hudTextureSmallCircles = makeTexture("img/smallcircles.png");
@@ -2947,7 +2954,11 @@ function initTexture(){
 	//duocylinderObjects.voxTerrain.tex = makeTexture("img/ash_uvgrid01.jpg");
 	//duocylinderObjects.voxTerrain.tex = makeTexture("img/cretish0958.png");
 	//duocylinderObjects.voxTerrain.tex = makeTexture("img/13787.jpg");
-	duocylinderObjects.voxTerrain.tex = makeTexture("img/2100-v1.jpg");
+//	duocylinderObjects.voxTerrain.tex = makeTexture("img/2100-v1.jpg");
+	
+	//duocylinderObjects.voxTerrain.tex = diffuseTexture;
+	duocylinderObjects.voxTerrain.tex = nmapTexture;
+	
 	//duocylinderObjects.voxTerrain.tex = makeTexture("img/4483-v7.jpg");	//rust
 
 	duocylinderObjects.voxTerrain.usesTriplanarMapping=true;
@@ -3049,9 +3060,9 @@ var guiParams={
 	"targeting":"off",
 	//fogColor0:'#b2dede',
 	//fogColor0:'#b451c5',
-	fogColor0:'#bbbbcc',
-	fogColor1:'#aa8822',
-	playerLight:'#ffffff',
+	fogColor0:'#000000',
+	fogColor1:'#aaaaaa',
+	playerLight:'#0000ff',
 	control:{
 		onRails:false,
 		handbrake:false,
@@ -3079,7 +3090,7 @@ var guiParams={
 		draw:true,
 		cmFacesUpdated:6,
 		mappingType:'vertex projection',
-		scale:0.3,
+		scale:0.2,
 		isPortal:true,
 		moveAway:0.0005
 	},

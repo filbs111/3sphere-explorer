@@ -2217,19 +2217,19 @@
 	varying vec3 vNormal;	
 	
 	void main(void) {
-		//transformedCoord = uMVMatrix*(aVertexPosition + 0.0000001*aVertexNormal);
-		transformedCoord = uMVMatrix*aVertexPosition;		//should be equivalent to above
 		//calculate vectors moved quarter way around world from this vertex, in the direction of each voxel axis. this is like TBNP "vertexMatrix" matrix, for a normal in one of these directions. (true normal is aVertexNormal though)
 		// guess top/bottom world axes x=y=0, z=w=0. up/down turns x,y into z,w. sideways turns x into y and w into z
-		vec4 updownaxis = vec4( length(aVertexPosition.zw)*aVertexPosition.xy , -length(aVertexPosition.xy)*aVertexPosition.zw);	//moved up or down from vertex point (not sure sign)
+		float lenRatio = length(aVertexPosition.zw)/length(aVertexPosition.xy);
+		vec4 updownaxis = vec4( lenRatio*aVertexPosition.xy , -(1./lenRatio)*aVertexPosition.zw);	//moved up or down from vertex point (not sure sign)
 		vec4 sideaxisone = normalize( vec4(aVertexPosition.y, -aVertexPosition.x, 0.,0.));
 		vec4 sideaxistwo = normalize( vec4(0.,0., aVertexPosition.w, -aVertexPosition.z));
 		
-		mat4 vertexMatrix=uMVMatrix*mat4( sideaxisone, sideaxistwo, updownaxis, aVertexPosition);	//todo get order, signs right!!
+		//zero out some components. expect lighting to be as if projected onto this relative position..
+		//mat4 vertexMatrix=uMVMatrix*mat4( vec4(0.), -updownaxis, vec4(0.), aVertexPosition);	//up-down OK
+		//mat4 vertexMatrix=uMVMatrix*mat4( sideaxistwo, vec4(0.), vec4(0.), aVertexPosition);	//along tunnel ok	
+		mat4 vertexMatrix=uMVMatrix*mat4( sideaxistwo, -updownaxis, sideaxisone, aVertexPosition);
 	
-		//transformedCoord = vertexMatrix[3];
-		//transformedCoord = uMVMatrix*aVertexPosition;		//should be equivalent to above
-		
+		transformedCoord = vertexMatrix[3];		
 		gl_Position = uPMatrix * transformedCoord;
 		
 		vPlayerLightPosTangentSpace = uDropLightPos* vertexMatrix;
