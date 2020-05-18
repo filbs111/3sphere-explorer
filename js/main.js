@@ -136,13 +136,22 @@ function initShaders(){
 		atmos:   loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE']),
 		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_TWO'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE'])
 	};
-		
-	shaderPrograms.texmapColor4Vec = {
+	
+	//voxTerrain shaders
+	shaderPrograms.triplanarColor4Vec = {
 		constant:loadShader( "shader-texmap-color-triplanar-vs-4vec", "shader-texmap-triplanar-fs", ['ATMOS_CONSTANT']),
 		atmos:   loadShader( "shader-texmap-color-triplanar-vs-4vec", "shader-texmap-triplanar-fs", ['ATMOS_ONE']),
 		atmos_v2:loadShader( "shader-texmap-color-triplanar-vs-4vec", "shader-texmap-triplanar-fs", ['ATMOS_TWO'])
 	}
-		
+	shaderPrograms.triplanarPerPixel = {	//like texmap4VecPerPixelDiscard - vertex position, normal are varyings, light positions are uniform
+		constant:loadShader( "shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_CONSTANT'],['VCOLOR','SPECULAR_ACTIVE']),
+		atmos:   loadShader( "shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_ONE'],['VCOLOR','SPECULAR_ACTIVE']),
+		atmos_v2:loadShader( "shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_TWO'],['VCOLOR','SPECULAR_ACTIVE'])
+	}
+	shaderPrograms.triplanarPerPixelTwo = {	//TODO add voxTerrain normal map shaders - calculate vertexMatrix, get light positions in this frame (light positions are varyings)	
+	}
+	
+	//procTerrain shaders
 	shaderPrograms.texmap4VecMapproject = {	//per vertex lighting
 		constant:loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['MAPPROJECT_ACTIVE','ATMOS_CONSTANT'], ['MAPPROJECT_ACTIVE']),
 		atmos:   loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['MAPPROJECT_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['MAPPROJECT_ACTIVE']),
@@ -2007,7 +2016,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
 		if (!duocylinderObj.isSea){
 			if (duocylinderObj.usesTriplanarMapping){	//means is voxTerrain.
-				activeShaderProgram = shaderPrograms.texmapColor4Vec[ guiParams.display.atmosShader ];
+				activeShaderProgram = guiParams.display.perPixelLighting? shaderPrograms.triplanarPerPixel[ guiParams.display.atmosShader ] : shaderPrograms.triplanarColor4Vec[ guiParams.display.atmosShader ];
 			}else{
 				//activeShaderProgram = duocylinderObj.useMapproject? shaderPrograms.texmap4VecMapproject[ guiParams.display.atmosShader ] : shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ] ;
 				activeShaderProgram = duocylinderObj.useMapproject? ( guiParams.display.useSpecular? shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecMapprojectDiscardNormalmapVcolorAndDiffuse[ guiParams.display.atmosShader ] ) : ( guiParams.display.useSpecular? shaderPrograms.texmap4VecPerPixelDiscardPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscard[ guiParams.display.atmosShader ]);
