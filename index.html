@@ -710,7 +710,11 @@
 	uniform vec3 uReflectorDiffColor;
 	uniform vec4 uReflectorPos;
 	uniform float uReflectorCos;
+#ifdef VEC_ATMOS_THICK
+	varying vec3 fog;
+#else	
 	varying float fog;
+#endif
 	varying vec4 adjustedPos;
 	varying vec4 transformedNormal;
 	varying vec4 transformedCoord;
@@ -742,7 +746,8 @@
 				
 		//guess maybe similar to some gaussian light source
 		
-		vec4 preGammaFragColor = vec4( fog*(( uPlayerLightColor*light+ uReflectorDiffColor*portalLight + uFogColor.xyz )*uColor.xyz + uEmitColor), 1.0) + (1.0-fog)*uFogColor;
+		//vec4 preGammaFragColor = vec4( fog*(( uPlayerLightColor*light+ uReflectorDiffColor*portalLight + uFogColor.xyz )*uColor.xyz + uEmitColor), 1.0) + (1.0-fog)*uFogColor;
+		vec4 preGammaFragColor = vec4( fog*(( uPlayerLightColor*light+ uReflectorDiffColor*portalLight + uFogColor.xyz )*uColor.xyz + uEmitColor) + (1.0-fog)*uFogColor.xyz , 1.0);
 		
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
@@ -756,7 +761,13 @@
 <script id="shader-perpixel-discard-vs" type="x-shader/x-vertex">
 	attribute vec3 aVertexPosition;
 	attribute vec3 aVertexNormal;
+#ifdef VEC_ATMOS_THICK
+	uniform vec3 uAtmosThickness;
+	varying vec3 fog;
+#else
 	uniform float uAtmosThickness;
+	varying float fog;
+#endif
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
@@ -764,7 +775,6 @@
 	uniform vec4 uCameraWorldPos;
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 	uniform vec3 uModelScale;
-	varying float fog;
 	varying vec4 adjustedPos;
 	varying vec4 transformedNormal;
 	varying vec4 transformedCoord;
@@ -777,7 +787,11 @@
 		gl_Position = uPMatrix * transformedCoord;
 		
 #ifdef ATMOS_CONSTANT		
+#ifdef VEC_ATMOS_THICK
+		fog = vec3(0.5*(1.0 + transformedCoord.w));
+#else
 		fog = 0.5*(1.0 + transformedCoord.w);
+#endif
 #else		
 		vec4 worldCoord = uMMatrix * aVertexPositionNormalized;
 		
@@ -1186,7 +1200,11 @@
 	uniform vec4 uColor;
 	uniform vec3 uPlayerLightColor;
 	uniform float thrustAmount;
+#ifdef VEC_ATMOS_THICK
+	varying vec3 fog;
+#else	
 	varying float fog;
+#endif
 	uniform vec4 uFogColor;
 	uniform vec3 uReflectorDiffColor;
 	uniform vec4 uReflectorPos;
@@ -1263,7 +1281,7 @@
 		
 		//guess maybe similar to some gaussian light source
 		//vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
-		vec4 preGammaFragColor = vec4( fog*litColor, 1.0) + (1.0-fog)*uFogColor;
+		vec4 preGammaFragColor = vec4( fog*litColor + (1.0-fog)*uFogColor.xyz, 1.);
 
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
@@ -1460,7 +1478,13 @@
 	attribute vec3 aVertexBinormal;
 	attribute vec3 aVertexColor;
 	varying vec3 vTextureCoord;
+#ifdef VEC_ATMOS_THICK
+	uniform vec3 uAtmosThickness;
+	varying vec3 fog;
+#else
 	uniform float uAtmosThickness;
+	varying float fog;
+#endif
 	uniform float uAtmosContrast;
 #ifdef VS_MATMULT
 	uniform mat4 uVMatrix;
@@ -1479,7 +1503,6 @@
 	uniform mat4 uPMatrix;
 	uniform vec4 uCameraWorldPos;
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
-	varying float fog;
 	uniform vec3 uModelScale;
 	uniform vec4 uReflectorPosVShaderCopy;	//TODO not this! shouldn't need in both. unsure why need different name. limitation of webgl, or bad assumption in shader loading func?
 	
@@ -1529,7 +1552,11 @@
 #endif	
 
 #ifdef ATMOS_CONSTANT		
+#ifdef VEC_ATMOS_THICK
+		fog = vec3(0.5*(1.0 + transformedCoord.w));
+#else
 		fog = 0.5*(1.0 + transformedCoord.w);
+#endif
 #else		
 		vec4 worldCoord = uMMatrix * aVertexPositionNormalized;
 		
@@ -1594,7 +1621,13 @@
 	attribute vec2 aTextureCoord;
 	attribute vec3 aVertexVelocity;
 	varying vec3 vTextureCoord;
+#ifdef VEC_ATMOS_THICK
+	uniform vec3 uAtmosThickness;
+	varying vec3 fog;
+#else
 	uniform float uAtmosThickness;
+	varying float fog;
+#endif
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
@@ -1602,7 +1635,6 @@
 	uniform vec4 uCameraWorldPos;
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 	uniform float uVertexMove;
-	varying float fog;
 	uniform vec3 uModelScale;
 	varying vec4 adjustedPos;
 	varying vec4 transformedNormal;	
@@ -1621,7 +1653,11 @@
 		gl_Position = uPMatrix * transformedCoord;
 
 #ifdef ATMOS_CONSTANT		
+#ifdef VEC_ATMOS_THICK
+		fog = vec3(0.5*(1.0 + transformedCoord.w));
+#else
 		fog = 0.5*(1.0 + transformedCoord.w);
+#endif
 #else		
 		vec4 worldCoord = uMMatrix * aVertexPositionNormalized;
 		
@@ -1796,7 +1832,13 @@
 	attribute vec4 aVertexNormal;
 	attribute vec2 aTextureCoord;
 	attribute vec4 aVertexColor;
+#ifdef VEC_ATMOS_THICK
+	uniform vec3 uAtmosThickness;
+	varying vec3 fog;
+#else
 	uniform float uAtmosThickness;
+	varying float fog;
+#endif
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
@@ -1807,7 +1849,6 @@
 	//uniform vec3 uReflectorDiffColor;
 	//uniform vec4 uReflectorPos;
 	//uniform float uReflectorCos;
-	varying float fog;
 	//varying vec3 veclight;
 	//varying vec4 vVertexPos;
 	varying vec4 transformedCoord;
@@ -1820,7 +1861,11 @@
 		transformedCoord = uMVMatrix * aVertexPosition;
 		gl_Position = uPMatrix * transformedCoord;
 #ifdef ATMOS_CONSTANT		
+#ifdef VEC_ATMOS_THICK
+		fog = vec3(0.5*(1.0 + transformedCoord.w));
+#else
 		fog = 0.5*(1.0 + transformedCoord.w);
+#endif
 #else
 		vec4 worldCoord = uMMatrix * aVertexPosition;
 		float dotProd = dot(uCameraWorldPos,worldCoord);
