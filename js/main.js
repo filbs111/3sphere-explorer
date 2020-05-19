@@ -3759,15 +3759,8 @@ var iterateMechanics = (function iterateMechanics(){
 			infoToShow+=", sshipMat:" + Array.from(sshipMatrix).map(elem=>elem.toFixed(3)).join(",");	//toFixed doesn't work right on float32 array so use Array.from first
 			infoToShow+=" debugRoll: " + debugRoll;
 			
-		//	document.querySelector("#info2").innerHTML = infoToShow;
-			document.querySelector("#info2").innerHTML = myDebugStr;
-			
-			//want to be able to steer in the air. todo properly - guess maybe wants "lift" from wings, but easiest implementation guess is to increase drag for lateral velocity.
-			//would like for both left/right, up/down velocity, but to test, try getting just one - like a aeroplane.
-			//TODO better aerodynamic model - would like decent "steerability" without too much slowdown when completely sideways.
-			airSpdVec[0]*=0.996;	//left/right
-			airSpdVec[1]*=0.996;	//up/down
-				//TODO squared speed drag for these?
+			document.querySelector("#info2").innerHTML = infoToShow;
+			//document.querySelector("#info2").innerHTML = myDebugStr;
 			
 			if (guiParams.control.handbrake){
 				for (var cc=0;cc<3;cc++){
@@ -3775,15 +3768,20 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			}
 			
-			//playerVelVec=scalarvectorprod(1.0-0.001*spd,playerVelVec);
-
-			//if (Math.random()<0.05){console.log("speed : " + spd);}	//show the speed. todo proper ui
-
 			//get the current atmospheric density.
 			var atmosThick = 0.001*guiParams.display.atmosThickness;	//1st constant just pulled out of the air. 
 			atmosThick*=Math.pow(2.71, guiParams.display.atmosContrast*(playerPos[0]*playerPos[0] + playerPos[1]*playerPos[1])); //as atmosScale increases, scale height decreases
 
-			playerVelVec=scalarvectorprod(1.0-atmosThick*spd,airSpdVec).map(function(val,idx){return val+spinVelPlayerCoords[idx];});
+			//want to be able to steer in the air. todo properly - guess maybe wants "lift" from wings, but easiest implementation guess is to increase drag for lateral velocity.
+			//would like for both left/right, up/down velocity, but to test, try getting just one - like a aeroplane.
+			//TODO better aerodynamic model - would like decent "steerability" without too much slowdown when completely sideways.
+			//some tweak for non-isotropic drag. relates to drag coefficients in different directions
+			var airSpdScale = [0.1,0.1,1];	//left/right, up/down, forwards/back
+			var scaledAirSpdVec = airSpdVec.map((elem,ii)=>elem/airSpdScale[ii]);
+			var spdScaled = Math.hypot.apply(null, scaledAirSpdVec);
+			
+			playerVelVec=scalarvectorprod(1.0-atmosThick*spdScaled,scaledAirSpdVec).map(function(val,idx){return val*airSpdScale[idx]+spinVelPlayerCoords[idx];});
+			
 			
 			if (autoFireCountdown>0){
 				autoFireCountdown--;
