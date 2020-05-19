@@ -1076,6 +1076,8 @@
 	precision mediump float;
 	uniform sampler2D uSampler;
 	uniform sampler2D uSamplerB;
+	uniform sampler2D uSampler2;
+	uniform sampler2D uSampler2B;
 	uniform vec4 uColor;
 	uniform vec3 uPlayerLightColor;
 #ifdef VEC_ATMOS_THICK
@@ -1109,6 +1111,10 @@
 #ifdef MAPPROJECT_ACTIVE
 		vec2 newTexCoord = vec2( atan(vVertexPos.x,vVertexPos.y)*CONST_REPS/CONST_TAU, atan(vVertexPos.z,vVertexPos.w)*CONST_REPS/CONST_TAU);
 		vec3 texSample = texture2D(uSampler, newTexCoord).xyz;
+#ifdef DOUBLE_TEXTURES
+		vec3 texSample2 = texture2D(uSampler, newTexCoord).xyz;
+		texSample = mix(texSample, texSample2, vColor.a);	//use tex vertex colour 4th channel
+#endif
 #else
 		vec3 texSample = texture2DProj(uSampler, vTextureCoord).xyz;
 #endif
@@ -1129,7 +1135,12 @@
 #ifdef DIFFUSE_TEX_ACTIVE
 #ifdef MAPPROJECT_ACTIVE
 		//adjustedColor*=texture2D(uSamplerB, newTexCoord);	//hope that 4th component is 1 (opaque). note currently only used in conjunction with MAPPROJECT_ACTIVE
-		adjustedColor*=pow(texture2D(uSamplerB, newTexCoord),vec4(2.2));	//convert rgb to linear. this is inefficient and expect interpolation won't work right. todo figure out how to use properly, or convert to linear before using in shader.
+		vec4 diffuseSample=texture2D(uSamplerB, newTexCoord);
+#ifdef DOUBLE_TEXTURES
+		diffuseSample= mix(diffuseSample, texture2D(uSampler2B, newTexCoord), vColor.a);
+		//diffuseSample= mix(diffuseSample, texture2D(uSampler2B, newTexCoord), 0.);
+#endif		
+		adjustedColor*=pow(diffuseSample,vec4(2.2));	//convert rgb to linear. this is inefficient and expect interpolation won't work right. todo figure out how to use properly, or convert to linear before using in shader.
 #else
 		adjustedColor*=pow(texture2DProj(uSamplerB, vTextureCoord),vec4(2.2));
 #endif
@@ -1939,7 +1950,7 @@
 	attribute vec4 aVertexTangent;
 	attribute vec4 aVertexBinormal;
 	attribute vec2 aTextureCoord;
-	attribute vec3 aVertexColor;	//TODO make consistent vec3 /vec4
+	attribute vec4 aVertexColor;
 #ifdef VEC_ATMOS_THICK
 	uniform vec3 uAtmosThickness;
 	varying vec3 fog;
@@ -1976,7 +1987,7 @@
 #endif
 
 #ifdef VCOLOR
-		vColor = vec4(aVertexColor,1.);	//TODO multiply by uColor in vert shader
+		vColor = aVertexColor;	//TODO multiply by uColor in vert shader
 #endif
 
 #ifdef ATMOS_CONSTANT		

@@ -94,6 +94,9 @@ function initShaders(){
 	shaderPrograms.texmap4VecMapproject = genShaderVariants("shader-texmap-vs-4vec", "shader-texmap-fs", ['MAPPROJECT_ACTIVE','CONST_ITERS 64.0'], ['MAPPROJECT_ACTIVE']);	//per vertex lighting
 	shaderPrograms.texmap4VecMapprojectDiscardNormalmapVcolorAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','MAPPROJECT_ACTIVE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','MAPPROJECT_ACTIVE'],true);	//per pixel tangent space lighting
 	shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE'],true);
+	shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse2Tex = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','DOUBLE_TEXTURES'],true);
+	
+	//sea shaders
 	shaderPrograms.duocylinderSea = genShaderVariants("shader-texmap-vs-duocylinder-sea", "shader-texmap-fs", ['CONST_ITERS 64.0']);
 	shaderPrograms.duocylinderSeaPerPixelDiscard = genShaderVariants("shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['CONST_ITERS 64.0'],[],true);
 	shaderPrograms.duocylinderSeaPerPixelDiscardPhong = genShaderVariants("shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['CONST_ITERS 64.0'], ['SPECULAR_ACTIVE'],true),
@@ -1928,7 +1931,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 				activeShaderProgram = guiParams.display.perPixelLighting? shaderPrograms.triplanarPerPixelTwoAndDiffuse[ guiParams.display.atmosShader ] : shaderPrograms.triplanarColor4Vec[ guiParams.display.atmosShader ];
 			}else{
 				//activeShaderProgram = duocylinderObj.useMapproject? shaderPrograms.texmap4VecMapproject[ guiParams.display.atmosShader ] : shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ] ;
-				activeShaderProgram = duocylinderObj.useMapproject? ( guiParams.display.useSpecular? shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecMapprojectDiscardNormalmapVcolorAndDiffuse[ guiParams.display.atmosShader ] ) : ( guiParams.display.useSpecular? shaderPrograms.texmap4VecPerPixelDiscardPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscard[ guiParams.display.atmosShader ]);
+				activeShaderProgram = duocylinderObj.useMapproject? ( guiParams.display.useSpecular? shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse2Tex[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecMapprojectDiscardNormalmapVcolorAndDiffuse[ guiParams.display.atmosShader ] ) : ( guiParams.display.useSpecular? shaderPrograms.texmap4VecPerPixelDiscardPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscard[ guiParams.display.atmosShader ]);
 			}
 			gl.useProgram(activeShaderProgram);
 		}else{
@@ -2590,9 +2593,16 @@ function drawTennisBall(duocylinderObj, shader){
 	gl.uniform1i(shader.uniforms.uSampler, 0);
 	
 	if (shader.uniforms.uSamplerB){
-		//console.log("binding tex 2");
 		bind2dTextureIfRequired(duocylinderObj.texB, gl.TEXTURE2);
 		gl.uniform1i(shader.uniforms.uSamplerB, 2);
+	}
+	if (shader.uniforms.uSampler2){ 
+		bind2dTextureIfRequired(duocylinderObj.tex2, gl.TEXTURE3);
+		gl.uniform1i(shader.uniforms.uSampler2, 3);
+	}
+	if (shader.uniforms.uSampler2B){
+		bind2dTextureIfRequired(duocylinderObj.tex2B, gl.TEXTURE4);
+		gl.uniform1i(shader.uniforms.uSampler2B, 4);
 	}
 	
 	//for (var side=0;side<2;side++){	//draw 2 sides
@@ -2815,10 +2825,10 @@ function setupScene() {
 
 var texture,diffuseTexture,hudTexture,hudTextureSmallCircles,hudTexturePlus,hudTextureX,hudTextureBox,sshipTexture,nmapTexture;
 
-function loadTmpFFTexture(id){
-	diffuseTexture = makeTexture("img/"+id+"/"+id+"-diffuse.jpg",false);
-	nmapTexture = makeTexture("img/"+id+"/"+id+"-normal.jpg",false);
-	
+function loadTmpFFTexture(id,directory){
+	directory = directory || 'img/';
+	diffuseTexture = makeTexture(directory+id+"/"+id+"-diffuse.jpg",false);
+	nmapTexture = makeTexture(directory+id+"/"+id+"-normal.jpg",false);
 }
 
 function initTexture(){
@@ -2828,7 +2838,13 @@ function initTexture(){
 //	diffuseTexture = makeTexture("img/4431-diffuse.jpg",false);nmapTexture = makeTexture("img/4431-normal.jpg",false);	//concrete blocks
 	//diffuseTexture = makeTexture("img/no-git/6133-diffuse.jpg",false);nmapTexture = makeTexture("img/no-git/6133-normal.jpg",false);	//metal crate
 	//diffuseTexture = makeTexture("img/no-git/4483-diffuse.jpg",false);nmapTexture = makeTexture("img/no-git/4483-normal.jpg",false);	//rust
-	loadTmpFFTexture(11581);
+	//loadTmpFFTexture(11581);
+	//loadTmpFFTexture(14196,'img/no-git/');
+	//loadTmpFFTexture(9701,'img/no-git/');	//craters. good for out-of-atmosphere part?
+	//loadTmpFFTexture(4241,'img/no-git/');
+	loadTmpFFTexture(6481);
+	//loadTmpFFTexture(14206,'img/no-git/');	//https://www.filterforge.com/filters/14206.html	"Sedimentary Boulders Rock Face"
+	//loadTmpFFTexture(1893,'img/no-git/');	//dry lakebed
 	
 	hudTexture = makeTexture("img/circles.png");
 	hudTextureSmallCircles = makeTexture("img/smallcircles.png");
@@ -2843,6 +2859,13 @@ function initTexture(){
 	duocylinderObjects.procTerrain.texB = diffuseTexture;
 
 	duocylinderObjects.procTerrain.useMapproject = true;
+
+	//load 2 more textures. already set textures still reference what was loaded already
+	//loadTmpFFTexture(4999,'img/no-git/');	//chequerboard
+	loadTmpFFTexture(14206);	//https://www.filterforge.com/filters/14206.html	"Sedimentary Boulders Rock Face"
+
+	duocylinderObjects.procTerrain.tex2 = nmapTexture;
+	duocylinderObjects.procTerrain.tex2B = diffuseTexture;
 	
 	//duocylinderObjects.sea.tex = null;
 	duocylinderObjects.sea.tex = makeTexture("img/4141.jpg");
@@ -2911,8 +2934,8 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	world0:{duocylinderModel:"voxTerrain",seaActive:false},
-	world1:{duocylinderModel:"none",seaActive:false},
+	world0:{duocylinderModel:"procTerrain",seaActive:false},
+	world1:{duocylinderModel:"none",seaActive:true},
 	duocylinderRotateSpeed:0,
 	seaLevel:-0.012,
 	drawShapes:{
@@ -2996,7 +3019,7 @@ var guiParams={
 		moveAway:0.0005
 	},
 	debug:{
-		closestPoint:true,
+		closestPoint:false,
 		buoys:false,
 		nmapUseShader2:true,
 		showSpeedOverlay:false,
