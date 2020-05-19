@@ -24,7 +24,8 @@ function bufferArraySubDataF32(buffer, offs, f32arr){
 	gl.bufferSubData(gl.ARRAY_BUFFER, offs, f32arr);
 }
 
-var atmosVariants = ['CONSTANT','ONE','TWO'];
+//var atmosVariants = ['CONSTANT','ONE','TWO'];
+var atmosVariants = ['ONE'];	//disable variants to speed up loading
 var genShaderVariants = function(vs_id, fs_id, vs_defines=[], fs_defines=[], usesVecAtmosThickness){
 	var shaders = {};
 	if (usesVecAtmosThickness){
@@ -37,9 +38,9 @@ var genShaderVariants = function(vs_id, fs_id, vs_defines=[], fs_defines=[], use
 		shaders[variant].usesVecAtmosThickness = usesVecAtmosThickness;
 	}
 	//temp:
-	shaders.constant = shaders.CONSTANT;
+	//shaders.constant = shaders.CONSTANT;
 	shaders.atmos = shaders.ONE;
-	shaders.atmos_v2 = shaders.TWO;
+	//shaders.atmos_v2 = shaders.TWO;
 	
 	return shaders;
 };
@@ -3150,7 +3151,7 @@ function init(){
 	displayFolder.add(guiParams.display, "showHud");
 	displayFolder.add(guiParams.display, "renderViaTexture", ['no','basic','bennyBoxLite','bennyBox','fisheye']);
 	displayFolder.add(guiParams.display, "perPixelLighting");
-	displayFolder.add(guiParams.display, "atmosShader", ['constant','atmos','atmos_v2']);	//basic is constant (contrast=0) 
+	//displayFolder.add(guiParams.display, "atmosShader", ['constant','atmos','atmos_v2']);	//basic is constant (contrast=0) 
 	displayFolder.add(guiParams.display, "atmosThickness", 0,0.5,0.05);
 displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(setAtmosThicknessMultiplier);
 	displayFolder.add(guiParams.display, "atmosContrast", -10,10,0.5);
