@@ -25,11 +25,16 @@ function bufferArraySubDataF32(buffer, offs, f32arr){
 }
 
 var atmosVariants = ['CONSTANT','ONE','TWO'];
-var genShaderVariants = function(vs_id, fs_id, vs_defines=[], fs_defines=[]){
+var genShaderVariants = function(vs_id, fs_id, vs_defines=[], fs_defines=[], usesVecAtmosThickness){
 	var shaders = {};
+	if (usesVecAtmosThickness){
+		vs_defines.push('VEC_ATMOS_THICK');
+		fs_defines.push('VEC_ATMOS_THICK');
+	}
 	for (var variant of atmosVariants){
 		var variantString = "ATMOS_"+variant;
 		shaders[variant]=loadShader(vs_id, fs_id, vs_defines.concat(variantString), fs_defines.concat(variantString));
+		shaders[variant].usesVecAtmosThickness = usesVecAtmosThickness;
 	}
 	//temp:
 	shaders.constant = shaders.CONSTANT;
@@ -83,19 +88,18 @@ function initShaders(){
 	//shaderPrograms.triplanarPerPixel = genShaderVariants("shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['VCOLOR','SPECULAR_ACTIVE'],['VCOLOR','SPECULAR_ACTIVE']);
 	shaderPrograms.triplanarPerPixel = genShaderVariants("shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['SPECULAR_ACTIVE'],['SPECULAR_ACTIVE']);	//like texmap4VecPerPixelDiscard - vertex position, normal are varyings, light positions are uniform
 	//shaderPrograms.triplanarPerPixelTwo = genShaderVariants("shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs-BASIC", ['VCOLOR','SPECULAR_ACTIVE'],['VCOLOR','SPECULAR_ACTIVE']);
-	shaderPrograms.triplanarPerPixelTwoAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs", ['SPECULAR_ACTIVE'],['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE']);	//calculate vertexMatrix, get light positions in this frame (light positions are varyings)
+	shaderPrograms.triplanarPerPixelTwoAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs", ['SPECULAR_ACTIVE'],['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE'],true);	//calculate vertexMatrix, get light positions in this frame (light positions are varyings)
 	
 	//procTerrain shaders
 	shaderPrograms.texmap4VecMapproject = genShaderVariants("shader-texmap-vs-4vec", "shader-texmap-fs", ['MAPPROJECT_ACTIVE','CONST_ITERS 64.0'], ['MAPPROJECT_ACTIVE']);	//per vertex lighting
-	shaderPrograms.texmap4VecMapprojectDiscardNormalmapVcolorAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','MAPPROJECT_ACTIVE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','MAPPROJECT_ACTIVE']);	//per pixel tangent space lighting
-	shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE']);
+	shaderPrograms.texmap4VecMapprojectDiscardNormalmapVcolorAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','MAPPROJECT_ACTIVE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','MAPPROJECT_ACTIVE'],true);	//per pixel tangent space lighting
+	shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE'],true);
 	shaderPrograms.duocylinderSea = genShaderVariants("shader-texmap-vs-duocylinder-sea", "shader-texmap-fs", ['CONST_ITERS 64.0']);
-	shaderPrograms.duocylinderSeaPerPixelDiscard = genShaderVariants("shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['CONST_ITERS 64.0']);
-	shaderPrograms.duocylinderSeaPerPixelDiscardPhong = genShaderVariants("shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['CONST_ITERS 64.0'], ['SPECULAR_ACTIVE']),
+	shaderPrograms.duocylinderSeaPerPixelDiscard = genShaderVariants("shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['CONST_ITERS 64.0'],[],true);
+	shaderPrograms.duocylinderSeaPerPixelDiscardPhong = genShaderVariants("shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['CONST_ITERS 64.0'], ['SPECULAR_ACTIVE'],true),
 				
-	shaderPrograms.cubemap = loadShader( "shader-cubemap-vs", "shader-cubemap-fs");
-					
-	shaderPrograms.vertprojCubemap = genShaderVariants("shader-cubemap-vs", "shader-cubemap-fs", ['VERTPROJ','CONST_ITERS 64.0']);
+	shaderPrograms.cubemap = genShaderVariants( "shader-cubemap-vs", "shader-cubemap-fs",['CONST_ITERS 64.0'],[],true);
+	shaderPrograms.vertprojCubemap = genShaderVariants("shader-cubemap-vs", "shader-cubemap-fs", ['VERTPROJ','CONST_ITERS 64.0'],[],true);
 				
 	shaderPrograms.decal = loadShader( "shader-decal-vs", "shader-decal-fs");
 					
@@ -2245,7 +2249,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//TODO have some variable for activeReflectorShader, avoid switch.
 		switch(guiParams.reflector.mappingType){
 			case 'projection':
-			activeShaderProgram = shaderPrograms.cubemap;
+			activeShaderProgram = shaderPrograms.cubemap[ guiParams.display.atmosShader ];
 			break;
 			case 'vertex projection':
 			activeShaderProgram = shaderPrograms.vertprojCubemap[ guiParams.display.atmosShader ];
@@ -2656,9 +2660,12 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 		gl.uniform1f(shaderProg.uniforms.uAtmosContrast, guiParams.display.atmosContrast);
 	}
 	if (shaderProg.uniforms.uAtmosThickness){	//todo do less often (at least query ui less often)
-		gl.uniform1f(shaderProg.uniforms.uAtmosThickness, guiParams.display.atmosThickness);
+		if (shaderProg.usesVecAtmosThickness){
+			gl.uniform3fv(shaderProg.uniforms.uAtmosThickness, atmosThicknessMultiplier.map(elem=>elem*guiParams.display.atmosThickness));
+		}else{
+			gl.uniform1f(shaderProg.uniforms.uAtmosThickness, guiParams.display.atmosThickness);
+		}
 	}
-	
 	gl.uniformMatrix4fv(shaderProg.uniforms.uPMatrix, false, pMatrix);
 }
 function drawObjectFromPreppedBuffers(bufferObj, shaderProg, skipM){
@@ -2732,7 +2739,11 @@ function setMatrixUniforms(shaderProgram) {
 		gl.uniform1f(shaderProgram.uniforms.uAtmosContrast, guiParams.display.atmosContrast);
 	}
 	if (shaderProgram.uniforms.uAtmosThickness){	//todo do less often (at least query ui less often)
-		gl.uniform1f(shaderProgram.uniforms.uAtmosThickness, guiParams.display.atmosThickness);
+		if (shaderProgram.usesVecAtmosThickness){
+			gl.uniform3fv(shaderProgram.uniforms.uAtmosThickness, atmosThicknessMultiplier.map(elem=>elem*guiParams.display.atmosThickness));
+		}else{
+			gl.uniform1f(shaderProgram.uniforms.uAtmosThickness, guiParams.display.atmosThickness);
+		}
 	}
 }
 
@@ -2949,7 +2960,7 @@ var guiParams={
 	"targeting":"off",
 	//fogColor0:'#b2dede',
 	//fogColor0:'#b451c5',
-	fogColor0:'#000000',
+	fogColor0:'#bbbbbb',
 	fogColor1:'#aaaaaa',
 	playerLight:'#0000ff',
 	control:{
@@ -2968,8 +2979,9 @@ var guiParams={
 		renderViaTexture:'fisheye',
 		perPixelLighting:true,
 		atmosShader:"atmos",
-		atmosThickness:0.2,
-		atmosContrast:2.0,
+		atmosThickness:0.05,
+		atmosThicknessMultiplier:'#88aaff',
+		atmosContrast:5.0,
 		culling:true,
 		useSpecular:true,
 		specularStrength:1.0,
@@ -3026,6 +3038,8 @@ var collisionTestObj4Mat = mat4.identity();
 var collisionTestObj5Mat = mat4.identity();
 
 var procTerrainNearestPointTestMat = mat4.identity();
+
+var atmosThicknessMultiplier;	//TODO different settings for different worlds
 
 function init(){
 
@@ -3115,6 +3129,7 @@ function init(){
 	displayFolder.add(guiParams.display, "perPixelLighting");
 	displayFolder.add(guiParams.display, "atmosShader", ['constant','atmos','atmos_v2']);	//basic is constant (contrast=0) 
 	displayFolder.add(guiParams.display, "atmosThickness", 0,0.5,0.05);
+displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(setAtmosThicknessMultiplier);
 	displayFolder.add(guiParams.display, "atmosContrast", -10,10,0.5);
 	displayFolder.add(guiParams.display, "culling");
 	displayFolder.add(guiParams.display, "useSpecular");
@@ -3231,6 +3246,7 @@ function init(){
 	completeShaders();
 	setFog(0,guiParams.fogColor0);
 	setFog(1,guiParams.fogColor1);
+	setAtmosThicknessMultiplier(guiParams.display.atmosThicknessMultiplier);
 	setPlayerLight(guiParams.playerLight);
     gl.enable(gl.DEPTH_TEST);
 	gl.enable(gl.CULL_FACE);
@@ -3238,14 +3254,14 @@ function init(){
 	requestAnimationFrame(drawScene);
 	
 	function setFog(world,color){
-		var r = parseInt(color.substring(1,3),16) /255;
-		var g = parseInt(color.substring(3,5),16) /255;
-		var b = parseInt(color.substring(5,7),16) /255;
-		worldColorsPlain[world]=[r,g,b,1];
+		worldColorsPlain[world]=colorArrFromUiString(color).concat(1);
 		worldColors[world]=worldColorsPlain[world].map(function(elem){
 			var withGamma =Math.pow(elem,2.2);
 			return withGamma/(1.01-withGamma);	//undo tone mapping
 		});
+	}
+	function setAtmosThicknessMultiplier(color){
+		atmosThicknessMultiplier = colorArrFromUiString(color);
 	}
 	function setPlayerLight(color){
 		var r = parseInt(color.substring(1,3),16) /255;
@@ -3253,6 +3269,12 @@ function init(){
 		var b = parseInt(color.substring(5,7),16) /255;
 		playerLightUnscaled=[r,g,b].map(function(elem){return Math.pow(elem,2.2)});	//apply gamma
 	}
+}
+function colorArrFromUiString(color){
+	var r = parseInt(color.substring(1,3),16) /255;
+	var g = parseInt(color.substring(3,5),16) /255;
+	var b = parseInt(color.substring(5,7),16) /255;
+	return [r,g,b];
 }
 
 var playerVelVec = [0,0,0];	//TODO use matrix/quaternion for this

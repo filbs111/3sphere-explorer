@@ -493,8 +493,12 @@
 	uniform float uReflectorCos;
 	uniform float uSpecularStrength;
 	uniform float uSpecularPower;
-	
+
+#ifdef VEC_ATMOS_THICK
+	varying vec3 fog;
+#else	
 	varying float fog;
+#endif
 	varying vec4 vPlayerLightPosTangentSpace;
 	varying vec4 vPortalLightPosTangentSpace;
 	varying vec4 vEyePosTangentSpace;
@@ -578,7 +582,8 @@
 #endif
 		
 		//guess maybe similar to some gaussian light source
-		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*adjustedColor*vec4(texColor,1.) + (1.0-fog)*uFogColor;
+		//vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*adjustedColor*vec4(texColor,1.) + (1.0-fog)*uFogColor;
+		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz )*adjustedColor.xyz*texColor + (1.0-fog)*uFogColor.xyz , 1.);
 				
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
@@ -905,7 +910,11 @@
 	uniform sampler2D uSampler;
 	uniform vec4 uColor;
 	uniform vec3 uPlayerLightColor;
+#ifdef VEC_ATMOS_THICK
+	varying vec3 fog;
+#else	
 	varying float fog;
+#endif
 	uniform vec4 uFogColor;
 	uniform vec3 uReflectorDiffColor;
 	uniform vec4 uReflectorPos;
@@ -964,7 +973,8 @@
 #endif		
 		
 		//guess maybe similar to some gaussian light source
-		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*adjustedColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
+		//vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*adjustedColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
+		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz )*adjustedColor.xyz*texture2DProj(uSampler, vTextureCoord).xyz + (1.0-fog)*uFogColor.xyz , 1.);
 		
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
@@ -1054,7 +1064,11 @@
 	uniform sampler2D uSamplerB;
 	uniform vec4 uColor;
 	uniform vec3 uPlayerLightColor;
+#ifdef VEC_ATMOS_THICK
+	varying vec3 fog;
+#else	
 	varying float fog;
+#endif
 	uniform vec4 uFogColor;
 	uniform vec3 uReflectorDiffColor;
 	uniform vec4 uReflectorPos;
@@ -1152,7 +1166,8 @@
 		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
 				
 		//guess maybe similar to some gaussian light source
-		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*adjustedColor + (1.0-fog)*uFogColor;
+		//vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*adjustedColor + (1.0-fog)*uFogColor;
+		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz )*adjustedColor.xyz + (1.0-fog)*uFogColor.xyz , 1.);
 
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);		
@@ -1880,16 +1895,20 @@
 	attribute vec4 aVertexBinormal;
 	attribute vec2 aTextureCoord;
 	attribute vec3 aVertexColor;	//TODO make consistent vec3 /vec4
+#ifdef VEC_ATMOS_THICK
+	uniform vec3 uAtmosThickness;
+	varying vec3 fog;
+#else
 	uniform float uAtmosThickness;
+	varying float fog;
+#endif
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
 	uniform vec4 uCameraWorldPos;	//used for atmos calcs. TODO can this be combined with/ used for eyepos calculation (used for specular)?
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
-	
 	uniform vec4 uReflectorPosVShaderCopy;
-	varying float fog;
 	
 	varying vec4 vPlayerLightPosTangentSpace;
 	varying vec4 vPortalLightPosTangentSpace;
@@ -1916,7 +1935,11 @@
 #endif
 
 #ifdef ATMOS_CONSTANT		
+#ifdef VEC_ATMOS_THICK
+		fog = vec3(0.5*(1.0 + transformedCoord.w));
+#else
 		fog = 0.5*(1.0 + transformedCoord.w);
+#endif
 #else
 		vec4 worldCoord = uMMatrix * aVertexPosition;
 		float dotProd = dot(uCameraWorldPos,worldCoord);
@@ -2200,7 +2223,13 @@
 	//attribute vec3 aVertexColor;
 	attribute vec3 aTriCoord;
 	attribute vec3 aTriNormal;
+#ifdef VEC_ATMOS_THICK
+	uniform vec3 uAtmosThickness;
+	varying vec3 fog;
+#else
 	uniform float uAtmosThickness;
+	varying float fog;
+#endif
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
@@ -2209,7 +2238,7 @@
 	uniform vec4 uCameraWorldPos;
 	uniform vec4 uReflectorPosVShaderCopy;
 	
-	varying float fog;
+	
 	varying vec4 vPlayerLightPosTangentSpace;
 	varying vec4 vPortalLightPosTangentSpace;
 	varying vec4 vEyePosTangentSpace;
@@ -2243,8 +2272,12 @@
 #endif
 		
 		
-#ifdef ATMOS_CONSTANT		
+#ifdef ATMOS_CONSTANT
+#ifdef VEC_ATMOS_THICK
+		fog = vec3(0.5*(1.0 + transformedCoord.w));
+#else
 		fog = 0.5*(1.0 + transformedCoord.w);
+#endif
 #else
 		vec4 worldCoord = uMMatrix * aVertexPosition;
 		float dotProd = dot(uCameraWorldPos,worldCoord);
@@ -2313,7 +2346,13 @@
 	#define CONST_TAU 6.2831853
 	
 	attribute vec2 aVertexPosition;
+#ifdef VEC_ATMOS_THICK
+	uniform vec3 uAtmosThickness;
+	varying vec3 fog;
+#else
 	uniform float uAtmosThickness;
+	varying float fog;
+#endif
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
@@ -2322,7 +2361,6 @@
 	uniform float uZeroLevel;
 	uniform vec4 uCameraWorldPos;
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
-	varying float fog;
 	varying vec4 transformedCoord;
 	varying vec4 transformedNormal;
 	varying vec3 vTextureCoord;
@@ -2417,7 +2455,11 @@
 		gl_Position = uPMatrix * transformedCoord;
 		
 #ifdef ATMOS_CONSTANT
+#ifdef VEC_ATMOS_THICK
+		fog = vec3(0.5*(1.0 + transformedCoord.w));
+#else
 		fog = 0.5*(1.0 + transformedCoord.w);
+#endif
 #else
 		vec4 worldCoord = uMMatrix * calculatedVertexPosition;
 		/*
@@ -2704,7 +2746,11 @@
 	precision mediump float;
 	uniform samplerCube uSampler;
 	varying vec3 vPos;
+#ifdef VEC_ATMOS_THICK
+	varying vec3 fog;
+#else	
 	varying float fog;
+#endif
 	uniform vec4 uColor;	//TODO remove? (should be white, but useful to tint for debug/ coloured reflector)
 	uniform vec4 uFogColor;
 	
@@ -2718,7 +2764,8 @@
 		//TODO check whether still need this - 
 		
 		vec3 preToneMap = preGammaFragColor / (1.001 - preGammaFragColor);	//using 1.001 instead of 1 to prevent /0 problems
-		preToneMap = vec3(fog)*uColor.xyz*preToneMap + (1.0-fog)*uFogColor.xyz;
+		//preToneMap = vec3(fog)*uColor.xyz*preToneMap + (1.0-fog)*uFogColor.xyz;
+		preToneMap = fog*uColor.xyz*preToneMap + (1.0-fog)*uFogColor.xyz;
 		
 		//reapply tone mapping
 		preGammaFragColor = preToneMap/(1.+preToneMap);
@@ -2732,12 +2779,17 @@
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
 	varying vec3 vPos;
-	varying float fog;	//TODO remove (fog should be applied at cubemap generation (unless fog is exponential decay)
 	uniform vec3 uModelScale;
 	uniform mat4 uPosShiftMat;
 	uniform float uPolarity;
 
+#ifdef VEC_ATMOS_THICK
+	uniform vec3 uAtmosThickness;
+	varying vec3 fog;
+#else
 	uniform float uAtmosThickness;
+	varying float fog;
+#endif
 	uniform float uAtmosContrast;	//atmos variants specific
 	uniform mat4 uMMatrix;
 	uniform vec4 uCameraWorldPos;
@@ -2759,7 +2811,11 @@
 		vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
 
 #ifdef ATMOS_CONSTANT
+#ifdef VEC_ATMOS_THICK
+		fog = vec3(0.5*(1.0 + transformedCoord.w));
+#else
 		fog = 0.5*(1.0 + transformedCoord.w);
+#endif
 #else
 		vec4 worldCoord = uMMatrix * aVertexPositionNormalized;
 #endif
