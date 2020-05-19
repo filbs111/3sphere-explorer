@@ -24,6 +24,21 @@ function bufferArraySubDataF32(buffer, offs, f32arr){
 	gl.bufferSubData(gl.ARRAY_BUFFER, offs, f32arr);
 }
 
+var atmosVariants = ['CONSTANT','ONE','TWO'];
+var genShaderVariants = function(vs_id, fs_id, vs_defines=[], fs_defines=[]){
+	var shaders = {};
+	for (var variant of atmosVariants){
+		var variantString = "ATMOS_"+variant;
+		shaders[variant]=loadShader(vs_id, fs_id, vs_defines.concat(variantString), fs_defines.concat(variantString));
+	}
+	//temp:
+	shaders.constant = shaders.CONSTANT;
+	shaders.atmos = shaders.ONE;
+	shaders.atmos_v2 = shaders.TWO;
+	
+	return shaders;
+};
+
 function initShaders(){	
 	var initShaderTimeStart = performance.now();
 	
@@ -34,182 +49,54 @@ function initShaders(){
 		
 	shaderPrograms.coloredPerVertex = loadShader( "shader-simple-vs", "shader-simple-fs");
 	//shaderPrograms.coloredPerPixel = loadShader( "shader-perpixel-vs", "shader-perpixel-fs");		//unused
-	shaderPrograms.coloredPerPixelDiscard = {
-		constant:loadShader( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs", ['ATMOS_CONSTANT']),
-		atmos:   loadShader( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0']),
-		atmos_v2:loadShader( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs", ['ATMOS_TWO'])
-	};
+	shaderPrograms.coloredPerPixelDiscard = genShaderVariants( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs", ['CONST_ITERS 64.0']);
 
-	shaderPrograms.coloredPerPixelTransparentDiscard = loadShader( "shader-perpixel-transparent-discard-vs", "shader-perpixel-transparent-discard-fs");
+	shaderPrograms.coloredPerPixelTransparentDiscard = loadShader("shader-perpixel-transparent-discard-vs", "shader-perpixel-transparent-discard-fs");
 	
 	shaderPrograms.texmapPerVertex = loadShader( "shader-texmap-vs", "shader-texmap-fs");
 					
 	//shaderPrograms.texmapPerPixel = loadShader( "shader-texmap-perpixel-vs", "shader-texmap-perpixel-fs");
-	shaderPrograms.texmapPerPixelDiscard = {
-		constant:loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['ATMOS_CONSTANT']),
-		atmos:   loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['ATMOS_TWO'])
-	};
-	shaderPrograms.texmapPerPixelDiscardPhong = {
-		constant:loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['ATMOS_CONSTANT'],['SPECULAR_ACTIVE']),
-		atmos:   loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0'],['SPECULAR_ACTIVE']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['ATMOS_TWO'],['SPECULAR_ACTIVE'])
-	};
-					
-	shaderPrograms.texmapPerPixelDiscardNormalmapV1 = {
-		constant:loadShader( "shader-texmap-perpixel-discard-normalmap-vs", "shader-texmap-perpixel-discard-normalmap-fs", ['ATMOS_CONSTANT']),
-		atmos:   loadShader( "shader-texmap-perpixel-discard-normalmap-vs", "shader-texmap-perpixel-discard-normalmap-fs", ['ATMOS_ONE','CONST_ITERS 64.0']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-discard-normalmap-vs", "shader-texmap-perpixel-discard-normalmap-fs", ['ATMOS_TWO'])
-	};
-	shaderPrograms.texmapPerPixelDiscardNormalmap = {
-		constant:loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['ATMOS_CONSTANT']),
-		atmos:   loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['ATMOS_ONE','CONST_ITERS 64.0']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['ATMOS_TWO'])
-	};
-	shaderPrograms.texmapPerPixelDiscardNormalmapPhong = {
-		constant:loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','ATMOS_CONSTANT'], ['SPECULAR_ACTIVE']),
-		atmos:   loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['SPECULAR_ACTIVE']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','ATMOS_TWO'], ['SPECULAR_ACTIVE'])
-	};
+	shaderPrograms.texmapPerPixelDiscard = genShaderVariants("shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['CONST_ITERS 64.0']);
+	shaderPrograms.texmapPerPixelDiscardPhong = genShaderVariants("shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['CONST_ITERS 64.0'],['SPECULAR_ACTIVE']);
+	shaderPrograms.texmapPerPixelDiscardNormalmapV1 = genShaderVariants("shader-texmap-perpixel-discard-normalmap-vs", "shader-texmap-perpixel-discard-normalmap-fs", ['CONST_ITERS 64.0']);
+	shaderPrograms.texmapPerPixelDiscardNormalmap = genShaderVariants("shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['CONST_ITERS 64.0']);	
+	shaderPrograms.texmapPerPixelDiscardNormalmapPhong = genShaderVariants("shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','CONST_ITERS 64.0'], ['SPECULAR_ACTIVE']);
+	shaderPrograms.texmapPerPixelDiscardNormalmapPhongVsMatmult = genShaderVariants("shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VS_MATMULT','SPECULAR_ACTIVE','CONST_ITERS 64.0'], ['SPECULAR_ACTIVE']);
+	shaderPrograms.texmapPerPixelDiscardNormalmapPhongInstanced = genShaderVariants("shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['INSTANCED','VS_MATMULT','SPECULAR_ACTIVE','CONST_ITERS 64.0'], ['SPECULAR_ACTIVE']);
 	
-	shaderPrograms.texmapPerPixelDiscardNormalmapPhongVsMatmult = {
-		constant:loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VS_MATMULT','SPECULAR_ACTIVE','ATMOS_CONSTANT'], ['SPECULAR_ACTIVE']),
-		atmos:   loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VS_MATMULT','SPECULAR_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['SPECULAR_ACTIVE']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VS_MATMULT','SPECULAR_ACTIVE','ATMOS_TWO'], ['SPECULAR_ACTIVE'])
-	};
-	shaderPrograms.texmapPerPixelDiscardNormalmapPhongInstanced = {
-		constant:loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['INSTANCED','VS_MATMULT','SPECULAR_ACTIVE','ATMOS_CONSTANT'], ['SPECULAR_ACTIVE']),
-		atmos:   loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['INSTANCED','VS_MATMULT','SPECULAR_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['SPECULAR_ACTIVE']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['INSTANCED','VS_MATMULT','SPECULAR_ACTIVE','ATMOS_TWO'], ['SPECULAR_ACTIVE'])
-	};
+	shaderPrograms.texmapPerPixelDiscardAtmosGradLight = loadShader("shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-gradlight-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0']); 	//could do more work in vert shader currently because light calculated per vertex - could just pass channel weights to frag shader...
 	
-	
-	shaderPrograms.texmapPerPixelDiscardAtmosGradLight = loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-gradlight-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0']); 	//could do more work in vert shader currently because light calculated per vertex - could just pass channel weights to frag shader...
-	shaderPrograms.texmapPerPixelDiscardExplode = {
-		constant:loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['VERTVEL_ACTIVE','ATMOS_CONSTANT']),
-		atmos:   loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['VERTVEL_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['VERTVEL_ACTIVE','ATMOS_TWO'])
-	};
-					
-	shaderPrograms.texmap4Vec = {
-		constant:loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['ATMOS_CONSTANT']),
-		atmos:   loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['ATMOS_ONE','CONST_ITERS 64.0']),
-		atmos_v2:loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['ATMOS_TWO'])
-	};
-	shaderPrograms.texmap4VecPerPixelDiscard = {
-		constant:loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['ATMOS_CONSTANT']),
-		atmos:   loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['ATMOS_TWO'])
-	};
-	shaderPrograms.texmap4VecPerPixelDiscardVcolor = {
-		constant:loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['VCOLOR','ATMOS_CONSTANT'],['VCOLOR']),
-		atmos:   loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['VCOLOR','ATMOS_ONE','CONST_ITERS 64.0'],['VCOLOR']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['VCOLOR','ATMOS_TWO'],['VCOLOR'])
-	};
-	shaderPrograms.texmap4VecPerPixelDiscardPhong = {
-		constant:loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['ATMOS_CONSTANT'], ['SPECULAR_ACTIVE']),
-		atmos:   loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0'], ['SPECULAR_ACTIVE']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['ATMOS_TWO'], ['SPECULAR_ACTIVE'])
-	};
-	shaderPrograms.texmap4VecPerPixelDiscardPhongVcolor = {
-		constant:loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['VCOLOR','ATMOS_CONSTANT'], ['VCOLOR','SPECULAR_ACTIVE']),
-		atmos:   loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['VCOLOR','ATMOS_ONE','CONST_ITERS 64.0'], ['VCOLOR','SPECULAR_ACTIVE']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['VCOLOR','ATMOS_TWO'], ['VCOLOR','SPECULAR_ACTIVE'])
-	};
-	shaderPrograms.texmap4VecPerPixelDiscardNormalmapAndDiffuse = {
-		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['ATMOS_CONSTANT'],['DIFFUSE_TEX_ACTIVE']),
-		atmos   :loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['ATMOS_ONE','CONST_ITERS 64.0'],['DIFFUSE_TEX_ACTIVE']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['ATMOS_TWO'],['DIFFUSE_TEX_ACTIVE'])
-	};
-	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongAndDiffuse = {
-		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','ATMOS_CONSTANT'], ['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE']),
-		atmos:   loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','ATMOS_TWO'], ['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE'])
-	};
-	shaderPrograms.texmap4VecPerPixelDiscardNormalmapVcolorAndDiffuse = {
-		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','ATMOS_CONSTANT'], ['DIFFUSE_TEX_ACTIVE','VCOLOR']),
-		atmos:   loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','ATMOS_ONE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','VCOLOR']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','ATMOS_TWO'], ['DIFFUSE_TEX_ACTIVE','VCOLOR'])
-	};
-	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse = {
-		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_CONSTANT'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE']),
-		atmos:   loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_TWO'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE'])
-	};
+	shaderPrograms.texmapPerPixelDiscardExplode = genShaderVariants("shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['VERTVEL_ACTIVE','CONST_ITERS 64.0']);			
+	shaderPrograms.texmap4Vec = genShaderVariants("shader-texmap-vs-4vec", "shader-texmap-fs", ['CONST_ITERS 64.0']);
+	shaderPrograms.texmap4VecPerPixelDiscard = genShaderVariants("shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['CONST_ITERS 64.0']);
+
+	shaderPrograms.texmap4VecPerPixelDiscardVcolor = genShaderVariants("shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['VCOLOR','CONST_ITERS 64.0'],['VCOLOR']);
+	shaderPrograms.texmap4VecPerPixelDiscardPhong = genShaderVariants("shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['CONST_ITERS 64.0'], ['SPECULAR_ACTIVE']);
+	shaderPrograms.texmap4VecPerPixelDiscardPhongVcolor = genShaderVariants("shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['VCOLOR','CONST_ITERS 64.0'], ['VCOLOR','SPECULAR_ACTIVE']);
+	shaderPrograms.texmap4VecPerPixelDiscardNormalmapAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['CONST_ITERS 64.0'],['DIFFUSE_TEX_ACTIVE']);
+	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE']);
+	shaderPrograms.texmap4VecPerPixelDiscardNormalmapVcolorAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','VCOLOR']),
+	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE']);
 	
 	//voxTerrain shaders
-	shaderPrograms.triplanarColor4Vec = {
-		constant:loadShader( "shader-texmap-color-triplanar-vs-4vec", "shader-texmap-triplanar-fs", ['ATMOS_CONSTANT']),
-		atmos:   loadShader( "shader-texmap-color-triplanar-vs-4vec", "shader-texmap-triplanar-fs", ['ATMOS_ONE']),
-		atmos_v2:loadShader( "shader-texmap-color-triplanar-vs-4vec", "shader-texmap-triplanar-fs", ['ATMOS_TWO'])
-	}
-	/*
-	shaderPrograms.triplanarPerPixel = {	//like texmap4VecPerPixelDiscard - vertex position, normal are varyings, light positions are uniform
-		constant:loadShader( "shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_CONSTANT'],['VCOLOR','SPECULAR_ACTIVE']),
-		atmos:   loadShader( "shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_ONE'],['VCOLOR','SPECULAR_ACTIVE']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_TWO'],['VCOLOR','SPECULAR_ACTIVE'])
-	}
-	*/
-	shaderPrograms.triplanarPerPixel = {	//like texmap4VecPerPixelDiscard - vertex position, normal are varyings, light positions are uniform
-		constant:loadShader( "shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['SPECULAR_ACTIVE','ATMOS_CONSTANT'],['SPECULAR_ACTIVE']),
-		atmos:   loadShader( "shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['SPECULAR_ACTIVE','ATMOS_ONE'],['SPECULAR_ACTIVE']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['SPECULAR_ACTIVE','ATMOS_TWO'],['SPECULAR_ACTIVE'])
-	}	
-	/*
-	shaderPrograms.triplanarPerPixelTwo = {	//TODO add voxTerrain normal map shaders - calculate vertexMatrix, get light positions in this frame (light positions are varyings)
-		constant:loadShader( "shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs-BASIC", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_CONSTANT'],['VCOLOR','SPECULAR_ACTIVE']),
-		atmos:   loadShader( "shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs-BASIC", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_ONE'],['VCOLOR','SPECULAR_ACTIVE']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs-BASIC", ['VCOLOR','SPECULAR_ACTIVE','ATMOS_TWO'],['VCOLOR','SPECULAR_ACTIVE'])
-	}
-	*/
-	shaderPrograms.triplanarPerPixelTwoAndDiffuse = {	//calculate vertexMatrix, get light positions in this frame (light positions are varyings)
-		constant:loadShader( "shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs", ['SPECULAR_ACTIVE','ATMOS_CONSTANT'],['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE']),
-		atmos:   loadShader( "shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs", ['SPECULAR_ACTIVE','ATMOS_ONE'],['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs", ['SPECULAR_ACTIVE','ATMOS_TWO'],['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE'])
-	}
+	shaderPrograms.triplanarColor4Vec = genShaderVariants("shader-texmap-color-triplanar-vs-4vec", "shader-texmap-triplanar-fs");
+	//shaderPrograms.triplanarPerPixel = genShaderVariants("shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['VCOLOR','SPECULAR_ACTIVE'],['VCOLOR','SPECULAR_ACTIVE']);
+	shaderPrograms.triplanarPerPixel = genShaderVariants("shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['SPECULAR_ACTIVE'],['SPECULAR_ACTIVE']);	//like texmap4VecPerPixelDiscard - vertex position, normal are varyings, light positions are uniform
+	//shaderPrograms.triplanarPerPixelTwo = genShaderVariants("shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs-BASIC", ['VCOLOR','SPECULAR_ACTIVE'],['VCOLOR','SPECULAR_ACTIVE']);
+	shaderPrograms.triplanarPerPixelTwoAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs", ['SPECULAR_ACTIVE'],['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE']);	//calculate vertexMatrix, get light positions in this frame (light positions are varyings)
 	
 	//procTerrain shaders
-	shaderPrograms.texmap4VecMapproject = {	//per vertex lighting
-		constant:loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['MAPPROJECT_ACTIVE','ATMOS_CONSTANT'], ['MAPPROJECT_ACTIVE']),
-		atmos:   loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['MAPPROJECT_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['MAPPROJECT_ACTIVE']),
-		atmos_v2:loadShader( "shader-texmap-vs-4vec", "shader-texmap-fs", ['MAPPROJECT_ACTIVE','ATMOS_TWO'], ['MAPPROJECT_ACTIVE'])
-	};
-	shaderPrograms.texmap4VecMapprojectDiscardNormalmapVcolorAndDiffuse = {	//per pixel tangent space lighting
-		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','MAPPROJECT_ACTIVE','ATMOS_CONSTANT'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','MAPPROJECT_ACTIVE']),
-		atmos   :loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','MAPPROJECT_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','MAPPROJECT_ACTIVE']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','MAPPROJECT_ACTIVE','ATMOS_TWO'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','MAPPROJECT_ACTIVE'])
-	};
-	shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse = {
-		constant:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','ATMOS_CONSTANT'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE']),
-		atmos   :loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','ATMOS_ONE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','ATMOS_TWO'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE'])
-	};
-	
-	//shaderPrograms.duocylinderSea = loadShader( "shader-texmap-vs-duocylinder-sea", "shader-flat-fs");
-	shaderPrograms.duocylinderSea = {
-		constant:loadShader( "shader-texmap-vs-duocylinder-sea", "shader-texmap-fs", ['ATMOS_CONSTANT']),
-		atmos:   loadShader( "shader-texmap-vs-duocylinder-sea", "shader-texmap-fs", ['ATMOS_ONE','CONST_ITERS 64.0']),
-		atmos_v2:loadShader( "shader-texmap-vs-duocylinder-sea", "shader-texmap-fs", ['ATMOS_TWO'])
-	};
-	shaderPrograms.duocylinderSeaPerPixelDiscard = {
-		constant:loadShader( "shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['ATMOS_CONSTANT']),
-		atmos:   loadShader( "shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['ATMOS_TWO'])
-	};
-	shaderPrograms.duocylinderSeaPerPixelDiscardPhong = {
-		constant:loadShader( "shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['ATMOS_CONSTANT', ['SPECULAR_ACTIVE']]),
-		atmos:   loadShader( "shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['ATMOS_ONE','CONST_ITERS 64.0'], ['SPECULAR_ACTIVE']),
-		atmos_v2:loadShader( "shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['ATMOS_TWO'], ['SPECULAR_ACTIVE'])
-	};
-					
+	shaderPrograms.texmap4VecMapproject = genShaderVariants("shader-texmap-vs-4vec", "shader-texmap-fs", ['MAPPROJECT_ACTIVE','CONST_ITERS 64.0'], ['MAPPROJECT_ACTIVE']);	//per vertex lighting
+	shaderPrograms.texmap4VecMapprojectDiscardNormalmapVcolorAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','MAPPROJECT_ACTIVE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','MAPPROJECT_ACTIVE']);	//per pixel tangent space lighting
+	shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE']);
+	shaderPrograms.duocylinderSea = genShaderVariants("shader-texmap-vs-duocylinder-sea", "shader-texmap-fs", ['CONST_ITERS 64.0']);
+	shaderPrograms.duocylinderSeaPerPixelDiscard = genShaderVariants("shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['CONST_ITERS 64.0']);
+	shaderPrograms.duocylinderSeaPerPixelDiscardPhong = genShaderVariants("shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['CONST_ITERS 64.0'], ['SPECULAR_ACTIVE']),
+				
 	shaderPrograms.cubemap = loadShader( "shader-cubemap-vs", "shader-cubemap-fs");
 					
-	shaderPrograms.vertprojCubemap = {
-		constant:loadShader( "shader-cubemap-vs", "shader-cubemap-fs", ['VERTPROJ','ATMOS_CONSTANT']),	
-		atmos:   loadShader( "shader-cubemap-vs", "shader-cubemap-fs", ['VERTPROJ','ATMOS_ONE','CONST_ITERS 64.0']),
-		atmos_v2:loadShader( "shader-cubemap-vs", "shader-cubemap-fs", ['VERTPROJ','ATMOS_TWO'])
-	};
-					
+	shaderPrograms.vertprojCubemap = genShaderVariants("shader-cubemap-vs", "shader-cubemap-fs", ['VERTPROJ','CONST_ITERS 64.0']);
+				
 	shaderPrograms.decal = loadShader( "shader-decal-vs", "shader-decal-fs");
 					
 	//get locations later by calling completeShaders (when expect compiles/links to have completed)
