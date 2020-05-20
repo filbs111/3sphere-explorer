@@ -2825,8 +2825,8 @@
 		vec2 screenDifference = uFNumber*interpCoords + portalCameraCoords;
 		
 		vec4 position = vec4(vec3(0.),1.);									//for camera in camera space
-		vec4 pointingDirection = normalize(vec4(uFNumber*interpCoords,-1.,0.));
-		vec4 portalPosToSubtract = position + pointingDirection*dot(uPortalCameraPos, pointingDirection);
+		vec4 pointingDirection = normalize(vec4(-uFNumber*interpCoords,1.,0.));
+		vec4 portalPosToSubtract = position*dot(uPortalCameraPos, position) + pointingDirection*dot(uPortalCameraPos, pointingDirection);	//the first part just zeroes out the w coord, but formulate like this with a view to converting to portal space coords
 		vec4 remainingPortalPos = uPortalCameraPos - portalPosToSubtract;
 		
 		float closestDistSq  = dot(remainingPortalPos,remainingPortalPos);	//want to get closest approach of light ray to portal centre. this is not correct, because centre colour not fixed, but gets concentric circles ok.
