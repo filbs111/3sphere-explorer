@@ -2809,11 +2809,19 @@
 #endif
 	uniform vec4 uColor;	//TODO remove? (should be white, but useful to tint for debug/ coloured reflector)
 	uniform vec4 uFogColor;
+	varying vec3 vScreenSpaceCoord;
 	
 	void main(void) {
 		//gl_FragColor = uColor*textureCube(uSampler, vPos);	//TODO use this (get rid of fog)
 		
 		vec3 preGammaFragColor = pow(textureCube(uSampler, vPos).xyz,vec3(2.2));
+		
+#ifdef SPECIAL
+		//preGammaFragColor.rg*=0.5*(1.+sin(10.*vScreenSpaceCoord));
+		vec2 interpCoords = vScreenSpaceCoord.xy/vScreenSpaceCoord.z;
+		interpCoords = interpCoords - floor(interpCoords);
+		preGammaFragColor.rg*=interpCoords;	//forget whether should divide by z or w
+#endif
 		
 		//undo tone mapping . y=1/(1+x) => x=y/(1-y)
 		//seems like in practice, undoing, redoing tone mapping has little value, but guess because currently not using very bright lighting.
@@ -2851,6 +2859,8 @@
 	uniform vec4 uCameraWorldPos;
 
 	uniform vec3 uCentrePosScaled;	//vertproj specific. this is position of cubemap centre point in unprojected model space
+	
+	varying vec3 vScreenSpaceCoord;
 
 	void main(void) {
 #ifdef VERTPROJ
@@ -2984,6 +2994,10 @@
 		//gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0); // *... or can just use 1.0 without normalising? TODO try.
 		gl_Position = uPMatrix * transformedCoord;
 		vPos = uPolarity * (uPosShiftMat*aVertexPositionNormalized).xyz;
+		
+#ifdef SPECIAL
+		vScreenSpaceCoord = gl_Position.xyw;	//xyz or xyw
+#endif
 	}
 </script>
 

@@ -104,6 +104,7 @@ function initShaders(){
 				
 	shaderPrograms.cubemap = genShaderVariants( "shader-cubemap-vs", "shader-cubemap-fs",['CONST_ITERS 64.0'],[],true);
 	shaderPrograms.vertprojCubemap = genShaderVariants("shader-cubemap-vs", "shader-cubemap-fs", ['VERTPROJ','CONST_ITERS 64.0'],[],true);
+	shaderPrograms.specialCubemap = genShaderVariants("shader-cubemap-vs", "shader-cubemap-fs", ['VERTPROJ','CONST_ITERS 64.0','SPECIAL'],['SPECIAL'],true);		//try calculating using screen space coordinates, to work around buggy wobbly rendering close to portal. initially use inefficient frag shader code to get screen coord, and solve problem of getting from screen coord to correct pix value. if works, might move to using scaled homogeneous coords that linearly interpolate	on screen. 	
 				
 	shaderPrograms.decal = loadShader( "shader-decal-vs", "shader-decal-fs");
 					
@@ -2256,7 +2257,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 			activeShaderProgram = shaderPrograms.cubemap[ guiParams.display.atmosShader ];
 			break;
 			case 'vertex projection':
-			activeShaderProgram = shaderPrograms.vertprojCubemap[ guiParams.display.atmosShader ];
+			//activeShaderProgram = shaderPrograms.vertprojCubemap[ guiParams.display.atmosShader ];
+			activeShaderProgram = shaderPrograms.specialCubemap[ guiParams.display.atmosShader ];
 			break;
 		}
 		gl.useProgram(activeShaderProgram);
@@ -2819,7 +2821,8 @@ function setupScene() {
 	playerCamera.qPair = [[1,0,0,0],[1,0,0,0]];
 	
 	//start player off outside of boxes
-	xyzmove4mat(playerCamera,[0,0,-1]);	//left, down, 
+	//xyzmove4mat(playerCamera,[0,0,-0.7]);	//left, down, 	//this causes a sound bug (might be because initialise in sea world? 
+	xyzmove4mat(playerCamera,[0,0,-0.9]);	//left, down, 
 	
 	targetMatrix = cellMatData.d16[0];
 }
@@ -3000,7 +3003,7 @@ var guiParams={
 		uVarOne:-0.01,
 		flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
 		showHud:false,
-		renderViaTexture:'fisheye',
+		renderViaTexture:'bennyBox',
 		perPixelLighting:true,
 		atmosShader:"atmos",
 		atmosThickness:0.05,
@@ -3015,7 +3018,7 @@ var guiParams={
 		draw:true,
 		cmFacesUpdated:6,
 		mappingType:'vertex projection',
-		scale:0.2,
+		scale:0.05,
 		isPortal:true,
 		moveAway:0.0005
 	},
@@ -3107,7 +3110,7 @@ function init(){
 	randBoxesFolder.add(guiParams["random boxes"],"drawType", ["singleBuffer","indiv","indivVsMatmult","instancedArrays"]);
 	randBoxesFolder.add(guiParams["random boxes"],"numToMove", 0,maxRandBoxes,64);
 	drawShapesFolder.add(guiParams.drawShapes,"teapot");
-	drawShapesFolder.add(guiParams.drawShapes,"teapot scale",0.2,2.0,0.05);
+	drawShapesFolder.add(guiParams.drawShapes,"teapot scale",0.05,2.0,0.05);
 	drawShapesFolder.add(guiParams.drawShapes,"towers");
 	drawShapesFolder.add(guiParams.drawShapes,"singleBufferTowers");
 	drawShapesFolder.add(guiParams.drawShapes,"explodingBox");
