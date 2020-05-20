@@ -2822,8 +2822,20 @@
 		//preGammaFragColor.rg*=0.5*(1.+sin(10.*vScreenSpaceCoord));
 		vec2 interpCoords = vScreenSpaceCoord.xy/vScreenSpaceCoord.z;
 		vec2 portalCameraCoords = uPortalCameraPos.xy/uPortalCameraPos.z;	//calculating from uniform every pixel is bad!
-		preGammaFragColor.rg= uFNumber*interpCoords + portalCameraCoords;
-		preGammaFragColor.b=0.;
+		vec2 screenDifference = uFNumber*interpCoords + portalCameraCoords;
+		
+		vec4 position = vec4(vec3(0.),1.);									//for camera in camera space
+		vec4 pointingDirection = normalize(vec4(uFNumber*interpCoords,-1.,0.));
+		vec4 portalPosToSubtract = position + pointingDirection*dot(uPortalCameraPos, pointingDirection);
+		vec4 remainingPortalPos = uPortalCameraPos - portalPosToSubtract;
+		
+		float closestDistSq  = dot(remainingPortalPos,remainingPortalPos);	//want to get closest approach of light ray to portal centre. this is not correct, because centre colour not fixed, but gets concentric circles ok.
+		closestDistSq*=500.;
+		preGammaFragColor = vec3( closestDistSq - floor(closestDistSq));
+		
+		//preGammaFragColor.rg= screenDifference;
+		//preGammaFragColor.b=0.;
+		
 #endif
 		
 		//undo tone mapping . y=1/(1+x) => x=y/(1-y)
