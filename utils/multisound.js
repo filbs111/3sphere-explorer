@@ -101,8 +101,8 @@ IndivSound.prototype.setAll = function(settings){
 			this.pannerNode.pan.linearRampToValueAtTime(settings.pan, thisScheduledAudioRampTime);
 		}
 	} catch(err){	//linearRampToValueAtTime fails if input value is "non finite". should know more when this happens again 
-		alert("caught an error in IndivSound.setAll , see logs");
-		console.log({error:err, settings:settings});
+//		alert("caught an error in IndivSound.setAll , see logs");
+//		console.log({error:err, settings:settings});
 	}
 }
 

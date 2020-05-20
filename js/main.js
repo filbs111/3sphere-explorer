@@ -2273,7 +2273,16 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 		}
 		if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
-			gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
+			gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, worldCamera.slice(12));
+		}
+		if (activeShaderProgram.uniforms.uPortalCameraPos){
+			gl.uniform4fv(activeShaderProgram.uniforms.uPortalCameraPos, [worldCamera[3],worldCamera[7],worldCamera[11],worldCamera[15]]);
+		}
+		if (activeShaderProgram.uniforms.uFNumber){
+			//todo keep this around. also used in fisheye shader.
+			var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
+			var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
+			gl.uniform2fv(activeShaderProgram.uniforms.uFNumber, [fx, fy]);
 		}
 
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [reflectorInfo.rad,reflectorInfo.rad, reflectorInfo.rad]);
@@ -2820,6 +2829,8 @@ function setupScene() {
 	//bung extra quaternion stuff onto this for quick test
 	playerCamera.qPair = [[1,0,0,0],[1,0,0,0]];
 	
+	//get bugs if start player without moving. is player inside portal?
+		
 	//start player off outside of boxes
 	//xyzmove4mat(playerCamera,[0,0,-0.7]);	//left, down, 	//this causes a sound bug (might be because initialise in sea world? 
 	xyzmove4mat(playerCamera,[0,0,-0.9]);	//left, down, 
@@ -2938,7 +2949,7 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	world0:{duocylinderModel:"procTerrain",seaActive:false},
+	world0:{duocylinderModel:"none",seaActive:false},
 	world1:{duocylinderModel:"none",seaActive:true},
 	duocylinderRotateSpeed:0,
 	seaLevel:-0.012,
@@ -3006,7 +3017,7 @@ var guiParams={
 		renderViaTexture:'bennyBox',
 		perPixelLighting:true,
 		atmosShader:"atmos",
-		atmosThickness:0.05,
+		atmosThickness:0.0,
 		atmosThicknessMultiplier:'#88aaff',
 		atmosContrast:5.0,
 		culling:true,
@@ -3974,6 +3985,7 @@ var iterateMechanics = (function iterateMechanics(){
 				var boxArrs = boxInfo.gridContents;
 				for (var gs of gridSqs){	//TODO get gridSqs
 					var bArray = boxArrs[gs];
+					if (bArray){	//occurs if in centre of world. TODO fail earlier in this case (avoid checking inside loop)
 					for (var bb of bArray){
 						
 						mat4.identity(relativeMat);
@@ -4118,7 +4130,7 @@ var iterateMechanics = (function iterateMechanics(){
 						}
 						
 					}
-				
+					}	//end if bArray (defined)
 				}
 			}
 			

@@ -2810,6 +2810,8 @@
 	uniform vec4 uColor;	//TODO remove? (should be white, but useful to tint for debug/ coloured reflector)
 	uniform vec4 uFogColor;
 	varying vec3 vScreenSpaceCoord;
+	uniform vec4 uPortalCameraPos;	//for "special" 
+	uniform vec2 uFNumber;
 	
 	void main(void) {
 		//gl_FragColor = uColor*textureCube(uSampler, vPos);	//TODO use this (get rid of fog)
@@ -2819,8 +2821,9 @@
 #ifdef SPECIAL
 		//preGammaFragColor.rg*=0.5*(1.+sin(10.*vScreenSpaceCoord));
 		vec2 interpCoords = vScreenSpaceCoord.xy/vScreenSpaceCoord.z;
-		interpCoords = interpCoords - floor(interpCoords);
-		preGammaFragColor.rg*=interpCoords;	//forget whether should divide by z or w
+		vec2 portalCameraCoords = uPortalCameraPos.xy/uPortalCameraPos.z;	//calculating from uniform every pixel is bad!
+		preGammaFragColor.rg= uFNumber*interpCoords + portalCameraCoords;
+		preGammaFragColor.b=0.;
 #endif
 		
 		//undo tone mapping . y=1/(1+x) => x=y/(1-y)
@@ -2996,7 +2999,11 @@
 		vPos = uPolarity * (uPosShiftMat*aVertexPositionNormalized).xyz;
 		
 #ifdef SPECIAL
-		vScreenSpaceCoord = gl_Position.xyw;	//xyz or xyw
+		vScreenSpaceCoord = gl_Position.xyw;
+		//next up - uniform to contain the camera space position of the portal
+		//and fx/fy. step 1 indicate by colour difference between screen coord and position on screen of portal.
+		//then work out how far from centre line of sighy passed. expect be able to draw concentric circles 
+		
 #endif
 	}
 </script>
