@@ -2291,6 +2291,12 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniform2fv(activeShaderProgram.uniforms.uFNumber, [fx, fy]);
 			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uMVMatrixFSCopy, false, mvMatrix);
 			gl.uniform3fv(activeShaderProgram.uniforms.uCentrePosScaledFSCopy, reflectorInfo.centreTanAngleVectorScaled	);
+			
+			//move matrix through portal for close rendering. 
+			var matrixToPortal = mat4.create(mvMatrix);	//should be inverted matrix or regular?
+			moveMatrixThruPortal(matrixToPortal, reflectorInfo.rad, 1);
+			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uPortaledMatrix, false, matrixToPortal);
+			
 		}
 
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [reflectorInfo.rad,reflectorInfo.rad, reflectorInfo.rad]);
@@ -3199,7 +3205,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	reflectorFolder.add(guiParams.reflector, "draw");
 	reflectorFolder.add(guiParams.reflector, "cmFacesUpdated", 0,6,1);
 	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection','screen space']);
-	reflectorFolder.add(guiParams.reflector, "scale", 0.2,2,0.01);
+	reflectorFolder.add(guiParams.reflector, "scale", 0.05,2,0.01);
 	reflectorFolder.add(guiParams.reflector, "isPortal");
 	reflectorFolder.add(guiParams.reflector, "moveAway", 0,0.001,0.0001);	//value required here is dependent on minimum scale. TODO moveawayvector should be in DIRECTION away from portal, but fixed length.
 
