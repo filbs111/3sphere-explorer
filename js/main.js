@@ -2293,11 +2293,12 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uMVMatrixFSCopy, false, mvMatrix);
 			gl.uniform3fv(activeShaderProgram.uniforms.uCentrePosScaledFSCopy, reflectorInfo.centreTanAngleVectorScaled	);
 			
+			gl.uniform1f(activeShaderProgram.uniforms.uPortalRad, reflectorInfo.rad);
+			
 			//move matrix through portal for close rendering. 
 			var matrixToPortal = mat4.create(mvMatrix);	//should be inverted matrix or regular?
 			moveMatrixThruPortal(matrixToPortal, reflectorInfo.rad, 1);
 			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uPortaledMatrix, false, matrixToPortal);
-			
 		}
 
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [reflectorInfo.rad,reflectorInfo.rad, reflectorInfo.rad]);

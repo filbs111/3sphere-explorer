@@ -2809,6 +2809,7 @@
 #endif
 	uniform vec4 uColor;	//TODO remove? (should be white, but useful to tint for debug/ coloured reflector)
 	uniform vec4 uFogColor;
+	uniform float uPortalRad;
 	varying vec3 vScreenSpaceCoord;
 	uniform vec4 uPortalCameraPos;	//for "special" 
 	uniform vec2 uFNumber;
@@ -2835,9 +2836,9 @@
 		
 		float closestDistSq  = dot(remainingPortalPos,remainingPortalPos);	//want to get closest approach of light ray to portal centre. this is not correct, because centre colour not fixed, but gets concentric circles ok.
 
-		float portalRad = 0.05;
-		float radsq = portalRad*portalRad;	 //reflector scale 0.05. 
-		//if (closestDistSq<radsq*0.95){	//thin ring being drawn for reflector scale 0.05. 
+		float portalRad = uPortalRad;
+//		float portalRad = normalize(vec2(uPortalRad,1.)).x;	//guess ??
+		float radsq = portalRad*portalRad;  
 		float squareDifference = radsq - closestDistSq;
 		if (squareDifference<0.){
 			discard;
@@ -2875,7 +2876,6 @@
 			
 			float closeness = dot(uCentrePosScaledFSCopy,uCentrePosScaledFSCopy);	//something that goes to 1 in shaky regime, 0 outside
 			closeness = pow(closeness,6.);
-			
 			//preGammaFragColor = mix(preGammaFragColor,vec3(1.,0.,0.), closeness );	//show goes red up close
 			//vec3 preGammaFragColor = pow(textureCube(uSampler, mix(surfCoord.xyz - uCentrePosScaledFSCopy, -simplePlanarPortalDir.xyz, closeness)).xyz,vec3(2.2));	//blend using mix
 			//vec3 preGammaFragColor = pow(textureCube(uSampler, (surfCoord.xyz - uCentrePosScaledFSCopy) - 0.025*simplePlanarPortalDir.xyz).xyz,vec3(2.2));	//simplePlanar will become dominant when other term small
