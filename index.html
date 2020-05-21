@@ -2813,13 +2813,14 @@
 	uniform vec4 uPortalCameraPos;	//for "special" 
 	uniform vec2 uFNumber;
 	uniform mat4 uMVMatrixFSCopy;
+	uniform vec3 uCentrePosScaledFSCopy;
 	
 	void main(void) {
 		//gl_FragColor = uColor*textureCube(uSampler, vPos);	//TODO use this (get rid of fog)
-		
+
+#ifndef SPECIAL	
 		vec3 preGammaFragColor = pow(textureCube(uSampler, vPos).xyz,vec3(2.2));
-		
-#ifdef SPECIAL
+#else
 		//preGammaFragColor.rg*=0.5*(1.+sin(10.*vScreenSpaceCoord));
 		vec2 interpCoords = vScreenSpaceCoord.xy/vScreenSpaceCoord.z;
 		vec2 portalCameraCoords = uPortalCameraPos.xy/uPortalCameraPos.z;	//calculating from uniform every pixel is bad!
@@ -2833,9 +2834,10 @@
 		
 		float closestDistSq  = dot(remainingPortalPos,remainingPortalPos);	//want to get closest approach of light ray to portal centre. this is not correct, because centre colour not fixed, but gets concentric circles ok.
 
-		float radsq = 0.05*0.05;	 //reflector scale 0.05. 
+		float portalRad = 0.05;
+		float radsq = portalRad*portalRad;	 //reflector scale 0.05. 
 		//if (closestDistSq<radsq*0.95){	//thin ring being drawn for reflector scale 0.05. 
-		if (closestDistSq>radsq*0.95){	//shave off a ring to ensure root(radsq - closestDistSq) is not root(-ve number)
+		if (closestDistSq>radsq*0.99){	//shave off a ring to ensure root(radsq - closestDistSq) is not root(-ve number)
 			discard;
 		}
 		
@@ -2844,12 +2846,21 @@
 		//then hopefully can reconstruct real world position of collision point. test by draw colour
 		//then to subtract off portal projection point and look up cubemap texture.
 		//vec4 remainingPosPortalSpace = uMVMatrixFSCopy*remainingPortalPos;
-		vec4 remainingPosPortalSpace = remainingPortalPos*uMVMatrixFSCopy;
-		vec4 pointingVecPortalSpace = pointingDirection*uMVMatrixFSCopy;
 		
-		preGammaFragColor = 10.*(remainingPosPortalSpace.xyz - pointingVecPortalSpace.xyz*pow( radsq - closestDistSq,.5));	//note can do matrix rotation in 1 go here.
-		
-	
+		//vec4 remainingPosPortalSpace = remainingPortalPos*uMVMatrixFSCopy;
+		//vec4 pointingVecPortalSpace = pointingDirection*uMVMatrixFSCopy;
+		//vec4 surfCoord = remainingPosPortalSpace - pointingVecPortalSpace*pow( radsq - closestDistSq,.5);	
+		vec4 surfCoord = (remainingPortalPos - pointingDirection*pow( radsq - closestDistSq,.5))*uMVMatrixFSCopy;	//do above 3 lines in 1
+		surfCoord = normalize(surfCoord);
+	//	vec3 preGammaFragColor = 2000.*surfCoord.xyz - floor(2000.*surfCoord.xyz);
+		vec3 preGammaFragColor = pow(textureCube(uSampler, surfCoord.xyz - uCentrePosScaledFSCopy).xyz,vec3(2.2));
+			//results are glitchy - seems like floating point uncertainty in position, centre pos is significant where these are close.
+			//TODO reformulate. simple way is something like just reformulate this last step. maybe not efficient.
+			// instead of sending uCentrePosScaled, send the centrepos direction, and centreposdirection-centrepos, exactly. this should become a small number close to portal.
+			
+			//a simpler bodge might be to just use simple "movement" of camera thru portal where close to it (shaky regime). blend between the two.
+	//	preGammaFragColor = mix(preGammaFragColor,vec3(1.,0.,0.), dot(uCentrePosScaledFSCopy,uCentrePosScaledFSCopy));
+			
 #endif
 		
 		//undo tone mapping . y=1/(1+x) => x=y/(1-y)

@@ -2257,7 +2257,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 			activeShaderProgram = shaderPrograms.cubemap[ guiParams.display.atmosShader ];
 			break;
 			case 'vertex projection':
-			//activeShaderProgram = shaderPrograms.vertprojCubemap[ guiParams.display.atmosShader ];
+			activeShaderProgram = shaderPrograms.vertprojCubemap[ guiParams.display.atmosShader ];
+			break;
+			case 'screen space':
 			activeShaderProgram = shaderPrograms.specialCubemap[ guiParams.display.atmosShader ];
 			break;
 		}
@@ -2288,15 +2290,15 @@ function drawWorldScene(frameTime, isCubemapView) {
 			var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
 			gl.uniform2fv(activeShaderProgram.uniforms.uFNumber, [fx, fy]);
 			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uMVMatrixFSCopy, false, mvMatrix);
+			gl.uniform3fv(activeShaderProgram.uniforms.uCentrePosScaledFSCopy, reflectorInfo.centreTanAngleVectorScaled	);
 		}
 
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [reflectorInfo.rad,reflectorInfo.rad, reflectorInfo.rad]);
 	
 		gl.uniform1f(activeShaderProgram.uniforms.uPolarity, reflectorInfo.polarity);
 		
-		
 		if (frustrumCull(mvMatrix,reflectorInfo.rad)){
-			if(guiParams.reflector.mappingType == 'vertex projection'){
+			if(['vertex projection','screen space'].includes(guiParams.reflector.mappingType) ){
 				gl.uniform3fv(activeShaderProgram.uniforms.uCentrePosScaled, reflectorInfo.centreTanAngleVectorScaled	);
 			}
 			drawObjectFromBuffers(sphereBuffersHiRes, activeShaderProgram, true);
@@ -3196,7 +3198,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	var reflectorFolder = gui.addFolder('reflector');
 	reflectorFolder.add(guiParams.reflector, "draw");
 	reflectorFolder.add(guiParams.reflector, "cmFacesUpdated", 0,6,1);
-	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection']);
+	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection','screen space']);
 	reflectorFolder.add(guiParams.reflector, "scale", 0.2,2,0.01);
 	reflectorFolder.add(guiParams.reflector, "isPortal");
 	reflectorFolder.add(guiParams.reflector, "moveAway", 0,0.001,0.0001);	//value required here is dependent on minimum scale. TODO moveawayvector should be in DIRECTION away from portal, but fixed length.
