@@ -2308,6 +2308,11 @@ function drawWorldScene(frameTime, isCubemapView) {
 				gl.uniform3fv(activeShaderProgram.uniforms.uCentrePosScaled, reflectorInfo.centreTanAngleVectorScaled	);
 			}
 			drawObjectFromBuffers(sphereBuffersHiRes, activeShaderProgram, true);
+			
+			//draw a smaller copy to work around problem with near clip plane? (bodge)
+			var shrunkScale = 0.99*reflectorInfo.rad;
+			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [shrunkScale,shrunkScale,shrunkScale]);
+			drawObjectFromBuffers(sphereBuffersHiRes, activeShaderProgram, true);
 		}
 		
 		activeShaderProgram = savedActiveProg;
