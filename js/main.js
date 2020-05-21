@@ -147,7 +147,8 @@ var gunBuffers={};
 var icoballBuffers={};
 var hyperboloidBuffers={};
 
-var sshipModelScale=0.0001;
+//var sshipModelScale=0.0001;
+var sshipModelScale=0.00005;
 var duocylinderSurfaceBoxScale = 0.025;
 
 var landingLegData=[
@@ -2965,7 +2966,7 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	world0:{duocylinderModel:"none",seaActive:false},
+	world0:{duocylinderModel:"procTerrain",seaActive:false},
 	world1:{duocylinderModel:"none",seaActive:true},
 	duocylinderRotateSpeed:0,
 	seaLevel:-0.012,
@@ -3030,7 +3031,7 @@ var guiParams={
 		uVarOne:-0.01,
 		flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
 		showHud:false,
-		renderViaTexture:'bennyBox',
+		renderViaTexture:'fisheye',
 		perPixelLighting:true,
 		atmosShader:"atmos",
 		atmosThickness:0.0,
@@ -4598,7 +4599,7 @@ function portalTest(obj, amount){
 	if (checkWithinReflectorRange(mat, adjustedRad)){	
 		moveMatrixThruPortal(mat, adjustedRad, 1.00000001);
 		obj.world=1-obj.world;
-		console.log("currentWorld now = " + obj.world);
+	//	console.log("currentWorld now = " + obj.world);
 	}
 }
 

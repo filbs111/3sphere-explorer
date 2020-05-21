@@ -2863,11 +2863,15 @@
 			//a simpler bodge might be to just use simple "movement" of camera thru portal where close to it (shaky regime). blend between the two.
 			vec4 simplePlanarPortalDir = pointingDirection*uPortaledMatrix;
 			
-			//float closeness = dot(uCentrePosScaledFSCopy,uCentrePosScaledFSCopy);	//something that goes to 1 in shaky regime, 0 outside
+			float closeness = dot(uCentrePosScaledFSCopy,uCentrePosScaledFSCopy);	//something that goes to 1 in shaky regime, 0 outside
+			closeness = pow(closeness,6.);
 			//preGammaFragColor = mix(preGammaFragColor,vec3(1.,0.,0.), closeness );	//show goes red up close
 			//vec3 preGammaFragColor = pow(textureCube(uSampler, mix(surfCoord.xyz - uCentrePosScaledFSCopy, -simplePlanarPortalDir.xyz, closeness)).xyz,vec3(2.2));	//blend using mix
-			vec3 preGammaFragColor = pow(textureCube(uSampler, (surfCoord.xyz - uCentrePosScaledFSCopy) - 0.1*simplePlanarPortalDir.xyz).xyz,vec3(2.2));	//simplePlanar will become dominant when other term small
+			//vec3 preGammaFragColor = pow(textureCube(uSampler, (surfCoord.xyz - uCentrePosScaledFSCopy) - 0.025*simplePlanarPortalDir.xyz).xyz,vec3(2.2));	//simplePlanar will become dominant when other term small
+			vec3 preGammaFragColor = pow(textureCube(uSampler, (surfCoord.xyz - uCentrePosScaledFSCopy) - 0.05*closeness*simplePlanarPortalDir.xyz).xyz,vec3(2.2));	//simplePlanar will become dominant when other term small
 				//TODO apply same method (blend simplePlanar) to more standard vertproj method- don't need to be doing everything in screen space.
+				
+			//preGammaFragColor*=vec3(closeness,1.-closeness,0.);	//colour to indicate closeness
 #endif
 		
 		//undo tone mapping . y=1/(1+x) => x=y/(1-y)
