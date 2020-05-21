@@ -2875,7 +2875,6 @@
 			
 			float closeness = dot(uCentrePosScaledFSCopy,uCentrePosScaledFSCopy);	//something that goes to 1 in shaky regime, 0 outside
 			closeness = pow(closeness,6.);
-			closeness=0.;	//override to use only surfcoord part
 			
 			//preGammaFragColor = mix(preGammaFragColor,vec3(1.,0.,0.), closeness );	//show goes red up close
 			//vec3 preGammaFragColor = pow(textureCube(uSampler, mix(surfCoord.xyz - uCentrePosScaledFSCopy, -simplePlanarPortalDir.xyz, closeness)).xyz,vec3(2.2));	//blend using mix
