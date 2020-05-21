@@ -2851,26 +2851,38 @@
 		
 		//vec4 remainingPosPortalSpace = remainingPortalPos*uMVMatrixFSCopy;
 		//vec4 pointingVecPortalSpace = pointingDirection*uMVMatrixFSCopy;
-		//vec4 surfCoord = remainingPosPortalSpace - pointingVecPortalSpace*pow( radsq - closestDistSq,.5);	
-		vec4 surfCoord = (remainingPortalPos - pointingDirection*pow(squareDifference,.5))*uMVMatrixFSCopy;	//do above 3 lines in 1
+		//vec4 surfCoord = remainingPosPortalSpace - pointingVecPortalSpace*pow( radsq - closestDistSq,.5);
+		
+		//vec4 surfCoord = (remainingPortalPos - pointingDirection*pow(squareDifference,.5))*uMVMatrixFSCopy;	//do above 3 lines in 1
+						//^^this is wrong if far from portal. guess to do with how w<->z
+					
+		vec2 zw = normalize(uPortalCameraPos.zw);
+		vec4 surfCoord = (remainingPortalPos - (pointingDirection*zw.y - position*zw.x)*pow(squareDifference,.5))*uMVMatrixFSCopy;		//about same results as standard vertproj shader. unsure if exact		
+		
 		surfCoord = normalize(surfCoord);
-	//	vec3 preGammaFragColor = 2000.*surfCoord.xyz - floor(2000.*surfCoord.xyz);
+		
+		//float invRepeat = 1.;
+		//vec3 preGammaFragColor = invRepeat*surfCoord.xyz - floor(invRepeat*surfCoord.xyz);
+		//vec3 preGammaFragColor = vec3(invRepeat*surfCoord.z - floor(invRepeat*surfCoord.z));
+		
 	//	vec3 preGammaFragColor = pow(textureCube(uSampler, surfCoord.xyz - uCentrePosScaledFSCopy).xyz,vec3(2.2));
 			//results are glitchy - seems like floating point uncertainty in position, centre pos is significant where these are close.
 			//TODO reformulate. simple way is something like just reformulate this last step. maybe not efficient.
 			// instead of sending uCentrePosScaled, send the centrepos direction, and centreposdirection-centrepos, exactly. this should become a small number close to portal.
-			
+		
 			//a simpler bodge might be to just use simple "movement" of camera thru portal where close to it (shaky regime). blend between the two.
 			vec4 simplePlanarPortalDir = pointingDirection*uPortaledMatrix;
 			
 			float closeness = dot(uCentrePosScaledFSCopy,uCentrePosScaledFSCopy);	//something that goes to 1 in shaky regime, 0 outside
 			closeness = pow(closeness,6.);
+			closeness=0.;	//override to use only surfcoord part
+			
 			//preGammaFragColor = mix(preGammaFragColor,vec3(1.,0.,0.), closeness );	//show goes red up close
 			//vec3 preGammaFragColor = pow(textureCube(uSampler, mix(surfCoord.xyz - uCentrePosScaledFSCopy, -simplePlanarPortalDir.xyz, closeness)).xyz,vec3(2.2));	//blend using mix
 			//vec3 preGammaFragColor = pow(textureCube(uSampler, (surfCoord.xyz - uCentrePosScaledFSCopy) - 0.025*simplePlanarPortalDir.xyz).xyz,vec3(2.2));	//simplePlanar will become dominant when other term small
 			vec3 preGammaFragColor = pow(textureCube(uSampler, (surfCoord.xyz - uCentrePosScaledFSCopy) - 0.05*closeness*simplePlanarPortalDir.xyz).xyz,vec3(2.2));	//simplePlanar will become dominant when other term small
 				//TODO apply same method (blend simplePlanar) to more standard vertproj method- don't need to be doing everything in screen space.
-				
+			
 			//preGammaFragColor*=vec3(closeness,1.-closeness,0.);	//colour to indicate closeness
 #endif
 		
