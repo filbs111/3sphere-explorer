@@ -2278,19 +2278,22 @@ function drawWorldScene(frameTime, isCubemapView) {
 		if (activeShaderProgram.uniforms.uPortalCameraPos){
 			gl.uniform4fv(activeShaderProgram.uniforms.uPortalCameraPos, [worldCamera[3],worldCamera[7],worldCamera[11],worldCamera[15]]);
 		}
+		
+		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.identity(mMatrix);
+		
 		if (activeShaderProgram.uniforms.uFNumber){
 			//todo keep this around. also used in fisheye shader.
 			var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
 			var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
 			gl.uniform2fv(activeShaderProgram.uniforms.uFNumber, [fx, fy]);
+			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uMVMatrixFSCopy, false, mvMatrix);
 		}
 
 		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [reflectorInfo.rad,reflectorInfo.rad, reflectorInfo.rad]);
 	
 		gl.uniform1f(activeShaderProgram.uniforms.uPolarity, reflectorInfo.polarity);
 		
-		mat4.set(invertedWorldCamera, mvMatrix);
-		mat4.identity(mMatrix);
 		
 		if (frustrumCull(mvMatrix,reflectorInfo.rad)){
 			if(guiParams.reflector.mappingType == 'vertex projection'){

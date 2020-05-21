@@ -2812,6 +2812,7 @@
 	varying vec3 vScreenSpaceCoord;
 	uniform vec4 uPortalCameraPos;	//for "special" 
 	uniform vec2 uFNumber;
+	uniform mat4 uMVMatrixFSCopy;
 	
 	void main(void) {
 		//gl_FragColor = uColor*textureCube(uSampler, vPos);	//TODO use this (get rid of fog)
@@ -2826,16 +2827,29 @@
 		
 		vec4 position = vec4(vec3(0.),1.);									//for camera in camera space
 		vec4 pointingDirection = normalize(vec4(-uFNumber*interpCoords,1.,0.));
-		vec4 portalPosToSubtract = position*dot(uPortalCameraPos, position) + pointingDirection*dot(uPortalCameraPos, pointingDirection);	//the first part just zeroes out the w coord, but formulate like this with a view to converting to portal space coords
+		vec4 pointingDirectionComponent = pointingDirection*dot(uPortalCameraPos, pointingDirection);
+		vec4 portalPosToSubtract = position*dot(uPortalCameraPos, position) + pointingDirectionComponent;	//the first part just zeroes out the w coord, but formulate like this with a view to converting to portal space coords
 		vec4 remainingPortalPos = uPortalCameraPos - portalPosToSubtract;
 		
 		float closestDistSq  = dot(remainingPortalPos,remainingPortalPos);	//want to get closest approach of light ray to portal centre. this is not correct, because centre colour not fixed, but gets concentric circles ok.
-		closestDistSq*=500.;
-		preGammaFragColor = vec3( closestDistSq - floor(closestDistSq));
+
+		float radsq = 0.05*0.05;	 //reflector scale 0.05. 
+		//if (closestDistSq<radsq*0.95){	//thin ring being drawn for reflector scale 0.05. 
+		if (closestDistSq>radsq*0.95){	//shave off a ring to ensure root(radsq - closestDistSq) is not root(-ve number)
+			discard;
+		}
 		
-		//preGammaFragColor.rg= screenDifference;
-		//preGammaFragColor.b=0.;
+//convert closestDist point and camera direction from screen space to portal space. then move in pointing direction by pow( radsq - closestDistSq,.5)
+//for efficiency this should be done inside vertex shader - the pointing direction can be varying.
+		//then hopefully can reconstruct real world position of collision point. test by draw colour
+		//then to subtract off portal projection point and look up cubemap texture.
+		//vec4 remainingPosPortalSpace = uMVMatrixFSCopy*remainingPortalPos;
+		vec4 remainingPosPortalSpace = remainingPortalPos*uMVMatrixFSCopy;
+		vec4 pointingVecPortalSpace = pointingDirection*uMVMatrixFSCopy;
 		
+		preGammaFragColor = 10.*(remainingPosPortalSpace.xyz - pointingVecPortalSpace.xyz*pow( radsq - closestDistSq,.5));	//note can do matrix rotation in 1 go here.
+		
+	
 #endif
 		
 		//undo tone mapping . y=1/(1+x) => x=y/(1-y)
