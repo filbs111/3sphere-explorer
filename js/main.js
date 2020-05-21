@@ -7,6 +7,7 @@ var angle_ext;
 
 var myDebugStr = "TEST INFO TO GO HERE";
 var myfisheyedebug;
+var mytestMat111;
 
 function bufferArrayData(buffer, arr, size){
 	 bufferArrayDataF32(buffer, new Float32Array(arr), size);
@@ -662,6 +663,7 @@ function calcReflectionInfo(toReflect,resultsObj){
 	resultsObj.shaderMatrix=reflectShaderMatrix;
 	
 	resultsObj.cubeViewShiftAdjusted = cubeViewShiftAdjusted;
+	resultsObj.cubeViewShiftAdjustedMinus = cubeViewShiftAdjustedMinus;	//for debugging
 	
 	//only used for droplightpos2, and only different from shaderMatrix if reflector (rather than portal) (inefficient!)
 	var reflectShaderMatrix2 = mat4.create();
@@ -2298,6 +2300,21 @@ function drawWorldScene(frameTime, isCubemapView) {
 			//move matrix through portal for close rendering. 
 			var matrixToPortal = mat4.create(mvMatrix);	//should be inverted matrix or regular?
 			moveMatrixThruPortal(matrixToPortal, reflectorInfo.rad, 1);
+			//moveMatrixThruPortal probably doesn't work that great unless almost at portal. do calculate more proper "reflection" in calcReflectionInfo , where calculate position to put cubemap camera. should do something like that here. as approx bodge, make the position component of this matrix match position of cubemap camera. this will likely make matrix non orthogonal
+
+			var matToCopyFrom = reflectorInfo.shaderMatrix;
+			matrixToPortal[3] = matToCopyFrom[12];
+			matrixToPortal[7] = matToCopyFrom[13];
+			matrixToPortal[11] = matToCopyFrom[14];
+			matrixToPortal[15] = matToCopyFrom[15];
+		}
+
+			//think this transformation should be something like the transformation between the portaled matrix (cubemap camera matrix?) and where camera would be if portaled through matrix.
+			mat4.multiply(matrixToPortal, reflectorInfo.shaderMatrix);
+		
+		//for debugging
+			mytestMat111 = matrixToPortal;
+			
 			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uPortaledMatrix, false, matrixToPortal);
 		}
 
@@ -3049,7 +3066,8 @@ var guiParams={
 		mappingType:'vertex projection',
 		scale:0.05,
 		isPortal:true,
-		moveAway:0.0005
+		moveAway:0.0005,
+		test1:false
 	},
 	debug:{
 		closestPoint:false,
@@ -3215,6 +3233,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	reflectorFolder.add(guiParams.reflector, "scale", 0.05,2,0.01);
 	reflectorFolder.add(guiParams.reflector, "isPortal");
 	reflectorFolder.add(guiParams.reflector, "moveAway", 0,0.001,0.0001);	//value required here is dependent on minimum scale. TODO moveawayvector should be in DIRECTION away from portal, but fixed length.
+	reflectorFolder.add(guiParams.reflector, "test1");
 
 	window.addEventListener("keydown",function(evt){
 		//console.log("key pressed : " + evt.keyCode);
