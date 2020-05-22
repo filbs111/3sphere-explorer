@@ -106,6 +106,8 @@ function initShaders(){
 	shaderPrograms.cubemap = genShaderVariants( "shader-cubemap-vs", "shader-cubemap-fs",['CONST_ITERS 64.0'],[],true);
 	shaderPrograms.vertprojCubemap = genShaderVariants("shader-cubemap-vs", "shader-cubemap-fs", ['VERTPROJ','CONST_ITERS 64.0'],[],true);
 	shaderPrograms.specialCubemap = genShaderVariants("shader-cubemap-vs", "shader-cubemap-fs", ['VERTPROJ','CONST_ITERS 64.0','SPECIAL'],['SPECIAL'],true);		//try calculating using screen space coordinates, to work around buggy wobbly rendering close to portal. initially use inefficient frag shader code to get screen coord, and solve problem of getting from screen coord to correct pix value. if works, might move to using scaled homogeneous coords that linearly interpolate	on screen. 	
+	shaderPrograms.vertprojMix = genShaderVariants("shader-cubemap-vs", "shader-cubemap-fs", ['VERTPROJ','CONST_ITERS 64.0','SPECIAL'],['VPROJ_MIX'],true);		
+	
 				
 	shaderPrograms.decal = loadShader( "shader-decal-vs", "shader-decal-fs");
 					
@@ -2265,6 +2267,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 			case 'screen space':
 			activeShaderProgram = shaderPrograms.specialCubemap[ guiParams.display.atmosShader ];
 			break;
+			case 'vertproj mix':
+			activeShaderProgram = shaderPrograms.vertprojMix[ guiParams.display.atmosShader ];
+			break;
 		}
 		gl.useProgram(activeShaderProgram);
 		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uPosShiftMat, false, reflectorInfo.shaderMatrix);
@@ -2292,16 +2297,19 @@ function drawWorldScene(frameTime, isCubemapView) {
 			var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
 			var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
 			gl.uniform2fv(activeShaderProgram.uniforms.uFNumber, [fx, fy]);
-			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uMVMatrixFSCopy, false, mvMatrix);
 			gl.uniform3fv(activeShaderProgram.uniforms.uCentrePosScaledFSCopy, reflectorInfo.centreTanAngleVectorScaled	);
 			
-			gl.uniform1f(activeShaderProgram.uniforms.uPortalRad, reflectorInfo.rad);
+			if (activeShaderProgram.uniforms.uPortalRad){	//specific stuff to special
+				gl.uniformMatrix4fv(activeShaderProgram.uniforms.uMVMatrixFSCopy, false, mvMatrix);
+				gl.uniform1f(activeShaderProgram.uniforms.uPortalRad, reflectorInfo.rad);
+			}
 			
 			//move matrix through portal for close rendering. 
 			var matrixToPortal = mat4.create(mvMatrix);	//should be inverted matrix or regular?
 			moveMatrixThruPortal(matrixToPortal, reflectorInfo.rad, 1);
 			//moveMatrixThruPortal probably doesn't work that great unless almost at portal. do calculate more proper "reflection" in calcReflectionInfo , where calculate position to put cubemap camera. should do something like that here. as approx bodge, make the position component of this matrix match position of cubemap camera. this will likely make matrix non orthogonal
 
+		if (guiParams.reflector.test1){	//appears to do ~nothing
 			var matToCopyFrom = reflectorInfo.shaderMatrix;
 			matrixToPortal[3] = matToCopyFrom[12];
 			matrixToPortal[7] = matToCopyFrom[13];
@@ -2311,6 +2319,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 
 			//think this transformation should be something like the transformation between the portaled matrix (cubemap camera matrix?) and where camera would be if portaled through matrix.
 			mat4.multiply(matrixToPortal, reflectorInfo.shaderMatrix);
+				//result is still a bit glitchy. suspect because calculation of matrixToPortal isn't quite right - moves by 2*portal radius , which is fine if close to portal, but really should move by a little less than this (see calculation of portal cubemap camera position.)
 		
 		//for debugging
 			mytestMat111 = matrixToPortal;
@@ -3229,7 +3238,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	var reflectorFolder = gui.addFolder('reflector');
 	reflectorFolder.add(guiParams.reflector, "draw");
 	reflectorFolder.add(guiParams.reflector, "cmFacesUpdated", 0,6,1);
-	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection','screen space']);
+	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection','screen space','vertproj mix']);
 	reflectorFolder.add(guiParams.reflector, "scale", 0.05,2,0.01);
 	reflectorFolder.add(guiParams.reflector, "isPortal");
 	reflectorFolder.add(guiParams.reflector, "moveAway", 0,0.001,0.0001);	//value required here is dependent on minimum scale. TODO moveawayvector should be in DIRECTION away from portal, but fixed length.

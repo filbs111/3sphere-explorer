@@ -2820,8 +2820,20 @@
 	void main(void) {
 		//gl_FragColor = uColor*textureCube(uSampler, vPos);	//TODO use this (get rid of fog)
 
-#ifndef SPECIAL	
+#ifndef SPECIAL
+#ifndef VPROJ_MIX
 		vec3 preGammaFragColor = pow(textureCube(uSampler, vPos).xyz,vec3(2.2));
+#else
+		vec2 interpCoords = vScreenSpaceCoord.xy/vScreenSpaceCoord.z;
+		vec4 pointingDirection = normalize(vec4(-uFNumber*interpCoords,1.,0.));
+
+		//a simpler bodge might be to just use simple "movement" of camera thru portal where close to it (shaky regime). blend between the two.
+		vec4 simplePlanarPortalDir = pointingDirection*uPortaledMatrix;
+		
+		float closeness = dot(uCentrePosScaledFSCopy,uCentrePosScaledFSCopy);	//something that goes to 1 in shaky regime, 0 outside
+		closeness = pow(closeness,6.);
+		vec3 preGammaFragColor = pow(textureCube(uSampler, vPos - 0.05*closeness*simplePlanarPortalDir.xyz).xyz,vec3(2.2));	//simplePlanar will become dominant when other term small
+#endif
 #else
 		//preGammaFragColor.rg*=0.5*(1.+sin(10.*vScreenSpaceCoord));
 		vec2 interpCoords = vScreenSpaceCoord.xy/vScreenSpaceCoord.z;
@@ -2884,8 +2896,11 @@
 			vec3 preGammaFragColor = pow(textureCube(uSampler, (surfCoord.xyz - uCentrePosScaledFSCopy) - 0.05*closeness*simplePlanarPortalDir.xyz).xyz,vec3(2.2));	//simplePlanar will become dominant when other term small
 			//vec3 preGammaFragColor = pow(textureCube(uSampler, -simplePlanarPortalDir.xyz).xyz,vec3(2.2));	//simplePlanar only
 				//TODO apply same method (blend simplePlanar) to more standard vertproj method- don't need to be doing everything in screen space.
-			
+	*/		
 			//preGammaFragColor*=vec3(closeness,1.-closeness,0.);	//colour to indicate closeness
+			
+			
+	//^^ this stuff is a garbage fire!!
 #endif
 		
 		//undo tone mapping . y=1/(1+x) => x=y/(1-y)
