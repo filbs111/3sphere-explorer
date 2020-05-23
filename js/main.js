@@ -1335,6 +1335,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var dropLightPos;
 	if (!guiParams["drop spaceship"]){
 		mat4.set(playerCameraInterp,sshipMatrix);	//copy current player 4-rotation matrix to the spaceship object
+	}else{
+		mat4.set(sshipMatrixNoInterp, sshipMatrix);		
 	}
 	
 	//get light pos in frame of camera. light is at spaceship
@@ -2888,7 +2890,9 @@ function setupScene() {
 		
 	//start player off outside of boxes
 	//xyzmove4mat(playerCamera,[0,0,-0.7]);	//left, down, 	//this causes a sound bug (might be because initialise in sea world? 
-	xyzmove4mat(playerCamera,[0,0,-0.9]);	//left, down, 
+	//xyzmove4mat(playerCamera,[0,0,-0.9]);	//left, down, 
+	//xyzmove4mat(playerCamera,[0,-0.8,-0.9]);	//BUG procTerrain
+	xyzmove4mat(playerCamera,[0.1,0.5,-0.9]);	//left, down, 
 	
 	targetMatrix = cellMatData.d16[0];
 }
@@ -3116,6 +3120,7 @@ var teapotMatrix=mat4.create();mat4.identity(teapotMatrix);
 xyzmove4mat(teapotMatrix,[0,0,-0.5]);
 var sshipMatrix=mat4.create();mat4.identity(sshipMatrix);
 var sshipMatrixNoInterp=mat4.create();mat4.identity(sshipMatrixNoInterp);
+var sshipMatDCFrame=mat4.create();
 var targetMatrix=mat4.create();mat4.identity(targetMatrix);
 var targetWorldFrame=[];
 var targetingResultOne=[];
@@ -3608,13 +3613,7 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		
 		var duocylinderRotate = duoCylinderAngVelConst * timeElapsed*moveSpeed;
-		
-		if (guiParams["drop spaceship"]){guiParams.duocylinderRotateSpeed=0;}	//bodge to let take pics outside spaceship
-							//note doesn't play well with dat.gui - ui doesn't update
-							// (TODO have spaceship mechanics apply independent of player when outside)
-		
 		duocylinderSpin+=duocylinderRotate; 	//TODO match spin speed with sea wave speed
-		
 		
 		if (guiParams.control.spinCorrection){
 			//rotate player in this frame (maybe better to drag towards this angular velocity, with drag prop to atmos density)
@@ -4549,9 +4548,7 @@ var iterateMechanics = (function iterateMechanics(){
 				new Explosion(bullet, 0.0003, [1,0.5,0.25], false, true);
 			}else{
 				var tmpMat = mat4.create(bullet.matrix);
-				mat4.transpose(tmpMat);	//inefficient! TODO precalc matrix to do this transpose-rotate-transpose!
-				rotate4mat(tmpMat, 0, 1, duocylinderSpin);	//get bullet matrix in frame of duocylinder. might be duplicating work from elsewhere.
-				mat4.transpose(tmpMat);	//inefficient
+				rotate4matCols(tmpMat, 0, 1, duocylinderSpin);	//get bullet matrix in frame of duocylinder. might be duplicating work from elsewhere.
 				new Explosion({matrix:tmpMat, world:bullet.world}, 0.0003, [0.2,0.4,0.6],true, true);	//different colour for debugging
 			}
 			
@@ -4607,6 +4604,12 @@ var iterateMechanics = (function iterateMechanics(){
 		if (!guiParams["drop spaceship"]){
 			mat4.set(playerCamera,sshipMatrixNoInterp);	//todo store gun matrices in player frame instead
 			sshipWorld = playerContainer.world;
+			
+			mat4.set(sshipMatrixNoInterp, sshipMatDCFrame);
+			rotate4matCols(sshipMatDCFrame, 0, 1, duocylinderSpin);	//get matrix in frame of duocylinder.
+		}else{
+			mat4.set(sshipMatDCFrame,sshipMatrixNoInterp);
+			rotate4matCols(sshipMatrixNoInterp, 0, 1, -duocylinderSpin);	//get matrix in frame of duocylinder.
 		}
 		updateGunTargeting(sshipMatrixNoInterp);
 
