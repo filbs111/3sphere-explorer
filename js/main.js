@@ -8,6 +8,7 @@ var angle_ext;
 var myDebugStr = "TEST INFO TO GO HERE";
 var myfisheyedebug;
 var mytestMat111;
+var testPortalDraw;
 
 function bufferArrayData(buffer, arr, size){
 	 bufferArrayDataF32(buffer, new Float32Array(arr), size);
@@ -765,84 +766,93 @@ function drawScene(frameTime){
 	
 	
 	mat4.set(offsetPlayerCamera, worldCamera);
+
+	mainCamFov = guiParams.display.cameraFov;
+	setProjectionMatrix(nonCmapPMatrix, mainCamFov, gl.viewportHeight/gl.viewportWidth);	//note mouse code assumes 90 deg fov used. TODO fix.
+	if (reverseCamera){
+		nonCmapPMatrix[0]=-nonCmapPMatrix[0];
+		xyzrotate4mat(worldCamera, (guiParams.display.flipReverseCamera? [Math.PI,0,0]:[0,Math.PI,0] ));	//flip 180  - note repeated later. TODO do once and store copy of camera
+	}
 	
-	calcReflectionInfo(worldCamera,reflectorInfo);
+	mat4.set(worldCamera, invertedWorldCamera);
+	mat4.transpose(invertedWorldCamera);
+	nonCmapCullFunc = generateCullFunc(nonCmapPMatrix);										//todo only update pmatrix, nonCmapCullFunc if input variables have changed
 	
-	//draw cubemap views
-	mat4.identity(worldCamera);	//TODO use correct matrices
-	
-	//TODO move pMatrix etc to only recalc on screen resize
-	//make a pmatrix for hemiphere perspective projection method.
-	
-	frustrumCull = squareFrustrumCull;
-	if (guiParams.reflector.cmFacesUpdated>0){
-		gl.cullFace(gl.BACK);	//because might have set to front for mirror reversing/landing camera.
-		var numFacesToUpdate = guiParams.reflector.cmFacesUpdated;
-		mat4.set(cmapPMatrix, pMatrix);
-		for (var ii=0;ii<numFacesToUpdate;ii++){	//only using currently to check perf impact. could use more "properly" and cycle/alternate.
-			var framebuffer = cubemapFramebuffer[ii];
-			gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-			gl.viewport(0, 0, framebuffer.width, framebuffer.height);
-			
-			mat4.identity(worldCamera);
-			
-			xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);	
-			
-			switch(ii){
-				case 0:
-					xyzrotate4mat(worldCamera, [0,-Math.PI/2,0]);	//right from default view
-					break;
-				case 1:
-					xyzrotate4mat(worldCamera, [0,Math.PI/2,0]);	//left from default view
-					break;
-				case 2:
-					xyzrotate4mat(worldCamera, [Math.PI/2,0,0]);	//top from default
-					xyzrotate4mat(worldCamera, [0,0,Math.PI]);
-					break;
-				case 3:
-					xyzrotate4mat(worldCamera, [-Math.PI/2,0,0]);
-					xyzrotate4mat(worldCamera, [0,0,Math.PI]);
-					break;
-				case 4:
-					xyzrotate4mat(worldCamera, [0,Math.PI,0]);
-					break;
-				case 5:
-					break;
+	testPortalDraw=false;
+	if (nonCmapCullFunc(invertedWorldCamera,reflectorInfo.rad)){
+		testPortalDraw=true;
+		
+		mat4.set(offsetPlayerCamera, worldCamera);
+		calcReflectionInfo(worldCamera,reflectorInfo);
+		
+		//draw cubemap views
+		mat4.identity(worldCamera);	//TODO use correct matrices
+		
+		//TODO move pMatrix etc to only recalc on screen resize
+		//make a pmatrix for hemiphere perspective projection method.
+		
+		frustumCull = squareFrustumCull;
+		if (guiParams.reflector.cmFacesUpdated>0){
+			gl.cullFace(gl.BACK);	//because might have set to front for mirror reversing/landing camera.
+			var numFacesToUpdate = guiParams.reflector.cmFacesUpdated;
+			mat4.set(cmapPMatrix, pMatrix);
+			for (var ii=0;ii<numFacesToUpdate;ii++){	//only using currently to check perf impact. could use more "properly" and cycle/alternate.
+				var framebuffer = cubemapFramebuffer[ii];
+				gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+				gl.viewport(0, 0, framebuffer.width, framebuffer.height);
+				
+				mat4.identity(worldCamera);
+				
+				xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);	
+				
+				switch(ii){
+					case 0:
+						xyzrotate4mat(worldCamera, [0,-Math.PI/2,0]);	//right from default view
+						break;
+					case 1:
+						xyzrotate4mat(worldCamera, [0,Math.PI/2,0]);	//left from default view
+						break;
+					case 2:
+						xyzrotate4mat(worldCamera, [Math.PI/2,0,0]);	//top from default
+						xyzrotate4mat(worldCamera, [0,0,Math.PI]);
+						break;
+					case 3:
+						xyzrotate4mat(worldCamera, [-Math.PI/2,0,0]);
+						xyzrotate4mat(worldCamera, [0,0,Math.PI]);
+						break;
+					case 4:
+						xyzrotate4mat(worldCamera, [0,Math.PI,0]);
+						break;
+					case 5:
+						break;
+				}
+				
+				//xyzrotate4mat(worldCamera, [Math.PI,0,0]);
+				
+				//xyzmove4mat(worldCamera, [0,0,Math.PI/2]);
+				
+				drawWorldScene(frameTime, true);	//TODO skip reflector draw
 			}
 			
-			//xyzrotate4mat(worldCamera, [Math.PI,0,0]);
-			
-			//xyzmove4mat(worldCamera, [0,0,Math.PI/2]);
-			
-			drawWorldScene(frameTime, true);	//TODO skip reflector draw
 		}
-		
 	}
 	
 	//setup for drawing to screen
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
-	
-	mainCamFov = guiParams.display.cameraFov;
-	
-	setProjectionMatrix(pMatrix, mainCamFov, gl.viewportHeight/gl.viewportWidth);	//note mouse code assumes 90 deg fov used. TODO fix.
-														//todo only update pmatrix if input variables have changed
-	
-	if (reverseCamera){
-		gl.cullFace(gl.FRONT);	//todo revert for drawing cubemap faces. or : for PIP camera, render to texture, flip when texture to screen (and if fullscreen reversing camera, use same cullface setting when drawing them (if switching cullface is a slow gl call)
-		pMatrix[0]=-pMatrix[0];
-	}else{
-		gl.cullFace(gl.BACK);
-	}
+	mat4.set(nonCmapPMatrix, pMatrix);
 														
-	frustrumCull = generateCullFunc(pMatrix);
-		
+	frustumCull = nonCmapCullFunc;
+	
 	mat4.set(offsetPlayerCamera, worldCamera);	//set worldCamera to playerCamera
 	//xyzmove4mat(worldCamera,[0,-0.01,-0.015]);	//3rd person camera
 	//xyzmove4mat(worldCamera,[0,0,0.005]);	//forward camera
-	
+
 	if (reverseCamera){
+		gl.cullFace(gl.FRONT);	//todo revert for drawing cubemap faces. or : for PIP camera, render to texture, flip when texture to screen (and if fullscreen reversing camera, use same cullface setting when drawing them (if switching cullface is a slow gl call)
 		xyzrotate4mat(worldCamera, (guiParams.display.flipReverseCamera? [Math.PI,0,0]:[0,Math.PI,0] ));	//flip 180
+	}else{
+		gl.cullFace(gl.BACK);
 	}
 	
 	if (guiParams.display.renderViaTexture == "no"){
@@ -1470,7 +1480,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 				mat4.multiply(mvMatrix, thisMat);
 				
 			//	if (thisMat[15]>criticalWPos){continue;}	//don't draw boxes too close to portal
-				if (frustrumCull(mvMatrix,boxRad)){
+				if (frustumCull(mvMatrix,boxRad)){
 					mat4.set(thisMat, mMatrix);
 					drawObjectFromPreppedBuffers(cubeBuffers, activeShaderProgram);
 				}
@@ -1501,7 +1511,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 				mat4.multiply(mvMatrix, thisMat);
 				
 			//	if (thisMat[15]>criticalWPos){continue;}	//don't draw boxes too close to portal
-				if (frustrumCull(mvMatrix,boxRad)){
+				if (frustumCull(mvMatrix,boxRad)){
 					mat4.set(thisMat, mMatrix);
 					drawObjectFromPreppedBuffersVsMatmult(cubeBuffers, activeShaderProgram);
 				}
@@ -1861,7 +1871,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 				});
 		}else{
 			drawArrayForFunc(function(){
-				if (frustrumCull(mvMatrix,cullRad)){
+				if (frustumCull(mvMatrix,cullRad)){
 					drawObjectFromPreppedBuffers(buffers, shaderProg);
 					numDrawn++;
 				}
@@ -2200,7 +2210,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,	matrix);
-		if (frustrumCull(mvMatrix,sphereRad)){
+		if (frustumCull(mvMatrix,sphereRad)){
 			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
 		}
 	}
@@ -2223,8 +2233,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 		mat4.multiply(mvMatrix,targetMatrix);
 		switch (guiParams.target.type){
 			case "sphere":
-				if (frustrumCull(mvMatrix,targetRad)){	//normally use +ve radius
-											//-ve to make disappear when not entirely inside view frustrum (for testing)
+				if (frustumCull(mvMatrix,targetRad)){	//normally use +ve radius
+											//-ve to make disappear when not entirely inside view frustum (for testing)
 					gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,targetRad]);
 					gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.target);
 					var emitColor = Math.sin(frameTime*0.01);
@@ -2237,7 +2247,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 				break;
 			case "box":
 				var boxRad = targetRad*Math.sqrt(3);
-				if (frustrumCull(mvMatrix,boxRad)){
+				if (frustumCull(mvMatrix,boxRad)){
 					var savedActiveProg = activeShaderProgram;	//todo push things onto a to draw list, 
 																//minimise shader switching
 					activeShaderProgram = shaderProgramTexmap;
@@ -2253,7 +2263,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	}
 
 	//DRAW PORTAL/REFLECTOR
-	if (guiParams.reflector.draw && !isCubemapView){
+	if (guiParams.reflector.draw && !isCubemapView && frustumCull(invertedWorldCamera,reflectorInfo.rad)){
 		var savedActiveProg = activeShaderProgram;
 		
 		//TODO have some variable for activeReflectorShader, avoid switch.
@@ -2331,17 +2341,17 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 		gl.uniform1f(activeShaderProgram.uniforms.uPolarity, reflectorInfo.polarity);
 		
-		if (frustrumCull(mvMatrix,reflectorInfo.rad)){
-			if(['vertex projection','screen space'].includes(guiParams.reflector.mappingType) ){
-				gl.uniform3fv(activeShaderProgram.uniforms.uCentrePosScaled, reflectorInfo.centreTanAngleVectorScaled	);
-			}
-			drawObjectFromBuffers(sphereBuffersHiRes, activeShaderProgram, true);
 			
-			//draw a smaller copy to work around problem with near clip plane? (bodge)
-			var shrunkScale = 0.99*reflectorInfo.rad;
-			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [shrunkScale,shrunkScale,shrunkScale]);
-			drawObjectFromBuffers(sphereBuffersHiRes, activeShaderProgram, true);
+		if(['vertex projection','screen space'].includes(guiParams.reflector.mappingType) ){
+			gl.uniform3fv(activeShaderProgram.uniforms.uCentrePosScaled, reflectorInfo.centreTanAngleVectorScaled	);
 		}
+		drawObjectFromBuffers(sphereBuffersHiRes, activeShaderProgram, true);
+		
+		//draw a smaller copy to work around problem with near clip plane? (bodge)
+		var shrunkScale = 0.99*reflectorInfo.rad;
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [shrunkScale,shrunkScale,shrunkScale]);
+		drawObjectFromBuffers(sphereBuffersHiRes, activeShaderProgram, true);
+
 		
 		activeShaderProgram = savedActiveProg;
 		gl.useProgram(activeShaderProgram);
@@ -2366,7 +2376,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			var bulletMatrix=bullets[b].matrix;
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix,bulletMatrix);
-			if (frustrumCull(mvMatrix,targetRad)){	
+			if (frustumCull(mvMatrix,targetRad)){	
 				drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
 			}
 		}
@@ -2491,7 +2501,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			//var radius = 0.01;
 			var opac = 0.01*singleExplosion.life;
 			
-			if (frustrumCull(mvMatrix,radius)){	
+			if (frustumCull(mvMatrix,radius)){	
 					//TODO check is draw order independent transparency
 				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, singleExplosion.color.map(function(val){return val*opac;}));
 				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [radius,radius,radius]);
@@ -2503,7 +2513,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			var largeRadiusAng = radius * (100-singleExplosion.life)*5;	//note that speed of sound delay approximation currently used 4vec distance, not curve, so this will only match up for small distances. 5 is a guess that seems about right. TODO work out properly!
 			if (largeRadiusAng<maxShockRadAng){
 				var largeRadius = Math.tan(largeRadiusAng);
-				if (frustrumCull(mvMatrix,largeRadius)){	//todo larger max shock rad for larger singleExplosion.size
+				if (frustumCull(mvMatrix,largeRadius)){	//todo larger max shock rad for larger singleExplosion.size
 					var largeOpac = 0.1*(1-(largeRadiusAng/maxShockRadAng));	//linearly drop opacity as sphere expands (simple)
 					gl.uniform3fv(transpShadProg.uniforms.uEmitColor, singleExplosion.color.map(function(val){return val*largeOpac;}));	//TODO neutral colour
 					gl.uniform3fv(transpShadProg.uniforms.uModelScale, [largeRadius,largeRadius,largeRadius]);
@@ -2560,13 +2570,13 @@ var Explosion=function(){
 
 
 //TODO button to toggle culling (so can check that doesn't impact what's drawn)
-var frustrumCull;
+var frustumCull;
 function generateCullFunc(pMat){
 	var const1 = pMat[5];
 	var const2 = pMat[0];
 	var const3 = Math.sqrt(1+pMat[5]*pMat[5]);
 	var const4 = Math.sqrt(1+pMat[0]*pMat[0]); 
-	return function(mat, rad){	//return whether an sphere of radius rad, at a position determined by mat (ie with position [mat[12],mat[13],mat[14],mat[15]]) overlaps the view frustrum.
+	return function(mat, rad){	//return whether an sphere of radius rad, at a position determined by mat (ie with position [mat[12],mat[13],mat[14],mat[15]]) overlaps the view frustum.
 		var adjustedRad=rad/Math.sqrt(1+rad*rad);
 		var const5=const3*adjustedRad;	//TODO only do this once when drawing a sequence of same objects.
 		var const6=const4*adjustedRad;
@@ -2770,6 +2780,7 @@ var moveAwayVec;
 var mMatrix = mat4.create();
 var mvMatrix = mat4.create();
 var pMatrix = mat4.create();
+var nonCmapPMatrix = mat4.create();
 var playerCamera = mat4.create();
 var playerCameraInterp = mat4.create();
 var offsetPlayerCamera = mat4.create();
@@ -2780,7 +2791,7 @@ var worldCamera = mat4.create();
 
 var cmapPMatrix = mat4.create();
 setProjectionMatrix(cmapPMatrix, -90.0, 1.0);	//-90 gets reflection to look right. (different for portal?)
-var squareFrustrumCull = generateCullFunc(cmapPMatrix);
+var squareFrustumCull = generateCullFunc(cmapPMatrix);
 
 var invertedWorldCamera = mat4.create();
 var invertedWorldCameraDuocylinderFrame = mat4.create();
@@ -3748,9 +3759,10 @@ var iterateMechanics = (function iterateMechanics(){
 			//var spd = Math.sqrt(airSpdVec.map(function(val){return val*val;}).reduce(function(val, sum){return val+sum;}));
 			var spd = Math.hypot.apply(null, airSpdVec);
 			
-			infoToShow+=", airspd:" + spd.toFixed(2);
-			infoToShow+=", sshipMat:" + Array.from(sshipMatrix).map(elem=>elem.toFixed(3)).join(",");	//toFixed doesn't work right on float32 array so use Array.from first
-			infoToShow+=" debugRoll: " + debugRoll;
+			infoToShow+=", airspd: " + spd.toFixed(2);
+		//	infoToShow+=", sshipMat:" + Array.from(sshipMatrix).map(elem=>elem.toFixed(3)).join(",");	//toFixed doesn't work right on float32 array so use Array.from first
+			infoToShow+=", portalDraw: "+testPortalDraw;
+			infoToShow+=", debugRoll: " + debugRoll;
 			
 			document.querySelector("#info2").innerHTML = infoToShow;
 			//document.querySelector("#info2").innerHTML = myDebugStr;
