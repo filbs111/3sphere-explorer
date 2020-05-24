@@ -9,7 +9,7 @@ function getFourHeights(aaFloor,bbFloor){
 	//seems that NaN gets in here (aa,bb)
 	if ( aaFloor<0 || bbFloor<0 || aaCeil<0 || bbCeil<0 || aaFloor>=procTerrainSize || bbFloor>=procTerrainSize || aaCeil>=procTerrainSize || bbCeil>=procTerrainSize){
 	//	console.log("bad input!");
-		console.log({aa:aa, bb:bb, aaFloor:aaFloor, bbFloor:bbFloor, aaCeil:aaCeil, bbCeil:bbCeil, procTerrainSize:procTerrainSize});
+		console.log({aaFloor:aaFloor, bbFloor:bbFloor, aaCeil:aaCeil, bbCeil:bbCeil, procTerrainSize:procTerrainSize});
 		//this results in a bug so return something! seems that is looking up index 256
 		return -1;	//returning this will cause problems.
 	}
@@ -26,8 +26,8 @@ function getInterpHeightForAB(aa,bb){
 	}
 	
 	//interpolate height. currently this func used for realtime height detection and mesh creation, and this should make latter slower, but unimportant.
-	var aaFloor = Math.floor(aa);	//%procTerrainSize;	//use % if get problems here (previously aa, bb could be procTerrainSize
-	var bbFloor = Math.floor(bb);	//%procTerrainSize;
+	var aaFloor = Math.floor(aa)%procTerrainSize;
+	var bbFloor = Math.floor(bb)%procTerrainSize;
 	
 	var heights = getFourHeights(aaFloor, bbFloor);
 	
@@ -47,8 +47,8 @@ function getInterpHeightAndGradForAB(aa,bb){
 	}
 	
 	//interpolate height. currently this func used for realtime height detection and mesh creation, and this should make latter slower, but unimportant.
-	var aaFloor = Math.floor(aa);	//%procTerrainSize;	//use % if get problems here (previously aa, bb could be procTerrainSize
-	var bbFloor = Math.floor(bb);	//%procTerrainSize;
+	var aaFloor = Math.floor(aa)%procTerrainSize;
+	var bbFloor = Math.floor(bb)%procTerrainSize;
 	
 	var heights = getFourHeights(aaFloor, bbFloor);
 	

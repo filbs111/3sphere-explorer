@@ -2927,13 +2927,9 @@ function setupScene() {
 	mat4.identity(playerCamera);	//not sure why have 2 matrices here...
 	//bung extra quaternion stuff onto this for quick test
 	playerCamera.qPair = [[1,0,0,0],[1,0,0,0]];
-	
-	//get bugs if start player without moving. is player inside portal?
-		
+			
 	//start player off outside of boxes
-	//xyzmove4mat(playerCamera,[0,0,-0.7]);	//left, down, 	//this causes a sound bug (might be because initialise in sea world? 
 	//xyzmove4mat(playerCamera,[0,0,-0.9]);	//left, down, 
-	//xyzmove4mat(playerCamera,[0,-0.8,-0.9]);	//BUG procTerrain
 	xyzmove4mat(playerCamera,[0.1,0.5,-0.9]);	//left, down, 
 	
 	targetMatrix = cellMatData.d16[0];
