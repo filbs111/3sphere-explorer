@@ -2407,8 +2407,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 	shaderSetup(transpShadProg);
 	
 	prepBuffersForDrawing(sphereBuffers, transpShadProg);
-	targetRad=0.0125;
-	gl.uniform3fv(transpShadProg.uniforms.uModelScale, [targetRad/25,targetRad/25,targetRad]);	//long streaks
+	targetRad=sshipModelScale*150;
+	gl.uniform3fv(transpShadProg.uniforms.uModelScale, [targetRad/50,targetRad/50,targetRad]);	//long streaks
 	gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [1.0, 1.0, 0.5]);	//YELLOW
 	
 	gl.enable(gl.BLEND);
@@ -3839,8 +3839,8 @@ var iterateMechanics = (function iterateMechanics(){
 				if (Math.random()<0.5){
 					//making a new matrix is inefficient - expect better if reused a temp matrix, copied it into buffer
 					var newm4 = mat4.create(sshipMatrix);
-					xyzmove4mat(newm4, [1,1,1].map(elem => {return 0.012*elem*(Math.random()-0.5)}));	//square uniform distibution
-					new Explosion({matrix:newm4,world:sshipWorld}, 0.0001, [0.2,0.06,0.06]);
+					xyzmove4mat(newm4, [1,1,1].map(elem => {return sshipModelScale*60*elem*(Math.random()-0.5)}));	//square uniform distibution
+					new Explosion({matrix:newm4,world:sshipWorld}, sshipModelScale*0.5, [0.2,0.06,0.06]);
 				}
 			}
 			
@@ -4855,7 +4855,7 @@ function fireGun(){
 			newFireDirectionVec[2]+=muzzleVel;
 			bullets.push({matrix:newBulletMatrix,vel:newFireDirectionVec,world:sshipWorld,active:true});
 			
-			new Explosion({matrix:gunMatrix,world:sshipWorld}, 0.00005, [0.06,0.06,0.06]);	//smoke/steam fx.
+			new Explosion({matrix:gunMatrix,world:sshipWorld}, sshipModelScale*0.5, [0.06,0.06,0.06]);	//smoke/steam fx.
 															//TODO emit from hot gun (continue after firing), lighting for smoke (don't see in dark) ...
 															//TODO get correct world (which side of portal end of gun is in)
 			matPool.destroy(relativeMatrix);
