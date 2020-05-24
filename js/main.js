@@ -2526,7 +2526,77 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}
 	}
 	
+	testRayBallCollision();
+	function testRayBallCollision(){
+		//will use code like this to find where camera ray intersects portal for "screen space shader" drawing.
+		//may also be useful for fast collisions etc 
+		//if have 2 4vectors, starting position "A" = [ax,ay,az,aw], and pointing direction (quarter way around world) "B" [bx,by,bz,dw], think that:
+		// for portal at position w=1, closest approach will occur at:
+		// ( 1/sqrt(aw*aw + bw*bw) )*(aw*A + bw*B)
+		// and a (normal) vector perpendicular to this is 
+		// ( 1/sqrt(aw*aw + bw*bw) )*(aw*B - bw*A)
+		//hope that latter is in a consistent direction, and can backtrack from closest approach 
+		
+		activeShaderProgram=shaderProgramTexmap;
+		shaderSetup(activeShaderProgram, texture);
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
+		prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
+		
+		//draw something at player position
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.magenta);
+		var posA = sshipMatrix.slice(12);
+		//drawTriAxisCrossForMatrix(sshipMatrix);
+	//	drawTriAxisCrossForPosition(posA);
+
+		//move some test object to quarter way around the world from player
+		var mytmpmat = mat4.create(sshipMatrix);
+		xyzmove4mat(mytmpmat, [0,0,Math.PI/2]);
+		var posB = mytmpmat.slice(12);
+		//drawTriAxisCrossForPosition(posB);
+
+		//calculate closest approach vector and represent by an object
+		var closeApproach = [];
+		var equatorVec = [];
+		var intermediateVec = [];
+		var movedFwdAng = -0.1;
+		
+		var maxwsq = posA[3]*posA[3] + posB[3]*posB[3];
+		
+		var maxw = Math.sqrt(maxwsq);	//TODO handle 0 (or avoid if maxwsq< crit value)
+		for (var cc=0;cc<4;cc++){
+			closeApproach[cc]=(1/maxw)*(posA[cc]*posA[3]+posB[cc]*posB[3]);
+			equatorVec[cc]=(1/maxw)*(posB[cc]*posA[3]-posA[cc]*posB[3]);
+			intermediateVec[cc]=closeApproach[cc]*Math.cos(movedFwdAng) + equatorVec[cc]*Math.sin(movedFwdAng);
+		}
+		//drawTriAxisCrossForPosition(closeApproach);
+		//drawTriAxisCrossForPosition(intermediateVec);
+		//drawTriAxisCrossForPosition(equatorVec);
+
+		
+		//determine whether this constitutes a collision
+		var critwsq = 1.0/(1.0+reflectorInfo.rad*reflectorInfo.rad);
+		var critw = Math.sqrt(critwsq);
+		var wdifference = maxwsq - critwsq;
+		if (maxwsq>critwsq){
+			//project onto w=1
+			//correction is length should move along this projection.
+			var projectedradiussq = (1-maxwsq)/maxwsq;
+			var correction = Math.sqrt( reflectorInfo.rad*reflectorInfo.rad - projectedradiussq );
+			
+			//console.log("colliding");
+			var collisionPoint = [];
+			for (var cc=0;cc<4;cc++){
+				collisionPoint[cc] = closeApproach[cc]*(1/maxw) - equatorVec[cc]*correction;
+					//^^ that's the collision point in projected space. since this is now a projected point from surface of sphere, can project back by multiplying by critw
+				collisionPoint[cc]*=critw;	//(this part should not be necessary in shader version)
+			}
+			
+			drawTriAxisCrossForPosition(collisionPoint);
+		}
+		
+	}
 	
+
 	
 	var maxShockRadAng = 0.5;
 	
@@ -4950,7 +5020,31 @@ function drawTriAxisCross(scale){
 	gl.uniform3fv(shaderProgramTexmap.uniforms.uModelScale, [scale,smallScale,smallScale]);
 	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
 };
-
+function drawTriAxisCrossForMatrix(mat){
+	mat4.set(invertedWorldCamera, mvMatrix);
+	mat4.multiply(mvMatrix, mat);
+	mat4.set(mat, mMatrix);
+	drawTriAxisCross(0.05);
+}
+function drawTriAxisCrossForPosition(posn){
+	var mat = mat4.identity();
+	/*
+	mat[12] = posn[0];
+	mat[13] = posn[1];
+	mat[14] = posn[2];
+	mat[15] = posn[3];
+	mat[3] = posn[0];
+	mat[7] = posn[1];
+	mat[11] = posn[2];*/
+	
+	//TODO a less crap way to do this, but just abuse xyzmove4mat for this
+	var xyzlength = Math.sqrt(posn[0]*posn[0] + posn[1]*posn[1] + posn[2]*posn[2]);
+	var angleToMove = -Math.atan2(xyzlength, posn[3]);
+	var moveVec = posn.slice(0,3).map(elem=>elem*angleToMove/xyzlength);
+	xyzmove4mat(mat, moveVec);
+	
+	drawTriAxisCrossForMatrix(mat);
+}
 
 function performGeneralShaderSetup(shader){
 	if (shader.uniforms.uSpecularStrength){
@@ -4960,3 +5054,6 @@ function performGeneralShaderSetup(shader){
 		gl.uniform1f(shader.uniforms.uSpecularPower, guiParams.display.specularPower);	
 	}
 }
+
+
+
