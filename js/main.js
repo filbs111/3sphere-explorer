@@ -2929,8 +2929,7 @@ function setupScene() {
 	playerCamera.qPair = [[1,0,0,0],[1,0,0,0]];
 			
 	//start player off outside of boxes
-	//xyzmove4mat(playerCamera,[0,0,-0.9]);	//left, down, 
-	xyzmove4mat(playerCamera,[0.1,0.5,-0.9]);	//left, down, 
+	xyzmove4mat(playerCamera,[0,0.2,-0.4]);	//left, down, fwd
 	
 	targetMatrix = cellMatData.d16[0];
 }
@@ -3147,6 +3146,7 @@ var settings = {
 	playerBallRad:0.006,
 	characterBallRad:0.001
 }
+reflectorInfo.rad = guiParams.reflector.scale;		//need to initialise currently because portalTest 1st occurs before calcReflectionInfo
 
 var worldColors=[];
 var worldColorsPlain=[];
