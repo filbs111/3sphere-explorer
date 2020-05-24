@@ -3118,7 +3118,7 @@ var guiParams={
 		atmosContrast:5.0,
 		culling:true,
 		useSpecular:true,
-		specularStrength:1.0,
+		specularStrength:0.5,
 		specularPower:20.0
 	},
 	reflector:{
@@ -3270,7 +3270,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	displayFolder.add(guiParams.display, "atmosContrast", -10,10,0.5);
 	displayFolder.add(guiParams.display, "culling");
 	displayFolder.add(guiParams.display, "useSpecular");
-	displayFolder.add(guiParams.display, "specularStrength", 0,2,0.2);
+	displayFolder.add(guiParams.display, "specularStrength", 0,1,0.05);	//currently diffuse colour and distance attenuation applies to both specular and diffuse, keeping nonnegative by having diffuse multiplier 1-specularStrength. therefore range 0-1. TODO different specular, diffuse colours, (instead of float strength), specular maybe shouldn't have distance attenuation same way - possibly correct for point source but want solution for sphere light...
 	displayFolder.add(guiParams.display, "specularPower", 1,20,0.5);
 	displayFolder.add(guiParams, "normalMove", 0,0.02,0.001);
 	

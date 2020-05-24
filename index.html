@@ -461,6 +461,7 @@
 	vec4 vecToEye = normalize(transformedCoord-eyePos);
 	vec4 halfVec = normalize( vecToEye + adjustedPosNormalised);
 	float phongAmount = uSpecularStrength*pow( max(-dot(halfVec, transformedNormal), 0.),uSpecularPower);
+	light*=(1.-uSpecularStrength);	//ensure total light doesn't go -ve
 	light+=phongAmount;
 #endif
 		
@@ -476,6 +477,7 @@
 		//TODO take into account "size" of portal light. TODO suspect this is not right - speculat much stronger in shader-texmap-perpixel-discard-normalmap-efficient-fs . suspect due to zeroing w component there
 		halfVec = normalize( vecToEye + normalize(transformedCoord-uReflectorPos));
 		phongAmount = uSpecularStrength*pow( max(-dot(halfVec, transformedNormal), 0.),uSpecularPower);
+		portalLight*=(1.-uSpecularStrength);
 		portalLight+=phongAmount;
 #endif
 
@@ -574,6 +576,7 @@
 		//float phongAmount = pow(max(dot(normalizedEyePosAdj, nmapNormal),0.),10.);	//simple glossy camera light
 		vec3 halfVec = normalize(normalizedEyePosAdj + normalizedLightPosAdj);
 		float phongAmount = uSpecularStrength*pow( max(dot(halfVec, nmapNormal), 0.),uSpecularPower);
+		light*=(1.-uSpecularStrength);	//ensure total light doesn't go -ve
 		light+=phongAmount;
 #endif
 		
@@ -593,6 +596,7 @@
 		//TODO take into account "size" of portal light
 		halfVec = normalize( normalizedEyePosAdj + vPortalLightPosTangentSpaceAdj );
 		phongAmount = uSpecularStrength*pow( max(dot(halfVec, nmapNormal), 0.),uSpecularPower);
+		portalLight*=(1.-uSpecularStrength);	//ensure total light doesn't go -ve
 		portalLight+=phongAmount;
 #endif
 
@@ -984,6 +988,7 @@
 	vec4 vecToEye = normalize(transformedCoord-eyePos);
 	vec4 halfVec = normalize( vecToEye + adjustedPosNormalised);
 	float phongAmount = uSpecularStrength*pow( max(-dot(halfVec, transformedNormal), 0.),uSpecularPower);
+	light*=(1.-uSpecularStrength);
 	light+=phongAmount;
 #endif
 		
@@ -999,6 +1004,7 @@
 		//TODO take into account "size" of portal light. TODO suspect this is not right - speculat much stronger in shader-texmap-perpixel-discard-normalmap-efficient-fs . suspect due to zeroing w component there
 		halfVec = normalize( vecToEye + normalize(transformedCoord-uReflectorPos));
 		phongAmount = uSpecularStrength*pow( max(-dot(halfVec, transformedNormal), 0.),uSpecularPower);
+		portalLight*=(1.-uSpecularStrength);
 		portalLight+=phongAmount;
 #endif
 
@@ -1185,7 +1191,7 @@
 		//TODO something more efficient. can the halfVec be a varying? what should it be (tried normalising it in vert shader and doesnt interpolate well)
 		
 		vec4 normalizedEyePosAdj = normalize(vec4( vEyePosTangentSpace.xyz , 0.));	
-		
+		light*=(1.-uSpecularStrength);
 		//float phongAmount = pow(max(dot(normalizedEyePosAdj, nmapNormal),0.),10.);	//simple glossy camera light
 		vec4 halfVec = normalize(normalizedEyePosAdj + normalizedLightPosAdj);
 		float phongAmount = uSpecularStrength*pow( max(dot(halfVec, nmapNormal), 0.),uSpecularPower);
@@ -1209,6 +1215,7 @@
 		//TODO take into account "size" of portal light
 		halfVec = normalize( normalizedEyePosAdj + vPortalLightPosTangentSpaceAdj );
 		phongAmount = uSpecularStrength*pow( max(dot(halfVec, nmapNormal), 0.),uSpecularPower);
+		portalLight*=(1.-uSpecularStrength);
 		portalLight+=phongAmount;
 #endif
 
