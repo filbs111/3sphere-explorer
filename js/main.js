@@ -112,6 +112,8 @@ function initShaders(){
 				
 	shaderPrograms.decal = loadShader( "shader-decal-vs", "shader-decal-fs");
 					
+	shaderPrograms.billboardQuads = loadShader("shader-simple-billboard-vs", "shader-very-simple-fs");				
+	
 	//get locations later by calling completeShaders (when expect compiles/links to have completed)
 	console.log("time to init shaders: " + ( performance.now() - initShaderTimeStart ) + "ms");
 }
@@ -131,6 +133,7 @@ var duocylinderObjects={
 var sphereBuffers={};
 var sphereBuffersHiRes={};
 var quadBuffers={};
+var quadBuffers2D={};
 var cubeBuffers={};
 var smoothCubeBuffers={};
 var randBoxBuffers={};
@@ -456,6 +459,7 @@ function initBuffers(){
 	loadBufferData(sphereBuffers, makeSphereData(16,32,1));
 	loadBufferData(sphereBuffersHiRes, makeSphereData(127,255,1)); //near index limit 65536.
 	loadBufferData(quadBuffers, quadData);
+	loadBufferData(quadBuffers2D, quadData2D);
 	loadBufferData(cubeBuffers, levelCubeData);
 	loadBufferData(smoothCubeBuffers, smoothCubeData);
 	loadBufferData(explodingCubeBuffers, explodingCubeData);
@@ -511,7 +515,7 @@ function initBuffers(){
 	
 	function loadBufferData(bufferObj, sourceData){
 		bufferObj.vertexPositionBuffer = gl.createBuffer();
-		bufferArrayData(bufferObj.vertexPositionBuffer, sourceData.vertices, 3);
+		bufferArrayData(bufferObj.vertexPositionBuffer, sourceData.vertices, sourceData.vertices_len || 3);
 		if (sourceData.uvcoords){
 			bufferObj.vertexTextureCoordBuffer= gl.createBuffer();
 			bufferArrayData(bufferObj.vertexTextureCoordBuffer, sourceData.uvcoords, 2);
@@ -1424,7 +1428,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniform4fv(shader.uniforms.uFogColor, localVecFogColor);
 		}
 		if (shader.uniforms.uReflectorDiffColor){
-				gl.uniform3fv(shader.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
+			gl.uniform3fv(shader.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
 		}
 		if (shader.uniforms.uPlayerLightColor){
 			gl.uniform3fv(shader.uniforms.uPlayerLightColor, playerLight);
@@ -1576,7 +1580,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffers.d);
 			gl.vertexAttribPointer(attrIdx+3, 4, gl.FLOAT, false, 0, 0);
 			*/
-			
+
 			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aMMatrixA, 1);
 			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aMMatrixB, 1);
 			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aMMatrixC, 1);
@@ -1612,12 +1616,50 @@ function drawWorldScene(frameTime, isCubemapView) {
 			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aMMatrixC, 0);
 			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aMMatrixD, 0);
 			*/
+			
+			zeroAttributeDivisors(activeShaderProgram);
 		}
+	}
+	
+	if (guiParams['random boxes'].drawType == 'instanced speckles'){	// (not really boxes)
+		//draw instanced billboard quads using instanced rendering
+		//shader setup is simple and different to normal, so forgo shaderSetup fun, just do here. no lights, fog at this time. (light bit compicated - for simulated diffuse spheres, perceived brightness depends on both viewing angle and light...
+		activeShaderProgram = shaderPrograms.billboardQuads;
+		gl.useProgram(activeShaderProgram);
+		
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+		
+		//cut down version of prepBuffersForDrawing
+		enableDisableAttributes(activeShaderProgram);
+		gl.bindBuffer(gl.ARRAY_BUFFER, quadBuffers2D.vertexPositionBuffer);
+		gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexPosition, quadBuffers2D.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quadBuffers2D.vertexIndexBuffer);
+		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uPMatrix, false, pMatrix);
+		
+		mat4.set(invertedWorldCameraDuocylinderFrame, mvMatrix);
+		//normally in drawObjectFromPreppedBuffers
+		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uMVMatrix, false, mvMatrix);
+				
+		angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aVertexCentrePosition, 1);
+		gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.randMatrixBuffers.a);	//borrow existing buffer containing a matrix row/columm - this is a source of random normalised 4vectors as desired.
+		gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexCentrePosition, 4, gl.FLOAT, false, 0, 0);
+		
+		angle_ext.drawElementsInstancedANGLE(gl.TRIANGLES, quadBuffers2D.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, numRandomBoxes);
+		
+		//seems like maybe has effect outside of drawElementsInstancedANGLE calls. to be safe,
+		zeroAttributeDivisors(activeShaderProgram);
+	}
+	
+	function zeroAttributeDivisors(shaderProg){
+			//seems like these carry over between invokations of drawElementsInstancedANGLE, loading different shaders. TODO proper method to only change when required, but for now, set all to zero before setting those wanted to 1
+		Object.keys(shaderProg.attributes).forEach(function(item, index){
+			angle_ext.vertexAttribDivisorANGLE(gl.getAttribLocation(shaderProg, item),0);
+		});
+		
 	}
 	
 	//switch back to previous shader (may already be using this depending on which drawType used for 'random boxes'
 	shaderSetup(guiParams.debug.nmapUseShader2 ? (guiParams.display.useSpecular ? shaderPrograms.texmapPerPixelDiscardNormalmapPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmapPerPixelDiscardNormalmap[ guiParams.display.atmosShader ]) : shaderPrograms.texmapPerPixelDiscardNormalmapV1[ guiParams.display.atmosShader ], nmapTexture);
-	
 	
 	
 	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
@@ -3179,7 +3221,7 @@ function init(){
 	randBoxesFolder.add(guiParams["random boxes"],"number",0,maxRandBoxes,64);
 	randBoxesFolder.add(guiParams["random boxes"],"size",0.001,0.01,0.001);
 	randBoxesFolder.add(guiParams["random boxes"],"collision");
-	randBoxesFolder.add(guiParams["random boxes"],"drawType", ["singleBuffer","indiv","indivVsMatmult","instancedArrays"]);
+	randBoxesFolder.add(guiParams["random boxes"],"drawType", ["singleBuffer","indiv","indivVsMatmult","instancedArrays","instanced speckles"]);
 	randBoxesFolder.add(guiParams["random boxes"],"numToMove", 0,maxRandBoxes,64);
 	drawShapesFolder.add(guiParams.drawShapes,"teapot");
 	drawShapesFolder.add(guiParams.drawShapes,"teapot scale",0.05,2.0,0.05);
