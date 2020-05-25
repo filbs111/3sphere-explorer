@@ -2900,7 +2900,15 @@
 		scaledPoint = scaledPoint - floor(scaledPoint);
 	//	vec3 preGammaFragColor = scaledPoint;	//looks solid!
 
-		vec3 preGammaFragColor = pow(textureCube(uSampler, normalize(-collisonPoint.xyz) - uCentrePosScaledFSCopy).xyz,vec3(2.2));
+		//no mix version
+	//	vec3 preGammaFragColor = pow(textureCube(uSampler, normalize(-collisonPoint.xyz) - uCentrePosScaledFSCopy).xyz,vec3(2.2));
+
+		//mix with simple planar (avoids wobbles at close range)
+		vec4 simplePlanarPortalDir = pointingDirection*uPortaledMatrix;
+		float closeness = dot(uCentrePosScaledFSCopy,uCentrePosScaledFSCopy);	//something that goes to 1 in shaky regime, 0 outside
+		closeness = pow(closeness,6.);
+		vec3 preGammaFragColor = pow(textureCube(uSampler, normalize(-collisonPoint.xyz) - uCentrePosScaledFSCopy - 0.05*closeness*simplePlanarPortalDir.xyz).xyz,vec3(2.2));	//simplePlanar will become dominant when other term small
+
 
 #endif
 		
