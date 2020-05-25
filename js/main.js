@@ -2526,7 +2526,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}
 	}
 	
-	testRayBallCollision();
+//	testRayBallCollision();
 	function testRayBallCollision(){
 		//will use code like this to find where camera ray intersects portal for "screen space shader" drawing.
 		//may also be useful for fast collisions etc 
@@ -2576,7 +2576,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//determine whether this constitutes a collision
 		var critwsq = 1.0/(1.0+reflectorInfo.rad*reflectorInfo.rad);
 		var critw = Math.sqrt(critwsq);
-		var wdifference = maxwsq - critwsq;
 		if (maxwsq>critwsq){
 			//project onto w=1
 			//correction is length should move along this projection.
@@ -2999,7 +2998,7 @@ function setupScene() {
 	playerCamera.qPair = [[1,0,0,0],[1,0,0,0]];
 			
 	//start player off outside of boxes
-	xyzmove4mat(playerCamera,[0,0.2,-0.4]);	//left, down, fwd
+	xyzmove4mat(playerCamera,[0,0.1,-0.3]);	//left, down, fwd
 	
 	targetMatrix = cellMatData.d16[0];
 }
@@ -3195,7 +3194,7 @@ var guiParams={
 		draw:true,
 		cmFacesUpdated:6,
 		mappingType:'vertex projection',
-		scale:0.05,
+		scale:0.3,
 		isPortal:true,
 		moveAway:0.0005,
 		test1:false

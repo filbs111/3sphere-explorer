@@ -2874,65 +2874,33 @@
 		
 		vec4 position = vec4(vec3(0.),1.);									//for camera in camera space
 		vec4 pointingDirection = normalize(vec4(-uFNumber*interpCoords,1.,0.));
-		vec4 pointingDirectionComponent = pointingDirection*dot(uPortalCameraPos, pointingDirection);
-		vec4 portalPosToSubtract = position*dot(uPortalCameraPos, position) + pointingDirectionComponent;	//the first part just zeroes out the w coord, but formulate like this with a view to converting to portal space coords
-		vec4 remainingPortalPos = uPortalCameraPos - portalPosToSubtract;
 		
-		float closestDistSq  = dot(remainingPortalPos,remainingPortalPos);	//want to get closest approach of light ray to portal centre. this is not correct, because centre colour not fixed, but gets concentric circles ok.
-
-		float portalRad = uPortalRad;
-		//float portalRad = normalize(vec2(uPortalRad,1.)).x;	//guess ??
-		float radsq = portalRad*portalRad;  
-		float squareDifference = radsq - closestDistSq;
-	//	if (squareDifference>0.0001){
-		if (squareDifference<0.){
+		//convert these into portal space. TODO do this in vertex shader and benefit from interpolation
+		vec4 posA = position * uMVMatrixFSCopy;		//this is posA in main.js:testRayBallCollision
+		vec4 posB = pointingDirection * uMVMatrixFSCopy;	//posB in ""
+	
+		float maxwsq = posA.w*posA.w + posB.w*posB.w;
+		float invmaxw = 1./sqrt(maxwsq);	//TODO handle 0 (or avoid if maxwsq< crit value)
+		vec4 closeApproach = invmaxw * (posA*posA.w + posB*posB.w);	//TODO combo mult by invmaxw here and later
+		vec4 equatorVec = - invmaxw * (posB*posA.w - posA*posB.w);
+		
+		float radsq = uPortalRad*uPortalRad;
+		float critwsq = 1./(1.+radsq);
+		if (maxwsq<critwsq){	//TODO move up
 			discard;
 		}
-		
-//convert closestDist point and camera direction from screen space to portal space. then move in pointing direction by pow( radsq - closestDistSq,.5)
-//for efficiency this should be done inside vertex shader - the pointing direction can be varying.
-		//then hopefully can reconstruct real world position of collision point. test by draw colour
-		//then to subtract off portal projection point and look up cubemap texture.
-		//vec4 remainingPosPortalSpace = uMVMatrixFSCopy*remainingPortalPos;
-		
-		//vec4 remainingPosPortalSpace = remainingPortalPos*uMVMatrixFSCopy;
-		//vec4 pointingVecPortalSpace = pointingDirection*uMVMatrixFSCopy;
-		//vec4 surfCoord = remainingPosPortalSpace - pointingVecPortalSpace*pow( radsq - closestDistSq,.5);
-		
-		//vec4 surfCoord = (remainingPortalPos - pointingDirection*pow(squareDifference,.5))*uMVMatrixFSCopy;	//do above 3 lines in 1
-						//^^this is wrong if far from portal. guess to do with how w<->z
-					
-		vec2 zw = normalize(uPortalCameraPos.zw);
-		vec4 surfCoord = (remainingPortalPos - (pointingDirection*zw.y - position*zw.x)*pow(squareDifference,.5))*uMVMatrixFSCopy;		//about same results as standard vertproj shader for small portal size
-		
-		surfCoord = normalize(surfCoord);
-		
-		//float invRepeat = 1.;
-		//vec3 preGammaFragColor = invRepeat*surfCoord.xyz - floor(invRepeat*surfCoord.xyz);
-		//vec3 preGammaFragColor = vec3(invRepeat*surfCoord.z - floor(invRepeat*surfCoord.z));
-		
-	//	vec3 preGammaFragColor = pow(textureCube(uSampler, surfCoord.xyz - uCentrePosScaledFSCopy).xyz,vec3(2.2));
-			//results are glitchy - seems like floating point uncertainty in position, centre pos is significant where these are close.
-			//TODO reformulate. simple way is something like just reformulate this last step. maybe not efficient.
-			// instead of sending uCentrePosScaled, send the centrepos direction, and centreposdirection-centrepos, exactly. this should become a small number close to portal.
-		
-			//a simpler bodge might be to just use simple "movement" of camera thru portal where close to it (shaky regime). blend between the two.
-			vec4 simplePlanarPortalDir = pointingDirection*uPortaledMatrix;
-			
-			float closeness = dot(uCentrePosScaledFSCopy,uCentrePosScaledFSCopy);	//something that goes to 1 in shaky regime, 0 outside
-			closeness = pow(closeness,6.);
-			//closeness =0.;
-			//preGammaFragColor = mix(preGammaFragColor,vec3(1.,0.,0.), closeness );	//show goes red up close
-			//vec3 preGammaFragColor = pow(textureCube(uSampler, mix(surfCoord.xyz - uCentrePosScaledFSCopy, -simplePlanarPortalDir.xyz, closeness)).xyz,vec3(2.2));	//blend using mix
-			//vec3 preGammaFragColor = pow(textureCube(uSampler, (surfCoord.xyz - uCentrePosScaledFSCopy) - 0.025*simplePlanarPortalDir.xyz).xyz,vec3(2.2));	//simplePlanar will become dominant when other term small
-			vec3 preGammaFragColor = pow(textureCube(uSampler, (surfCoord.xyz - uCentrePosScaledFSCopy) - 0.05*closeness*simplePlanarPortalDir.xyz).xyz,vec3(2.2));	//simplePlanar will become dominant when other term small
-			//vec3 preGammaFragColor = pow(textureCube(uSampler, -simplePlanarPortalDir.xyz).xyz,vec3(2.2));	//simplePlanar only
-				//TODO apply same method (blend simplePlanar) to more standard vertproj method- don't need to be doing everything in screen space.
-	*/		
-			//preGammaFragColor*=vec3(closeness,1.-closeness,0.);	//colour to indicate closeness
-			
-			
-	//^^ this stuff is a garbage fire!!
+
+		float projectedradiussq = (1.-maxwsq)/maxwsq;
+		float correction = sqrt( radsq - projectedradiussq );
+		vec4 collisonPoint = invmaxw*closeApproach - correction*equatorVec;
+
+		//simple test
+		vec3 scaledPoint = 10.*(normalize(-collisonPoint.xyz)+1.);
+		scaledPoint = scaledPoint - floor(scaledPoint);
+	//	vec3 preGammaFragColor = scaledPoint;	//looks solid!
+
+		vec3 preGammaFragColor = pow(textureCube(uSampler, normalize(-collisonPoint.xyz) - uCentrePosScaledFSCopy).xyz,vec3(2.2));
+
 #endif
 		
 		//undo tone mapping . y=1/(1+x) => x=y/(1-y)
