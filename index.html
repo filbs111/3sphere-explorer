@@ -2880,15 +2880,16 @@
 		vec4 posB = pointingDirection * uMVMatrixFSCopy;	//posB in ""
 	
 		float maxwsq = posA.w*posA.w + posB.w*posB.w;
-		float invmaxw = 1./sqrt(maxwsq);	//TODO handle 0 (or avoid if maxwsq< crit value)
-		vec4 closeApproach = invmaxw * (posA*posA.w + posB*posB.w);	//TODO combo mult by invmaxw here and later
-		vec4 equatorVec = - invmaxw * (posB*posA.w - posA*posB.w);
-		
 		float radsq = uPortalRad*uPortalRad;
 		float critwsq = 1./(1.+radsq);
-		if (maxwsq<critwsq){	//TODO move up
+		
+		if (maxwsq<critwsq){
 			discard;
 		}
+		
+		float invmaxw = 1./sqrt(maxwsq);
+		vec4 closeApproach = invmaxw * (posA*posA.w + posB*posB.w);	//TODO combo mult by invmaxw here and later
+		vec4 equatorVec = - invmaxw * (posB*posA.w - posA*posB.w);
 
 		float projectedradiussq = (1.-maxwsq)/maxwsq;
 		float correction = sqrt( radsq - projectedradiussq );
