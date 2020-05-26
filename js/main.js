@@ -4037,7 +4037,7 @@ var iterateMechanics = (function iterateMechanics(){
 				
 				//voxel collision. 
 				//simple version, just push away from closest point. this will be in "wrong direction" if inside voxel volume, so will fall down if tunnel inside. TODO this better! see notes for function drawBall. TODO damping, friction etc
-				var penetration = settings.playerBallRad - distanceForVox;
+				var penetration = ( guiParams["drop spaceship"] ? settings.characterBallRad : settings.playerBallRad ) - distanceForVox;
 				var penetrationChange = penetration - lastVoxPenetration;	//todo cap this.
 				lastVoxPenetration = penetration;
 				//if (penetration>0){
@@ -4134,7 +4134,7 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			
 			function processBoxCollisionsForBoxInfoAllPoints(boxInfo){
-				processBoxCollisionsForBoxInfo(boxInfo, playerCentreBallData, settings.playerBallRad, true, true);
+				processBoxCollisionsForBoxInfo(boxInfo, playerCentreBallData, ( guiParams["drop spaceship"] ? settings.characterBallRad : settings.playerBallRad ), true, true);
 						
 				for (var legnum=0;legnum<landingLegData.length;legnum++){
 				//	processBoxCollisionsForBoxInfo(boxInfo, landingLegData[legnum], 0.001, false);	//disable to debug easier using only playerCentreBallData collision
