@@ -2837,7 +2837,6 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 	
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
 
-	
 	if (usesCubeMap){
 		gl.uniform1i(shaderProg.uniforms.uSampler, 1);	//put cubemap in tex 1 always, avoiding bind calls.
 	}
@@ -2845,18 +2844,27 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 	if (shaderProg.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader. TODO do less ofteen (move camera less often than switch buffers)
 		gl.uniform4fv(shaderProg.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
 	}
+	
+	setupShaderAtmos(shaderProg);
+	
+	gl.uniformMatrix4fv(shaderProg.uniforms.uPMatrix, false, pMatrix);
+}
+function setupShaderAtmos(shaderProg){	//TODO generalise more shader stuff
 	if (shaderProg.uniforms.uAtmosContrast){	//todo do less often (at least query ui less often)
 		gl.uniform1f(shaderProg.uniforms.uAtmosContrast, guiParams.display.atmosContrast);
 	}
 	if (shaderProg.uniforms.uAtmosThickness){	//todo do less often (at least query ui less often)
+		//make atmos thickness constant at "zero" duocylinder height. thickness here is uAtmosContrast*uAtmosThickness,
+		var thicknessValForShader = guiParams.display.atmosThickness*Math.pow(2.71,-0.5*guiParams.display.atmosContrast);
+	
 		if (shaderProg.usesVecAtmosThickness){
-			gl.uniform3fv(shaderProg.uniforms.uAtmosThickness, atmosThicknessMultiplier.map(elem=>elem*guiParams.display.atmosThickness));
+			gl.uniform3fv(shaderProg.uniforms.uAtmosThickness, atmosThicknessMultiplier.map(elem=>elem*thicknessValForShader));
 		}else{
-			gl.uniform1f(shaderProg.uniforms.uAtmosThickness, guiParams.display.atmosThickness);
+			gl.uniform1f(shaderProg.uniforms.uAtmosThickness, thicknessValForShader);
 		}
 	}
-	gl.uniformMatrix4fv(shaderProg.uniforms.uPMatrix, false, pMatrix);
 }
+
 function drawObjectFromPreppedBuffers(bufferObj, shaderProg, skipM){
 	//skipM = skipM | false;
 	//skipM = false;
@@ -2925,16 +2933,7 @@ function setMatrixUniforms(shaderProgram) {
     gl.uniformMatrix4fv(shaderProgram.uniforms.uPMatrix, false, pMatrix);
     gl.uniformMatrix4fv(shaderProgram.uniforms.uMVMatrix, false, mvMatrix);
 	if (shaderProgram.uniforms.uMMatrix){gl.uniformMatrix4fv(shaderProgram.uniforms.uMMatrix, false, mMatrix);}
-	if (shaderProgram.uniforms.uAtmosContrast){	//todo do less often (at least query ui less often)
-		gl.uniform1f(shaderProgram.uniforms.uAtmosContrast, guiParams.display.atmosContrast);
-	}
-	if (shaderProgram.uniforms.uAtmosThickness){	//todo do less often (at least query ui less often)
-		if (shaderProgram.usesVecAtmosThickness){
-			gl.uniform3fv(shaderProgram.uniforms.uAtmosThickness, atmosThicknessMultiplier.map(elem=>elem*guiParams.display.atmosThickness));
-		}else{
-			gl.uniform1f(shaderProgram.uniforms.uAtmosThickness, guiParams.display.atmosThickness);
-		}
-	}
+	setupShaderAtmos(shaderProgram);
 }
 
 var cubemapFramebuffer;
@@ -2998,7 +2997,7 @@ function setupScene() {
 	playerCamera.qPair = [[1,0,0,0],[1,0,0,0]];
 			
 	//start player off outside of boxes
-	xyzmove4mat(playerCamera,[0,0.1,-0.3]);	//left, down, fwd
+	xyzmove4mat(playerCamera,[0,1,-0.3]);	//left, down, fwd
 	
 	targetMatrix = cellMatData.d16[0];
 }
@@ -3114,7 +3113,7 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	world0:{duocylinderModel:"procTerrain",seaActive:false},
+	world0:{duocylinderModel:"voxTerrain",seaActive:false},
 	world1:{duocylinderModel:"none",seaActive:true},
 	duocylinderRotateSpeed:0,
 	seaLevel:-0.012,
@@ -3182,7 +3181,7 @@ var guiParams={
 		renderViaTexture:'fisheye',
 		perPixelLighting:true,
 		atmosShader:"atmos",
-		atmosThickness:0.0,
+		atmosThickness:0.2,
 		atmosThicknessMultiplier:'#88aaff',
 		atmosContrast:5.0,
 		culling:true,
@@ -3336,7 +3335,7 @@ function init(){
 	//displayFolder.add(guiParams.display, "atmosShader", ['constant','atmos','atmos_v2']);	//basic is constant (contrast=0) 
 	displayFolder.add(guiParams.display, "atmosThickness", 0,0.5,0.05);
 displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(setAtmosThicknessMultiplier);
-	displayFolder.add(guiParams.display, "atmosContrast", -10,10,0.5);
+	displayFolder.add(guiParams.display, "atmosContrast", -20,20,0.5);
 	displayFolder.add(guiParams.display, "culling");
 	displayFolder.add(guiParams.display, "useSpecular");
 	displayFolder.add(guiParams.display, "specularStrength", 0,1,0.05);	//currently diffuse colour and distance attenuation applies to both specular and diffuse, keeping nonnegative by having diffuse multiplier 1-specularStrength. therefore range 0-1. TODO different specular, diffuse colours, (instead of float strength), specular maybe shouldn't have distance attenuation same way - possibly correct for point source but want solution for sphere light...
@@ -3881,7 +3880,7 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			//get the current atmospheric density.
 			var atmosThick = 0.001*guiParams.display.atmosThickness;	//1st constant just pulled out of the air. 
-			atmosThick*=Math.pow(2.71, guiParams.display.atmosContrast*(playerPos[0]*playerPos[0] + playerPos[1]*playerPos[1])); //as atmosScale increases, scale height decreases
+			atmosThick*=Math.pow(2.71, guiParams.display.atmosContrast*(playerPos[0]*playerPos[0] + playerPos[1]*playerPos[1] -0.5)); //as atmosScale increases, scale height decreases
 
 			//want to be able to steer in the air. todo properly - guess maybe wants "lift" from wings, but easiest implementation guess is to increase drag for lateral velocity.
 			//would like for both left/right, up/down velocity, but to test, try getting just one - like a aeroplane.
