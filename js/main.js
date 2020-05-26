@@ -112,8 +112,7 @@ function initShaders(){
 				
 	shaderPrograms.decal = loadShader( "shader-decal-vs", "shader-decal-fs");
 					
-	//shaderPrograms.billboardQuads = loadShader("shader-simple-billboard-vs", "shader-very-simple-fs");				
-	shaderPrograms.billboardQuads = loadShader("shader-lensing-billboard-vs", "shader-very-simple-fs");				
+	shaderPrograms.billboardQuads = loadShader("shader-simple-moving-billboard-vs", "shader-very-simple-fs");				
 	
 	//get locations later by calling completeShaders (when expect compiles/links to have completed)
 	console.log("time to init shaders: " + ( performance.now() - initShaderTimeStart ) + "ms");
@@ -1647,6 +1646,14 @@ function drawWorldScene(frameTime, isCubemapView) {
 		angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aVertexCentrePosition, 1);
 		gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.randMatrixBuffers.a);	//borrow existing buffer containing a matrix row/columm - this is a source of random normalised 4vectors as desired.
 		gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexCentrePosition, 4, gl.FLOAT, false, 0, 0);
+		if (activeShaderProgram.attributes.aVertexCentreDirection){
+			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aVertexCentreDirection, 1);
+			gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.randMatrixBuffers.b);
+			gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexCentreDirection, 4, gl.FLOAT, false, 0, 0);
+		}
+		if (activeShaderProgram.uniforms.uTime){		
+			gl.uniform1f(activeShaderProgram.uniforms.uTime, frameTime);			
+		}
 		
 		angle_ext.drawElementsInstancedANGLE(gl.TRIANGLES, quadBuffers2D.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, numRandomBoxes);
 		
