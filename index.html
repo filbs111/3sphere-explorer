@@ -1143,6 +1143,7 @@
 <script id="shader-texmap-perpixel-discard-normalmap-efficient-fs" type="x-shader/x-fragment">
 	#define CONST_TAU 6.2831853
 	#define CONST_REPS 16.0
+	#extension GL_EXT_frag_depth : enable
 
 	precision mediump float;
 	uniform sampler2D uSampler;
@@ -1272,6 +1273,8 @@
 		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
 	
 		gl_FragColor.a =1.0;
+
+		gl_FragDepthEXT = gl_FragCoord.z;	//reproduces standard behaviour. TODO try z/(1+w) for stereographic projection (with some scaling to get inside capped range. 0->1 or -1->1 ?) , to avoid near/far clipping
 	}
 </script>
 

@@ -4,6 +4,7 @@ var shaderProgramColored,	//these are variables that are set to different shader
 	shaderProgramTexmap;	//but keeping separate for now so know that all shaderPrograms.something are unchanging
 
 var angle_ext;
+var fragDepth_ext;	//maybe pointless to store this, allegedly just need to call gl.getExtension('EXT_frag_depth')	https://developer.mozilla.org/en-US/docs/Web/API/EXT_frag_depth
 
 var myDebugStr = "TEST INFO TO GO HERE";
 var myfisheyedebug;
@@ -3453,6 +3454,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	
 	initGL();
 	angle_ext = gl.getExtension("ANGLE_instanced_arrays");							
+	fragDepth_ext = gl.getExtension('EXT_frag_depth');
 	
 	initTextureFramebuffer(rttView);
 	initTextureFramebuffer(rttFisheyeView);
