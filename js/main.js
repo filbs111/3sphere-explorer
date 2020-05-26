@@ -85,7 +85,7 @@ function initShaders(){
 	shaderPrograms.texmap4VecPerPixelDiscardNormalmapAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['CONST_ITERS 64.0'],['DIFFUSE_TEX_ACTIVE'],true);
 	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE'],true);
 	shaderPrograms.texmap4VecPerPixelDiscardNormalmapVcolorAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','VCOLOR'],true),
-	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','CONST_ITERS 64.0'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE'],true);
+	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','CONST_ITERS 64.0','CUSTOM_DEPTH'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','CUSTOM_DEPTH'],true);
 	
 	//voxTerrain shaders
 	shaderPrograms.triplanarColor4Vec = genShaderVariants("shader-texmap-color-triplanar-vs-4vec", "shader-texmap-triplanar-fs");

@@ -1143,8 +1143,9 @@
 <script id="shader-texmap-perpixel-discard-normalmap-efficient-fs" type="x-shader/x-fragment">
 	#define CONST_TAU 6.2831853
 	#define CONST_REPS 16.0
+#ifdef CUSTOM_DEPTH
 	#extension GL_EXT_frag_depth : enable
-
+#endif
 	precision mediump float;
 	uniform sampler2D uSampler;
 	uniform sampler2D uSamplerB;
@@ -1172,7 +1173,9 @@
 	varying vec3 vTextureCoord;
 	varying vec4 vVertexPos;
 	varying vec4 vColor;
-
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif
 	void main(void) {
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;	//TODO is transformedcoord still needed if have vPortalLightPosTangentSpace ? 
 	
@@ -1272,9 +1275,13 @@
 		
 		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
 	
+
 		gl_FragColor.a =1.0;
 
-		gl_FragDepthEXT = gl_FragCoord.z;	//reproduces standard behaviour. TODO try z/(1+w) for stereographic projection (with some scaling to get inside capped range. 0->1 or -1->1 ?) , to avoid near/far clipping
+#ifdef CUSTOM_DEPTH
+		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;	//should run from 0->1. TODO varyings that don't require *,+.5
+#endif
+		//gl_FragDepthEXT = gl_FragCoord.z;	//reproduces standard behaviour. TODO try z/(1+w) for stereographic projection (with some scaling to get inside capped range. 0->1 or -1->1 ?) , to avoid near/far clipping
 	}
 </script>
 
@@ -2049,10 +2056,17 @@
 	varying vec3 vTextureCoord;
 	varying vec4 vVertexPos;
 	varying vec4 vColor;
-	
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif
 	void main(void) {
 		mat4 vertexMatrix = uMVMatrix*mat4( aVertexTangent, aVertexBinormal, aVertexNormal, aVertexPosition);
 		transformedCoord = vertexMatrix[3];
+#ifdef CUSTOM_DEPTH
+		//vZW = vec2(transformedCoord.z, transformedCoord.w);	
+		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);	//w/z from -1 to 1. 	//note that w, z switched from intuitive expectation. see projection matrix. stuff nearest the camera has, at this point, w~1, stuff far away has w~-1, stuff in the middle (looks smallest) w=0. z at this point is like later w, and with sign change. 0 near/far, -1 in middle.
+		//TODO can this be got efficiently from gl_FragCoord? what is best point to project from? (this is stereographic projection, but something closer to standard (transformedCoord.z, transformedCoord.w) might be worth it if see close range z-fighting for crossing over polygons. 
+#endif
 		gl_Position = uPMatrix * transformedCoord;
 		vPlayerLightPosTangentSpace = uDropLightPos* vertexMatrix;
 		vPortalLightPosTangentSpace = uReflectorPosVShaderCopy*vertexMatrix;
