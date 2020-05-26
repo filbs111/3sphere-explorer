@@ -112,7 +112,8 @@ function initShaders(){
 				
 	shaderPrograms.decal = loadShader( "shader-decal-vs", "shader-decal-fs");
 					
-	shaderPrograms.billboardQuads = loadShader("shader-simple-billboard-vs", "shader-very-simple-fs");				
+	//shaderPrograms.billboardQuads = loadShader("shader-simple-billboard-vs", "shader-very-simple-fs");				
+	shaderPrograms.billboardQuads = loadShader("shader-lensing-billboard-vs", "shader-very-simple-fs");				
 	
 	//get locations later by calling completeShaders (when expect compiles/links to have completed)
 	console.log("time to init shaders: " + ( performance.now() - initShaderTimeStart ) + "ms");
@@ -1628,6 +1629,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.useProgram(activeShaderProgram);
 		
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+		if (activeShaderProgram.uniforms.uDropLightPos){
+			gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
+		}
 		
 		//cut down version of prepBuffersForDrawing
 		enableDisableAttributes(activeShaderProgram);
@@ -3138,10 +3142,10 @@ var guiParams={
 		singleBufferRoads:true
 	},
 	'random boxes':{
-		number:0,	//maxRandBoxes,	//note ui controlled value does not affect singleBuffer
+		number:maxRandBoxes,	//note ui controlled value does not affect singleBuffer
 		size:0.01,
 		collision:false,
-		drawType:'instancedArrays',
+		drawType:'instanced speckles',
 		numToMove:0
 	},
 	"draw 5-cell":false,
@@ -3211,7 +3215,7 @@ var guiParams={
 	normalMove:0
 };
 var settings = {
-	playerBallRad:0.006,
+	playerBallRad:0.003,
 	characterBallRad:0.001
 }
 reflectorInfo.rad = guiParams.reflector.scale;		//need to initialise currently because portalTest 1st occurs before calcReflectionInfo
