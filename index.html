@@ -390,10 +390,15 @@
 	attribute vec4 aVertexCentrePosition;	//instanced attribute for starting position
 	attribute vec4 aVertexCentreDirection;		//instanced attribute a quarter way around "world" from starting position
 	attribute vec2 aVertexPosition;			//offset position
-
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif
 	void main(void) {
 		float angle = uTime*0.0001;	//TODO different speeds for different particles, ensure clean looping. speeds should be multiples of 2*PI/loopTime
 		vec4 transformedCoord = uMVMatrix * (aVertexCentrePosition*cos(angle) + aVertexCentreDirection*sin(angle));
+#ifdef CUSTOM_DEPTH
+		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
+#endif
 		gl_Position = uPMatrix * ( transformedCoord + vec4(aVertexPosition, vec2(0.)));
 	}
 </script>
@@ -423,10 +428,19 @@
 	}
 </script>
 <script id="shader-very-simple-fs" type="x-shader/x-fragment">
+#ifdef CUSTOM_DEPTH
+	#extension GL_EXT_frag_depth : enable
+#endif
 	precision mediump float;
 	uniform vec4 uColor;
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif
 	void main(void) {
 		gl_FragColor = uColor;
+#ifdef CUSTOM_DEPTH
+		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
+#endif
 	}
 </script>
 
@@ -549,6 +563,9 @@
 
 
 <script id="shader-texmap-perpixel-normalmap-triplanar-fs" type="x-shader/x-fragment">
+#ifdef CUSTOM_DEPTH
+	#extension GL_EXT_frag_depth : enable
+#endif
 	precision mediump float;
 	uniform sampler2D uSampler;
 	uniform sampler2D uSamplerB;
@@ -574,7 +591,9 @@
 	varying vec3 vPos;		//3vector position (before mapping onto duocyinder)
 	varying vec3 vNormal;
 	varying vec3 vTexAmounts;
-	
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif	
 	void main(void) {
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
 		
@@ -659,6 +678,9 @@
 		
 		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
 		gl_FragColor.a =1.0;
+#ifdef CUSTOM_DEPTH
+		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
+#endif
 	}
 </script>
 
@@ -771,6 +793,9 @@
 
 <!-- discard fragments inside reflector (when rendering cubemap view from inside reflector -->
 <script id="shader-perpixel-discard-fs" type="x-shader/x-fragment">
+#ifdef CUSTOM_DEPTH
+	#extension GL_EXT_frag_depth : enable
+#endif
 	precision mediump float;
 	uniform vec4 uColor;
 	uniform vec3 uEmitColor;
@@ -787,7 +812,9 @@
 	varying vec4 adjustedPos;
 	varying vec4 transformedNormal;
 	varying vec4 transformedCoord;
-	
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif	
 	void main(void) {
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
 	
@@ -825,6 +852,9 @@
 		//gl_FragColor = vec4( pow(preGammaFragColor.r,0.455), pow(preGammaFragColor.g,0.455), pow(preGammaFragColor.b,0.455), pow(preGammaFragColor.a,0.455));
 		
 		gl_FragColor.a =uColor.a;	//TODO confirm check logic for transparent objects
+#ifdef CUSTOM_DEPTH
+		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
+#endif
 	}
 </script>
 <script id="shader-perpixel-discard-vs" type="x-shader/x-vertex">
@@ -847,14 +877,19 @@
 	varying vec4 adjustedPos;
 	varying vec4 transformedNormal;
 	varying vec4 transformedCoord;
-	
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif	
 	void main(void) {	
 		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
 		transformedCoord = uMVMatrix * aVertexPositionNormalized;
+#ifdef CUSTOM_DEPTH
+		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
+#endif	
 		transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
 		adjustedPos = transformedCoord - uDropLightPos;
 		gl_Position = uPMatrix * transformedCoord;
-		
+	
 #ifdef ATMOS_CONSTANT		
 #ifdef VEC_ATMOS_THICK
 		fog = vec3(0.5*(1.0 + transformedCoord.w));
@@ -917,6 +952,9 @@
 </script>
 
 <script id="shader-perpixel-transparent-discard-fs" type="x-shader/x-fragment">
+#ifdef CUSTOM_DEPTH
+	#extension GL_EXT_frag_depth : enable
+#endif
 	precision mediump float;
 	uniform vec3 uEmitColor;
 
@@ -925,7 +963,9 @@
 	varying float fog;	//note currently assume fog distance same for all colours
 	varying vec4 transformedCoord;
 	varying vec4 transformedNormal;
-	
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif	
 	void main(void) {
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
 		if (posCosDiff>0.0){
@@ -940,6 +980,9 @@
 		
 		//gl_FragColor = vec4(uEmitColor, fog*light);
 		gl_FragColor = vec4(uEmitColor, fog);
+#ifdef CUSTOM_DEPTH
+		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
+#endif
 	}
 </script>
 <script id="shader-perpixel-transparent-discard-vs" type="x-shader/x-vertex">
@@ -951,10 +994,15 @@
 	varying float fog;
 	varying vec4 transformedCoord;
 	varying vec4 transformedNormal;
-	
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif	
 	void main(void) {	
 		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
 		transformedCoord = uMVMatrix * aVertexPositionNormalized;
+#ifdef CUSTOM_DEPTH
+		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
+#endif
 		gl_Position = uPMatrix * transformedCoord;
 		
 		fog = 0.5*(1.0 + transformedCoord.w);
@@ -988,6 +1036,9 @@
 </script>
 
 <script id="shader-texmap-perpixel-discard-fs" type="x-shader/x-fragment">
+#ifdef CUSTOM_DEPTH
+	#extension GL_EXT_frag_depth : enable
+#endif
 	precision mediump float;
 	varying vec3 vTextureCoord;
 	uniform sampler2D uSampler;
@@ -1008,7 +1059,9 @@
 	varying vec4 transformedNormal;	
 	varying vec4 transformedCoord;	
 	varying vec4 vColor;
-	
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif	
 	void main(void) {
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
 	
@@ -1071,6 +1124,10 @@
 		//gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		//gl_FragColor = (1.0-fog)*uFogColor;
 		gl_FragColor.a =1.0;
+		
+#ifdef CUSTOM_DEPTH
+		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
+#endif
 	}
 </script>
 
@@ -1287,6 +1344,9 @@
 
 
 <script id="shader-texmap-perpixel-gradlight-discard-fs" type="x-shader/x-fragment">
+#ifdef CUSTOM_DEPTH
+	#extension GL_EXT_frag_depth : enable
+#endif
 	precision mediump float;
 	varying vec3 vTextureCoord;
 	uniform sampler2D uSampler;
@@ -1307,7 +1367,9 @@
 	varying vec4 transformedCoord;	
 	
 	uniform vec3 uLightPosPlayerFrame;	//tmp. TODO do this stuff in v shader
-	
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif
 	void main(void) {
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
 	
@@ -1386,6 +1448,12 @@
 		//gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		//gl_FragColor = (1.0-fog)*uFogColor;
 		gl_FragColor.a =1.0;
+		
+#ifdef CUSTOM_DEPTH
+		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
+		//vec2 normZW=normalize(vZW);
+		//gl_FragDepthEXT = .5*(normZW.x/normZW.y) + .5;
+#endif
 	}
 </script>
 
@@ -1604,7 +1672,9 @@
 	varying vec4 vEyePosTangentSpace;			//does this get skipped automatically if not used?
 	
 	varying vec4 transformedCoord;
-	
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif	
 	void main(void) {
 		
 		
@@ -1631,6 +1701,9 @@
 		mat4 vertexMatrix = MVMatrix*mat4(untransformedTangent, untransformedBinormal, untransformedNormal, aVertexPositionNormalized);
 
 		transformedCoord = vertexMatrix[3];
+#ifdef CUSTOM_DEPTH
+		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
+#endif
 		gl_Position = uPMatrix * transformedCoord;
 		
 		vPlayerLightPosTangentSpace = uDropLightPos*vertexMatrix;
@@ -1732,7 +1805,9 @@
 	varying vec4 adjustedPos;
 	varying vec4 transformedNormal;	
 	varying vec4 transformedCoord;
-
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif
 	void main(void) {
 #ifdef VERTVEL_ACTIVE
 		vec3 shiftedPosition = uModelScale*aVertexPosition + aVertexVelocity*uVertexMove;
@@ -1741,6 +1816,9 @@
 		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
 #endif
 		transformedCoord = uMVMatrix * aVertexPositionNormalized;
+#ifdef CUSTOM_DEPTH
+		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
+#endif
 		transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
 		adjustedPos = transformedCoord - uDropLightPos;
 		gl_Position = uPMatrix * transformedCoord;
@@ -1949,9 +2027,14 @@
 	varying vec3 vTextureCoord;
 	varying vec4 vColor;
 	varying vec4 adjustedPos;
-
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif
 	void main(void) {
 		transformedCoord = uMVMatrix * aVertexPosition;
+#ifdef CUSTOM_DEPTH
+		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
+#endif
 		gl_Position = uPMatrix * transformedCoord;
 #ifdef ATMOS_CONSTANT		
 #ifdef VEC_ATMOS_THICK
@@ -2392,7 +2475,9 @@
 	varying vec3 vTexAmounts;
 	varying vec4 vColor;
 	varying vec3 vNormal;	
-	
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif	
 	void main(void) {
 		//calculate vectors moved quarter way around world from this vertex, in the direction of each voxel axis. this is like TBNP "vertexMatrix" matrix, for a normal in one of these directions. (true normal is aVertexNormal though)
 		// guess top/bottom world axes x=y=0, z=w=0. up/down turns x,y into z,w. sideways turns x into y and w into z
@@ -2408,7 +2493,9 @@
 	
 		transformedCoord = vertexMatrix[3];		
 		gl_Position = uPMatrix * transformedCoord;
-		
+#ifdef CUSTOM_DEPTH
+		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
+#endif		
 		vPlayerLightPosTangentSpace = uDropLightPos* vertexMatrix;
 		vPortalLightPosTangentSpace = uReflectorPosVShaderCopy*vertexMatrix;
 		
@@ -2510,7 +2597,9 @@
 	varying vec4 transformedNormal;
 	varying vec3 vTextureCoord;
 	varying vec4 adjustedPos;
-	
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif
 	void addWaveContribution(in vec2 wavePosIn, inout vec3 wavePosAccum, inout vec3 vDerivativeWRTX, inout vec3 vDerivativeWRTY, float peakiness, vec2 waveCycles){	//waveCycles should be int2
 		//wavecycles - number of waves across repeating square in each direction.
 		//wavevector relates to this...
@@ -2596,7 +2685,9 @@
 		
 		//3 use thse values same as in shader-texmap-vs-4vec
 		transformedCoord = uMVMatrix * calculatedVertexPosition;
-		
+#ifdef CUSTOM_DEPTH
+		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
+#endif
 		gl_Position = uPMatrix * transformedCoord;
 		
 #ifdef ATMOS_CONSTANT
@@ -2888,6 +2979,9 @@
 
 <!-- simple cubemap pix shader -->
 <script id="shader-cubemap-fs" type="x-shader/x-fragment">
+#ifdef CUSTOM_DEPTH
+	#extension GL_EXT_frag_depth : enable
+#endif
 	precision mediump float;
 	uniform samplerCube uSampler;
 	varying vec3 vPos;
@@ -2905,7 +2999,9 @@
 	uniform mat4 uMVMatrixFSCopy;
 	uniform vec3 uCentrePosScaledFSCopy;
 	uniform mat4 uPortaledMatrix;
-	
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif	
 	void main(void) {
 		//gl_FragColor = uColor*textureCube(uSampler, vPos);	//TODO use this (get rid of fog)
 
@@ -2981,7 +3077,14 @@
 		preGammaFragColor = preToneMap/(1.+preToneMap);
 		
 		gl_FragColor = vec4( pow(preGammaFragColor, vec3(0.455)) , 1.0);
-	}
+		
+#ifdef CUSTOM_DEPTH
+		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
+		//vec2 normZW= normalize(vZW);
+		//gl_FragDepthEXT = .5*(normZW.x/normZW.y) + .5;
+#endif
+}
+
 </script>
 <!-- vertex shader -->
 <script id="shader-cubemap-vs" type="x-shader/x-vertex">
@@ -3007,6 +3110,9 @@
 	uniform vec3 uCentrePosScaled;	//vertproj specific. this is position of cubemap centre point in unprojected model space
 	
 	varying vec3 vScreenSpaceCoord;
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif
 
 	void main(void) {
 #ifdef VERTPROJ
@@ -3021,7 +3127,9 @@
 																//can avoid this by inputting 4vector positions *...
 #endif
 		vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
-
+#ifdef CUSTOM_DEPTH
+		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
+#endif
 #ifdef ATMOS_CONSTANT
 #ifdef VEC_ATMOS_THICK
 		fog = vec3(0.5*(1.0 + transformedCoord.w));
