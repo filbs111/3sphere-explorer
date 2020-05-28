@@ -82,7 +82,7 @@ function initShaders(){
 	shaderPrograms.texmap4VecPerPixelDiscard = genShaderVariants("shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['CONST_ITERS 64.0'],[],true);
 
 	shaderPrograms.texmap4VecPerPixelDiscardVcolor = genShaderVariants("shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['VCOLOR','CONST_ITERS 64.0'],['VCOLOR'],true);
-	shaderPrograms.texmap4VecPerPixelDiscardPhong = genShaderVariants("shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['CONST_ITERS 64.0'], ['SPECULAR_ACTIVE'],true);
+	shaderPrograms.texmap4VecPerPixelDiscardPhong = genShaderVariants("shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['CONST_ITERS 64.0','CUSTOM_DEPTH'], ['SPECULAR_ACTIVE','CUSTOM_DEPTH'],true);
 	shaderPrograms.texmap4VecPerPixelDiscardPhongVcolor = genShaderVariants("shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['VCOLOR','CONST_ITERS 64.0','CUSTOM_DEPTH'], ['VCOLOR','SPECULAR_ACTIVE','CUSTOM_DEPTH'],true);
 	shaderPrograms.texmap4VecPerPixelDiscardNormalmapAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['CONST_ITERS 64.0'],['DIFFUSE_TEX_ACTIVE'],true);
 	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','CONST_ITERS 64.0','CUSTOM_DEPTH'], ['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE','CUSTOM_DEPTH'],true);
