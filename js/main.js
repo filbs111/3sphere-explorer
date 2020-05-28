@@ -3563,16 +3563,20 @@ var iterateMechanics = (function iterateMechanics(){
 	var playerAngVelVec = [0,0,0];
 	
 	var timeTracker =0;
-	var timeStep = 10;
+	var timeStep = 5;	//5ms => 200 steps/s. this is small to prevent tunelling. TODO better collision system that does not require this!
+	var timeStepMultiplier = timeStep/10;	//because stepSpeed initially tuned for timeStep=10;
+	var angVelDampMultiplier=Math.pow(0.85, timeStep/10);
+	var gunHeatMultiplier = Math.pow(0.995, timeStep/10);
+
 	
-	var thrust = 0.01;	//TODO make keyboard/gamepad fair! currently thrust, moveSpeed config independent!
+	var thrust = 0.001*timeStep;	//TODO make keyboard/gamepad fair! currently thrust, moveSpeed config independent!
 	
 	//gamepad
 	var activeGp, buttons, axes;
 	
 	var autoFireCountdown=0;
 	//var autoFireCountdownStartVal=6;
-	var autoFireCountdownStartVal=1;
+	var autoFireCountdownStartVal=Math.ceil(1 / (timeStep/10));	//note due to rounding, fire rate somewhat dependent on timestep 
 	var lastPlayerAngMove = [0,0,0];	//for interpolation
 	var duoCylinderAngVelConst=0;
 	
@@ -3633,7 +3637,6 @@ var iterateMechanics = (function iterateMechanics(){
 		lastTime=nowTime;
 		
 		
-		
 		//move random boxes about
 		//note singleBuffer version not implemented, though this could be done by updating vertex data etc (expect relatively inefficient)
 		//this just proves concept of updating buffers in realtime
@@ -3678,7 +3681,7 @@ var iterateMechanics = (function iterateMechanics(){
 		timeTracker-=numSteps*timeStep;
 		for (var ii=0;ii<numSteps;ii++){
 			stepSpeed();
-			gunHeat*=0.995;
+			gunHeat*=gunHeatMultiplier;
 			offsetCam.iterate();
 		}
 		
@@ -3771,7 +3774,7 @@ var iterateMechanics = (function iterateMechanics(){
 				var xxplusyy = playerCamera[12]*playerCamera[12] + playerCamera[13]*playerCamera[13];
 				var multFactor = 4*xxplusyy*(1-xxplusyy);
 				
-				playerAngVelVec[2]+=debugRoll*guiParams.control.sriMechStr*multFactor
+				playerAngVelVec[2]+=debugRoll*guiParams.control.sriMechStr*multFactor*timeStepMultiplier;
 			}
 		
 		
@@ -3793,9 +3796,11 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			currentThrustInput=currentThrustInput.map(function(elem){return elem*thrust;});
 			
-			playerAngVelVec[0]+=keyThing.keystate(40)-keyThing.keystate(38); //pitch
-			playerAngVelVec[1]+=keyThing.keystate(39)-keyThing.keystate(37); //turn
-			playerAngVelVec[2]+=keyThing.keystate(69)-keyThing.keystate(81); //roll
+			var currentRotateInput=[];
+			
+			currentRotateInput[0]=keyThing.keystate(40)-keyThing.keystate(38); //pitch
+			currentRotateInput[1]=keyThing.keystate(39)-keyThing.keystate(37); //turn
+			currentRotateInput[2]=keyThing.keystate(69)-keyThing.keystate(81); //roll
 			
 			if (activeGp){
 				//TODO move calculation of total input from keys/gamepad outside this loop
@@ -3817,7 +3822,7 @@ var iterateMechanics = (function iterateMechanics(){
 					//maybe better to pick one! (probably should apply cube logic to acc'n for exponential smoothed binary key input, do something "realistic" for drag forces
 				}
 				
-				playerAngVelVec[2]+=gpSettings.roll(activeGp); //roll
+				currentRotateInput[2]+=gpSettings.roll(activeGp); //roll
 				
 				//other rotation
 				var gpRotate=[];
@@ -3829,22 +3834,22 @@ var iterateMechanics = (function iterateMechanics(){
 				magsq = gpRotate.reduce(function(total, val){return total+ val*val;}, 0);
 				var magpow = Math.pow(50*magsq,1.5);	//TODO handle fact that max values separately maxed out, so currently turns faster in diagonal direction.
 				
-				lastPlayerAngMove = scalarvectorprod(100000*magpow,gpRotate);
+				lastPlayerAngMove = scalarvectorprod(100000*magpow*timeStepMultiplier,gpRotate);
 				rotatePlayer(lastPlayerAngMove);	//TODO add rotational momentum - not direct rotate
 			}
 			
-			playerVelVec[0]+=currentThrustInput[0];	//todo either write vector addition func or use glmatrix vectors
-			playerVelVec[1]+=currentThrustInput[1];
-			playerVelVec[2]+=currentThrustInput[2];
-			
+			for (var cc=0;cc<3;cc++){
+				playerAngVelVec[cc]+= timeStepMultiplier*currentRotateInput[cc];
+				playerVelVec[cc]+=currentThrustInput[cc];	//todo either write vector addition func or use glmatrix vectors
+			}
 			
 			//print speed
 			var infoToShow ="";
 			var speed = Math.hypot.apply(null, playerVelVec);
 			infoToShow += "spd:" + speed.toFixed(2);
 			
-			playerAngVelVec=scalarvectorprod(0.85,playerAngVelVec);
-			
+			playerAngVelVec=scalarvectorprod(angVelDampMultiplier,playerAngVelVec);
+						
 			//blend velocity with velocity of rotating duosphere. (todo angular vel to use this too)
 			//matrix entries 12-15 describe position. (remain same when rotate player and don't move)
 			//playerVel is in frame of player though - so apply matrix rotation to this.
