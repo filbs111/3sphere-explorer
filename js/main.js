@@ -3563,11 +3563,10 @@ var iterateMechanics = (function iterateMechanics(){
 	var playerAngVelVec = [0,0,0];
 	
 	var timeTracker =0;
-	var timeStep = 5;	//5ms => 200 steps/s. this is small to prevent tunelling. TODO better collision system that does not require this!
+	var timeStep = 1;	//1ms => 1000 steps/s! this is small to prevent tunelling. TODO better collision system that does not require this!
 	var timeStepMultiplier = timeStep/10;	//because stepSpeed initially tuned for timeStep=10;
 	var angVelDampMultiplier=Math.pow(0.85, timeStep/10);
 	var gunHeatMultiplier = Math.pow(0.995, timeStep/10);
-
 	
 	var thrust = 0.001*timeStep;	//TODO make keyboard/gamepad fair! currently thrust, moveSpeed config independent!
 	
@@ -4313,26 +4312,15 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			}
 			
+			rotatePlayer(scalarvectorprod(timeStep * rotateSpeed,playerAngVelVec));
+			movePlayer(scalarvectorprod(timeStep * moveSpeed,playerVelVec));
 			
+			//TODO apply duocylinder spin inside loop here. 
 			
 		}
 		
-		var moveAmount = timeElapsed * moveSpeed;
-		var rotateAmount = timeElapsed * rotateSpeed;
-		//var bulletMove = timeElapsed * bulletSpeed;
 		
 		
-		//make new velvec to make slow movement adjustment better, total amount moved nonlinear with press duration
-		//just multiply the "thrust" by its squared length. (ie its magnitude is cubed)
-		//var playerVelVecMagsq = playerVelVec.reduce(function(total, val){return total+ val*val;}, 0);
-		
-		rotatePlayer(scalarvectorprod(rotateAmount,playerAngVelVec));
-		
-		
-		//playerVelVecBodge =  playerVelVec.map(function(val){return val*playerVelVecMagsq;});
-		//movePlayer(scalarvectorprod(moveAmount,playerVelVecBodge));	//no bodge because using playerVelVec for bullets
-		movePlayer(scalarvectorprod(moveAmount,playerVelVec));
-
 		//value used in sphere collision TODO? avoid this if switched to box. eg referencing some general
 		//collision func. TODO recalc critvalue only when changes
 		//var critValue = 1-guiParams.target.scale*guiParams.target.scale;	//small ang approx
