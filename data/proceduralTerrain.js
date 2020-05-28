@@ -137,7 +137,9 @@ function terrainGetNearPointFor4VecPos(vec){	//returns estimated point in procTe
 	
 	//return {a:-a+tnormal[0]*altitude, b:Math.PI*1.5 -b +tnormal[1]*altitude , h:(Math.PI/4)*hinfo.centreHeight};	//TODO do h correctly
 	//return {a:-a+tnormal[0]*altitude, b:Math.PI*1.5 -b +tnormal[1]*altitude , h:c/Math.sqrt(2)};	// height just return input
-	return {a:-a-tnormal[0]*altitude, b:Math.PI*1.5 -b -tnormal[1]*altitude , h:(c - tnormal[2]*altitude) /Math.sqrt(2)};	// h
+	return {a:-a-tnormal[0]*altitude, b:Math.PI*1.5 -b -tnormal[1]*altitude , h:(c - tnormal[2]*altitude) /Math.sqrt(2),
+		altitude:altitude		//bung this on so can bodge signed distance by comparing this with 0.
+	};
 	
 	
 }
@@ -177,7 +179,8 @@ function getNearestTerrainPosMatFor4VecPos(posVec){
 		//convert this to 4vec space, using function in voxterrain.js (todo generalise). 
 		//todo account for duocylinder spin
 
-	return getMatForABCDCCoords(abhPos.a,Math.PI*1.5 - abhPos.b,abhPos.h*Math.sqrt(2));	//note Math.PI*1.5 - ... , *Math.sqrt(2) because vox, procterrain stuff is inconsistent
+	return {mat:getMatForABCDCCoords(abhPos.a,Math.PI*1.5 - abhPos.b,abhPos.h*Math.sqrt(2)),	//note Math.PI*1.5 - ... , *Math.sqrt(2) because vox, procterrain stuff is inconsistent
+			altitude:abhPos.altitude};	
 }
 
 function decentMod(num,toModBy){	//handle crappy nature of mod function (gives -ve if -ve)

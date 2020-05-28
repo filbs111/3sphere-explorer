@@ -3563,7 +3563,7 @@ var iterateMechanics = (function iterateMechanics(){
 	var playerAngVelVec = [0,0,0];
 	
 	var timeTracker =0;
-	var timeStep = 8;	//1ms => 1000 steps/s! this is small to prevent tunelling. TODO better collision system that does not require this!
+	var timeStep = 2;	//2ms => 500 steps/s! this is small to prevent tunelling. TODO better collision system that does not require this!
 	var timeStepMultiplier = timeStep/10;	//because stepSpeed initially tuned for timeStep=10;
 	var angVelDampMultiplier=Math.pow(0.85, timeStep/10);
 	var gunHeatMultiplier = Math.pow(0.995, timeStep/10);
@@ -3964,11 +3964,17 @@ var iterateMechanics = (function iterateMechanics(){
 					
 					//get nearest point on terrain. could do this in terrain space, but to be reliable, testable, find nearest 4vec position, find this position in player frame.
 					//note this matrix "jiggles" when duocylinder rotating due to interpolation (other test mats that don't jiggle probably are in duocylinder rotating frame space)
-					var nearestPosMat = getNearestTerrainPosMatFor4VecPos(legPos);
+					var nearestTerrainPosInfo = getNearestTerrainPosMatFor4VecPos(legPos)
+					var nearestPosMat = nearestTerrainPosInfo.mat;
 					var nearestPos = nearestPosMat.slice(12);
 					
 					//find length from this to position in player space.
 					var lengthToNearest = Math.hypot.apply(null, nearestPos.map((elem,ii)=>{return elem-legPos[ii];}));
+
+					//bodge to get signed distance. TODO more sensible method without if/ternary
+					forceSwitch =  nearestTerrainPosInfo.altitude > 0 ? 1 : -1;
+					lengthToNearest*=forceSwitch;
+					
 					myDebugStr = "suspensionHeightNow: " + suspensionHeightNow.toFixed(4) + ", lengthToNearest: " + lengthToNearest.toFixed(4);
 					
 					suspensionHeightNow = lengthToNearest;	//override suspension height with new distance. improves collision detection (barring glitches if break assumptions - eg might collide with phantom terrain if have abrupt steep wall...) . reaction force will remain upwards with just this change.
@@ -3978,7 +3984,7 @@ var iterateMechanics = (function iterateMechanics(){
 					var suspensionVel = suspensionHeightNow-suspensionHeight;
 					var suspensionForce = 20*suspensionHeightNow+ 150*suspensionVel;	
 																			//TODO rotational speed impact on velocity									
-					suspensionForce=Math.max(suspensionForce,0);
+					suspensionForce=Math.max(suspensionForce,0) * forceSwitch;
 					landingLeg.suspHeight = suspensionHeightNow;
 														
 					//apply force to player, "up" wrt duocylinder
