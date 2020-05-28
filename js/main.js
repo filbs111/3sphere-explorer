@@ -3563,7 +3563,7 @@ var iterateMechanics = (function iterateMechanics(){
 	var playerAngVelVec = [0,0,0];
 	
 	var timeTracker =0;
-	var timeStep = 1;	//1ms => 1000 steps/s! this is small to prevent tunelling. TODO better collision system that does not require this!
+	var timeStep = 8;	//1ms => 1000 steps/s! this is small to prevent tunelling. TODO better collision system that does not require this!
 	var timeStepMultiplier = timeStep/10;	//because stepSpeed initially tuned for timeStep=10;
 	var angVelDampMultiplier=Math.pow(0.85, timeStep/10);
 	var gunHeatMultiplier = Math.pow(0.995, timeStep/10);
@@ -4052,7 +4052,10 @@ var iterateMechanics = (function iterateMechanics(){
 				
 				//voxel collision. 
 				//simple version, just push away from closest point. this will be in "wrong direction" if inside voxel volume, so will fall down if tunnel inside. TODO this better! see notes for function drawBall. TODO damping, friction etc
-				var penetration = ( guiParams["drop spaceship"] ? settings.characterBallRad : settings.playerBallRad ) - distanceForVox;
+				
+				var signedDistanceForVox = (voxCollisionCentralLevel<0) ? distanceForVox: -distanceForVox;	//this is a bodge. better to use gradient/value, or direction and signed distance, from modified test2VoxABC().
+				
+				var penetration = ( guiParams["drop spaceship"] ? settings.characterBallRad : settings.playerBallRad ) - signedDistanceForVox;
 				var penetrationChange = penetration - lastVoxPenetration;	//todo cap this.
 				lastVoxPenetration = penetration;
 				//if (penetration>0){
@@ -4066,7 +4069,7 @@ var iterateMechanics = (function iterateMechanics(){
 					var dampConstant = 200;
 					multiplier+=penetrationChange*dampConstant;
 					
-					multiplier/=distanceForVox;	//normalise. playerBallRad would give near same result assuming penetrations remain small
+					multiplier/=signedDistanceForVox;	//normalise. playerBallRad would give near same result assuming penetrations remain small
 					
 					var forcePlayerFrame = pointDisplacement.map(function(elem){return elem*multiplier;});	//TODO use vector class?
 					for (var cc=0;cc<3;cc++){
