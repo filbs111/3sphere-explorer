@@ -394,7 +394,7 @@
 	varying vec2 vZW;
 #endif
 	void main(void) {
-		float angle = uTime*0.0001;	//TODO different speeds for different particles, ensure clean looping. speeds should be multiples of 2*PI/loopTime
+		float angle = uTime*0.001;	//TODO different speeds for different particles, ensure clean looping. speeds should be multiples of 2*PI/loopTime
 		vec4 transformedCoord = uMVMatrix * (aVertexCentrePosition*cos(angle) + aVertexCentreDirection*sin(angle));
 #ifdef CUSTOM_DEPTH
 		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);

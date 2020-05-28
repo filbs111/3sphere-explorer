@@ -634,6 +634,8 @@ function initBuffers(){
 		alteredMesh.faces = newFaces;
 		return loadBlenderExport(alteredMesh);
 	}
+	
+	explosionParticles.init();
 }
 
 var reflectorInfo={
@@ -730,7 +732,7 @@ var lastSeaTime=0;
 function drawScene(frameTime){
 	resizecanvas();
 
-	iterateMechanics();	//TODO make movement speed independent of framerate
+	iterateMechanics(frameTime);	//TODO make movement speed independent of framerate
 	
 	requestAnimationFrame(drawScene);
 	stats.end();
@@ -1648,20 +1650,25 @@ function drawWorldScene(frameTime, isCubemapView) {
 		mat4.set(invertedWorldCameraDuocylinderFrame, mvMatrix);
 		//normally in drawObjectFromPreppedBuffers
 		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uMVMatrix, false, mvMatrix);
-				
+		
+		var expParticleBuffers = explosionParticles.getBuffers();
+		
 		angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aVertexCentrePosition, 1);
-		gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.randMatrixBuffers.a);	//borrow existing buffer containing a matrix row/columm - this is a source of random normalised 4vectors as desired.
+		//gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.randMatrixBuffers.a);	//borrow existing buffer containing a matrix row/columm - this is a source of random normalised 4vectors as desired.
+		gl.bindBuffer(gl.ARRAY_BUFFER, expParticleBuffers.posns);	//borrow existing buffer containing a matrix row/columm - this is a source of random normalised 4vectors as desired.
 		gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexCentrePosition, 4, gl.FLOAT, false, 0, 0);
 		if (activeShaderProgram.attributes.aVertexCentreDirection){
 			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aVertexCentreDirection, 1);
-			gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.randMatrixBuffers.b);
+			//gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.randMatrixBuffers.b);
+			gl.bindBuffer(gl.ARRAY_BUFFER, expParticleBuffers.dirns);
 			gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexCentreDirection, 4, gl.FLOAT, false, 0, 0);
 		}
 		if (activeShaderProgram.uniforms.uTime){		
 			gl.uniform1f(activeShaderProgram.uniforms.uTime, frameTime);			
 		}
 		
-		angle_ext.drawElementsInstancedANGLE(gl.TRIANGLES, quadBuffers2D.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, numRandomBoxes);
+		//angle_ext.drawElementsInstancedANGLE(gl.TRIANGLES, quadBuffers2D.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, numRandomBoxes);
+		angle_ext.drawElementsInstancedANGLE(gl.TRIANGLES, quadBuffers2D.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, expParticleBuffers.posns.numItems);
 		
 		//seems like maybe has effect outside of drawElementsInstancedANGLE calls. to be safe,
 		zeroAttributeDivisors(activeShaderProgram);
@@ -3583,7 +3590,7 @@ var iterateMechanics = (function iterateMechanics(){
 	
 	var playerCameraDuocylinderFrame = mat4.create(playerCamera);		//todo resuse from pool
 	
-	return function(){
+	return function(frameTime){
 		
 		reverseCamera=keyThing.keystate(82) || (mouseInfo.buttons & 4); 	//R or middle mouse click
 		
@@ -3649,7 +3656,7 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		if (guiParams["random boxes"].drawType=='instancedArrays'){
 			//this copypasted from elsewhere. todo cleaner
-			var matrixF32ArrA = new Float32Array(matsToMove*4);
+			var matrixF32ArrA = new Float32Array(matsToMove*4);	// TODO reuse Float32Array!
 			var matrixF32ArrB = new Float32Array(matsToMove*4);
 			var matrixF32ArrC = new Float32Array(matsToMove*4);
 			var matrixF32ArrD = new Float32Array(matsToMove*4);
@@ -4671,6 +4678,8 @@ var iterateMechanics = (function iterateMechanics(){
 				new Explosion({matrix:tmpMat, world:bullet.world}, 0.0003, [0.2,0.4,0.6],true, true);	//different colour for debugging
 			}
 			
+			explosionParticles.makeExplosion(bullet.matrix.slice(12), frameTime);
+			
 			//singleExplosion.life = 100;
 			//singleExplosion.matrix = bulletMatrix;
 		}
@@ -5038,6 +5047,9 @@ function drawTriAxisCrossForMatrix(mat){
 	drawTriAxisCross(0.05);
 }
 function drawTriAxisCrossForPosition(posn){
+	drawTriAxisCrossForMatrix(matForPos(posn));
+}
+function matForPos(posn){	//this is wasteful - makes a new matrix each time
 	var mat = mat4.identity();
 	/*
 	mat[12] = posn[0];
@@ -5053,10 +5065,8 @@ function drawTriAxisCrossForPosition(posn){
 	var angleToMove = -Math.atan2(xyzlength, posn[3]);
 	var moveVec = posn.slice(0,3).map(elem=>elem*angleToMove/xyzlength);
 	xyzmove4mat(mat, moveVec);
-	
-	drawTriAxisCrossForMatrix(mat);
+	return mat;
 }
-
 function performGeneralShaderSetup(shader){
 	if (shader.uniforms.uSpecularStrength){
 		gl.uniform1f(shader.uniforms.uSpecularStrength, guiParams.display.specularStrength);	
@@ -5064,6 +5074,81 @@ function performGeneralShaderSetup(shader){
 	if (shader.uniforms.uSpecularPower){
 		gl.uniform1f(shader.uniforms.uSpecularPower, guiParams.display.specularPower);	
 	}
+}
+
+
+var explosionParticles = (function(){
+	//something containing set of position and direction of particles that will draw using shader.
+	//each particle has 2 orthogonal 4-vectors, position at time t = position*cos(t) + direction*sin(t)
+	var arrayLen = 256;	//initial implementation - start all particles. later should store larger number of particles, update subset for new explosion
+		//initially just use random direction/speed. should be able to make a particle explosion with a velocity, direction too though, with speeds that loop.
+
+//	var particlePositions=new Array(arrayLen);	//TODO remove? probably these are unneeded and 
+//	var particleDirections=new Array(arrayLen);
+	
+	var posnsF32 = new Float32Array(arrayLen*4);	//TODO interleave posns, dirns
+	var dirnsF32 = new Float32Array(arrayLen*4);
+	var posnsGlBuffer;	//TODO can gl be got before get to this IIFE? 
+	var dirnsGlBuffer;
+		//ideally buffers should be position, direction, positon, direction .... to reduce calls to buffer sub data.
+	
+	return {
+		makeExplosion: function makeExplosion(posn, time){
+			var mat = matForPos(posn);
+			var time_angle = time*0.001;	//this will change depending on shader cycle time. 
+			var ct = Math.cos(time_angle);
+			var st = Math.sin(time_angle);
+			var dirn=[];
+			var newPosn;
+			var newDirn;
+			
+			for (var ii=0, pp=0;ii<arrayLen;ii++,pp+=4){
+				var dirvec3 = randomNormalised3vec();	//get direction vector for time = 0
+				newPosn=[];
+				newDirn=[];
+				//do a matrix multiplication. TODO use matrix methods to reduce code length!
+				for (var bb=0;bb<4;bb++){
+					dirn[bb]=0;
+					for (var aa=0;aa<3;aa++){
+						dirn[bb]+=dirvec3[aa]*mat[aa*4+bb];
+					}
+					
+					//rotate position and direction such that newposn*cos(time_angle) + newdirn*sin(time_angle) = posn
+					// newposn = posn*cos(time_angle) - dirn*sin(time_angle)
+					// newdirn = dirn*cos(time_angle) + posn*sin(time_angle)
+					newPosn[bb]=posn[bb]*ct - dirn[bb]*st;
+					newDirn[bb]=dirn[bb]*ct + posn[bb]*st;
+				}
+			//	particlePositions[ii]=newPosn;
+			//	particleDirections[ii]=newDirn;
+				posnsF32.set(newPosn, pp);
+				dirnsF32.set(newDirn, pp);
+			}
+			bufferArrayDataF32(posnsGlBuffer, posnsF32, 4);
+			bufferArrayDataF32(dirnsGlBuffer, dirnsF32, 4);
+		},
+		getBuffers: function getBuffers(){
+			return {posns:posnsGlBuffer, dirns:dirnsGlBuffer}
+		},
+		init: function init(){
+			posnsGlBuffer = gl.createBuffer();
+			dirnsGlBuffer = gl.createBuffer();
+			//some initial data
+			this.makeExplosion([1,0,0,0],0);
+		}
+	}
+})();
+
+function randomNormalised3vec(){	//TODO uniformly distributed angle (gauss ok, IIRC trig solution for 3d is neat), maybe precalculate, maybe want nonrandom for better sphere coverage for particles
+	var vec=[]
+	var lensq=0;
+	for (var cc=0;cc<3;cc++){
+		var thisElem = Math.random()+Math.random()-1;	//add lots of these to approach gaussian
+		vec.push(thisElem);	
+		lensq+=thisElem*thisElem;
+	}
+	var len = Math.sqrt(lensq);
+	return vec.map(elem=>elem/len);	
 }
 
 
