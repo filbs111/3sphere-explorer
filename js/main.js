@@ -4407,13 +4407,13 @@ var iterateMechanics = (function iterateMechanics(){
 			var bulletPos = [bulletMatrix[12],bulletMatrix[13],bulletMatrix[14],bulletMatrix[15]];	//todo use this elsewhere?
 			if (worldInfo.duocylinderModel == "procTerrain"){
 				//collision with duocylinder procedural terrain	
-				if (getHeightAboveTerrainFor4VecPos(bulletPos)<0){detonateBullet(bullet, true);}
+				if (getHeightAboveTerrainFor4VecPos(bulletPos)<0){detonateBullet(bullet, true, [0.3,0.3,0.3,1]);}
 			}
 			if (worldInfo.duocylinderModel == "voxTerrain"){	//TODO generalise collision by specifying a function for terrain. (voxTerrain, procTerrain)
-				if (voxCollisionFunction(bulletPos)>0){detonateBullet(bullet, true);}
+				if (voxCollisionFunction(bulletPos)>0){detonateBullet(bullet, true, [0.5,0.5,0.5,1]);}
 			}
 			if (worldInfo.seaActive){
-				if (getHeightAboveSeaFor4VecPos(bulletPos, lastSeaTime)<0){detonateBullet(bullet, true);}
+				if (getHeightAboveSeaFor4VecPos(bulletPos, lastSeaTime)<0){detonateBullet(bullet, true, [0.6,0.75,1,1]);}
 				//if (getHeightAboveSeaFor4VecPos(bulletPos, 0)<0){detonateBullet(bullet, true);}
 			}
 			
@@ -4482,7 +4482,7 @@ var iterateMechanics = (function iterateMechanics(){
 					if (Math.max(Math.abs(relativeMat[3]),
 								Math.abs(relativeMat[7]),
 								Math.abs(relativeMat[11]))<thisBoxSize*relativeMat[15]){
-						detonateBullet(bullet, moveWithDuocylinder);
+						detonateBullet(bullet, moveWithDuocylinder, [1,0.8,0.6,1]);
 				}
 			}
 			
@@ -4678,18 +4678,18 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			}
 		}
-		function detonateBullet(bullet, moveWithDuocylinder){	//TODO what scope does this have? best practice???
+		function detonateBullet(bullet, moveWithDuocylinder, color=[1,1,1,1]){	//TODO what scope does this have? best practice???
 			bullet.vel = [0,0,0];	//if colliding with target, stop bullet.
 			bullet.active=false;
 			
 			if (!moveWithDuocylinder){
 				new Explosion(bullet, 0.0003, [1,0.5,0.25], false, true);
-				explosionParticles.makeExplosion(bullet.matrix.slice(12), frameTime, [1,0.8,0.5,1]);
+				explosionParticles.makeExplosion(bullet.matrix.slice(12), frameTime, color);
 			}else{
 				var tmpMat = mat4.create(bullet.matrix);
 				rotate4matCols(tmpMat, 0, 1, duocylinderSpin);	//get bullet matrix in frame of duocylinder. might be duplicating work from elsewhere.
 				new Explosion({matrix:tmpMat, world:bullet.world}, 0.0003, [0.2,0.4,0.6],true, true);	//different colour for debugging
-				explosionParticles.makeExplosion(tmpMat.slice(12), frameTime, [0.6,0.6,1,1]);
+				explosionParticles.makeExplosion(tmpMat.slice(12), frameTime, color);
 			}
 			
 			//singleExplosion.life = 100;
