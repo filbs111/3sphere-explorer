@@ -393,9 +393,16 @@
 #ifdef CUSTOM_DEPTH
 	varying vec2 vZW;
 #endif
+#ifdef INSTANCE_COLOR
+	attribute vec4 aColor;
+	varying vec4 vColor;
+#endif
 	void main(void) {
 		float angle = uTime*0.001;	//TODO different speeds for different particles, ensure clean looping. speeds should be multiples of 2*PI/loopTime
 		vec4 transformedCoord = uMVMatrix * (aVertexCentrePosition*cos(angle) + aVertexCentreDirection*sin(angle));
+#ifdef INSTANCE_COLOR
+		vColor = aColor;
+#endif
 #ifdef CUSTOM_DEPTH
 		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
 #endif
@@ -436,8 +443,17 @@
 #ifdef CUSTOM_DEPTH
 	varying vec2 vZW;
 #endif
+#ifdef INSTANCE_COLOR
+	varying vec4 vColor;
+#endif
 	void main(void) {
+
+#ifdef INSTANCE_COLOR	
+		gl_FragColor = uColor*vColor;	//TODO lose uColor
+#else
 		gl_FragColor = uColor;
+#endif	
+	
 #ifdef CUSTOM_DEPTH
 		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
 #endif

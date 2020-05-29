@@ -115,7 +115,7 @@ function initShaders(){
 				
 	shaderPrograms.decal = loadShader("shader-decal-vs", "shader-decal-fs");
 					
-	shaderPrograms.billboardQuads = loadShader("shader-simple-moving-billboard-vs", "shader-very-simple-fs",['CUSTOM_DEPTH'],['CUSTOM_DEPTH']);				
+	shaderPrograms.billboardQuads = loadShader("shader-simple-moving-billboard-vs", "shader-very-simple-fs",['CUSTOM_DEPTH','INSTANCE_COLOR'],['CUSTOM_DEPTH','INSTANCE_COLOR']);				
 	
 	//get locations later by calling completeShaders (when expect compiles/links to have completed)
 	console.log("time to init shaders: " + ( performance.now() - initShaderTimeStart ) + "ms");
@@ -1654,14 +1654,18 @@ function drawWorldScene(frameTime, isCubemapView) {
 		var expParticleBuffers = explosionParticles.getBuffers();
 		
 		angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aVertexCentrePosition, 1);
-		//gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.randMatrixBuffers.a);	//borrow existing buffer containing a matrix row/columm - this is a source of random normalised 4vectors as desired.
-		gl.bindBuffer(gl.ARRAY_BUFFER, expParticleBuffers.posns);	//borrow existing buffer containing a matrix row/columm - this is a source of random normalised 4vectors as desired.
+		gl.bindBuffer(gl.ARRAY_BUFFER, expParticleBuffers.posns);
 		gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexCentrePosition, 4, gl.FLOAT, false, 0, 0);
 		if (activeShaderProgram.attributes.aVertexCentreDirection){
 			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aVertexCentreDirection, 1);
-			//gl.bindBuffer(gl.ARRAY_BUFFER, randBoxBuffers.randMatrixBuffers.b);
 			gl.bindBuffer(gl.ARRAY_BUFFER, expParticleBuffers.dirns);
 			gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexCentreDirection, 4, gl.FLOAT, false, 0, 0);
+		}
+		if (activeShaderProgram.attributes.aColor){
+			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aColor, 1);
+			gl.bindBuffer(gl.ARRAY_BUFFER, expParticleBuffers.colrs);
+			gl.vertexAttribPointer(activeShaderProgram.attributes.aColor, 4, gl.FLOAT, false, 0, 0);
+		
 		}
 		if (activeShaderProgram.uniforms.uTime){		
 			gl.uniform1f(activeShaderProgram.uniforms.uTime, frameTime);			
@@ -4672,12 +4676,12 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			if (!moveWithDuocylinder){
 				new Explosion(bullet, 0.0003, [1,0.5,0.25], false, true);
-				explosionParticles.makeExplosion(bullet.matrix.slice(12), frameTime);
+				explosionParticles.makeExplosion(bullet.matrix.slice(12), frameTime, [1,1,0.5,1]);
 			}else{
 				var tmpMat = mat4.create(bullet.matrix);
 				rotate4matCols(tmpMat, 0, 1, duocylinderSpin);	//get bullet matrix in frame of duocylinder. might be duplicating work from elsewhere.
 				new Explosion({matrix:tmpMat, world:bullet.world}, 0.0003, [0.2,0.4,0.6],true, true);	//different colour for debugging
-				explosionParticles.makeExplosion(tmpMat.slice(12), frameTime);
+				explosionParticles.makeExplosion(tmpMat.slice(12), frameTime, [0.5,0.5,1,1]);
 			}
 			
 			//singleExplosion.life = 100;
@@ -5090,13 +5094,15 @@ var explosionParticles = (function(){
 	
 	var posnsF32 = new Float32Array(blockLen*4);	//TODO interleave posns, dirns
 	var dirnsF32 = new Float32Array(blockLen*4);
+	var colrsF32 = new Float32Array(blockLen*4);
 	var posnsGlBuffer;	//TODO can gl be got before get to this IIFE? 
 	var dirnsGlBuffer;
+	var colrsGlBuffer;
 		//ideally buffers should be position, direction, positon, direction .... to reduce calls to buffer sub data.
 	var blockOffs;
 	
 	return {
-		makeExplosion: function makeExplosion(posn, time){
+		makeExplosion: function makeExplosion(posn, time, colr){
 			
 			blockOffs = nextBlock*blockLen;
 			nextBlock = (nextBlock+1)%numBlocks;
@@ -5128,30 +5134,29 @@ var explosionParticles = (function(){
 				}
 				posnsF32.set(newPosn, pp);
 				dirnsF32.set(newDirn, pp);
+				colrsF32.set(colr, pp);
 			}
-		//	bufferArrayDataF32(posnsGlBuffer, posnsF32, 4);
-		//	bufferArrayDataF32(dirnsGlBuffer, dirnsF32, 4);
-			
-			//bufferArraySubDataF32(posnsGlBuffer, blockOffs*4, posnsF32);
-		//	bufferArraySubDataF32(dirnsGlBuffer, blockOffs*4, dirnsF32);
 
 			bufferArraySubDataF32(posnsGlBuffer, blockOffs*16, posnsF32);
 			bufferArraySubDataF32(dirnsGlBuffer, blockOffs*16, dirnsF32);			
+			bufferArraySubDataF32(colrsGlBuffer, blockOffs*16, colrsF32);			
 		},
 		getBuffers: function getBuffers(){
-			return {posns:posnsGlBuffer, dirns:dirnsGlBuffer}
+			return {posns:posnsGlBuffer, dirns:dirnsGlBuffer, colrs:colrsGlBuffer}
 		},
 		init: function init(){
 			posnsGlBuffer = gl.createBuffer();
 			dirnsGlBuffer = gl.createBuffer();
+			colrsGlBuffer = gl.createBuffer();
 			//some initial data
 			
 			var tmpF32Array = new Float32Array(arrayLen*4);	//seems like have to initialise GL buffer in entirety first. (is this necessary?).
 			bufferArrayDataF32(posnsGlBuffer, tmpF32Array, 4);
 			bufferArrayDataF32(dirnsGlBuffer, tmpF32Array, 4);
+			bufferArrayDataF32(colrsGlBuffer, tmpF32Array, 4);
 			
 			for (var bb=0;bb<numBlocks;bb++){
-				this.makeExplosion([1,0,0,0],0);	//fill arrays with some dummy data (is this necessary?) TODO stop this dummy data from rendering
+				this.makeExplosion([1,0,0,0],0,[1,1,1,1]);	//fill arrays with some dummy data (is this necessary?) TODO stop this dummy data from rendering (disable depth write, make transparent? only draw active particles?
 			}
 		}
 	}
