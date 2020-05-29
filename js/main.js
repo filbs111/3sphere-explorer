@@ -3582,7 +3582,7 @@ var iterateMechanics = (function iterateMechanics(){
 	
 	var autoFireCountdown=0;
 	//var autoFireCountdownStartVal=6;
-	var autoFireCountdownStartVal=Math.ceil(1 / (timeStep/10));	//note due to rounding, fire rate somewhat dependent on timestep 
+	var autoFireCountdownStartVal=Math.ceil(5 / (timeStep/10));	//note due to rounding, fire rate somewhat dependent on timestep 
 	var lastPlayerAngMove = [0,0,0];	//for interpolation
 	var duoCylinderAngVelConst=0;
 	
@@ -5080,20 +5080,27 @@ function performGeneralShaderSetup(shader){
 var explosionParticles = (function(){
 	//something containing set of position and direction of particles that will draw using shader.
 	//each particle has 2 orthogonal 4-vectors, position at time t = position*cos(t) + direction*sin(t)
-	var arrayLen = 256;	//initial implementation - start all particles. later should store larger number of particles, update subset for new explosion
-		//initially just use random direction/speed. should be able to make a particle explosion with a velocity, direction too though, with speeds that loop.
-
-//	var particlePositions=new Array(arrayLen);	//TODO remove? probably these are unneeded and 
-//	var particleDirections=new Array(arrayLen);
 	
-	var posnsF32 = new Float32Array(arrayLen*4);	//TODO interleave posns, dirns
-	var dirnsF32 = new Float32Array(arrayLen*4);
+	var blockLen = 64;	//number of particles in an explosion.
+	var numBlocks = 64;
+	var nextBlock = 0;
+	var arrayLen = blockLen*numBlocks;	// = 4096
+		//initial implementation - start all particles. later should store larger number of particles, update subset for new explosion
+		//initially just use random direction/speed. should be able to make a particle explosion with a velocity, direction too though, with speeds that loop.
+	
+	var posnsF32 = new Float32Array(blockLen*4);	//TODO interleave posns, dirns
+	var dirnsF32 = new Float32Array(blockLen*4);
 	var posnsGlBuffer;	//TODO can gl be got before get to this IIFE? 
 	var dirnsGlBuffer;
 		//ideally buffers should be position, direction, positon, direction .... to reduce calls to buffer sub data.
+	var blockOffs;
 	
 	return {
 		makeExplosion: function makeExplosion(posn, time){
+			
+			blockOffs = nextBlock*blockLen;
+			nextBlock = (nextBlock+1)%numBlocks;
+			
 			var mat = matForPos(posn);
 			var time_angle = time*0.001;	//this will change depending on shader cycle time. 
 			var ct = Math.cos(time_angle);
@@ -5102,7 +5109,7 @@ var explosionParticles = (function(){
 			var newPosn;
 			var newDirn;
 			
-			for (var ii=0, pp=0;ii<arrayLen;ii++,pp+=4){
+			for (var ii=0, pp=0;ii<blockLen;ii++,pp+=4){
 				var dirvec3 = randomNormalised3vec();	//get direction vector for time = 0
 				newPosn=[];
 				newDirn=[];
@@ -5119,13 +5126,17 @@ var explosionParticles = (function(){
 					newPosn[bb]=posn[bb]*ct - dirn[bb]*st;
 					newDirn[bb]=dirn[bb]*ct + posn[bb]*st;
 				}
-			//	particlePositions[ii]=newPosn;
-			//	particleDirections[ii]=newDirn;
 				posnsF32.set(newPosn, pp);
 				dirnsF32.set(newDirn, pp);
 			}
-			bufferArrayDataF32(posnsGlBuffer, posnsF32, 4);
-			bufferArrayDataF32(dirnsGlBuffer, dirnsF32, 4);
+		//	bufferArrayDataF32(posnsGlBuffer, posnsF32, 4);
+		//	bufferArrayDataF32(dirnsGlBuffer, dirnsF32, 4);
+			
+			//bufferArraySubDataF32(posnsGlBuffer, blockOffs*4, posnsF32);
+		//	bufferArraySubDataF32(dirnsGlBuffer, blockOffs*4, dirnsF32);
+
+			bufferArraySubDataF32(posnsGlBuffer, blockOffs*16, posnsF32);
+			bufferArraySubDataF32(dirnsGlBuffer, blockOffs*16, dirnsF32);			
 		},
 		getBuffers: function getBuffers(){
 			return {posns:posnsGlBuffer, dirns:dirnsGlBuffer}
@@ -5134,7 +5145,14 @@ var explosionParticles = (function(){
 			posnsGlBuffer = gl.createBuffer();
 			dirnsGlBuffer = gl.createBuffer();
 			//some initial data
-			this.makeExplosion([1,0,0,0],0);
+			
+			var tmpF32Array = new Float32Array(arrayLen*4);	//seems like have to initialise GL buffer in entirety first. (is this necessary?).
+			bufferArrayDataF32(posnsGlBuffer, tmpF32Array, 4);
+			bufferArrayDataF32(dirnsGlBuffer, tmpF32Array, 4);
+			
+			for (var bb=0;bb<numBlocks;bb++){
+				this.makeExplosion([1,0,0,0],0);	//fill arrays with some dummy data (is this necessary?) TODO stop this dummy data from rendering
+			}
 		}
 	}
 })();
