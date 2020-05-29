@@ -1652,27 +1652,27 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uMVMatrix, false, mvMatrix);
 		
 		var expParticleBuffers = explosionParticles.getBuffers();
-		
-		angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aVertexCentrePosition, 1);
-		gl.bindBuffer(gl.ARRAY_BUFFER, expParticleBuffers.posns);
-		gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexCentrePosition, 4, gl.FLOAT, false, 0, 0);
-		if (activeShaderProgram.attributes.aVertexCentreDirection){
-			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aVertexCentreDirection, 1);
-			gl.bindBuffer(gl.ARRAY_BUFFER, expParticleBuffers.dirns);
-			gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexCentreDirection, 4, gl.FLOAT, false, 0, 0);
-		}
-		if (activeShaderProgram.attributes.aColor){
-			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aColor, 1);
-			gl.bindBuffer(gl.ARRAY_BUFFER, expParticleBuffers.colrs);
-			gl.vertexAttribPointer(activeShaderProgram.attributes.aColor, 4, gl.FLOAT, false, 0, 0);
-		
-		}
-		if (activeShaderProgram.uniforms.uTime){		
-			gl.uniform1f(activeShaderProgram.uniforms.uTime, frameTime);			
-		}
-		
-		//angle_ext.drawElementsInstancedANGLE(gl.TRIANGLES, quadBuffers2D.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, numRandomBoxes);
-		angle_ext.drawElementsInstancedANGLE(gl.TRIANGLES, quadBuffers2D.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, expParticleBuffers.posns.numItems);
+		explosionParticles.getRangesToDraw(frameTime).forEach(elem=>{
+			//	console.log(elem);
+			var offs = elem.start * 16;
+			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aVertexCentrePosition, 1);
+			gl.bindBuffer(gl.ARRAY_BUFFER, expParticleBuffers.posns);
+			gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexCentrePosition, 4, gl.FLOAT, false, 0, offs);
+			if (activeShaderProgram.attributes.aVertexCentreDirection){
+				angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aVertexCentreDirection, 1);
+				gl.bindBuffer(gl.ARRAY_BUFFER, expParticleBuffers.dirns);
+				gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexCentreDirection, 4, gl.FLOAT, false, 0, offs);
+			}
+			if (activeShaderProgram.attributes.aColor){
+				angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aColor, 1);
+				gl.bindBuffer(gl.ARRAY_BUFFER, expParticleBuffers.colrs);
+				gl.vertexAttribPointer(activeShaderProgram.attributes.aColor, 4, gl.FLOAT, false, 0, offs);
+			}
+			if (activeShaderProgram.uniforms.uTime){		
+				gl.uniform1f(activeShaderProgram.uniforms.uTime, frameTime);			
+			}
+			angle_ext.drawElementsInstancedANGLE(gl.TRIANGLES, quadBuffers2D.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, elem.number);
+		});
 		
 		//seems like maybe has effect outside of drawElementsInstancedANGLE calls. to be safe,
 		zeroAttributeDivisors(activeShaderProgram);
@@ -5095,6 +5095,7 @@ var explosionParticles = (function(){
 	
 	var blockLen = 64;	//number of particles in an explosion.
 	var numBlocks = 64;
+	var blockStartTimes = new Array(numBlocks);
 	var nextBlock = 0;
 	var arrayLen = blockLen*numBlocks;	// = 4096
 		//initial implementation - start all particles. later should store larger number of particles, update subset for new explosion
@@ -5113,6 +5114,8 @@ var explosionParticles = (function(){
 		makeExplosion: function makeExplosion(posn, time, colr){
 			
 			blockOffs = nextBlock*blockLen;
+			blockStartTimes[nextBlock] = time;
+			
 			nextBlock = (nextBlock+1)%numBlocks;
 			
 			var mat = matForPos(posn);
@@ -5152,6 +5155,25 @@ var explosionParticles = (function(){
 		getBuffers: function getBuffers(){
 			return {posns:posnsGlBuffer, dirns:dirnsGlBuffer, colrs:colrsGlBuffer}
 		},
+		getRangesToDraw: function getRangesToDraw(time){
+			//since particle lifetimes fixed, and created in array, should be 0,1 or 2 contiguous ranges of particles that should draw.]
+			//this is simple/easy method.
+			// note: alternate method :set expiry time as shader variable, shrink vertices to point if expired. (could also use for hiding when will hit terrain))
+			var activeRange = false;
+			var ranges = [];
+			for (var bb=0;bb<numBlocks;bb++){
+				if ( (time - blockStartTimes[bb]) < 1000 ){	//block should be drawn
+					if (!activeRange){
+						activeRange = {start:bb*blockLen,number:0};
+						ranges.push(activeRange);
+					}
+					activeRange.number+=blockLen;
+				}else{
+					activeRange=false;
+				}
+			}
+			return ranges;
+		},
 		init: function init(){
 			posnsGlBuffer = gl.createBuffer();
 			dirnsGlBuffer = gl.createBuffer();
@@ -5164,7 +5186,7 @@ var explosionParticles = (function(){
 			bufferArrayDataF32(colrsGlBuffer, tmpF32Array, 4);
 			
 			for (var bb=0;bb<numBlocks;bb++){
-				this.makeExplosion([1,0,0,0],0,[1,1,1,1]);	//fill arrays with some dummy data (is this necessary?) TODO stop this dummy data from rendering (disable depth write, make transparent? only draw active particles?
+				this.makeExplosion([1,0,0,0],-10000,[1,1,1,1]);	//fill arrays with some dummy data (is this necessary?) TODO stop this dummy data from rendering (disable depth write, make transparent? only draw active particles?
 			}
 		}
 	}
@@ -5181,6 +5203,3 @@ function randomNormalised3vec(){	//TODO uniformly distributed angle (gauss ok, I
 	var len = Math.sqrt(lensq);
 	return vec.map(elem=>elem/len);	
 }
-
-
-
