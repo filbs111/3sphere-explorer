@@ -3224,7 +3224,8 @@ var guiParams={
 		buoys:false,
 		nmapUseShader2:true,
 		showSpeedOverlay:false,
-		emitFire:false
+		emitFire:false,
+		fireworks:false
 	},
 	audio:{
 		volume:0.2,
@@ -3373,6 +3374,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 		ols.display = (ols.display == 'block')? 'none':'block';
 		});
 	debugFolder.add(guiParams.debug, "emitFire");
+	debugFolder.add(guiParams.debug, "fireworks");
 	
 	var audioFolder = gui.addFolder('audio');
 	audioFolder.add(guiParams.audio, "volume", 0,1,0.1).onChange(MySound.setGlobalVolume);
@@ -3937,6 +3939,12 @@ var iterateMechanics = (function iterateMechanics(){
 					new Explosion({matrix:newm4,world:sshipWorld}, sshipModelScale*0.5, [0.2,0.06,0.06]);
 				}
 			}
+			if (guiParams.debug.fireworks){
+				if (Math.random()<0.05){
+					explosionParticles.makeExplosion(random_quaternion(), frameTime, [Math.random(),Math.random(),Math.random(),1]);	//TODO guarantee bright colour
+				}
+			}
+			
 			
 			//IIRC playerCamera is the spaceship (or virtual spaceship if "dropped spaceship"), and worldCamera is the actual camera (screen)
 			//mat4.set(worldCamera, invertedWorldCamera);		//ensure up to date...
@@ -4676,12 +4684,12 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			if (!moveWithDuocylinder){
 				new Explosion(bullet, 0.0003, [1,0.5,0.25], false, true);
-				explosionParticles.makeExplosion(bullet.matrix.slice(12), frameTime, [1,1,0.5,1]);
+				explosionParticles.makeExplosion(bullet.matrix.slice(12), frameTime, [1,0.8,0.5,1]);
 			}else{
 				var tmpMat = mat4.create(bullet.matrix);
 				rotate4matCols(tmpMat, 0, 1, duocylinderSpin);	//get bullet matrix in frame of duocylinder. might be duplicating work from elsewhere.
 				new Explosion({matrix:tmpMat, world:bullet.world}, 0.0003, [0.2,0.4,0.6],true, true);	//different colour for debugging
-				explosionParticles.makeExplosion(tmpMat.slice(12), frameTime, [0.5,0.5,1,1]);
+				explosionParticles.makeExplosion(tmpMat.slice(12), frameTime, [0.6,0.6,1,1]);
 			}
 			
 			//singleExplosion.life = 100;
@@ -5108,7 +5116,7 @@ var explosionParticles = (function(){
 			nextBlock = (nextBlock+1)%numBlocks;
 			
 			var mat = matForPos(posn);
-			var time_angle = time*0.001;	//this will change depending on shader cycle time. 
+			var time_angle = time*0.0005;	//this will change depending on shader cycle time. 
 			var ct = Math.cos(time_angle);
 			var st = Math.sin(time_angle);
 			var dirn=[];
