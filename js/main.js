@@ -4672,13 +4672,13 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			if (!moveWithDuocylinder){
 				new Explosion(bullet, 0.0003, [1,0.5,0.25], false, true);
+				explosionParticles.makeExplosion(bullet.matrix.slice(12), frameTime);
 			}else{
 				var tmpMat = mat4.create(bullet.matrix);
 				rotate4matCols(tmpMat, 0, 1, duocylinderSpin);	//get bullet matrix in frame of duocylinder. might be duplicating work from elsewhere.
 				new Explosion({matrix:tmpMat, world:bullet.world}, 0.0003, [0.2,0.4,0.6],true, true);	//different colour for debugging
+				explosionParticles.makeExplosion(tmpMat.slice(12), frameTime);
 			}
-			
-			explosionParticles.makeExplosion(bullet.matrix.slice(12), frameTime);
 			
 			//singleExplosion.life = 100;
 			//singleExplosion.matrix = bulletMatrix;
