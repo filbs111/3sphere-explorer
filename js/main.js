@@ -1194,7 +1194,7 @@ function updateGunTargeting(matrix){
 		//should pick 1st if guns can rotate to that direction, else 2nd if guns can get there, else no solution.
 		
 		//first get target direction in frame of screen.
-		var targetPos = [targetMatrix[12],targetMatrix[13],targetMatrix[14],targetMatrix[15]];
+		var targetPos = targetMatrix.slice(12);
 		for (var ii=0;ii<4;ii++){
 			var total=0;
 			for (var jj=0;jj<4;jj++){
@@ -1345,7 +1345,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	xyzmove4mat(sshipMatrixShifted, moveAwayVec);
 	
 	mat4.multiply(lightMat, sshipMatrixShifted);
-	dropLightPos = [lightMat[12], lightMat[13], lightMat[14], lightMat[15]];
+	dropLightPos = lightMat.slice(12);
 	
 	//for debug 
 	window.lmat = lightMat;
@@ -1359,7 +1359,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		var dropLightReflectionInfo={};
 		calcReflectionInfo(sshipMatrixShifted,dropLightReflectionInfo);
 		mat4.multiply(lightMat, dropLightReflectionInfo.shaderMatrix2);
-		dropLightPos = [lightMat[12], lightMat[13], lightMat[14], lightMat[15]];	//todo make light dimmer/directional when "coming out of" portal
+		dropLightPos = lightMat.slice(12);	//todo make light dimmer/directional when "coming out of" portal
 	}
 	
 	var boxSize;
@@ -1705,7 +1705,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//switch to non-normalmap shader
 //	shaderSetup(shaderProgramTexmap, texture);
 	
-	var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//copied from elsewhere
+	var playerPos = playerCamera.slice(12);			//copied from elsewhere
 		
 	if (worldInfo.duocylinderModel == 'procTerrain'){
 		terrainCollisionTestBoxPos = terrainGetHeightFor4VecPos(playerPos);		//TODO in position update (not rendering)
@@ -2014,7 +2014,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniform1f(activeShaderProgram.uniforms.uZeroLevel, zeroLevel);
 		}
 		if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
-			gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
+			gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, worldCamera.slice(12));
 		}
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
 		performCommon4vecShaderSetup(activeShaderProgram);
@@ -2029,7 +2029,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}
 	
 		if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
-			gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
+			gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, worldCamera.slice(12));
 		}
 		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 		if (activeShaderProgram.uniforms.uReflectorDiffColor){
@@ -2848,7 +2848,7 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 	}
 	
 	if (shaderProg.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader. TODO do less ofteen (move camera less often than switch buffers)
-		gl.uniform4fv(shaderProg.uniforms.uCameraWorldPos, [worldCamera[12],worldCamera[13],worldCamera[14],worldCamera[15]]);
+		gl.uniform4fv(shaderProg.uniforms.uCameraWorldPos, worldCamera.slice(12));
 	}
 	
 	setupShaderAtmos(shaderProg);
@@ -3740,7 +3740,7 @@ var iterateMechanics = (function iterateMechanics(){
 			//todo combine these
 			//todo account for rotation while moving wrt duocylinder ? 
 			
-			var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];			//guess what this is	
+			var playerPos = playerCamera.slice(12);			//guess what this is	
 			var axisDirWorldCoords = [ 0,0,playerCamera[15],-playerCamera[14]];						
 			var axisDirPlayerCoords = [
 				axisDirWorldCoords[2]*playerCamera[2] + axisDirWorldCoords[3]*playerCamera[3],
@@ -3961,7 +3961,7 @@ var iterateMechanics = (function iterateMechanics(){
 								
 					var landingLegMat = mat4.create(playerCamera);
 					xyzmove4mat(landingLegMat, legPosPlayerFrame);
-					var legPos = [landingLegMat[12],landingLegMat[13],landingLegMat[14],landingLegMat[15]];	
+					var legPos = landingLegMat.slice(12);	
 					
 					//simple spring force terrain collision - 
 					//lookup height above terrain, subtract some value (height above terrain where restoring force goes to zero - basically maximum extension of landing legs. apply spring force upward to player proportional to this amount.
@@ -4264,7 +4264,7 @@ var iterateMechanics = (function iterateMechanics(){
 							xyzmove4mat(tempMat3, reactionNormal);
 							mat4.multiply(relativeMatC, tempMat3);
 						
-							var relativePosC = [relativeMatC[12], relativeMatC[13], relativeMatC[14], relativeMatC[15]];
+							var relativePosC = relativeMatC.slice(12);
 							
 							if (drawDebugStuff){
 								//TODO sort out what's what here. chopped around so comments a mess
@@ -4292,7 +4292,7 @@ var iterateMechanics = (function iterateMechanics(){
 								//....
 								
 								//already have relativeMat. position of box relative to player maybe already available
-								var relativePosB = [relativeMat[12], relativeMat[13], relativeMat[14], relativeMat[15]];
+								var relativePosB = relativeMat.slice(12);
 								mat4.set(playerCamera, collisionTestObj4Mat);
 								xyzmove4mat(collisionTestObj4Mat, [-relativePosB[0],-relativePosB[1],-relativePosB[2]]);
 								//TODO account for duocylinder rotation (currently assuming unrotated)
@@ -4390,7 +4390,7 @@ var iterateMechanics = (function iterateMechanics(){
 			var worldInfo = (bullet.world==0) ? guiParams.world0 : guiParams.world1;
 					//todo keep bullets in 2 lists/arrays so can check this once per world
 			
-			var bulletPos = [bulletMatrix[12],bulletMatrix[13],bulletMatrix[14],bulletMatrix[15]];	//todo use this elsewhere?
+			var bulletPos = bulletMatrix.slice(12);	//todo use this elsewhere?
 			if (worldInfo.duocylinderModel == "procTerrain"){
 				//collision with duocylinder procedural terrain	
 				if (getHeightAboveTerrainFor4VecPos(bulletPos)<0){detonateBullet(bullet, true, [0.3,0.3,0.3,1]);}
