@@ -3744,8 +3744,9 @@ var iterateMechanics = (function iterateMechanics(){
 		myAudioPlayer.setClockSound({delay:distance/soundspd, gain:vol, pan:pan});
 		
 		
-		var duocylinderRotate = duoCylinderAngVelConst * timeElapsed*moveSpeed;
-		duocylinderSpin+=duocylinderRotate; 	//TODO match spin speed with sea wave speed
+//		var duocylinderRotate = duoCylinderAngVelConst * timeElapsed*moveSpeed;
+		var duocylinderRotate = duoCylinderAngVelConst * (numSteps*timeStep)*moveSpeed;
+//		duocylinderSpin+=duocylinderRotate; 	//TODO match spin speed with sea wave speed
 		
 		if (guiParams.control.spinCorrection){
 			//rotate player in this frame (maybe better to drag towards this angular velocity, with drag prop to atmos density)
@@ -3765,6 +3766,7 @@ var iterateMechanics = (function iterateMechanics(){
 		}
 		
 		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
+			duocylinderSpin+=duoCylinderAngVelConst*timeStep*moveSpeed;
 		
 			//auto-roll upright. with view to using for character controller
 			//could put this outside stepspeed if didn't decay towards 0 roll (could do immediately like do with spinCorrection
