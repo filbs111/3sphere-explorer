@@ -277,53 +277,38 @@ function generateDataForDataMatricesScale(inputData, infoArray, scaleFact){
 	
 	var sourceUvs = inputData.uvcoords;	//TODO proper projection, but if just using cubes, all verts equidistant from projection middle point, so doesn't matter
 	
-	var transformedVerts = [];
-	var transformedNorms = [];
-	var transformedBins = [];
-	var transformedTans = [];
+	var numVals = numInstances*numVerts*4;
+	var transformedVerts = new Float32Array(numVals);
+	var transformedNorms = new Float32Array(numVals);
+	var transformedBins = new Float32Array(numVals);
+	var transformedTans = new Float32Array(numVals);
 	var copiedUvs = [];
 	var myvec4 = vec4.create();
 	
 	for (var ii=0;ii<numInstances;ii++,offset+=numVerts){
 		thisMat = matsArray[ii];
 		thisColor = colorsArray[ii];
-		for (var vv=0;vv<numVerts;vv++){
+		for (var vv=0,idx=offset*4;vv<numVerts;vv++,idx+=4){
 			//make a copy of vertex, rotate by matrix
-			thisVert = sourceVerts[vv]; 
-			myvec4[0] = thisVert[0];
-			myvec4[1] = thisVert[1];
-			myvec4[2] = thisVert[2];
-			myvec4[3] = thisVert[3];						
+			myvec4.set(sourceVerts[vv]);
 			mat4.multiplyVec4(thisMat, myvec4);
-			transformedVerts.push([myvec4[0],myvec4[1],myvec4[2],myvec4[3]]);	//TODO is there a standard method to treat a vec4 like an array?
+			transformedVerts.set(myvec4, idx);	
 			
 			//make a copy of normal, rotate by matrix
-			thisNorm = sourceNorms[vv];
-			myvec4[0] = thisNorm[0];
-			myvec4[1] = thisNorm[1];
-			myvec4[2] = thisNorm[2];
-			myvec4[3] = thisNorm[3];
+			myvec4.set(sourceNorms[vv]);
 			mat4.multiplyVec4(thisMat, myvec4);
-			transformedNorms.push([myvec4[0],myvec4[1],myvec4[2],myvec4[3]]);	//TODO is there a standard method to treat a vec4 like an array?
+			transformedNorms.set(myvec4, idx);	
 		}
 		if (inBins){
-			for (var vv=0;vv<numVerts;vv++){
+			for (var vv=0,idx=offset*4;vv<numVerts;vv++,idx+=4){
 				//TODO reuse code for verts, norms, bins, tans (doing the same thing for all)
-				thisBin = sourceBins[vv];
-				myvec4[0] = thisBin[0];
-				myvec4[1] = thisBin[1];
-				myvec4[2] = thisBin[2];
-				myvec4[3] = thisBin[3];						
+				myvec4.set(sourceBins[vv]);					
 				mat4.multiplyVec4(thisMat, myvec4);
-				transformedBins.push([myvec4[0],myvec4[1],myvec4[2],myvec4[3]]);	
+				transformedBins.set(myvec4, idx);
 				
-				thisTan = sourceTans[vv];
-				myvec4[0] = thisTan[0];
-				myvec4[1] = thisTan[1];
-				myvec4[2] = thisTan[2];
-				myvec4[3] = thisTan[3];						
+				myvec4.set(sourceTans[vv]);		
 				mat4.multiplyVec4(thisMat, myvec4);
-				transformedTans.push([myvec4[0],myvec4[1],myvec4[2],myvec4[3]]);	
+				transformedTans.set(myvec4, idx);
 			}
 		}
 	
@@ -337,16 +322,16 @@ function generateDataForDataMatricesScale(inputData, infoArray, scaleFact){
 	}
 	
 	var toReturn = {	//todo check best format to output (would require change to buffer creation from data step that follows)
-		vertices:[].concat.apply([],transformedVerts),
-		normals:[].concat.apply([],transformedNorms),
+		vertices:transformedVerts,
+		normals:transformedNorms,
 		uvcoords:[].concat.apply([],copiedUvs),
 		faces:[].concat.apply([],outputIndexData),	//todo use "indices" consistent with 3vec vertex format
 		colors:[].concat.apply([],outputColorData)
 	}
 	
 	if (inBins){
-		toReturn.binormals=[].concat.apply([],transformedBins);
-		toReturn.tangents=[].concat.apply([],transformedTans);
+		toReturn.binormals=transformedBins;
+		toReturn.tangents=transformedTans;
 	}
 	
 	return toReturn;
