@@ -1642,11 +1642,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 			var offs = elem.start * 16;
 			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aVertexCentrePosition, 1);
 			gl.bindBuffer(gl.ARRAY_BUFFER, expParticleBuffers.posns);
-			gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexCentrePosition, 4, gl.FLOAT, false, 0, offs);
+			gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexCentrePosition, 4, gl.FLOAT, false, 32, 2*offs);
 			if (activeShaderProgram.attributes.aVertexCentreDirection){
 				angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aVertexCentreDirection, 1);
-				gl.bindBuffer(gl.ARRAY_BUFFER, expParticleBuffers.dirns);
-				gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexCentreDirection, 4, gl.FLOAT, false, 0, offs);
+				gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexCentreDirection, 4, gl.FLOAT, false, 32, 2*offs+16);
 			}
 			if (activeShaderProgram.attributes.aColor){
 				angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aColor, 1);
@@ -5088,11 +5087,9 @@ var explosionParticles = (function(){
 		//initial implementation - start all particles. later should store larger number of particles, update subset for new explosion
 		//initially just use random direction/speed. should be able to make a particle explosion with a velocity, direction too though, with speeds that loop.
 	
-	var posnsF32 = new Float32Array(blockLen*4);	//TODO interleave posns, dirns
-	var dirnsF32 = new Float32Array(blockLen*4);
+	var posnDirnsF32 = new Float32Array(blockLen*8);
 	var colrsF32 = new Float32Array(blockLen*4);
-	var posnsGlBuffer;	//TODO can gl be got before get to this IIFE? 
-	var dirnsGlBuffer;
+	var posnDirnsGlBuffer;	//TODO can gl be got before get to this IIFE? 
 	var colrsGlBuffer;
 		//ideally buffers should be position, direction, positon, direction .... to reduce calls to buffer sub data.
 	var blockOffs;
@@ -5129,17 +5126,16 @@ var explosionParticles = (function(){
 					newPosn[bb]=posn[bb]*ct - dirn[bb]*st;
 					newDirn[bb]=dirn[bb]*ct + posn[bb]*st;
 				}
-				posnsF32.set(newPosn, pp);
-				dirnsF32.set(newDirn, pp);
+				posnDirnsF32.set(newPosn, 2*pp);
+				posnDirnsF32.set(newDirn, 2*pp+4);
 				colrsF32.set(colr, pp);
 			}
 
-			bufferArraySubDataF32(posnsGlBuffer, blockOffs*16, posnsF32);
-			bufferArraySubDataF32(dirnsGlBuffer, blockOffs*16, dirnsF32);			
+			bufferArraySubDataF32(posnDirnsGlBuffer, blockOffs*32, posnDirnsF32);
 			bufferArraySubDataF32(colrsGlBuffer, blockOffs*16, colrsF32);			
 		},
 		getBuffers: function getBuffers(){
-			return {posns:posnsGlBuffer, dirns:dirnsGlBuffer, colrs:colrsGlBuffer}
+			return {posns:posnDirnsGlBuffer, colrs:colrsGlBuffer}
 		},
 		getRangesToDraw: function getRangesToDraw(time){
 			//since particle lifetimes fixed, and created in array, should be 0,1 or 2 contiguous ranges of particles that should draw.]
@@ -5161,15 +5157,13 @@ var explosionParticles = (function(){
 			return ranges;
 		},
 		init: function init(){
-			posnsGlBuffer = gl.createBuffer();
-			dirnsGlBuffer = gl.createBuffer();
+			posnDirnsGlBuffer = gl.createBuffer();
 			colrsGlBuffer = gl.createBuffer();
 			//some initial data
 			
-			var tmpF32Array = new Float32Array(arrayLen*4);	//seems like have to initialise GL buffer in entirety first. (is this necessary?).
-			bufferArrayDataF32(posnsGlBuffer, tmpF32Array, 4);
-			bufferArrayDataF32(dirnsGlBuffer, tmpF32Array, 4);
-			bufferArrayDataF32(colrsGlBuffer, tmpF32Array, 4);
+			//seems like have to initialise GL buffer in entirety first. (is this necessary?).
+			bufferArrayDataF32(posnDirnsGlBuffer, new Float32Array(arrayLen*8), 4);
+			bufferArrayDataF32(colrsGlBuffer, new Float32Array(arrayLen*4), 4);
 			
 			for (var bb=0;bb<numBlocks;bb++){
 				this.makeExplosion([1,0,0,0],-10000,[1,1,1,1],0);	//fill arrays with some dummy data (is this necessary?) TODO stop this dummy data from rendering (disable depth write, make transparent? only draw active particles?
