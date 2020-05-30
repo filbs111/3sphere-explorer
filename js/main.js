@@ -2645,7 +2645,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			
 			
 			//larger shockwave, should match sound
-			var largeRadiusAng = radius * (100-singleExplosion.life)*5;	//note that speed of sound delay approximation currently used 4vec distance, not curve, so this will only match up for small distances. 5 is a guess that seems about right. TODO work out properly!
+			var largeRadiusAng = radius * (100-singleExplosion.life)*2;	//note that speed of sound delay approximation currently used 4vec distance, not curve, so this will only match up for small distances. 5 is a guess that seems about right. TODO work out properly!
 			if (largeRadiusAng<maxShockRadAng){
 				var largeRadius = Math.tan(largeRadiusAng);
 				if (frustumCull(mvMatrix,largeRadius)){	//todo larger max shock rad for larger singleExplosion.size
@@ -3713,7 +3713,7 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		for (var ee in explosions){
 			var singleExplosion = explosions[ee];
-			singleExplosion.life-=0.6*numSteps;
+			singleExplosion.life-=0.4*numSteps;
 			if (singleExplosion.life<1){
 				delete explosions[ee];
 			}
