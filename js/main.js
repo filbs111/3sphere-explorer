@@ -3694,8 +3694,8 @@ var iterateMechanics = (function iterateMechanics(){
 		for (var ii=0;ii<numSteps;ii++){
 			stepSpeed();
 			gunHeat*=gunHeatMultiplier;
-			offsetCam.iterate();
 		}
+		offsetCam.iterate();
 		
 		//TODO check whether this calculation is redundant (done elsewhere)
 		mat4.set(playerCamera, worldCamera);	//TODO check whether playerCamera is main camera or spaceship, decide where microphone should be
