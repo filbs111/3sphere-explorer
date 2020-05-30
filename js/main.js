@@ -3943,7 +3943,7 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 			if (guiParams.debug.fireworks){
 				if (Math.random()<0.05){
-					explosionParticles.makeExplosion(random_quaternion(), frameTime, [Math.random(),Math.random(),Math.random(),1]);	//TODO guarantee bright colour
+					explosionParticles.makeExplosion(random_quaternion(), frameTime, [Math.random(),Math.random(),Math.random(),1],1);	//TODO guarantee bright colour
 				}
 			}
 			
@@ -4686,12 +4686,12 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			if (!moveWithDuocylinder){
 				new Explosion(bullet, 0.0003, [1,0.5,0.25], false, true);
-				explosionParticles.makeExplosion(bullet.matrix.slice(12), frameTime, color);
+				explosionParticles.makeExplosion(bullet.matrix.slice(12), frameTime, color,0);
 			}else{
 				var tmpMat = mat4.create(bullet.matrix);
 				rotate4matCols(tmpMat, 0, 1, duocylinderSpin);	//get bullet matrix in frame of duocylinder. might be duplicating work from elsewhere.
 				new Explosion({matrix:tmpMat, world:bullet.world}, 0.0003, [0.2,0.4,0.6],true, true);	//different colour for debugging
-				explosionParticles.makeExplosion(tmpMat.slice(12), frameTime, color);
+				explosionParticles.makeExplosion(tmpMat.slice(12), frameTime, color,0);
 			}
 			
 			//singleExplosion.life = 100;
@@ -5095,7 +5095,7 @@ var explosionParticles = (function(){
 	//something containing set of position and direction of particles that will draw using shader.
 	//each particle has 2 orthogonal 4-vectors, position at time t = position*cos(t) + direction*sin(t)
 	
-	var blockLen = 64;	//number of particles in an explosion.
+	var blockLen = 256;	//number of particles in an explosion.
 	var numBlocks = 64;
 	var blockStartTimes = new Array(numBlocks);
 	var nextBlock = 0;
@@ -5113,8 +5113,7 @@ var explosionParticles = (function(){
 	var blockOffs;
 	
 	return {
-		makeExplosion: function makeExplosion(posn, time, colr){
-			
+		makeExplosion: function makeExplosion(posn, time, colr, normalness){
 			blockOffs = nextBlock*blockLen;
 			blockStartTimes[nextBlock] = time;
 			
@@ -5129,7 +5128,7 @@ var explosionParticles = (function(){
 			var newDirn;
 			
 			for (var ii=0, pp=0;ii<blockLen;ii++,pp+=4){
-				var dirvec3 = randomNormalised3vec();	//get direction vector for time = 0
+				var dirvec3 = randomNormalised3vec(normalness);	//get direction vector for time = 0
 				newPosn=[];
 				newDirn=[];
 				//do a matrix multiplication. TODO use matrix methods to reduce code length!
@@ -5188,13 +5187,13 @@ var explosionParticles = (function(){
 			bufferArrayDataF32(colrsGlBuffer, tmpF32Array, 4);
 			
 			for (var bb=0;bb<numBlocks;bb++){
-				this.makeExplosion([1,0,0,0],-10000,[1,1,1,1]);	//fill arrays with some dummy data (is this necessary?) TODO stop this dummy data from rendering (disable depth write, make transparent? only draw active particles?
+				this.makeExplosion([1,0,0,0],-10000,[1,1,1,1],0);	//fill arrays with some dummy data (is this necessary?) TODO stop this dummy data from rendering (disable depth write, make transparent? only draw active particles?
 			}
 		}
 	}
 })();
 
-function randomNormalised3vec(){	//TODO uniformly distributed angle (gauss ok, IIRC trig solution for 3d is neat), maybe precalculate, maybe want nonrandom for better sphere coverage for particles
+function randomNormalised3vec(normalness=1){	//TODO uniformly distributed angle (gauss ok, IIRC trig solution for 3d is neat), maybe precalculate, maybe want nonrandom for better sphere coverage for particles
 	var vec=[]
 	var lensq=0;
 	for (var cc=0;cc<3;cc++){
@@ -5203,5 +5202,8 @@ function randomNormalised3vec(){	//TODO uniformly distributed angle (gauss ok, I
 		lensq+=thisElem*thisElem;
 	}
 	var len = Math.sqrt(lensq);
+	//len = normalness*len + (1-normalness);	
+	len = 1 + normalness*(len-1);
+	
 	return vec.map(elem=>elem/len);	
 }
