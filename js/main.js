@@ -12,19 +12,19 @@ var mytestMat111;
 var testPortalDraw;
 
 function bufferArrayData(buffer, arr, size){
-	 bufferArrayDataF32(buffer, new Float32Array(arr), size);
+	 bufferArrayDataGeneral(buffer, new Float32Array(arr), size);
 }
-function bufferArrayDataF32(buffer, f32arr, size){
+function bufferArrayDataGeneral(buffer, arr, size){
 	//console.log("size:" + size);
 	gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-	gl.bufferData(gl.ARRAY_BUFFER, f32arr, gl.STATIC_DRAW);
+	gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STATIC_DRAW);
 	buffer.itemSize = size;
-	buffer.numItems = f32arr.length / size;
+	buffer.numItems = arr.length / size;
 }
 
-function bufferArraySubDataF32(buffer, offs, f32arr){
+function bufferArraySubDataGeneral(buffer, offs, arr){
 	gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-	gl.bufferSubData(gl.ARRAY_BUFFER, offs, f32arr);
+	gl.bufferSubData(gl.ARRAY_BUFFER, offs, arr);
 }
 
 //var atmosVariants = ['CONSTANT','ONE','TWO'];
@@ -569,10 +569,10 @@ function initBuffers(){
 		var matB = gl.createBuffer();
 		var matC = gl.createBuffer();
 		var matD = gl.createBuffer();
-		bufferArrayDataF32(matA, matrixF32ArrA, 4);
-		bufferArrayDataF32(matB, matrixF32ArrB, 4);
-		bufferArrayDataF32(matC, matrixF32ArrC, 4);
-		bufferArrayDataF32(matD, matrixF32ArrD, 4);
+		bufferArrayDataGeneral(matA, matrixF32ArrA, 4);
+		bufferArrayDataGeneral(matB, matrixF32ArrB, 4);
+		bufferArrayDataGeneral(matC, matrixF32ArrC, 4);
+		bufferArrayDataGeneral(matD, matrixF32ArrD, 4);
 		
 		return {a:matA, b:matB, c:matC, d:matD};
 	}
@@ -1650,7 +1650,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			if (activeShaderProgram.attributes.aColor){
 				angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aColor, 1);
 				gl.bindBuffer(gl.ARRAY_BUFFER, expParticleBuffers.colrs);
-				gl.vertexAttribPointer(activeShaderProgram.attributes.aColor, 4, gl.FLOAT, false, 0, offs);
+				gl.vertexAttribPointer(activeShaderProgram.attributes.aColor, 4, gl.UNSIGNED_BYTE, true, 4, offs/4);
 			}
 			if (activeShaderProgram.uniforms.uTime){		
 				gl.uniform1f(activeShaderProgram.uniforms.uTime, frameTime);			
@@ -3661,10 +3661,10 @@ var iterateMechanics = (function iterateMechanics(){
 				matrixF32ArrD.set(thisMat.slice(12,16),pp);
 			}
 			
-			bufferArraySubDataF32(randBoxBuffers.randMatrixBuffers.a, 0, matrixF32ArrA);
-			bufferArraySubDataF32(randBoxBuffers.randMatrixBuffers.b, 0, matrixF32ArrB);
-			bufferArraySubDataF32(randBoxBuffers.randMatrixBuffers.c, 0, matrixF32ArrC);
-			bufferArraySubDataF32(randBoxBuffers.randMatrixBuffers.d, 0, matrixF32ArrD);
+			bufferArraySubDataGeneral(randBoxBuffers.randMatrixBuffers.a, 0, matrixF32ArrA);
+			bufferArraySubDataGeneral(randBoxBuffers.randMatrixBuffers.b, 0, matrixF32ArrB);
+			bufferArraySubDataGeneral(randBoxBuffers.randMatrixBuffers.c, 0, matrixF32ArrC);
+			bufferArraySubDataGeneral(randBoxBuffers.randMatrixBuffers.d, 0, matrixF32ArrD);
 		}
 		
 		
@@ -5079,16 +5079,16 @@ var explosionParticles = (function(){
 	//something containing set of position and direction of particles that will draw using shader.
 	//each particle has 2 orthogonal 4-vectors, position at time t = position*cos(t) + direction*sin(t)
 	
-	var blockLen = 256;	//number of particles in an explosion.
+	var blockLen = 128;	//number of particles in an explosion.
 	var numBlocks = 64;
 	var blockStartTimes = new Array(numBlocks);
 	var nextBlock = 0;
-	var arrayLen = blockLen*numBlocks;	// = 4096
+	var arrayLen = blockLen*numBlocks;	// = 8192
 		//initial implementation - start all particles. later should store larger number of particles, update subset for new explosion
 		//initially just use random direction/speed. should be able to make a particle explosion with a velocity, direction too though, with speeds that loop.
 	
 	var posnDirnsF32 = new Float32Array(blockLen*8);
-	var colrsF32 = new Float32Array(blockLen*4);
+	var colrsUI8 = new Uint8ClampedArray(blockLen*4);
 	var posnDirnsGlBuffer;	//TODO can gl be got before get to this IIFE? 
 	var colrsGlBuffer;
 		//ideally buffers should be position, direction, positon, direction .... to reduce calls to buffer sub data.
@@ -5109,7 +5109,7 @@ var explosionParticles = (function(){
 			var newPosn;
 			var newDirn;
 			
-			for (var ii=0, pp=0;ii<blockLen;ii++,pp+=4){
+			for (var pp=0;pp<blockLen;pp++){
 				var dirvec3 = randomNormalised3vec(normalness);	//get direction vector for time = 0
 				newPosn=[];
 				newDirn=[];
@@ -5126,13 +5126,13 @@ var explosionParticles = (function(){
 					newPosn[bb]=posn[bb]*ct - dirn[bb]*st;
 					newDirn[bb]=dirn[bb]*ct + posn[bb]*st;
 				}
-				posnDirnsF32.set(newPosn, 2*pp);
-				posnDirnsF32.set(newDirn, 2*pp+4);
-				colrsF32.set(colr, pp);
+				posnDirnsF32.set(newPosn, 8*pp);
+				posnDirnsF32.set(newDirn, 8*pp+4);
+				colrsUI8.set(colr.map(elem=>Math.floor(elem*255)), 4*pp);
 			}
 
-			bufferArraySubDataF32(posnDirnsGlBuffer, blockOffs*32, posnDirnsF32);
-			bufferArraySubDataF32(colrsGlBuffer, blockOffs*16, colrsF32);			
+			bufferArraySubDataGeneral(posnDirnsGlBuffer, blockOffs*32, posnDirnsF32);
+			bufferArraySubDataGeneral(colrsGlBuffer, blockOffs*4, colrsUI8);
 		},
 		getBuffers: function getBuffers(){
 			return {posns:posnDirnsGlBuffer, colrs:colrsGlBuffer}
@@ -5162,8 +5162,8 @@ var explosionParticles = (function(){
 			//some initial data
 			
 			//seems like have to initialise GL buffer in entirety first. (is this necessary?).
-			bufferArrayDataF32(posnDirnsGlBuffer, new Float32Array(arrayLen*8), 4);
-			bufferArrayDataF32(colrsGlBuffer, new Float32Array(arrayLen*4), 4);
+			bufferArrayDataGeneral(posnDirnsGlBuffer, new Float32Array(arrayLen*8), 4);
+			bufferArrayDataGeneral(colrsGlBuffer, new Uint8Array(arrayLen*4), 4);
 			
 			for (var bb=0;bb<numBlocks;bb++){
 				this.makeExplosion([1,0,0,0],-10000,[1,1,1,1],0);	//fill arrays with some dummy data (is this necessary?) TODO stop this dummy data from rendering (disable depth write, make transparent? only draw active particles?
