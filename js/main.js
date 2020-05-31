@@ -1642,10 +1642,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 			var offs = elem.start * 16;
 			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aVertexCentrePosition, 1);
 			gl.bindBuffer(gl.ARRAY_BUFFER, expParticleBuffers.posns);
-			gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexCentrePosition, 4, gl.FLOAT, false, 32, 2*offs);
+			gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexCentrePosition, 4, gl.SHORT, true, 16, offs);
 			if (activeShaderProgram.attributes.aVertexCentreDirection){
 				angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aVertexCentreDirection, 1);
-				gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexCentreDirection, 4, gl.FLOAT, false, 32, 2*offs+16);
+				gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexCentreDirection, 4, gl.SHORT, true, 16, offs+8);
 			}
 			if (activeShaderProgram.attributes.aColor){
 				angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aColor, 1);
@@ -5087,7 +5087,7 @@ var explosionParticles = (function(){
 		//initial implementation - start all particles. later should store larger number of particles, update subset for new explosion
 		//initially just use random direction/speed. should be able to make a particle explosion with a velocity, direction too though, with speeds that loop.
 	
-	var posnDirnsF32 = new Float32Array(blockLen*8);
+	var posnDirnsI16 = new Int16Array(blockLen*8);
 	var colrsUI8 = new Uint8ClampedArray(blockLen*4);
 	var posnDirnsGlBuffer;	//TODO can gl be got before get to this IIFE? 
 	var colrsGlBuffer;
@@ -5125,13 +5125,17 @@ var explosionParticles = (function(){
 					// newdirn = dirn*cos(time_angle) + posn*sin(time_angle)
 					newPosn[bb]=posn[bb]*ct - dirn[bb]*st;
 					newDirn[bb]=dirn[bb]*ct + posn[bb]*st;
+					
+					//convert from float to int16. int16 runs from -32768 to 32767. TODO find out exactly how shader "normalisation" maps this back to -1 to 1. for other uses eg static objects this may matter much more. note "Due to OpenGL ES 2.0 / WebGL 1.0 platform differences, some implementations may decode signed normalized integers to floating-point values differently" https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_mesh_quantization
+					
+					newPosn[bb] = Math.min(32767,Math.max(-32768,Math.floor(newPosn[bb]*32767)));	//alternatively use Math.round. (unsure which is more correct.)
+					newDirn[bb] = Math.min(32767,Math.max(-32768,Math.floor(newDirn[bb]*32767)));
 				}
-				posnDirnsF32.set(newPosn, 8*pp);
-				posnDirnsF32.set(newDirn, 8*pp+4);
+				posnDirnsI16.set(newPosn, 8*pp);
+				posnDirnsI16.set(newDirn, 8*pp+4);
 				colrsUI8.set(colr.map(elem=>Math.floor(elem*255)), 4*pp);
 			}
-
-			bufferArraySubDataGeneral(posnDirnsGlBuffer, blockOffs*32, posnDirnsF32);
+			bufferArraySubDataGeneral(posnDirnsGlBuffer, blockOffs*16, posnDirnsI16);
 			bufferArraySubDataGeneral(colrsGlBuffer, blockOffs*4, colrsUI8);
 		},
 		getBuffers: function getBuffers(){
@@ -5162,7 +5166,7 @@ var explosionParticles = (function(){
 			//some initial data
 			
 			//seems like have to initialise GL buffer in entirety first. (is this necessary?).
-			bufferArrayDataGeneral(posnDirnsGlBuffer, new Float32Array(arrayLen*8), 4);
+			bufferArrayDataGeneral(posnDirnsGlBuffer, new Int16Array(arrayLen*8), 4);
 			bufferArrayDataGeneral(colrsGlBuffer, new Uint8Array(arrayLen*4), 4);
 			
 			for (var bb=0;bb<numBlocks;bb++){
