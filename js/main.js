@@ -5,6 +5,7 @@ var shaderProgramColored,	//these are variables that are set to different shader
 
 var angle_ext;
 var fragDepth_ext;	//maybe pointless to store this, allegedly just need to call gl.getExtension('EXT_frag_depth')	https://developer.mozilla.org/en-US/docs/Web/API/EXT_frag_depth
+var depthTex_ext;
 
 var myDebugStr = "TEST INFO TO GO HERE";
 var myfisheyedebug;
@@ -37,6 +38,19 @@ var genShaderVariants = function(vs_id, fs_id, vs_defines=[], fs_defines=[], use
 	//	vs_defines.push('CUSTOM_DEPTH');
 	//	fs_defines.push('CUSTOM_DEPTH');
 	}
+	
+	//try deleting CUSTOM_DEPTH - use this to test if can get decent z-buffer performance (increase range without introducing z-fighting), without recourse to custom depth, by increasing depth buffer precision,
+	/*
+	var index = vs_defines.indexOf('CUSTOM_DEPTH');
+	if (index > -1) {
+	  vs_defines.splice(index, 1);
+	}
+	index = fs_defines.indexOf('CUSTOM_DEPTH');
+	if (index > -1) {
+	  fs_defines.splice(index, 1);
+	}
+	*/
+	
 	for (var variant of atmosVariants){
 		var variantString = "ATMOS_"+variant;
 		shaders[variant]=loadShader(vs_id, fs_id, vs_defines.concat(variantString), fs_defines.concat(variantString));
@@ -904,7 +918,8 @@ function drawScene(frameTime){
 		}else{
 			//draw scene to intermediate screen
 			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-			bind2dTextureIfRequired(rttFisheyeView.texture);	
+		//	bind2dTextureIfRequired(rttFisheyeView.texture);	
+			bind2dTextureIfRequired(rttFisheyeView.depthTexture);	//demo displaying rendered depth texture
 			activeProg = shaderPrograms.fullscreenTexturedFisheye;
 			gl.useProgram(activeProg);
 			enableDisableAttributes(activeProg);
@@ -3450,6 +3465,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	initGL();
 	angle_ext = gl.getExtension("ANGLE_instanced_arrays");							
 	fragDepth_ext = gl.getExtension('EXT_frag_depth');
+	depthTex_ext = gl.getExtension('WEBGL_depth_texture');
 	
 	initTextureFramebuffer(rttView);
 	initTextureFramebuffer(rttFisheyeView);
@@ -4980,16 +4996,23 @@ function setRttSize(view, width, height){
 	
 	gl.bindTexture(gl.TEXTURE_2D, view.texture);
 	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, view.framebuffer.width, view.framebuffer.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+	
+	gl.bindTexture(gl.TEXTURE_2D, view.depthTexture);
+	gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT, view.framebuffer.width, view.framebuffer.height, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT , null);	//can use gl.UNSIGNED_BYTE , gl.UNSIGNED_SHORT here but get depth fighting (though only on spaceship) gl.UNSIGNED_INT stops z-fighting, could use WEBGL_depth_texture UNSIGNED_INT_24_8_WEBGL .
+	//note that possibly gl.UNSIGNED_INT might help z-fighting without needing to do custom depth writing.
+	
+	gl.bindTexture(gl.TEXTURE_2D, null);
+	
 	var renderbuffer = gl.createRenderbuffer();
 	gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
-	gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, view.framebuffer.width, view.framebuffer.height);
+	gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, view.framebuffer.width, view.framebuffer.height); // TODO what is difference gl.DEPTH_COMPONENT, gl.DEPTH_COMPONENT16 ?
 
 //	gl.bindFramebuffer(gl.FRAMEBUFFER, view.framebuffer);
 	
 	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, view.texture, 0);
-	gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, renderbuffer);
-
-	gl.bindTexture(gl.TEXTURE_2D, null);
+	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, view.depthTexture, 0);
+	//gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, renderbuffer);
+	
 	gl.bindRenderbuffer(gl.RENDERBUFFER, null);
 //	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
@@ -5006,8 +5029,15 @@ function initTextureFramebuffer(view) {
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 	//gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-
 	//gl.generateMipmap(gl.TEXTURE_2D);
+	
+	view.depthTexture = gl.createTexture();
+	gl.bindTexture(gl.TEXTURE_2D, view.depthTexture);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+	
 
 	gl.bindFramebuffer(gl.FRAMEBUFFER, view.framebuffer);
 	setRttSize( view, 2048, 1024);	//overwritten right away, so little point having here.
