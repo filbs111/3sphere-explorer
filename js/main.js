@@ -5126,9 +5126,9 @@ var explosionParticles = (function(){
 					newPosn[bb]=posn[bb]*ct - dirn[bb]*st;
 					newDirn[bb]=dirn[bb]*ct + posn[bb]*st;
 					
-					//convert from float to int16. int16 runs from -32768 to 32767. TODO find out exactly how shader "normalisation" maps this back to -1 to 1. for other uses eg static objects this may matter much more. note "Due to OpenGL ES 2.0 / WebGL 1.0 platform differences, some implementations may decode signed normalized integers to floating-point values differently" https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_mesh_quantization
+					//convert from float to int16. int16 runs from -32768 to 32767. TODO find out exactly how shader "normalisation" maps this back to -1 to 1. for other uses eg static objects this may matter much more. note "Due to OpenGL ES 2.0 / WebGL 1.0 platform differences, some implementations may decode signed normalized integers to floating-point values differently" https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_mesh_quantization 
 					
-					newPosn[bb] = Math.min(32767,Math.max(-32768,Math.floor(newPosn[bb]*32767)));	//alternatively use Math.round. (unsure which is more correct.)
+					newPosn[bb] = Math.min(32767,Math.max(-32768,Math.floor(newPosn[bb]*32767)));	//alternatively use Math.round. unsure which is more correct. https://www.khronos.org/opengl/wiki/Normalized_Integer "Alternate mapping". unclear whether applies. using uint and 2x-1 in vert shader would resolve uncertainty, or do some experiment to discern whether MIN, -MAX are equivalent etc
 					newDirn[bb] = Math.min(32767,Math.max(-32768,Math.floor(newDirn[bb]*32767)));
 				}
 				posnDirnsI16.set(newPosn, 8*pp);
