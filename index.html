@@ -127,6 +127,21 @@
 	}
 </script>
 
+<script id="shader-fullscreen-with-depthmap-fs" type="x-shader/x-fragment">
+#extension GL_EXT_frag_depth : enable
+	precision mediump float;
+	
+	varying vec2 vTextureCoord;
+	uniform sampler2D uSampler;
+	uniform sampler2D uSamplerDepthmap;
+	
+	void main(void) {
+		gl_FragColor = texture2D(uSampler, vTextureCoord);
+		gl_FragDepthEXT = texture2D(uSamplerDepthmap, vTextureCoord).r;
+		//gl_FragDepthEXT = texture2D(uSampler, vTextureCoord).r;
+	}
+</script>
+
 <!-- simple texture mapped pix shader with fisheye effect-->
 <script id="shader-fullscreen-fs-fisheye" type="x-shader/x-fragment">
 	precision mediump float;

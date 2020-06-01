@@ -68,6 +68,7 @@ function initShaders(){
 	var initShaderTimeStart = performance.now();
 	
 	shaderPrograms.fullscreenTextured = loadShader( "shader-fullscreen-vs", "shader-fullscreen-fs"); 
+	shaderPrograms.fullscreenTexturedWithDepthmap = loadShader( "shader-fullscreen-vs", "shader-fullscreen-with-depthmap-fs"); 
 	shaderPrograms.fullscreenTexturedFisheye = loadShader( "shader-fullscreen-vs", "shader-fullscreen-fs-fisheye");
 	shaderPrograms.fullscreenBennyBoxLite = loadShader( "shader-fullscreen-vs", "shader-fullscreen-fs-bennybox-lite");
 	shaderPrograms.fullscreenBennyBox = loadShader( "shader-fullscreen-vs", "shader-fullscreen-fs-bennybox");	//https://www.youtube.com/watch?v=Z9bYzpwVINA
@@ -864,7 +865,7 @@ function drawScene(frameTime){
 	}
 	
 	if (guiParams.display.renderViaTexture == "no"){
-		drawWorldScene(frameTime, false, offsetCameraContainer.world);
+		drawWorldScene(frameTime, false);
 	}else{
 		
 		var fisheyeParams={};
@@ -903,26 +904,27 @@ function drawScene(frameTime){
 			var oversizedViewport = [ 2*Math.floor(oversize*gl.viewportWidth/2),  2*Math.floor(oversize*gl.viewportHeight/2)];
 			gl.viewport( 0,0, oversizedViewport[0], oversizedViewport[1] );
 			setRttSize( rttFisheyeView, oversizedViewport[0], oversizedViewport[1] );	//todo stop setting this repeatedly
-			drawWorldScene(frameTime, false, offsetCameraContainer.world);
+			
+			var wSettings = drawWorldScene(frameTime, false);
 			
 			//switch to another view of same size, asign textures for existing rgb(a) and depth map, and draw these to new rgb(a), depth map (fullscreen quad)
 			// note that drawing depthmap maybe redundant because will be looking up depth map from texture to determine colours anyway, but might help with discarding pixels etc.
 			gl.bindFramebuffer(gl.FRAMEBUFFER, rttFisheyeView2.framebuffer);
 			gl.viewport( 0,0, oversizedViewport[0], oversizedViewport[1] );
 			setRttSize( rttFisheyeView2, oversizedViewport[0], oversizedViewport[1] );	//todo stop setting this repeatedly
-			activeProg = shaderPrograms.fullscreenTextured;
+			activeProg = shaderPrograms.fullscreenTexturedWithDepthmap;
 			gl.useProgram(activeProg);
 			enableDisableAttributes(activeProg);
 			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);	//TODO check whether need this - should be redrawing everything so could just disable z check
 			
-			bind2dTextureIfRequired(rttFisheyeView.texture);	
-			//bind2dTextureIfRequired(rttFisheyeView.depthTexture);	//demo displaying rendered depth texture TODO assign both textures at once.
+			bind2dTextureIfRequired(rttFisheyeView.texture);
+			bind2dTextureIfRequired(rttFisheyeView.depthTexture,gl.TEXTURE2);	//demo displaying rendered depth texture TODO assign both textures at once.
 			
-			gl.uniform1i(activeProg.uniforms.uSampler, 0);		//TODO choose a consistent texture slot	
-			gl.uniform2fv(activeProg.uniforms.uInvSize, [1/gl.viewportWidth , 1/gl.viewportHeight]);		
+			gl.uniform1i(activeProg.uniforms.uSampler, 0);
+			gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);	
 			drawObjectFromBuffers(fsBuffers, activeProg);
 			
-			drawWorldScene2(frameTime);	//depth aware drawing stuff like sea
+			drawWorldScene2(frameTime, wSettings);	//depth aware drawing stuff like sea
 		}
 		
 		//draw the scene to offscreen framebuffer
@@ -933,11 +935,12 @@ function drawScene(frameTime){
 		var activeProg;
 		
 		if (guiParams.display.renderViaTexture != "fisheye"){
-			drawWorldScene(frameTime, false, offsetCameraContainer.world);
+			drawWorldScene(frameTime, false);
 		}else{
 			//draw scene to intermediate screen
 			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 			bind2dTextureIfRequired(rttFisheyeView2.texture);	
+		//	bind2dTextureIfRequired(rttFisheyeView2.depthTexture);	
 			activeProg = shaderPrograms.fullscreenTexturedFisheye;
 			gl.useProgram(activeProg);
 			enableDisableAttributes(activeProg);
@@ -1330,16 +1333,29 @@ function updateGunTargeting(matrix){
 
 var lgMat;
 
-function drawWorldScene(frameTime, isCubemapView) {
+
+function getWorldSceneSettings(isCubemapView){
 	var colorsSwitch = ((isCubemapView && guiParams.reflector.isPortal)?1:0)^offsetCameraContainer.world;
 	var worldInfo = (colorsSwitch==0) ? guiParams.world0 : guiParams.world1;	//todo use array
-	
 	var localVecFogColor = worldColors[colorsSwitch];
 	var localVecReflectorColor = guiParams.reflector.isPortal? worldColors[1-colorsSwitch]: worldColors[colorsSwitch];
 	var localVecReflectorDiffColor = [ localVecReflectorColor[0]-localVecFogColor[0],
 										localVecReflectorColor[1]-localVecFogColor[1],
 										localVecReflectorColor[2]-localVecFogColor[2]];	//todo use a vector class!
-		
+
+	//calculate stuff for discard shaders
+	//position of reflector in frame of camera (after MVMatrix transformation)
+	var reflectorPosTransformed = [worldCamera[3],worldCamera[7],worldCamera[11],worldCamera[15]];
+	var cosReflector = 1.0/Math.sqrt(1+reflectorInfo.rad*reflectorInfo.rad);
+	
+	return {colorsSwitch, worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector};
+}
+
+function drawWorldScene(frameTime, isCubemapView) {
+	var wSettings = getWorldSceneSettings(isCubemapView);
+	({colorsSwitch,worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector} = wSettings);
+		//above could just paste getWorldSceneSettings function stuff here instead.
+	
 	gl.clearColor.apply(gl,worldColorsPlain[colorsSwitch]);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 			
@@ -1350,10 +1366,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 	mat4.set(invertedWorldCamera, invertedWorldCameraDuocylinderFrame);
 	rotate4mat(invertedWorldCameraDuocylinderFrame, 0, 1, duocylinderSpin);
 	
-	//calculate stuff for discard shaders
-	//position of reflector in frame of camera (after MVMatrix transformation)
-	var reflectorPosTransformed = [worldCamera[3],worldCamera[7],worldCamera[11],worldCamera[15]];
-	var cosReflector = 1.0/Math.sqrt(1+reflectorInfo.rad*reflectorInfo.rad);
 		
 	var relevantColorShader = shaderPrograms.coloredPerPixelDiscard[ guiParams.display.atmosShader ];
 	//var relevantTexmapShader = shaderPrograms.texmapPerPixelDiscard[ guiParams.display.atmosShader ];
@@ -1379,6 +1391,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	mat4.multiply(lightMat, sshipMatrixShifted);
 	dropLightPos = lightMat.slice(12);
+	
+	wSettings.dropLightPos = dropLightPos;
 	
 	//for debug 
 	window.lmat = lightMat;
@@ -1988,7 +2002,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	activeShaderProgram = guiParams.display.perPixelLighting? (guiParams.display.useSpecular ? shaderPrograms.texmap4VecPerPixelDiscardPhongVcolor[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscardVcolor[ guiParams.display.atmosShader ]): shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ];
 	gl.useProgram(activeShaderProgram);
-	performCommon4vecShaderSetup(activeShaderProgram, "not normal map");
+	performCommon4vecShaderSetup(activeShaderProgram, wSettings, "not normal map");
 
 	if (guiParams["random boxes"].drawType == 'singleBuffer'){
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.randBoxes);
@@ -2002,7 +2016,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	activeShaderProgram = guiParams.display.useSpecular ? shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscardNormalmapVcolorAndDiffuse[ guiParams.display.atmosShader ];
 	gl.useProgram(activeShaderProgram);
-	performCommon4vecShaderSetup(activeShaderProgram, "normal map");
+	performCommon4vecShaderSetup(activeShaderProgram, wSettings, "normal map");
 	
 	if (guiParams.drawShapes.singleBufferTowers){
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);	//uColor is redundant here since have vertex colors. TODO lose it?
@@ -2011,72 +2025,25 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	activeShaderProgram = guiParams.display.useSpecular ? shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongAndDiffuse[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscardNormalmapAndDiffuse[ guiParams.display.atmosShader ];
 	gl.useProgram(activeShaderProgram);
-	performCommon4vecShaderSetup(activeShaderProgram, "normal map");
+	performCommon4vecShaderSetup(activeShaderProgram, wSettings, "normal map");
 	
 	if (guiParams.drawShapes.singleBufferRoads){
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.darkGray);
 		drawTennisBall(roadBoxBuffers, activeShaderProgram);
 	}
-	
+	/*
 	activeShaderProgram = shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ];
 	gl.useProgram(activeShaderProgram);
-	performCommon4vecShaderSetup(activeShaderProgram, "log3");
-	
+	performCommon4vecShaderSetup(activeShaderProgram, wSettings, "log3");
+	*/
 	if (worldInfo.duocylinderModel!='none'){
-		drawDuocylinderObject(duocylinderObjects[worldInfo.duocylinderModel]);
+		drawDuocylinderObject(wSettings, duocylinderObjects[worldInfo.duocylinderModel]);
 	}
-	if (worldInfo.seaActive){
-		drawDuocylinderObject(duocylinderObjects['sea'], guiParams.seaLevel);
-	}
-	
-	function drawDuocylinderObject(duocylinderObj, zeroLevel){		
-		//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
-		if (!duocylinderObj.isSea){
-			if (duocylinderObj.usesTriplanarMapping){	//means is voxTerrain.
-				//activeShaderProgram = guiParams.display.perPixelLighting? shaderPrograms.triplanarPerPixel[ guiParams.display.atmosShader ] : shaderPrograms.triplanarColor4Vec[ guiParams.display.atmosShader ];
-				activeShaderProgram = guiParams.display.perPixelLighting? shaderPrograms.triplanarPerPixelTwoAndDiffuse[ guiParams.display.atmosShader ] : shaderPrograms.triplanarColor4Vec[ guiParams.display.atmosShader ];
-			}else{
-				//activeShaderProgram = duocylinderObj.useMapproject? shaderPrograms.texmap4VecMapproject[ guiParams.display.atmosShader ] : shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ] ;
-				activeShaderProgram = duocylinderObj.useMapproject? ( guiParams.display.useSpecular? shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse2Tex[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecMapprojectDiscardNormalmapVcolorAndDiffuse[ guiParams.display.atmosShader ] ) : ( guiParams.display.useSpecular? shaderPrograms.texmap4VecPerPixelDiscardPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscard[ guiParams.display.atmosShader ]);
-			}
-			gl.useProgram(activeShaderProgram);
-		}else{
-			activeShaderProgram = guiParams.display.perPixelLighting? ( guiParams.display.useSpecular? shaderPrograms.duocylinderSeaPerPixelDiscardPhong[ guiParams.display.atmosShader ] :shaderPrograms.duocylinderSeaPerPixelDiscard[ guiParams.display.atmosShader ]) : shaderPrograms.duocylinderSea[ guiParams.display.atmosShader ];
-			gl.useProgram(activeShaderProgram);
-			gl.uniform1f(activeShaderProgram.uniforms.uTime, seaTime);			
-			gl.uniform1f(activeShaderProgram.uniforms.uZeroLevel, zeroLevel);
-		}
-		if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
-			gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, worldCamera.slice(12));
-		}
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
-		performCommon4vecShaderSetup(activeShaderProgram);
-		
-		drawTennisBall(duocylinderObj, activeShaderProgram);
+			
+	if (worldInfo.seaActive && isCubemapView){	//draw this in drawWorldScene2 for standard view (using depth image from drawWorldScene) TODO move there for cubemap view also.
+		drawDuocylinderObject(wSettings, duocylinderObjects['sea'], guiParams.seaLevel, seaTime);
 	}
 	
-	function performCommon4vecShaderSetup(activeShaderProgram, logtag){	//todo move to top level? are inner functions inefficient?
-				
-		if (logtag){
-			document[logtag] = {about:"performCommon4vecShaderSetup", localVecFogColor:localVecFogColor, localVecReflectorDiffColor:localVecReflectorDiffColor, playerLight:playerLight, reflectorPosTransformed:reflectorPosTransformed, cosReflector:cosReflector, dropLightPos:dropLightPos};
-		}
-	
-		if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
-			gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, worldCamera.slice(12));
-		}
-		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
-		if (activeShaderProgram.uniforms.uReflectorDiffColor){
-				gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
-		}
-		if (activeShaderProgram.uniforms.uPlayerLightColor){
-			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
-		}
-		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
-		if (activeShaderProgram.uniforms.uReflectorPosVShaderCopy){gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPosVShaderCopy, reflectorPosTransformed);}
-		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
-		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
-		performGeneralShaderSetup(activeShaderProgram);
-	}
 	
 	//draw objects without textures
 	activeShaderProgram = shaderProgramColored;
@@ -2698,10 +2665,25 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//gl.useProgram(shaderProgramColored);
 	//gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [0, 0, 0]);
 
+	return wSettings;
 }
 
-function drawWorldScene2(frameTime){	//TODO drawing using rgba, depth buffer images from previous rendering
+function drawWorldScene2(frameTime, wSettings){	//TODO drawing using rgba, depth buffer images from previous rendering
+	//({colorsSwitch,worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, dropLightPos} = wSettings);
 	
+	({worldInfo} = wSettings);
+	
+	//general stuff used for all 4vec vertex format objects (currently)	//note this is duplicated from drawWorldScene
+	mat4.set(invertedWorldCamera, mvMatrix);
+	rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
+	mat4.identity(mMatrix);							//better to set M, V matrices and leave MV for shader?
+	rotate4mat(mMatrix, 0, 1, duocylinderSpin);
+	
+	var seaTime = 0.00005*(frameTime % 20000 ); //20s loop	//note this is duplicated from drawWorldScene
+	if (worldInfo.seaActive){
+		drawDuocylinderObject(wSettings, duocylinderObjects['sea'], guiParams.seaLevel, seaTime);
+	}
+
 }
 
 var explosions ={};		//todo how to contain this? eg should constructor be eg explosions.construct()? what's good practice?
@@ -5049,7 +5031,7 @@ function initTextureFramebuffer(view) {
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);	//TODO use nearest where appropriate (eg when copying for depth/rgb aware 2nd stage rendering)
 	//gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 	//gl.generateMipmap(gl.TEXTURE_2D);
@@ -5126,6 +5108,56 @@ function performGeneralShaderSetup(shader){
 	if (shader.uniforms.uSpecularPower){
 		gl.uniform1f(shader.uniforms.uSpecularPower, guiParams.display.specularPower);	
 	}
+}
+function performCommon4vecShaderSetup(activeShaderProgram, wSettings, logtag){	//todo move to top level? are inner functions inefficient?
+	({colorsSwitch,worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, dropLightPos} = wSettings);
+
+	if (logtag){
+		document[logtag] = {about:"performCommon4vecShaderSetup", localVecFogColor:localVecFogColor, localVecReflectorDiffColor:localVecReflectorDiffColor, playerLight:playerLight, reflectorPosTransformed:reflectorPosTransformed, cosReflector:cosReflector, dropLightPos:dropLightPos};
+	}
+
+	if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
+		gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, worldCamera.slice(12));
+	}
+	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
+	if (activeShaderProgram.uniforms.uReflectorDiffColor){
+			gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
+	}
+	if (activeShaderProgram.uniforms.uPlayerLightColor){
+		gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
+	}
+	gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
+	if (activeShaderProgram.uniforms.uReflectorPosVShaderCopy){gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPosVShaderCopy, reflectorPosTransformed);}
+	gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
+	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
+	performGeneralShaderSetup(activeShaderProgram);
+}
+function drawDuocylinderObject(wSettings, duocylinderObj, zeroLevel, seaTime){	
+	var activeShaderProgram;
+	//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
+	if (!duocylinderObj.isSea){
+		if (duocylinderObj.usesTriplanarMapping){	//means is voxTerrain.
+			//activeShaderProgram = guiParams.display.perPixelLighting? shaderPrograms.triplanarPerPixel[ guiParams.display.atmosShader ] : shaderPrograms.triplanarColor4Vec[ guiParams.display.atmosShader ];
+			activeShaderProgram = guiParams.display.perPixelLighting? shaderPrograms.triplanarPerPixelTwoAndDiffuse[ guiParams.display.atmosShader ] : shaderPrograms.triplanarColor4Vec[ guiParams.display.atmosShader ];
+		}else{
+			//activeShaderProgram = duocylinderObj.useMapproject? shaderPrograms.texmap4VecMapproject[ guiParams.display.atmosShader ] : shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ] ;
+			activeShaderProgram = duocylinderObj.useMapproject? ( guiParams.display.useSpecular? shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse2Tex[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecMapprojectDiscardNormalmapVcolorAndDiffuse[ guiParams.display.atmosShader ] ) : ( guiParams.display.useSpecular? shaderPrograms.texmap4VecPerPixelDiscardPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscard[ guiParams.display.atmosShader ]);
+		}
+		gl.useProgram(activeShaderProgram);
+	}else{
+		activeShaderProgram = guiParams.display.perPixelLighting? ( guiParams.display.useSpecular? shaderPrograms.duocylinderSeaPerPixelDiscardPhong[ guiParams.display.atmosShader ] :shaderPrograms.duocylinderSeaPerPixelDiscard[ guiParams.display.atmosShader ]) : shaderPrograms.duocylinderSea[ guiParams.display.atmosShader ];
+		gl.useProgram(activeShaderProgram);
+		gl.uniform1f(activeShaderProgram.uniforms.uTime, seaTime);			
+		gl.uniform1f(activeShaderProgram.uniforms.uZeroLevel, zeroLevel);
+	}
+		
+	if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
+		gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, worldCamera.slice(12));
+	}
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+	performCommon4vecShaderSetup(activeShaderProgram, wSettings);
+	
+	drawTennisBall(duocylinderObj, activeShaderProgram);
 }
 
 
