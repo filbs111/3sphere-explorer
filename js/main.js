@@ -904,6 +904,25 @@ function drawScene(frameTime){
 			gl.viewport( 0,0, oversizedViewport[0], oversizedViewport[1] );
 			setRttSize( rttFisheyeView, oversizedViewport[0], oversizedViewport[1] );	//todo stop setting this repeatedly
 			drawWorldScene(frameTime, false, offsetCameraContainer.world);
+			
+			//switch to another view of same size, asign textures for existing rgb(a) and depth map, and draw these to new rgb(a), depth map (fullscreen quad)
+			// note that drawing depthmap maybe redundant because will be looking up depth map from texture to determine colours anyway, but might help with discarding pixels etc.
+			gl.bindFramebuffer(gl.FRAMEBUFFER, rttFisheyeView2.framebuffer);
+			gl.viewport( 0,0, oversizedViewport[0], oversizedViewport[1] );
+			setRttSize( rttFisheyeView2, oversizedViewport[0], oversizedViewport[1] );	//todo stop setting this repeatedly
+			activeProg = shaderPrograms.fullscreenTextured;
+			gl.useProgram(activeProg);
+			enableDisableAttributes(activeProg);
+			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);	//TODO check whether need this - should be redrawing everything so could just disable z check
+			
+			bind2dTextureIfRequired(rttFisheyeView.texture);	
+			//bind2dTextureIfRequired(rttFisheyeView.depthTexture);	//demo displaying rendered depth texture TODO assign both textures at once.
+			
+			gl.uniform1i(activeProg.uniforms.uSampler, 0);		//TODO choose a consistent texture slot	
+			gl.uniform2fv(activeProg.uniforms.uInvSize, [1/gl.viewportWidth , 1/gl.viewportHeight]);		
+			drawObjectFromBuffers(fsBuffers, activeProg);
+			
+			drawWorldScene2(frameTime);	//depth aware drawing stuff like sea
 		}
 		
 		//draw the scene to offscreen framebuffer
@@ -918,8 +937,7 @@ function drawScene(frameTime){
 		}else{
 			//draw scene to intermediate screen
 			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-		//	bind2dTextureIfRequired(rttFisheyeView.texture);	
-			bind2dTextureIfRequired(rttFisheyeView.depthTexture);	//demo displaying rendered depth texture
+			bind2dTextureIfRequired(rttFisheyeView2.texture);	
 			activeProg = shaderPrograms.fullscreenTexturedFisheye;
 			gl.useProgram(activeProg);
 			enableDisableAttributes(activeProg);
@@ -2682,6 +2700,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 
 }
 
+function drawWorldScene2(frameTime){	//TODO drawing using rgba, depth buffer images from previous rendering
+	
+}
 
 var explosions ={};		//todo how to contain this? eg should constructor be eg explosions.construct()? what's good practice?
 var Explosion=function(){
@@ -3469,6 +3490,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	
 	initTextureFramebuffer(rttView);
 	initTextureFramebuffer(rttFisheyeView);
+	initTextureFramebuffer(rttFisheyeView2);
 	initShaders();
 	initTexture();
 	initCubemapFramebuffer();
@@ -4984,6 +5006,7 @@ function fireGun(){
 //from http://learningwebgl.com/blog/?p=1786
 var rttView={};
 var rttFisheyeView={};
+var rttFisheyeView2={};
 
 function setRttSize(view, width, height){	
 	if (view.sizeX == width && view.sizeY == height){return;}	// avoid setting again if same numbers ( has speed impact)
@@ -5040,7 +5063,8 @@ function initTextureFramebuffer(view) {
 	
 
 	gl.bindFramebuffer(gl.FRAMEBUFFER, view.framebuffer);
-	setRttSize( view, 2048, 1024);	//overwritten right away, so little point having here.
+	//setRttSize( view, 2048, 1024);	//overwritten right away, so little point having here.
+	setRttSize( view, 512, 512);	//overwritten right away, so little point having here.
 	
 	/*
 	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, rttFramebuffer.width, rttFramebuffer.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
