@@ -1073,6 +1073,10 @@
 	precision mediump float;
 	varying vec3 vTextureCoord;
 	uniform sampler2D uSampler;
+#ifdef DEPTH_AWARE
+	uniform sampler2D uSamplerDepthmap;
+	varying vec3 vScreenSpaceCoord;
+#endif
 	uniform vec4 uColor;
 	uniform vec3 uPlayerLightColor;
 #ifdef VEC_ATMOS_THICK
@@ -1143,8 +1147,14 @@
 		
 		//guess maybe similar to some gaussian light source
 		//vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*adjustedColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
+
 		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz )*adjustedColor.xyz*texture2DProj(uSampler, vTextureCoord).xyz + (1.0-fog)*uFogColor.xyz , 1.);
 		
+#ifdef DEPTH_AWARE
+		//preGammaFragColor.rgb = texture2D(uSamplerDepthmap, gl_FragCoord.xy).rgb;	//just something to show can use texture.
+		preGammaFragColor = texture2DProj(uSamplerDepthmap, vec3(.5,.5,1.)*vScreenSpaceCoord.xyz + vec3(.5,.5,0.)*vScreenSpaceCoord.z);	//TODO use coords that project without extra term
+#endif
+
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
 
@@ -2631,6 +2641,10 @@
 #ifdef CUSTOM_DEPTH
 	varying vec2 vZW;
 #endif
+#ifdef DEPTH_AWARE
+	varying vec3 vScreenSpaceCoord;
+#endif
+
 	void addWaveContribution(in vec2 wavePosIn, inout vec3 wavePosAccum, inout vec3 vDerivativeWRTX, inout vec3 vDerivativeWRTY, float peakiness, vec2 waveCycles){	//waveCycles should be int2
 		//wavecycles - number of waves across repeating square in each direction.
 		//wavevector relates to this...
@@ -2800,6 +2814,10 @@
 		adjustedPos = transformedCoord - uDropLightPos;
 		
 		vTextureCoord = vec3( aVertexPosition, 1.0 );	//any point in projected tex??
+		
+#ifdef DEPTH_AWARE
+		vScreenSpaceCoord = gl_Position.xyw;
+#endif
 	}
 </script>
 

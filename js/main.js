@@ -118,10 +118,11 @@ function initShaders(){
 	shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse2Tex = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','CONST_ITERS 64.0','CUSTOM_DEPTH'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','DOUBLE_TEXTURES','CUSTOM_DEPTH'],true);
 	
 	//sea shaders
-	shaderPrograms.duocylinderSea = genShaderVariants("shader-texmap-vs-duocylinder-sea", "shader-texmap-fs", ['CONST_ITERS 64.0']);
-	shaderPrograms.duocylinderSeaPerPixelDiscard = genShaderVariants("shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['CONST_ITERS 64.0'],[],true);
+	//shaderPrograms.duocylinderSea = genShaderVariants("shader-texmap-vs-duocylinder-sea", "shader-texmap-fs", ['CONST_ITERS 64.0']);
+	//shaderPrograms.duocylinderSeaPerPixelDiscard = genShaderVariants("shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['CONST_ITERS 64.0'],[],true);
 	shaderPrograms.duocylinderSeaPerPixelDiscardPhong = genShaderVariants("shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['CONST_ITERS 64.0','CUSTOM_DEPTH'], ['SPECULAR_ACTIVE','CUSTOM_DEPTH'],true),
-				
+	shaderPrograms.duocylinderSeaPerPixelDiscardPhongDepthAware = genShaderVariants("shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['CONST_ITERS 64.0','CUSTOM_DEPTH','DEPTH_AWARE'], ['SPECULAR_ACTIVE','CUSTOM_DEPTH','DEPTH_AWARE'],true),
+	
 	shaderPrograms.cubemap = genShaderVariants( "shader-cubemap-vs", "shader-cubemap-fs",['CONST_ITERS 64.0'],[],true);
 	shaderPrograms.vertprojCubemap = genShaderVariants("shader-cubemap-vs", "shader-cubemap-fs", ['VERTPROJ','CONST_ITERS 64.0','CUSTOM_DEPTH'],['CUSTOM_DEPTH'],true);
 	shaderPrograms.specialCubemap = genShaderVariants("shader-cubemap-vs", "shader-cubemap-fs", ['VERTPROJ','CONST_ITERS 64.0','SPECIAL'],['SPECIAL'],true);		//try calculating using screen space coordinates, to work around buggy wobbly rendering close to portal. initially use inefficient frag shader code to get screen coord, and solve problem of getting from screen coord to correct pix value. if works, might move to using scaled homogeneous coords that linearly interpolate	on screen. 	
@@ -2040,10 +2041,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawDuocylinderObject(wSettings, duocylinderObjects[worldInfo.duocylinderModel]);
 	}
 			
-	if (worldInfo.seaActive && isCubemapView){	//draw this in drawWorldScene2 for standard view (using depth image from drawWorldScene) TODO move there for cubemap view also.
-		drawDuocylinderObject(wSettings, duocylinderObjects['sea'], guiParams.seaLevel, seaTime);
-	}
-	
+	//if (worldInfo.seaActive && isCubemapView){	//draw this in drawWorldScene2 for standard view (using depth image from drawWorldScene) TODO move there for cubemap view also.
+	//	drawDuocylinderObject(wSettings, duocylinderObjects['sea'], guiParams.seaLevel, seaTime);
+	//}
 	
 	//draw objects without textures
 	activeShaderProgram = shaderProgramColored;
@@ -2794,6 +2794,11 @@ function drawTennisBall(duocylinderObj, shader){
 	
 	bind2dTextureIfRequired(duocylinderObj.tex);
 	gl.uniform1i(shader.uniforms.uSampler, 0);
+	
+	if (shader.uniforms.uSamplerDepthmap){
+		bind2dTextureIfRequired(rttFisheyeView.depthTexture,gl.TEXTURE2);	//for depth aware duocylinder sea
+		gl.uniform1i(shader.uniforms.uSamplerDepthmap, 2);
+	}
 	
 	if (shader.uniforms.uSamplerB){
 		bind2dTextureIfRequired(duocylinderObj.texB, gl.TEXTURE2);
@@ -5145,7 +5150,8 @@ function drawDuocylinderObject(wSettings, duocylinderObj, zeroLevel, seaTime){
 		}
 		gl.useProgram(activeShaderProgram);
 	}else{
-		activeShaderProgram = guiParams.display.perPixelLighting? ( guiParams.display.useSpecular? shaderPrograms.duocylinderSeaPerPixelDiscardPhong[ guiParams.display.atmosShader ] :shaderPrograms.duocylinderSeaPerPixelDiscard[ guiParams.display.atmosShader ]) : shaderPrograms.duocylinderSea[ guiParams.display.atmosShader ];
+		//activeShaderProgram = guiParams.display.perPixelLighting? ( guiParams.display.useSpecular? shaderPrograms.duocylinderSeaPerPixelDiscardPhong[ guiParams.display.atmosShader ] :shaderPrograms.duocylinderSeaPerPixelDiscard[ guiParams.display.atmosShader ]) : shaderPrograms.duocylinderSea[ guiParams.display.atmosShader ];
+		activeShaderProgram = shaderPrograms.duocylinderSeaPerPixelDiscardPhongDepthAware[ guiParams.display.atmosShader ];
 		gl.useProgram(activeShaderProgram);
 		gl.uniform1f(activeShaderProgram.uniforms.uTime, seaTime);			
 		gl.uniform1f(activeShaderProgram.uniforms.uZeroLevel, zeroLevel);
