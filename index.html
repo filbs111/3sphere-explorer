@@ -1150,11 +1150,6 @@
 
 		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz )*adjustedColor.xyz*texture2DProj(uSampler, vTextureCoord).xyz + (1.0-fog)*uFogColor.xyz , 1.);
 		
-#ifdef DEPTH_AWARE
-		//preGammaFragColor.rgb = texture2D(uSamplerDepthmap, gl_FragCoord.xy).rgb;	//just something to show can use texture.
-		preGammaFragColor = texture2DProj(uSamplerDepthmap, vec3(.5,.5,1.)*vScreenSpaceCoord.xyz + vec3(.5,.5,0.)*vScreenSpaceCoord.z);	//TODO use coords that project without extra term
-#endif
-
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
 
@@ -1164,7 +1159,21 @@
 		
 		//gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		//gl_FragColor = (1.0-fog)*uFogColor;
+		
+
+#ifdef DEPTH_AWARE
+		//preGammaFragColor.rgb = texture2D(uSamplerDepthmap, gl_FragCoord.xy).rgb;	//just something to show can use texture.
+		float currentDepth =  texture2DProj(uSamplerDepthmap, vec3(.5,.5,1.)*vScreenSpaceCoord.xyz + vec3(.5,.5,0.)*vScreenSpaceCoord.z).r;
+		float newDepth = .5*(vZW.x/vZW.y) + .5;	//this is duplicate of custom depth calculation
+		float depthDifference = newDepth - currentDepth;	//TODO calculate actual length difference
+		//preGammaFragColor = vec4( vec3(depthDifference) ,1.);	//TODO use coords that project without extra term
+		
+		gl_FragColor.a = depthDifference*-100.;
+#else
 		gl_FragColor.a =1.0;
+#endif		
+
+
 		
 #ifdef CUSTOM_DEPTH
 		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;

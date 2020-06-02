@@ -2673,6 +2673,9 @@ function drawWorldScene2(frameTime, wSettings){	//TODO drawing using rgba, depth
 	
 	({worldInfo} = wSettings);
 	
+	gl.enable(gl.BLEND);
+	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+	
 	//general stuff used for all 4vec vertex format objects (currently)	//note this is duplicated from drawWorldScene
 	mat4.set(invertedWorldCamera, mvMatrix);
 	rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
@@ -2683,6 +2686,8 @@ function drawWorldScene2(frameTime, wSettings){	//TODO drawing using rgba, depth
 	if (worldInfo.seaActive){
 		drawDuocylinderObject(wSettings, duocylinderObjects['sea'], guiParams.seaLevel, seaTime);
 	}
+
+	gl.disable(gl.BLEND);
 
 }
 
