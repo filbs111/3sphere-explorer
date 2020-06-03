@@ -685,7 +685,6 @@ function calcReflectionInfo(toReflect,resultsObj){
 	resultsObj.shaderMatrix2=reflectShaderMatrix2;
 }
 
-var moveAwayVec;
 var gunHeat = 0;
 
 var offsetCam = (function(){
@@ -767,12 +766,6 @@ function drawScene(frameTime){
 	if (!wentThrough){
 		xyzmove4mat(offsetPlayerCamera,offsetCam.getVec());
 	}
-	
-	//move camera away from portal (todo ensure player model movement references offsetPlayerCamera BEFORE this move!
-	moveAwayVec = [ offsetPlayerCamera[3]* guiParams.reflector.moveAway,
-						offsetPlayerCamera[7]* guiParams.reflector.moveAway,
-						offsetPlayerCamera[11]* guiParams.reflector.moveAway];
-	xyzmove4mat(offsetPlayerCamera, moveAwayVec);
 	
 	
 	mat4.set(offsetPlayerCamera, worldCamera);
@@ -1349,12 +1342,24 @@ function getWorldSceneSettings(isCubemapView){
 	var reflectorPosTransformed = [worldCamera[3],worldCamera[7],worldCamera[11],worldCamera[15]];
 	var cosReflector = 1.0/Math.sqrt(1+reflectorInfo.rad*reflectorInfo.rad);
 	
-	return {colorsSwitch, worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector};
+	var sshipDrawMatrix;
+	if (sshipWorld == colorsSwitch){ //only draw spaceship if it's in the world that currently drawing. (TODO this for other objects eg shots)
+		sshipDrawMatrix = sshipMatrix;
+	}else{
+		if (checkWithinReflectorRange(sshipMatrix, Math.tan(Math.atan(reflectorInfo.rad) +0.1))){
+			var portaledMatrix = mat4.create();
+			mat4.set(sshipMatrix, portaledMatrix);
+			moveMatrixThruPortal(portaledMatrix, reflectorInfo.rad, 1);
+			sshipDrawMatrix = portaledMatrix;
+		}	
+	}
+	
+	return {colorsSwitch, worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, sshipDrawMatrix};
 }
 
 function drawWorldScene(frameTime, isCubemapView) {
 	var wSettings = getWorldSceneSettings(isCubemapView);
-	({colorsSwitch,worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector} = wSettings);
+	({colorsSwitch,worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, sshipDrawMatrix} = wSettings);
 		//above could just paste getWorldSceneSettings function stuff here instead.
 	
 	gl.clearColor.apply(gl,worldColorsPlain[colorsSwitch]);
@@ -1388,7 +1393,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	var sshipMatrixShifted = mat4.create();	//TODO permanent/reuse (code duplicated from elsewhere.
 	mat4.set(sshipMatrix, sshipMatrixShifted)
-	xyzmove4mat(sshipMatrixShifted, moveAwayVec);
 	
 	mat4.multiply(lightMat, sshipMatrixShifted);
 	dropLightPos = lightMat.slice(12);
@@ -1459,6 +1463,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	shaderSetup(guiParams.debug.nmapUseShader2 ? (guiParams.display.useSpecular ? shaderPrograms.texmapPerPixelDiscardNormalmapPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmapPerPixelDiscardNormalmap[ guiParams.display.atmosShader ]) : shaderPrograms.texmapPerPixelDiscardNormalmapV1[ guiParams.display.atmosShader ], nmapTexture);
 	
 	function shaderSetup(shader, tex){
+		activeShaderProgram = shader;
 		performShaderSetup(shader, wSettings, tex, boxSize);
 		gl.uniform3fv(shader.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
 	}	
@@ -2082,32 +2087,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	
 	var drawFunc = guiParams["draw spaceship"]? drawSpaceship : drawBall;
-	var sshipDrawMatrix;
 	
-	//TODO permanent
-	var sshipMatrixShifted = mat4.create();
-	mat4.set(sshipMatrix, sshipMatrixShifted);
-	
-	//MOVE MODEL AWAY FROM PORTAL.
-	//in order to jump camera across portal to avoid too close rendering issues (z-buffer)
-	//should do this for everything! (maybe nicer to use special (inv)cameraMatrix ?)
-	//likely sufficient to just do for camera and spaceship initially.
-	//what to do about lights, bullets etc consider later.
-	//basically idea is to move everything in the same direction - along line of portal to camera.
-	//conceivably current code will only work for objects near camera. TODO test.
-	
-	xyzmove4mat(sshipMatrixShifted, moveAwayVec);
-	
-	if (sshipWorld == colorsSwitch){ //only draw spaceship if it's in the world that currently drawing. (TODO this for other objects eg shots)
-		sshipDrawMatrix = sshipMatrixShifted;
-	}else{
-		if (checkWithinReflectorRange(sshipMatrixShifted, Math.tan(Math.atan(reflectorInfo.rad) +0.1))){
-			var portaledMatrix = mat4.create();
-			mat4.set(sshipMatrixShifted, portaledMatrix);
-			moveMatrixThruPortal(portaledMatrix, reflectorInfo.rad, 1);
-			sshipDrawMatrix = portaledMatrix;
-		}	
-	}
 	if (sshipDrawMatrix){
 		drawFunc(sshipDrawMatrix);
 	}
@@ -2385,20 +2365,118 @@ function drawWorldScene(frameTime, isCubemapView) {
 	}
 	
 	
+//	testRayBallCollision();
+	function testRayBallCollision(){
+		//will use code like this to find where camera ray intersects portal for "screen space shader" drawing.
+		//may also be useful for fast collisions etc 
+		//if have 2 4vectors, starting position "A" = [ax,ay,az,aw], and pointing direction (quarter way around world) "B" [bx,by,bz,dw], think that:
+		// for portal at position w=1, closest approach will occur at:
+		// ( 1/sqrt(aw*aw + bw*bw) )*(aw*A + bw*B)
+		// and a (normal) vector perpendicular to this is 
+		// ( 1/sqrt(aw*aw + bw*bw) )*(aw*B - bw*A)
+		//hope that latter is in a consistent direction, and can backtrack from closest approach 
+		
+		activeShaderProgram=shaderProgramTexmap;
+		shaderSetup(activeShaderProgram, texture);
+		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
+		prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
+		
+		//draw something at player position
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.magenta);
+		var posA = sshipMatrix.slice(12);
+		//drawTriAxisCrossForMatrix(sshipMatrix);
+	//	drawTriAxisCrossForPosition(posA);
+
+		//move some test object to quarter way around the world from player
+		var mytmpmat = mat4.create(sshipMatrix);
+		xyzmove4mat(mytmpmat, [0,0,Math.PI/2]);
+		var posB = mytmpmat.slice(12);
+		//drawTriAxisCrossForPosition(posB);
+
+		//calculate closest approach vector and represent by an object
+		var closeApproach = [];
+		var equatorVec = [];
+		var intermediateVec = [];
+		var movedFwdAng = -0.1;
+		
+		var maxwsq = posA[3]*posA[3] + posB[3]*posB[3];
+		
+		var maxw = Math.sqrt(maxwsq);	//TODO handle 0 (or avoid if maxwsq< crit value)
+		for (var cc=0;cc<4;cc++){
+			closeApproach[cc]=(1/maxw)*(posA[cc]*posA[3]+posB[cc]*posB[3]);
+			equatorVec[cc]=(1/maxw)*(posB[cc]*posA[3]-posA[cc]*posB[3]);
+			intermediateVec[cc]=closeApproach[cc]*Math.cos(movedFwdAng) + equatorVec[cc]*Math.sin(movedFwdAng);
+		}
+		//drawTriAxisCrossForPosition(closeApproach);
+		//drawTriAxisCrossForPosition(intermediateVec);
+		//drawTriAxisCrossForPosition(equatorVec);
+
+		
+		//determine whether this constitutes a collision
+		var critwsq = 1.0/(1.0+reflectorInfo.rad*reflectorInfo.rad);
+		var critw = Math.sqrt(critwsq);
+		if (maxwsq>critwsq){
+			//project onto w=1
+			//correction is length should move along this projection.
+			var projectedradiussq = (1-maxwsq)/maxwsq;
+			var correction = Math.sqrt( reflectorInfo.rad*reflectorInfo.rad - projectedradiussq );
+			
+			//console.log("colliding");
+			var collisionPoint = [];
+			for (var cc=0;cc<4;cc++){
+				collisionPoint[cc] = closeApproach[cc]*(1/maxw) - equatorVec[cc]*correction;
+					//^^ that's the collision point in projected space. since this is now a projected point from surface of sphere, can project back by multiplying by critw
+				collisionPoint[cc]*=critw;	//(this part should not be necessary in shader version)
+			}
+			
+			drawTriAxisCrossForPosition(collisionPoint);
+		}
+		
+	}
+	
+
+	return wSettings;
+}
+
+function drawWorldScene2(frameTime, wSettings){	//TODO drawing using rgba, depth buffer images from previous rendering
+	//({colorsSwitch,worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, dropLightPos} = wSettings);
+	
+	({worldInfo, sshipDrawMatrix} = wSettings);
+	
+
+	gl.enable(gl.BLEND);
+	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+	
+	//general stuff used for all 4vec vertex format objects (currently)	//note this is duplicated from drawWorldScene
+	mat4.set(invertedWorldCamera, mvMatrix);
+	rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
+	mat4.identity(mMatrix);							//better to set M, V matrices and leave MV for shader?
+	rotate4mat(mMatrix, 0, 1, duocylinderSpin);
+	
+	var seaTime = 0.00005*(frameTime % 20000 ); //20s loop	//note this is duplicated from drawWorldScene
+	if (worldInfo.seaActive){
+		drawDuocylinderObject(wSettings, duocylinderObjects['sea'], guiParams.seaLevel, seaTime);
+	}
+
+
 	//draw bullets
 	var transpShadProg = shaderPrograms.coloredPerPixelTransparentDiscard;
 	//var transpShadProg = shaderPrograms.coloredPerPixelDiscard;
 	shaderSetup(transpShadProg);
+	function shaderSetup(shader, tex){
+		performShaderSetup(shader, wSettings, tex);
+	}
 	
 	prepBuffersForDrawing(sphereBuffers, transpShadProg);
-//	targetRad=sshipModelScale*150;
-//	gl.uniform3fv(transpShadProg.uniforms.uModelScale, [targetRad/50,targetRad/50,targetRad]);	//long streaks
-//	gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [1.0, 1.0, 0.5]);	//YELLOW
+	targetRad=sshipModelScale*150;
+	gl.uniform3fv(transpShadProg.uniforms.uModelScale, [targetRad/50,targetRad/50,targetRad]);	//long streaks
+	gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [1.0, 1.0, 0.5]);	//YELLOW
 	
 	gl.enable(gl.BLEND);
 	gl.blendFunc(gl.SRC_ALPHA , gl.ONE);	
 	gl.depthMask(false);
-	/*
+	
+	
 	for (var b in bullets){
 		if (bullets[b].active && bullets[b].world == colorsSwitch){
 			var bulletMatrix=bullets[b].matrix;
@@ -2409,7 +2487,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 			}
 		}
 	}
-	*/
+	
+	
+	
 	if (sshipDrawMatrix){
 		drawThrusters(sshipDrawMatrix);
 	}
@@ -2510,76 +2590,13 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}
 	}
 	
-//	testRayBallCollision();
-	function testRayBallCollision(){
-		//will use code like this to find where camera ray intersects portal for "screen space shader" drawing.
-		//may also be useful for fast collisions etc 
-		//if have 2 4vectors, starting position "A" = [ax,ay,az,aw], and pointing direction (quarter way around world) "B" [bx,by,bz,dw], think that:
-		// for portal at position w=1, closest approach will occur at:
-		// ( 1/sqrt(aw*aw + bw*bw) )*(aw*A + bw*B)
-		// and a (normal) vector perpendicular to this is 
-		// ( 1/sqrt(aw*aw + bw*bw) )*(aw*B - bw*A)
-		//hope that latter is in a consistent direction, and can backtrack from closest approach 
-		
-		activeShaderProgram=shaderProgramTexmap;
-		shaderSetup(activeShaderProgram, texture);
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
-		prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
-		
-		//draw something at player position
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.magenta);
-		var posA = sshipMatrix.slice(12);
-		//drawTriAxisCrossForMatrix(sshipMatrix);
-	//	drawTriAxisCrossForPosition(posA);
-
-		//move some test object to quarter way around the world from player
-		var mytmpmat = mat4.create(sshipMatrix);
-		xyzmove4mat(mytmpmat, [0,0,Math.PI/2]);
-		var posB = mytmpmat.slice(12);
-		//drawTriAxisCrossForPosition(posB);
-
-		//calculate closest approach vector and represent by an object
-		var closeApproach = [];
-		var equatorVec = [];
-		var intermediateVec = [];
-		var movedFwdAng = -0.1;
-		
-		var maxwsq = posA[3]*posA[3] + posB[3]*posB[3];
-		
-		var maxw = Math.sqrt(maxwsq);	//TODO handle 0 (or avoid if maxwsq< crit value)
-		for (var cc=0;cc<4;cc++){
-			closeApproach[cc]=(1/maxw)*(posA[cc]*posA[3]+posB[cc]*posB[3]);
-			equatorVec[cc]=(1/maxw)*(posB[cc]*posA[3]-posA[cc]*posB[3]);
-			intermediateVec[cc]=closeApproach[cc]*Math.cos(movedFwdAng) + equatorVec[cc]*Math.sin(movedFwdAng);
-		}
-		//drawTriAxisCrossForPosition(closeApproach);
-		//drawTriAxisCrossForPosition(intermediateVec);
-		//drawTriAxisCrossForPosition(equatorVec);
-
-		
-		//determine whether this constitutes a collision
-		var critwsq = 1.0/(1.0+reflectorInfo.rad*reflectorInfo.rad);
-		var critw = Math.sqrt(critwsq);
-		if (maxwsq>critwsq){
-			//project onto w=1
-			//correction is length should move along this projection.
-			var projectedradiussq = (1-maxwsq)/maxwsq;
-			var correction = Math.sqrt( reflectorInfo.rad*reflectorInfo.rad - projectedradiussq );
-			
-			//console.log("colliding");
-			var collisionPoint = [];
-			for (var cc=0;cc<4;cc++){
-				collisionPoint[cc] = closeApproach[cc]*(1/maxw) - equatorVec[cc]*correction;
-					//^^ that's the collision point in projected space. since this is now a projected point from surface of sphere, can project back by multiplying by critw
-				collisionPoint[cc]*=critw;	//(this part should not be necessary in shader version)
-			}
-			
-			drawTriAxisCrossForPosition(collisionPoint);
-		}
-		
-	}
 	
-
+	
+	
+	
+	
+	
+	
 	
 	var maxShockRadAng = 0.5;
 	
@@ -2620,15 +2637,16 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}
 	}
 	
+	
 	//muzzle flash? 
 	for (var gg in gunMatrices){
 		//if (gg>0) continue;
-		var mfRad = 0.01;
+		var mfRad = 0.005;
 		var flashAmount = muzzleFlashAmounts[gg]
 		gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [flashAmount, flashAmount/2, flashAmount/4]);
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,gunMatrices[gg]);
-		xyzmove4mat(mvMatrix,[0,0,0.015]);
+		xyzmove4mat(mvMatrix,[0,0,0.0075]);
 
 		for (var xx=0;xx<3;xx++){	//nested spheres
 			gl.uniform3fv(transpShadProg.uniforms.uModelScale, [mfRad/5,mfRad/5,mfRad]);
@@ -2636,64 +2654,11 @@ function drawWorldScene(frameTime, isCubemapView) {
 			mfRad-=.0005;
 		}
 	}
-	
-	gl.depthMask(true);
-	gl.disable(gl.BLEND);
-	
-	//gl.useProgram(shaderProgramColored);
-	//gl.uniform3fv(shaderProgramColored.uniforms.uEmitColor, [0, 0, 0]);
 
-	return wSettings;
-}
-
-function drawWorldScene2(frameTime, wSettings){	//TODO drawing using rgba, depth buffer images from previous rendering
-	//({colorsSwitch,worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, dropLightPos} = wSettings);
 	
-	({worldInfo} = wSettings);
 	
-
-	gl.enable(gl.BLEND);
-	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 	
-	//general stuff used for all 4vec vertex format objects (currently)	//note this is duplicated from drawWorldScene
-	mat4.set(invertedWorldCamera, mvMatrix);
-	rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
-	mat4.identity(mMatrix);							//better to set M, V matrices and leave MV for shader?
-	rotate4mat(mMatrix, 0, 1, duocylinderSpin);
 	
-	var seaTime = 0.00005*(frameTime % 20000 ); //20s loop	//note this is duplicated from drawWorldScene
-	if (worldInfo.seaActive){
-		drawDuocylinderObject(wSettings, duocylinderObjects['sea'], guiParams.seaLevel, seaTime);
-	}
-
-
-	//draw bullets
-	var transpShadProg = shaderPrograms.coloredPerPixelTransparentDiscard;
-	//var transpShadProg = shaderPrograms.coloredPerPixelDiscard;
-	shaderSetup(transpShadProg);
-	function shaderSetup(shader, tex){
-		performShaderSetup(shader, wSettings, tex);
-	}
-	
-	prepBuffersForDrawing(sphereBuffers, transpShadProg);
-	targetRad=sshipModelScale*150;
-	gl.uniform3fv(transpShadProg.uniforms.uModelScale, [targetRad/50,targetRad/50,targetRad]);	//long streaks
-	gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [1.0, 1.0, 0.5]);	//YELLOW
-	
-	gl.enable(gl.BLEND);
-	gl.blendFunc(gl.SRC_ALPHA , gl.ONE);	
-	gl.depthMask(false);
-	
-	for (var b in bullets){
-		if (bullets[b].active && bullets[b].world == colorsSwitch){
-			var bulletMatrix=bullets[b].matrix;
-			mat4.set(invertedWorldCamera, mvMatrix);
-			mat4.multiply(mvMatrix,bulletMatrix);
-			if (frustumCull(mvMatrix,targetRad)){	
-				drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
-			}
-		}
-	}
 	
 	gl.depthMask(true);
 
@@ -2893,7 +2858,9 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 	
 	setupShaderAtmos(shaderProg);
 	
-	gl.uniformMatrix4fv(shaderProg.uniforms.uPMatrix, false, pMatrix);
+	//if (shaderProg.uniforms.uPMatrix){
+		gl.uniformMatrix4fv(shaderProg.uniforms.uPMatrix, false, pMatrix);
+	//}
 }
 function setupShaderAtmos(shaderProg){	//TODO generalise more shader stuff
 	if (shaderProg.uniforms.uAtmosContrast){	//todo do less often (at least query ui less often)
@@ -2943,7 +2910,6 @@ var bind2dTextureIfRequired = (function createBind2dTextureIfRequiredFunction(){
 
 
 //need all of these???
-var moveAwayVec;
 var mMatrix = mat4.create();
 var mvMatrix = mat4.create();
 var pMatrix = mat4.create();
@@ -3240,7 +3206,6 @@ var guiParams={
 		mappingType:'vertex projection',
 		scale:0.3,
 		isPortal:true,
-		moveAway:0.0005,
 		test1:false
 	},
 	debug:{
@@ -3410,7 +3375,6 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection','screen space','vertproj mix']);
 	reflectorFolder.add(guiParams.reflector, "scale", 0.05,2,0.01);
 	reflectorFolder.add(guiParams.reflector, "isPortal");
-	reflectorFolder.add(guiParams.reflector, "moveAway", 0,0.001,0.0001);	//value required here is dependent on minimum scale. TODO moveawayvector should be in DIRECTION away from portal, but fixed length.
 	reflectorFolder.add(guiParams.reflector, "test1");
 
 	window.addEventListener("keydown",function(evt){
@@ -5134,7 +5098,6 @@ function performGeneralShaderSetup(shader){
 function performShaderSetup(shader, wSettings, tex){	//TODO use this more widely, possibly by pulling out to higher level. similar to performCommon4vecShaderSetup
 	({localVecFogColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, dropLightPos} = wSettings);
 
-	activeShaderProgram = shader;
 	gl.useProgram(shader);	//todo use function variable
 	
 	if (tex){
