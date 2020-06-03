@@ -1458,33 +1458,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 
 	shaderSetup(guiParams.debug.nmapUseShader2 ? (guiParams.display.useSpecular ? shaderPrograms.texmapPerPixelDiscardNormalmapPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmapPerPixelDiscardNormalmap[ guiParams.display.atmosShader ]) : shaderPrograms.texmapPerPixelDiscardNormalmapV1[ guiParams.display.atmosShader ], nmapTexture);
 	
-	function shaderSetup(shader, tex){	//TODO use this more widely, possibly by pulling out to higher level. similar to performCommon4vecShaderSetup
-		activeShaderProgram = shader;
-		gl.useProgram(shader);	//todo use function variable
-		
-		if (tex){
-			bind2dTextureIfRequired(tex);
-		}
-		if (shader.uniforms.uFogColor){
-			gl.uniform4fv(shader.uniforms.uFogColor, localVecFogColor);
-		}
-		if (shader.uniforms.uReflectorDiffColor){
-			gl.uniform3fv(shader.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
-		}
-		if (shader.uniforms.uPlayerLightColor){
-			gl.uniform3fv(shader.uniforms.uPlayerLightColor, playerLight);
-		}
-		gl.uniform4fv(shader.uniforms.uReflectorPos, reflectorPosTransformed);
-		if (shader.uniforms.uReflectorPosVShaderCopy){gl.uniform4fv(shader.uniforms.uReflectorPosVShaderCopy, reflectorPosTransformed);}
-		gl.uniform1f(shader.uniforms.uReflectorCos, cosReflector);	
-		
-		performGeneralShaderSetup(shader);
-		
+	function shaderSetup(shader, tex){
+		performShaderSetup(shader, wSettings, tex, boxSize);
 		gl.uniform3fv(shader.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
-		if (shader.uniforms.uDropLightPos){
-			gl.uniform4fv(shader.uniforms.uDropLightPos, dropLightPos);
-		}
-	}
+	}	
 	
 	
 	var guiBoxes = guiParams.drawShapes.boxes;
@@ -2407,20 +2384,21 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.useProgram(activeShaderProgram);
 	}
 	
+	
 	//draw bullets
 	var transpShadProg = shaderPrograms.coloredPerPixelTransparentDiscard;
 	//var transpShadProg = shaderPrograms.coloredPerPixelDiscard;
 	shaderSetup(transpShadProg);
 	
 	prepBuffersForDrawing(sphereBuffers, transpShadProg);
-	targetRad=sshipModelScale*150;
-	gl.uniform3fv(transpShadProg.uniforms.uModelScale, [targetRad/50,targetRad/50,targetRad]);	//long streaks
-	gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [1.0, 1.0, 0.5]);	//YELLOW
+//	targetRad=sshipModelScale*150;
+//	gl.uniform3fv(transpShadProg.uniforms.uModelScale, [targetRad/50,targetRad/50,targetRad]);	//long streaks
+//	gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [1.0, 1.0, 0.5]);	//YELLOW
 	
 	gl.enable(gl.BLEND);
 	gl.blendFunc(gl.SRC_ALPHA , gl.ONE);	
 	gl.depthMask(false);
-	
+	/*
 	for (var b in bullets){
 		if (bullets[b].active && bullets[b].world == colorsSwitch){
 			var bulletMatrix=bullets[b].matrix;
@@ -2431,7 +2409,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			}
 		}
 	}
-	
+	*/
 	if (sshipDrawMatrix){
 		drawThrusters(sshipDrawMatrix);
 	}
@@ -2673,6 +2651,7 @@ function drawWorldScene2(frameTime, wSettings){	//TODO drawing using rgba, depth
 	
 	({worldInfo} = wSettings);
 	
+
 	gl.enable(gl.BLEND);
 	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 	
@@ -2686,6 +2665,39 @@ function drawWorldScene2(frameTime, wSettings){	//TODO drawing using rgba, depth
 	if (worldInfo.seaActive){
 		drawDuocylinderObject(wSettings, duocylinderObjects['sea'], guiParams.seaLevel, seaTime);
 	}
+
+
+	//draw bullets
+	var transpShadProg = shaderPrograms.coloredPerPixelTransparentDiscard;
+	//var transpShadProg = shaderPrograms.coloredPerPixelDiscard;
+	shaderSetup(transpShadProg);
+	function shaderSetup(shader, tex){
+		performShaderSetup(shader, wSettings, tex);
+	}
+	
+	prepBuffersForDrawing(sphereBuffers, transpShadProg);
+	targetRad=sshipModelScale*150;
+	gl.uniform3fv(transpShadProg.uniforms.uModelScale, [targetRad/50,targetRad/50,targetRad]);	//long streaks
+	gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [1.0, 1.0, 0.5]);	//YELLOW
+	
+	gl.enable(gl.BLEND);
+	gl.blendFunc(gl.SRC_ALPHA , gl.ONE);	
+	gl.depthMask(false);
+	
+	for (var b in bullets){
+		if (bullets[b].active && bullets[b].world == colorsSwitch){
+			var bulletMatrix=bullets[b].matrix;
+			mat4.set(invertedWorldCamera, mvMatrix);
+			mat4.multiply(mvMatrix,bulletMatrix);
+			if (frustumCull(mvMatrix,targetRad)){	
+				drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
+			}
+		}
+	}
+	
+	gl.depthMask(true);
+
+
 
 	gl.disable(gl.BLEND);
 
@@ -5119,6 +5131,34 @@ function performGeneralShaderSetup(shader){
 		gl.uniform1f(shader.uniforms.uSpecularPower, guiParams.display.specularPower);	
 	}
 }
+function performShaderSetup(shader, wSettings, tex){	//TODO use this more widely, possibly by pulling out to higher level. similar to performCommon4vecShaderSetup
+	({localVecFogColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, dropLightPos} = wSettings);
+
+	activeShaderProgram = shader;
+	gl.useProgram(shader);	//todo use function variable
+	
+	if (tex){
+		bind2dTextureIfRequired(tex);
+	}
+	if (shader.uniforms.uFogColor){
+		gl.uniform4fv(shader.uniforms.uFogColor, localVecFogColor);
+	}
+	if (shader.uniforms.uReflectorDiffColor){
+		gl.uniform3fv(shader.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
+	}
+	if (shader.uniforms.uPlayerLightColor){
+		gl.uniform3fv(shader.uniforms.uPlayerLightColor, playerLight);
+	}
+	gl.uniform4fv(shader.uniforms.uReflectorPos, reflectorPosTransformed);
+	if (shader.uniforms.uReflectorPosVShaderCopy){gl.uniform4fv(shader.uniforms.uReflectorPosVShaderCopy, reflectorPosTransformed);}
+	gl.uniform1f(shader.uniforms.uReflectorCos, cosReflector);	
+	
+	performGeneralShaderSetup(shader);
+	
+	if (shader.uniforms.uDropLightPos){
+		gl.uniform4fv(shader.uniforms.uDropLightPos, dropLightPos);
+	}
+}
 function performCommon4vecShaderSetup(activeShaderProgram, wSettings, logtag){	//todo move to top level? are inner functions inefficient?
 	({colorsSwitch,worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, dropLightPos} = wSettings);
 
@@ -5131,7 +5171,7 @@ function performCommon4vecShaderSetup(activeShaderProgram, wSettings, logtag){	/
 	}
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 	if (activeShaderProgram.uniforms.uReflectorDiffColor){
-			gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
+		gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
 	}
 	if (activeShaderProgram.uniforms.uPlayerLightColor){
 		gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
