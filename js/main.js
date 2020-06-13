@@ -796,18 +796,53 @@ function drawScene(frameTime){
 		
 		frustumCull = squareFrustumCull;
 		if (guiParams.reflector.cmFacesUpdated>0){
+			
+			var wSettingsArr = [];	//TODO is this always same?
+			
 			gl.cullFace(gl.BACK);	//because might have set to front for mirror reversing/landing camera.
 			var numFacesToUpdate = guiParams.reflector.cmFacesUpdated;
 			mat4.set(cmapPMatrix, pMatrix);
 			for (var ii=0;ii<numFacesToUpdate;ii++){	//only using currently to check perf impact. could use more "properly" and cycle/alternate.
-				var framebuffer = cubemapFramebuffer[ii];
+				var framebuffer = cubemapView.intermediateFramebuffers[ii];
+				//var framebuffer = cubemapView.framebuffers[ii];
 				gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
 				gl.viewport(0, 0, framebuffer.width, framebuffer.height);
-				
 				mat4.identity(worldCamera);
-				
 				xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);	
+				rotateCameraForFace(ii);
 				
+				wSettingsArr.push( drawWorldScene(frameTime, true) );
+			}
+			
+			for (var ii=0;ii<numFacesToUpdate;ii++){
+				var framebuffer = cubemapView.framebuffers[ii];
+				gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+				gl.viewport(0, 0, framebuffer.width, framebuffer.height);
+				mat4.identity(worldCamera);
+				xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);	
+				rotateCameraForFace(ii);
+				
+				var activeProg = shaderPrograms.fullscreenTexturedWithDepthmap;
+				gl.useProgram(activeProg);
+				enableDisableAttributes(activeProg);
+				gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);	//TODO check whether need this - should be redrawing everything so could just disable z check
+				
+				bind2dTextureIfRequired(cubemapView.intermediateTextures[ii]);
+				bind2dTextureIfRequired(cubemapView.intermediateDepthTextures[ii],gl.TEXTURE2);
+				
+				gl.uniform1i(activeProg.uniforms.uSampler, 0);
+				gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);	
+				
+				//gl.cullFace(gl.FRONT);	//??
+				drawObjectFromBuffers(fsBuffers, activeProg);
+				gl.cullFace(gl.BACK);
+				drawWorldScene2(frameTime, wSettingsArr[ii], cubemapView.intermediateDepthTextures[ii]);	//depth aware drawing stuff like sea
+					//note currently depth is not correct, probably responsible for inconsistent rendering across cubemap edges.
+				
+			}
+			
+			
+			function rotateCameraForFace(ii){
 				switch(ii){
 					case 0:
 						xyzrotate4mat(worldCamera, [0,-Math.PI/2,0]);	//right from default view
@@ -829,12 +864,6 @@ function drawScene(frameTime){
 					case 5:
 						break;
 				}
-				
-				//xyzrotate4mat(worldCamera, [Math.PI,0,0]);
-				
-				//xyzmove4mat(worldCamera, [0,0,Math.PI/2]);
-				
-				drawWorldScene(frameTime, true);	//TODO skip reflector draw
 			}
 			
 		}
@@ -912,13 +941,13 @@ function drawScene(frameTime){
 			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);	//TODO check whether need this - should be redrawing everything so could just disable z check
 			
 			bind2dTextureIfRequired(rttFisheyeView.texture);
-			bind2dTextureIfRequired(rttFisheyeView.depthTexture,gl.TEXTURE2);	//demo displaying rendered depth texture TODO assign both textures at once.
+			bind2dTextureIfRequired(rttFisheyeView.depthTexture,gl.TEXTURE2);
 			
 			gl.uniform1i(activeProg.uniforms.uSampler, 0);
 			gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);	
 			drawObjectFromBuffers(fsBuffers, activeProg);
 			
-			drawWorldScene2(frameTime, wSettings);	//depth aware drawing stuff like sea
+			drawWorldScene2(frameTime, wSettings, rttFisheyeView.depthTexture);	//depth aware drawing stuff like sea
 		}
 		
 		//draw the scene to offscreen framebuffer
@@ -2438,7 +2467,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	return wSettings;
 }
 
-function drawWorldScene2(frameTime, wSettings){	//TODO drawing using rgba, depth buffer images from previous rendering
+function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using rgba, depth buffer images from previous rendering
 	//({colorsSwitch,worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, dropLightPos} = wSettings);
 	
 	({worldInfo, sshipDrawMatrix} = wSettings);
@@ -2446,6 +2475,9 @@ function drawWorldScene2(frameTime, wSettings){	//TODO drawing using rgba, depth
 
 	gl.enable(gl.BLEND);
 	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+	
+	mat4.set(worldCamera, invertedWorldCamera);
+	mat4.transpose(invertedWorldCamera);
 	
 	//general stuff used for all 4vec vertex format objects (currently)	//note this is duplicated from drawWorldScene
 	mat4.set(invertedWorldCamera, mvMatrix);
@@ -2455,7 +2487,7 @@ function drawWorldScene2(frameTime, wSettings){	//TODO drawing using rgba, depth
 	
 	var seaTime = 0.00005*(frameTime % 20000 ); //20s loop	//note this is duplicated from drawWorldScene
 	if (worldInfo.seaActive){
-		drawDuocylinderObject(wSettings, duocylinderObjects['sea'], guiParams.seaLevel, seaTime);
+		drawDuocylinderObject(wSettings, duocylinderObjects['sea'], guiParams.seaLevel, seaTime, depthMap);
 	}
 
 
@@ -2735,7 +2767,7 @@ var enableDisableAttributes = (function generateEnableDisableAttributesFunc(){
 })();
 
 
-function drawTennisBall(duocylinderObj, shader){
+function drawTennisBall(duocylinderObj, shader, depthMap){
 	enableDisableAttributes(shader);
 
 	gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexPositionBuffer);
@@ -2778,7 +2810,7 @@ function drawTennisBall(duocylinderObj, shader){
 	gl.uniform1i(shader.uniforms.uSampler, 0);
 	
 	if (shader.uniforms.uSamplerDepthmap){
-		bind2dTextureIfRequired(rttFisheyeView.depthTexture,gl.TEXTURE2);	//for depth aware duocylinder sea
+		bind2dTextureIfRequired(depthMap,gl.TEXTURE2);	//for depth aware duocylinder sea
 		gl.uniform1i(shader.uniforms.uSamplerDepthmap, 2);
 	}
 	
@@ -2948,19 +2980,27 @@ function setMatrixUniforms(shaderProgram) {
 	setupShaderAtmos(shaderProgram);
 }
 
-var cubemapFramebuffer;
-var cubemapTexture;
+var cubemapView={};
 var cubemapSize = 1024;
 //cube map code from http://www.humus.name/cubemapviewer.js (slightly modified)
-var cubemapFacelist;
 
-function initCubemapFramebuffer(){
-	cubemapFramebuffer = [];
+function initCubemapFramebuffer(view){
+	//for rendering to separate 2d textures, prior to cubemap
+	var intermediateFramebuffers = [];
+	var intermediateTextures = [];
+	var intermediateDepthTextures = [];
+	view.intermediateFramebuffers = intermediateFramebuffers;
+	view.intermediateTextures = intermediateTextures;
+	view.intermediateDepthTextures = intermediateDepthTextures;
 	
-	cubemapTexture = gl.createTexture();
+	//for rendering to cubemap
+	var framebuffers = [];
+	view.framebuffers = framebuffers;
+	
+	view.cubemapTexture = gl.createTexture();
 	
 	gl.activeTexture(gl.TEXTURE1);	//use texture 1 always for cubemap
-	gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubemapTexture);
+	gl.bindTexture(gl.TEXTURE_CUBE_MAP, view.cubemapTexture);
 	gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 	gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 	gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -2972,31 +3012,66 @@ function initCubemapFramebuffer(){
 				 gl.TEXTURE_CUBE_MAP_NEGATIVE_Y,
 				 gl.TEXTURE_CUBE_MAP_POSITIVE_Z,
 				 gl.TEXTURE_CUBE_MAP_NEGATIVE_Z];
-	cubemapFacelist = faces;
 	
 	for (var i = 0; i < faces.length; i++)
 	{
 		var face = faces[i];
-		
+			
 		var framebuffer = gl.createFramebuffer();
 		gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
 		framebuffer.width = cubemapSize;
 		framebuffer.height = cubemapSize;
-		cubemapFramebuffer[i]=framebuffer;
+		framebuffers[i]=framebuffer;
 		
 		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-		//gl.texImage2D(face, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
 		gl.texImage2D(face, 0, gl.RGBA, cubemapSize, cubemapSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-		
+	
 		var renderbuffer = gl.createRenderbuffer();
 		gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
 		gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, cubemapSize, cubemapSize);
-		
-		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, face, cubemapTexture, 0);
+				
+		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, face, view.cubemapTexture, 0);
 		gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, renderbuffer);
 	}
-	//gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);	//this gets rid of errors being logged to console. 
+	
 	gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+	
+	//setup rendering to intermediate textures.
+	for (var i = 0; i < faces.length; i++)
+	{
+		var framebuffer = gl.createFramebuffer();
+		gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+		framebuffer.width = cubemapSize;
+		framebuffer.height = cubemapSize;
+		intermediateFramebuffers[i]=framebuffer;
+		
+		var textureRgb = gl.createTexture();
+		gl.bindTexture(gl.TEXTURE_2D, textureRgb);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);	//TODO use nearest where appropriate (eg when copying for depth/rgb aware 2nd stage rendering)
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, cubemapSize, cubemapSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+		intermediateTextures.push(textureRgb);
+
+		var depthTexture = gl.createTexture();
+		gl.bindTexture(gl.TEXTURE_2D, depthTexture);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT, cubemapSize, cubemapSize, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT , null);
+		intermediateDepthTextures.push(depthTexture);
+		
+		gl.bindTexture(gl.TEXTURE_2D, null);
+		
+		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, textureRgb, 0);
+		gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, depthTexture, 0);
+	}
+	
+	//gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);	//this gets rid of errors being logged to console. 
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 }
 
@@ -3461,7 +3536,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	initTextureFramebuffer(rttFisheyeView2);
 	initShaders();
 	initTexture();
-	initCubemapFramebuffer();
+	initCubemapFramebuffer(cubemapView);
 	initBuffers();
 	completeShaders();
 	setFog(0,guiParams.fogColor0);
@@ -5145,7 +5220,7 @@ function performCommon4vecShaderSetup(activeShaderProgram, wSettings, logtag){	/
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 	performGeneralShaderSetup(activeShaderProgram);
 }
-function drawDuocylinderObject(wSettings, duocylinderObj, zeroLevel, seaTime){	
+function drawDuocylinderObject(wSettings, duocylinderObj, zeroLevel, seaTime, depthMap){	
 	var activeShaderProgram;
 	//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
 	if (!duocylinderObj.isSea){
@@ -5171,7 +5246,7 @@ function drawDuocylinderObject(wSettings, duocylinderObj, zeroLevel, seaTime){
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
 	performCommon4vecShaderSetup(activeShaderProgram, wSettings);
 	
-	drawTennisBall(duocylinderObj, activeShaderProgram);
+	drawTennisBall(duocylinderObj, activeShaderProgram, depthMap);
 }
 
 
