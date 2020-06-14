@@ -3053,8 +3053,8 @@ function initCubemapFramebuffer(view){
 		gl.bindTexture(gl.TEXTURE_2D, textureRgb);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);	//TODO use nearest where appropriate (eg when copying for depth/rgb aware 2nd stage rendering)
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, cubemapSize, cubemapSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
 		intermediateTextures.push(textureRgb);
@@ -3536,7 +3536,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	depthTex_ext = gl.getExtension('WEBGL_depth_texture');
 	
 	initTextureFramebuffer(rttView);
-	initTextureFramebuffer(rttFisheyeView);
+	initTextureFramebuffer(rttFisheyeView, true);
 	initTextureFramebuffer(rttFisheyeView2);
 	initShaders();
 	initTexture();
@@ -5088,7 +5088,8 @@ function setRttSize(view, width, height){
 }
 
 
-function initTextureFramebuffer(view) {
+function initTextureFramebuffer(view, useNearestFiltering) {
+	var filterType = useNearestFiltering ? gl.NEAREST : gl.LINEAR;
 	view.framebuffer = gl.createFramebuffer();
 
 	view.texture = gl.createTexture();
@@ -5096,9 +5097,8 @@ function initTextureFramebuffer(view) {
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);	//TODO use nearest where appropriate (eg when copying for depth/rgb aware 2nd stage rendering)
-	//gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filterType);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filterType);
 	//gl.generateMipmap(gl.TEXTURE_2D);
 	
 	view.depthTexture = gl.createTexture();
