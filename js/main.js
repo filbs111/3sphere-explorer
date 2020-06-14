@@ -944,8 +944,12 @@ function drawScene(frameTime){
 			bind2dTextureIfRequired(rttFisheyeView.depthTexture,gl.TEXTURE2);
 			
 			gl.uniform1i(activeProg.uniforms.uSampler, 0);
-			gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);	
+			gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);
+			gl.cullFace(gl.BACK);	//TODO use a revered fsBuffers
 			drawObjectFromBuffers(fsBuffers, activeProg);
+			if (reverseCamera){
+				gl.cullFace(gl.FRONT);
+			}
 			
 			drawWorldScene2(frameTime, wSettings, rttFisheyeView.depthTexture);	//depth aware drawing stuff like sea
 		}
