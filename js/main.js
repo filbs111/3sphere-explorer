@@ -2482,6 +2482,9 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 	
 	mat4.set(worldCamera, invertedWorldCamera);
 	mat4.transpose(invertedWorldCamera);
+	//equivalent for frame of duocylinder, to reduce complexity of drawing, collision checks etc
+	mat4.set(invertedWorldCamera, invertedWorldCameraDuocylinderFrame);
+	rotate4mat(invertedWorldCameraDuocylinderFrame, 0, 1, duocylinderSpin);
 	
 	//general stuff used for all 4vec vertex format objects (currently)	//note this is duplicated from drawWorldScene
 	mat4.set(invertedWorldCamera, mvMatrix);
