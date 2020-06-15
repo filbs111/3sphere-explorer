@@ -4419,7 +4419,10 @@ var iterateMechanics = (function iterateMechanics(){
 			movePlayer(scalarvectorprod(timeStep * moveSpeed,playerVelVec));
 			
 			//TODO apply duocylinder spin inside loop here. 
+		
 			
+			var thrustVolume = Math.tanh(40*Math.hypot.apply(null, currentThrustInput));	//todo jet noise. take speed, atmos thickness into account. should be loud when going fast but not thrusting, pitch shift
+			myAudioPlayer.setJetSound({delay:0, gain:thrustVolume, pan:0});
 		}
 		
 		

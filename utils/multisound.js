@@ -138,10 +138,18 @@ var myAudioPlayer = (function(){
 	}
 	whooshSound = new MySound('audio/blowtorch_50k.mp3', playWhooshSound);
 	
+	var jetSoundInstance;
+	var playJetSound= function(){
+		console.log("attempting to play jet sound");
+		jetSoundInstance=jetSound.play(0,0,true);
+	}
+	jetSound = new MySound('audio/blowtorch_50k.mp3', playJetSound);
+	
 	gunSound.setVolume(0.2);
 	bombSound.setVolume(0.2);
 	clockSound.setVolume(0);	//disabled
 	whooshSound.setVolume(1);
+	jetSound.setVolume(1);
 	
 	return {
 		playGunSound: function(delay, vol){
@@ -160,6 +168,9 @@ var myAudioPlayer = (function(){
 		setWhooshSoundBox: function(settings){
 			if (whooshSoundBoxInstance){whooshSoundBoxInstance.setAll(settings);}
 		},
+		setJetSound: function(settings){
+			if (jetSoundInstance){jetSoundInstance.setAll(settings);}
+		}
 	}
 })();
 
