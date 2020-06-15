@@ -825,16 +825,16 @@ function drawScene(frameTime){
 				var activeProg = shaderPrograms.fullscreenTexturedWithDepthmap;
 				gl.useProgram(activeProg);
 				enableDisableAttributes(activeProg);
-				gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);	//TODO check whether need this - should be redrawing everything so could just disable z check
-				
+
 				bind2dTextureIfRequired(cubemapView.intermediateTextures[ii]);
 				bind2dTextureIfRequired(cubemapView.intermediateDepthTextures[ii],gl.TEXTURE2);
 				
 				gl.uniform1i(activeProg.uniforms.uSampler, 0);
 				gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);	
 				
-				//gl.cullFace(gl.FRONT);	//??
+				gl.depthFunc(gl.ALWAYS);
 				drawObjectFromBuffers(fsBuffers, activeProg);
+				gl.depthFunc(gl.LESS);
 				gl.cullFace(gl.BACK);
 				drawWorldScene2(frameTime, wSettingsArr[ii], cubemapView.intermediateDepthTextures[ii]);	//depth aware drawing stuff like sea
 					//note currently depth is not correct, probably responsible for inconsistent rendering across cubemap edges.
@@ -938,15 +938,16 @@ function drawScene(frameTime){
 			activeProg = shaderPrograms.fullscreenTexturedWithDepthmap;
 			gl.useProgram(activeProg);
 			enableDisableAttributes(activeProg);
-			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);	//TODO check whether need this - should be redrawing everything so could just disable z check
-			
+
 			bind2dTextureIfRequired(rttFisheyeView.texture);
 			bind2dTextureIfRequired(rttFisheyeView.depthTexture,gl.TEXTURE2);
 			
 			gl.uniform1i(activeProg.uniforms.uSampler, 0);
 			gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);
 			gl.cullFace(gl.BACK);	//TODO use a revered fsBuffers
+			gl.depthFunc(gl.ALWAYS);
 			drawObjectFromBuffers(fsBuffers, activeProg);
+			gl.depthFunc(gl.LESS);
 			if (reverseCamera){
 				gl.cullFace(gl.FRONT);
 			}
@@ -965,9 +966,7 @@ function drawScene(frameTime){
 			drawWorldScene(frameTime, false);
 		}else{
 			//draw scene to intermediate screen
-			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 			bind2dTextureIfRequired(rttFisheyeView2.texture);	
-		//	bind2dTextureIfRequired(rttFisheyeView2.depthTexture);	
 			activeProg = shaderPrograms.fullscreenTexturedFisheye;
 			gl.useProgram(activeProg);
 			enableDisableAttributes(activeProg);
@@ -981,14 +980,14 @@ function drawScene(frameTime){
 			
 			gl.uniform1i(activeProg.uniforms.uSampler, 0);		
 			gl.uniform2fv(activeProg.uniforms.uInvSize, [1/gl.viewportWidth , 1/gl.viewportHeight]);		
+			gl.depthFunc(gl.ALWAYS);
 			drawObjectFromBuffers(fsBuffers, activeProg);
+			//gl.depthFunc(gl.LESS);
 		}
 		
 		//draw quad to screen using drawn texture
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);	//draw to screen.
 		gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);	//TODO check whether necessary to keep setting this
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);	//TODO check whether need this - should be redrawing everything so could just disable z check
-		
 		bind2dTextureIfRequired(rttView.texture);	
 		
 		//draw the simple quad object to the screen
@@ -1008,8 +1007,10 @@ function drawScene(frameTime){
 		//gl.activeTexture(gl.TEXTURE0);
 
 		gl.uniform1i(activeProg.uniforms.uSampler, 0);		
-		gl.uniform2fv(activeProg.uniforms.uInvSize, [1/gl.viewportWidth , 1/gl.viewportHeight]);		
+		gl.uniform2fv(activeProg.uniforms.uInvSize, [1/gl.viewportWidth , 1/gl.viewportHeight]);
+		gl.depthFunc(gl.ALWAYS);		
 		drawObjectFromBuffers(fsBuffers, activeProg);
+		gl.depthFunc(gl.LESS);
 	}
 	
 	if (!guiParams["drop spaceship"] && guiParams.display.showHud){	//only draw hud if haven't dropped spaceship
