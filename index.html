@@ -1169,7 +1169,7 @@
 		float depthDifference = newDepth - currentDepth;	//TODO calculate actual length difference
 		//preGammaFragColor = vec4( vec3(depthDifference) ,1.);	//TODO use coords that project without extra term
 		
-		gl_FragColor.a = depthDifference*-100.;
+		gl_FragColor.a = 1.-exp(depthDifference*1000.);
 #else
 		gl_FragColor.a =1.0;
 #endif		
