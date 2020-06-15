@@ -59,6 +59,7 @@ var MySound = (function(){
 		source.buffer = this.buffer	
 		if (loop){
 			source.loop = true;
+			var soundDuration = this.buffer.duration;
 			source.loopEnd=soundDuration;
 			source.loopStart=0.1;	//this fixes glitchy looping heard in firefox. seems that this sound is silent/quiet at start, so firefox has expected behaviour. maybe other browsers are using some metadata - expect this sound is designed to loop some time in.
 		}
