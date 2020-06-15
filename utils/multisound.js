@@ -57,7 +57,12 @@ var MySound = (function(){
 		}
 		var source = audiocontext.createBufferSource();	//TODO pool of sounds? is creating a new buffersource each play. unknown if expensive
 		source.buffer = this.buffer	
-		if (loop){source.loop = true;}
+		if (loop){
+			source.loop = true;
+			source.loopEnd=soundDuration;
+			source.loopStart=0.1;	//this fixes glitchy looping heard in firefox. seems that this sound is silent/quiet at start, so firefox has expected behaviour. maybe other browsers are using some metadata - expect this sound is designed to loop some time in.
+		}
+		
 		
 		var indivGainNode = audiocontext.createGain();	
 		indivGainNode.gain.setValueAtTime(vol, audiocontext.currentTime);
