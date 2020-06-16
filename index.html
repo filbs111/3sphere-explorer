@@ -2283,8 +2283,6 @@
 
 <script id="shader-texmap-color-triplanar-vs-4vec" type="x-shader/x-vertex">
 	//TODO determine whether more efficient to calc aVertexPosition, aVertexNormal from aTriCoord, aTriNormal here in vert shader, or precalc and pass in.
-	#define CONST_ITERS 64.0
-
 	attribute vec4 aVertexPosition;
 	attribute vec4 aVertexNormal;
 	attribute vec3 aVertexColor;	//todo 4vec?
@@ -2399,8 +2397,6 @@
 <!-- merged shader-texmap-color-triplanar-vs-4vec, shader-texmap-perpixel-vs-4vec -->
 <script id="shader-texmap-perpixel-color-triplanar-vs-4vec" type="x-shader/x-vertex">
 	//TODO determine whether more efficient to calc aVertexPosition, aVertexNormal from aTriCoord, aTriNormal here in vert shader, or precalc and pass in.
-	#define CONST_ITERS 64.0
-
 	attribute vec4 aVertexPosition;
 	attribute vec4 aVertexNormal;
 	attribute vec4 aVertexColor;
@@ -2494,8 +2490,6 @@
 </script>
 <script id="shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec" type="x-shader/x-vertex">
 	//TODO determine whether more efficient to calc aVertexPosition, aVertexNormal from aTriCoord, aTriNormal here in vert shader, or precalc and pass in.
-	#define CONST_ITERS 64.0
-
 	attribute vec4 aVertexPosition;
 	attribute vec4 aVertexNormal;	//AFAIK shouldn't need this, but removing it causes rendering bug. todo find and fix
 	attribute vec4 aVertexColor;
