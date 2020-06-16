@@ -695,7 +695,8 @@ var offsetCam = (function(){
 	var targetForType = {
 		"near 3rd person":[0,-37.5,-25],	//TODO reduce code duplication. do scalar vector product targetForType time?
 		"mid 3rd person":[0,-50,-75],
-		"far 3rd person":[0,-100,-125],	
+		//"far 3rd person":[0,-100,-125],	
+		"far 3rd person":[0,-75,-100],	
 		"cockpit":[0,0,11.5],
 		"side":[30,0,12.5]
 	}
@@ -3269,8 +3270,8 @@ var guiParams={
 		smoothMouse:200
 	},
 	display:{
-		cameraType:"mid 3rd person",
-		cameraFov:140,
+		cameraType:"far 3rd person",
+		cameraFov:135,
 		uVarOne:-0.01,
 		flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
 		showHud:false,
