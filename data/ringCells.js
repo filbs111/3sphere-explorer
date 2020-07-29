@@ -25,3 +25,5 @@ var ringCells=(function generateRingCells(){
 
 	return ringCellsArr;
 })();
+
+var ringCellsT = ringCells.map( ring => ring.map(mtrx => mat4.transpose(mat4.create(mtrx))));

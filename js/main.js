@@ -204,6 +204,7 @@ playerCentreBallData = {pos:[0,0,0],suspHeight:0,cubeColPen:0};
 var maxRandBoxes = 8192;
 //var maxRandBoxes = 50;	//tmp smaller to make startup faster?
 var randomMats = [];	//some random poses. used for "dust motes". really only positions required, but flexible, can use for random boxes/whatever 		
+var randomMatsT = [];
 
 function generateDataForDataMatricesScale(inputData, infoArray, scaleFact){
 	var numInstances = infoArray.length;
@@ -483,6 +484,7 @@ function initBuffers(){
 	loadBufferData(icoballBuffers, icoballObj);
 	loadBufferData(hyperboloidBuffers, hyperboloidData);
 
+	var thisMatT;
 	for (var ii=0;ii<maxRandBoxes;ii++){
 		//thisMat = convert_quats_to_4matrix(random_quat_pair(), mat4.create());
 	
@@ -494,8 +496,13 @@ function initBuffers(){
 		thisMat.qPair = thisQpair;
 	
 		randomMats.push(thisMat);
+
+		thisMatT = mat4.create(thisMat);	//todo only use transposed matrix?
+		mat4.transpose(thisMatT);
+		randomMatsT.push(thisMatT);
 	}
 	
+
 	var randBoxData = generateDataForDataMatricesScale(smoothCubeData, randomMats.map(elem => {return {matrix:elem};}), 0.001);	//TODO ensure none inside portal radius. (4vec vertex shader doesn't discard pixels)
 	
 	//console.log("randBoxData:");
@@ -4453,7 +4460,7 @@ var iterateMechanics = (function iterateMechanics(){
 		//slightly less ridiculous place for this - not declaring functions inside for loop!
 		function checkBulletCollision(bullet, bulletMoveAmount){
 			var bulletMatrix=bullet.matrix;
-			
+			var tmpVec4 = vec4.create([0,0,0,0]);
 			var bulletMatrixTransposed = mat4.create();	//instead of transposing matrices describing possible colliding objects orientation.
 			mat4.set(bulletMatrix,bulletMatrixTransposed);	//alternatively might store transposed other objects orientation permanently
 			mat4.transpose(bulletMatrixTransposed);
@@ -4461,6 +4468,10 @@ var iterateMechanics = (function iterateMechanics(){
 			var bulletMatrixTransposedDCRefFrame=mat4.create(bulletMatrixTransposed);	//in frame of duocylinder
 			rotate4mat(bulletMatrixTransposedDCRefFrame, 0, 1, duocylinderSpin);
 			
+			var bulletPos = bulletMatrix.slice(12);	//todo use this elsewhere?
+			var bulletPos4V = vec4.create(bulletPos);
+			var bulletPosDCF4V = vec4.create([bulletMatrixTransposedDCRefFrame[3],bulletMatrixTransposedDCRefFrame[7],bulletMatrixTransposedDCRefFrame[11],bulletMatrixTransposedDCRefFrame[15]]);
+
 			var bulletVel=bullet.vel;
 			xyzmove4mat(bulletMatrix,scalarvectorprod(bulletMoveAmount,bulletVel));
 			
@@ -4485,7 +4496,6 @@ var iterateMechanics = (function iterateMechanics(){
 			var worldInfo = (bullet.world==0) ? guiParams.world0 : guiParams.world1;
 					//todo keep bullets in 2 lists/arrays so can check this once per world
 			
-			var bulletPos = bulletMatrix.slice(12);	//todo use this elsewhere?
 			if (worldInfo.duocylinderModel == "procTerrain"){
 				//collision with duocylinder procedural terrain	
 				if (getHeightAboveTerrainFor4VecPos(bulletPos)<0){detonateBullet(bullet, true, [0.3,0.3,0.3,1]);}
@@ -4505,23 +4515,22 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			//box rings
 			var guiBoxes= guiParams.drawShapes.boxes;
-			if (guiBoxes['y=z=0']){checkCollisionForBoxRing(ringCells[0]);}
-			if (guiBoxes['x=z=0']){checkCollisionForBoxRing(ringCells[1]);}
-			if (guiBoxes['x=y=0']){checkCollisionForBoxRing(ringCells[2]);}
-			if (guiBoxes['z=w=0']){checkCollisionForBoxRing(ringCells[3]);}
-			if (guiBoxes['y=w=0']){checkCollisionForBoxRing(ringCells[4]);}
-			if (guiBoxes['x=w=0']){checkCollisionForBoxRing(ringCells[5]);}
+			if (guiBoxes['y=z=0']){checkCollisionForBoxRing(ringCellsT[0]);}
+			if (guiBoxes['x=z=0']){checkCollisionForBoxRing(ringCellsT[1]);}
+			if (guiBoxes['x=y=0']){checkCollisionForBoxRing(ringCellsT[2]);}
+			if (guiBoxes['z=w=0']){checkCollisionForBoxRing(ringCellsT[3]);}
+			if (guiBoxes['y=w=0']){checkCollisionForBoxRing(ringCellsT[4]);}
+			if (guiBoxes['x=w=0']){checkCollisionForBoxRing(ringCellsT[5]);}
 			
-			function checkCollisionForBoxRing(ringCellMats){	//todo combine with below (random boxes)
-				for (var ii=0;ii<ringCellMats.length;ii++){
-					boxCollideCheck(ringCellMats[ii],ringBoxSize,critValueRingBox);
+			function checkCollisionForBoxRing(ringCellMatsT){	//todo combine with below (random boxes)
+				for (var ii=0;ii<ringCellMatsT.length;ii++){
+					boxCollideCheck(ringCellMatsT[ii],ringBoxSize,critValueRingBox,bulletPos4V);
 				}
 			}
 			
-			
 			if (numRandomBoxes>0 && guiParams["random boxes"].collision){
 				for (var ii=0;ii<numRandomBoxes;ii++){
-					boxCollideCheck(randomMats[ii],boxSize,critValueRandBox);
+					boxCollideCheck(randomMatsT[ii],boxSize,critValueRandBox,bulletPos4V);
 				}
 			}
 			
@@ -4544,25 +4553,16 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 			function boxCollideArray(bArray){
 				for (var bb of bArray){
-					boxCollideCheck(bb.matrix,duocylinderSurfaceBoxScale,critValueDCBox, bulletMatrixTransposedDCRefFrame, true);
+					boxCollideCheck(bb.matrixT,duocylinderSurfaceBoxScale,critValueDCBox, bulletPosDCF4V, true);
 				}
 			}
 				
-			
-			function boxCollideCheck(cellMat,thisBoxSize,boxCritValue, bulletMatrixTransposedForRefFrame, moveWithDuocylinder){
-					var bulletMatrixTransposedForRefFrame = bulletMatrixTransposedForRefFrame || bulletMatrixTransposed;
-				//if (cellMat[15]>criticalWPos){return;}	//not drawing boxes too close to portal, so don't collide with them either!
-														//also breaks ring box collision now (when box near portal)
-														//TODO move to setup stage 
-					
-					mat4.set(bulletMatrixTransposedForRefFrame, relativeMat);
-					mat4.multiply(relativeMat, cellMat);
-					
-					if (relativeMat[15]<boxCritValue){return;}	//early sphere check
-					
-					if (Math.max(Math.abs(relativeMat[3]),
-								Math.abs(relativeMat[7]),
-								Math.abs(relativeMat[11]))<thisBoxSize*relativeMat[15]){
+			function boxCollideCheck(cellMatT,thisBoxSize,boxCritValue, bulletPos4V, moveWithDuocylinder){
+					mat4.multiplyVec4(cellMatT, bulletPos4V, tmpVec4);
+					if (tmpVec4[3]<boxCritValue){return;}	//early sphere check
+					if (Math.max(Math.abs(tmpVec4[0]),
+								Math.abs(tmpVec4[1]),
+								Math.abs(tmpVec4[2]))<thisBoxSize*tmpVec4[3]){
 						detonateBullet(bullet, moveWithDuocylinder, [1,0.8,0.6,1]);
 				}
 			}

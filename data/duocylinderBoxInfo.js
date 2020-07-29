@@ -92,7 +92,10 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 		xyzrotate4mat(boxMatrix, [turn,0,0]);
 		xyzrotate4mat(boxMatrix, [0,Math.PI/2,0]);	//put hyperboloids upright
 		
-		var thisItem = {matrix:boxMatrix, color:cc};
+		var boxMatrixT = mat4.create(boxMatrix);	//todo use only transposed/not transposed matrix in code
+		mat4.transpose(boxMatrixT);
+
+		var thisItem = {matrix:boxMatrix, matrixT:boxMatrixT, color:cc};
 		currentboxInfo.list.push(thisItem);
 		
 		//do in reliable way - use same logic as bullet pos lookup. (could do this direct from aa, bb here, but code more complex)
