@@ -3683,24 +3683,7 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		reverseCamera=keyThing.keystate(82) || (mouseInfo.buttons & 4); 	//R or middle mouse click
 		
-		//GAMEPAD
-		activeGp=false;
-		//basic gamepad support
-		
-		//oculus touch controllers are recognised as controllers.
-		//to work around, abuse fact that these don't have 10th button.
-		//find the 1st gamepad with button 10.
-
-		var gpads=navigator.getGamepads();
-		if (gpads){
-			for (gpad of gpads){
-				if (gpad && gpad.buttons && gpad.buttons[10] && gpad.axes){
-					activeGp = gpad;
-					break;
-				}
-			}
-		}
-		//TODO handle choosing one of multiple gamepads and keeping that gamepad selected.
+		activeGp=getGamepad();
 				
 		if (activeGp){	
 			buttons = activeGp.buttons;
