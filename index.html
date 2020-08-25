@@ -951,7 +951,7 @@
 #ifdef ATMOS_ONE
 		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
 		float total=0.0;
-		for (float aa=0.0;aa<CONST_ITERS;aa++){
+		for (float aa=0.5;aa<CONST_ITERS;aa++){
 			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
 			total+= exp(uAtmosContrast*rsq);
 		}
@@ -1646,7 +1646,7 @@
 #ifdef ATMOS_ONE
 		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
 		float total=0.0;
-		for (float aa=0.0;aa<CONST_ITERS;aa++){
+		for (float aa=0.5;aa<CONST_ITERS;aa++){
 			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
 			total+= exp(uAtmosContrast*rsq);
 		}
@@ -1797,7 +1797,7 @@
 #ifdef ATMOS_ONE
 		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
 		float total=0.0;
-		for (float aa=0.0;aa<CONST_ITERS;aa++){
+		for (float aa=0.5;aa<CONST_ITERS;aa++){
 			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
 			total+= exp(uAtmosContrast*rsq);
 		}
@@ -1903,7 +1903,7 @@
 #ifdef ATMOS_ONE
 		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
 		float total=0.0;
-		for (float aa=0.0;aa<CONST_ITERS;aa++){
+		for (float aa=0.5;aa<CONST_ITERS;aa++){
 			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
 			total+= exp(uAtmosContrast*rsq);
 		}
@@ -1986,7 +1986,7 @@
 		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
 		
 		float total=0.0;
-		for (float aa=0.0;aa<CONST_ITERS;aa++){
+		for (float aa=0.5;aa<CONST_ITERS;aa++){
 			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
 			total+= exp(uAtmosContrast*rsq);
 		}
@@ -2115,7 +2115,7 @@
 		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
 		
 		float total=0.0;
-		for (float aa=0.0;aa<CONST_ITERS;aa++){
+		for (float aa=0.5;aa<CONST_ITERS;aa++){
 			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
 			total+= exp(uAtmosContrast*rsq);
 		}
@@ -2241,7 +2241,7 @@
 		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
 		
 		float total=0.0;
-		for (float aa=0.0;aa<CONST_ITERS;aa++){
+		for (float aa=0.5;aa<CONST_ITERS;aa++){
 			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
 			total+= exp(uAtmosContrast*rsq);
 		}
@@ -2332,7 +2332,7 @@
 		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
 		
 		float total=0.0;
-		for (float aa=0.0;aa<CONST_ITERS;aa++){
+		for (float aa=0.5;aa<CONST_ITERS;aa++){
 			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
 			total+= exp(uAtmosContrast*rsq);
 		}
@@ -2446,7 +2446,7 @@
 		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
 		
 		float total=0.0;
-		for (float aa=0.0;aa<CONST_ITERS;aa++){
+		for (float aa=0.5;aa<CONST_ITERS;aa++){
 			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
 			total+= exp(uAtmosContrast*rsq);
 		}
@@ -2577,7 +2577,7 @@
 		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
 		
 		float total=0.0;
-		for (float aa=0.0;aa<CONST_ITERS;aa++){
+		for (float aa=0.5;aa<CONST_ITERS;aa++){
 			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
 			total+= exp(uAtmosContrast*rsq);
 		}
@@ -2784,7 +2784,7 @@
 		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
 		
 		float total=0.0;
-		for (float aa=0.0;aa<CONST_ITERS;aa++){
+		for (float aa=0.5;aa<CONST_ITERS;aa++){
 			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
 			total+= exp(uAtmosContrast*rsq);
 		}
@@ -2976,7 +2976,7 @@
 		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
 		
 		float total=0.0;
-		for (float aa=0.0;aa<CONST_ITERS;aa++){
+		for (float aa=0.5;aa<CONST_ITERS;aa++){
 			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
 			total+= exp(uAtmosContrast*rsq);
 		}
@@ -3251,7 +3251,7 @@
 		float magTerm = length(vec2(cos2Term, sin2Term));
 		
 		float total=0.0;
-		for (float aa=0.0;aa<CONST_ITERS;aa++){
+		for (float aa=0.5;aa<CONST_ITERS;aa++){
 			float rsq = magTerm*sin(aa*maxDoubleAngOverIters+shiftAngle);
 			total+= exp(uAtmosContrast*rsq);
 		}
