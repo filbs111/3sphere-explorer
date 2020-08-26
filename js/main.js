@@ -905,7 +905,7 @@ function drawScene(frameTime){
 		
 		if (guiParams.display.renderViaTexture == "fisheye"){
 			//draw scene to a offscreen
-			gl.bindFramebuffer(gl.FRAMEBUFFER, rttFisheyeView.framebuffer);
+			gl.bindFramebuffer(gl.FRAMEBUFFER, rttStageOneView.framebuffer);
 			
 			var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
 			var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
@@ -933,24 +933,27 @@ function drawScene(frameTime){
 			
 			myfisheyedebug = fisheyeParams;	//TODO remove
 			
-			
 			var oversizedViewport = [ 2*Math.floor(oversize*gl.viewportWidth/2),  2*Math.floor(oversize*gl.viewportHeight/2)];
 			gl.viewport( 0,0, oversizedViewport[0], oversizedViewport[1] );
-			setRttSize( rttFisheyeView, oversizedViewport[0], oversizedViewport[1] );	//todo stop setting this repeatedly
+			setRttSize( rttStageOneView, oversizedViewport[0], oversizedViewport[1] );	//todo stop setting this repeatedly
 			
 			var wSettings = drawWorldScene(frameTime, false);
 			
+			drawTransparentStuff(rttStageOneView, rttFisheyeView2, oversizedViewport[0], oversizedViewport[1], wSettings);
+		}
+		
+		function drawTransparentStuff(fromView, toView, sizeX, sizeY, wSettings){
 			//switch to another view of same size, asign textures for existing rgb(a) and depth map, and draw these to new rgb(a), depth map (fullscreen quad)
 			// note that drawing depthmap maybe redundant because will be looking up depth map from texture to determine colours anyway, but might help with discarding pixels etc.
-			gl.bindFramebuffer(gl.FRAMEBUFFER, rttFisheyeView2.framebuffer);
-			gl.viewport( 0,0, oversizedViewport[0], oversizedViewport[1] );
-			setRttSize( rttFisheyeView2, oversizedViewport[0], oversizedViewport[1] );	//todo stop setting this repeatedly
+			gl.bindFramebuffer(gl.FRAMEBUFFER, toView.framebuffer);
+			gl.viewport( 0,0, sizeX, sizeY);
+			setRttSize( toView, sizeX, sizeY );	//todo stop setting this repeatedly
 			activeProg = shaderPrograms.fullscreenTexturedWithDepthmap;
 			gl.useProgram(activeProg);
 			enableDisableAttributes(activeProg);
 
-			bind2dTextureIfRequired(rttFisheyeView.texture);
-			bind2dTextureIfRequired(rttFisheyeView.depthTexture,gl.TEXTURE2);
+			bind2dTextureIfRequired(fromView.texture);
+			bind2dTextureIfRequired(fromView.depthTexture,gl.TEXTURE2);
 			
 			gl.uniform1i(activeProg.uniforms.uSampler, 0);
 			gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);
@@ -962,20 +965,32 @@ function drawScene(frameTime){
 				gl.cullFace(gl.FRONT);
 			}
 			
-			drawWorldScene2(frameTime, wSettings, rttFisheyeView.depthTexture);	//depth aware drawing stuff like sea
+			drawWorldScene2(frameTime, wSettings, fromView.depthTexture);	//depth aware drawing stuff like sea
 		}
-		
-		//draw the scene to offscreen framebuffer
-		gl.bindFramebuffer(gl.FRAMEBUFFER, rttView.framebuffer);
-		gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
-		setRttSize( rttView, gl.viewportWidth, gl.viewportHeight );
+
 		
 		var activeProg;
 		
 		if (guiParams.display.renderViaTexture != "fisheye"){
-			drawWorldScene(frameTime, false);
+
+			gl.bindFramebuffer(gl.FRAMEBUFFER, rttStageOneView.framebuffer);
+			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
+			setRttSize( rttStageOneView, gl.viewportWidth, gl.viewportHeight );
+			var wSettings = drawWorldScene(frameTime, false);
+
+			//draw scene to penultimate screen (before FXAA)
+			gl.bindFramebuffer(gl.FRAMEBUFFER, rttView.framebuffer);
+			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
+			setRttSize( rttView, gl.viewportWidth, gl.viewportHeight );
+
+			drawTransparentStuff(rttStageOneView, rttView, gl.viewportWidth, gl.viewportHeight, wSettings);	
 		}else{
-			//draw scene to intermediate screen
+
+			//draw scene to penultimate screen (before FXAA)
+			gl.bindFramebuffer(gl.FRAMEBUFFER, rttView.framebuffer);
+			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
+			setRttSize( rttView, gl.viewportWidth, gl.viewportHeight );
+
 			bind2dTextureIfRequired(rttFisheyeView2.texture);	
 			activeProg = shaderPrograms.fullscreenTexturedFisheye;
 			gl.useProgram(activeProg);
@@ -3217,8 +3232,8 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	world0:{duocylinderModel:"voxTerrain",seaActive:false},
-	world1:{duocylinderModel:"none",seaActive:true},
+	world0:{duocylinderModel:"voxTerrain",seaActive:true},
+	world1:{duocylinderModel:"none",seaActive:false},
 	duocylinderRotateSpeed:0,
 	seaLevel:-0.012,
 	drawShapes:{
@@ -3550,7 +3565,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	depthTex_ext = gl.getExtension('WEBGL_depth_texture');
 	
 	initTextureFramebuffer(rttView);
-	initTextureFramebuffer(rttFisheyeView, true);
+	initTextureFramebuffer(rttStageOneView, true);
 	initTextureFramebuffer(rttFisheyeView2);
 	initShaders();
 	initTexture();
@@ -5045,7 +5060,7 @@ function fireGun(){
 
 //from http://learningwebgl.com/blog/?p=1786
 var rttView={};
-var rttFisheyeView={};
+var rttStageOneView={};
 var rttFisheyeView2={};
 
 function setRttSize(view, width, height){	

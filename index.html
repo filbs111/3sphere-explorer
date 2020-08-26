@@ -122,7 +122,7 @@
 					//TODO should NW, NE etc samples be used in final result if in desired direction?)
 				
 		vec4 avg = 0.333*(texture2D(uSampler, vTextureCoord + uInvSize*dir.xy) + texture2D(uSampler, vTextureCoord - uInvSize*dir.xy) + MIDv4);
-		
+		avg.a=1.0;
 		gl_FragColor = avg;
 		//gl_FragColor = vec4(vec3(avg.y),1.0);	//grayscale by just take green channel
 	}
@@ -245,7 +245,7 @@
 		dir = dir*0.5;	//like result2 from video
 		//now dir is multiplied by thirds, so guess could simplify above code.
 		//missing test for extreme result2 values, sampling for result1. 
-		
+		avg.a=1.0;
 		vec4 avg = 0.333*(texture2D(uSampler, vTextureCoord + uInvSize*dir.xy) + texture2D(uSampler, vTextureCoord - uInvSize*dir.xy) + MIDv4);
 		
 		gl_FragColor = avg;
@@ -294,6 +294,10 @@
 		float lumaMin = min(lumaM, min(min(NW,NE), min(SW,SE)));
 		float lumaMax = max(lumaM, max(max(NW,NE), max(SW,SE)));
 		float lumaResult2 = dot(luma, result2);
+
+		result1.a=1.0;	//make alpha 1 because in some cases input data has alpha, and output may use alpha.  
+		result2.a=1.0;	//TODO ensure that input alpha=1 , or ensure output alpha doesn't matter, remove this 
+
 		if (lumaResult2 < lumaMin || lumaResult2> lumaMax){
 			gl_FragColor = result1;
 		}else{
