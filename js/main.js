@@ -813,7 +813,7 @@ function drawScene(frameTime){
 			var numFacesToUpdate = guiParams.reflector.cmFacesUpdated;
 			mat4.set(cmapPMatrix, pMatrix);
 			for (var ii=0;ii<numFacesToUpdate;ii++){	//only using currently to check perf impact. could use more "properly" and cycle/alternate.
-				var framebuffer = cubemapView.intermediateFramebuffers[ii];
+				var framebuffer = guiParams.display.drawTransparentStuff ? cubemapView.intermediateFramebuffers[ii] : cubemapView.framebuffers[ii];
 				//var framebuffer = cubemapView.framebuffers[ii];
 				gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
 				gl.viewport(0, 0, framebuffer.width, framebuffer.height);
@@ -824,33 +824,34 @@ function drawScene(frameTime){
 				wSettingsArr.push( drawWorldScene(frameTime, true) );
 			}
 			
-			for (var ii=0;ii<numFacesToUpdate;ii++){
-				var framebuffer = cubemapView.framebuffers[ii];
-				gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-				gl.viewport(0, 0, framebuffer.width, framebuffer.height);
-				mat4.identity(worldCamera);
-				xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);	
-				rotateCameraForFace(ii);
-				
-				var activeProg = shaderPrograms.fullscreenTexturedWithDepthmap;
-				gl.useProgram(activeProg);
-				enableDisableAttributes(activeProg);
+			if (guiParams.display.drawTransparentStuff){
+				for (var ii=0;ii<numFacesToUpdate;ii++){
+					var framebuffer = cubemapView.framebuffers[ii];
+					gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+					gl.viewport(0, 0, framebuffer.width, framebuffer.height);
+					mat4.identity(worldCamera);
+					xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);	
+					rotateCameraForFace(ii);
+					
+					var activeProg = shaderPrograms.fullscreenTexturedWithDepthmap;
+					gl.useProgram(activeProg);
+					enableDisableAttributes(activeProg);
 
-				bind2dTextureIfRequired(cubemapView.intermediateTextures[ii]);
-				bind2dTextureIfRequired(cubemapView.intermediateDepthTextures[ii],gl.TEXTURE2);
-				
-				gl.uniform1i(activeProg.uniforms.uSampler, 0);
-				gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);	
-				
-				gl.depthFunc(gl.ALWAYS);
-				drawObjectFromBuffers(fsBuffers, activeProg);
-				gl.depthFunc(gl.LESS);
-				gl.cullFace(gl.BACK);
-				drawWorldScene2(frameTime, wSettingsArr[ii], cubemapView.intermediateDepthTextures[ii]);	//depth aware drawing stuff like sea
-					//note currently depth is not correct, probably responsible for inconsistent rendering across cubemap edges.
-				
+					bind2dTextureIfRequired(cubemapView.intermediateTextures[ii]);
+					bind2dTextureIfRequired(cubemapView.intermediateDepthTextures[ii],gl.TEXTURE2);
+					
+					gl.uniform1i(activeProg.uniforms.uSampler, 0);
+					gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);	
+					
+					gl.depthFunc(gl.ALWAYS);
+					drawObjectFromBuffers(fsBuffers, activeProg);
+					gl.depthFunc(gl.LESS);
+					gl.cullFace(gl.BACK);
+					drawWorldScene2(frameTime, wSettingsArr[ii], cubemapView.intermediateDepthTextures[ii]);	//depth aware drawing stuff like sea
+						//note currently depth is not correct, probably responsible for inconsistent rendering across cubemap edges.
+					
+				}
 			}
-			
 			
 			function rotateCameraForFace(ii){
 				switch(ii){
