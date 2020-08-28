@@ -245,9 +245,9 @@
 		dir = dir*0.5;	//like result2 from video
 		//now dir is multiplied by thirds, so guess could simplify above code.
 		//missing test for extreme result2 values, sampling for result1. 
-		avg.a=1.0;
-		vec4 avg = 0.333*(texture2D(uSampler, vTextureCoord + uInvSize*dir.xy) + texture2D(uSampler, vTextureCoord - uInvSize*dir.xy) + MIDv4);
 		
+		vec4 avg = 0.333*(texture2D(uSampler, vTextureCoord + uInvSize*dir.xy) + texture2D(uSampler, vTextureCoord - uInvSize*dir.xy) + MIDv4);
+		avg.a=1.0;
 		gl_FragColor = avg;
 		//gl_FragColor = vec4(vec3(avg.y),1.0);	//grayscale by just take green channel
 		//gl_FragColor = vec4(vec3(dot(luma,avg)),1.0);	//grayscale
