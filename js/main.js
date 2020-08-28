@@ -903,6 +903,8 @@ function drawScene(frameTime){
 		
 		var fisheyeParams={};
 		
+		var sceneDrawingOutputView = rttStageOneView;
+
 		if (guiParams.display.renderViaTexture == "fisheye"){
 			//draw scene to a offscreen
 			gl.bindFramebuffer(gl.FRAMEBUFFER, rttStageOneView.framebuffer);
@@ -939,7 +941,10 @@ function drawScene(frameTime){
 			
 			var wSettings = drawWorldScene(frameTime, false);
 			
-			drawTransparentStuff(rttStageOneView, rttFisheyeView2, oversizedViewport[0], oversizedViewport[1], wSettings);
+			if (guiParams.display.drawTransparentStuff){
+				drawTransparentStuff(rttStageOneView, rttFisheyeView2, oversizedViewport[0], oversizedViewport[1], wSettings);
+				sceneDrawingOutputView = rttFisheyeView2;
+			}
 		}
 		
 		function drawTransparentStuff(fromView, toView, sizeX, sizeY, wSettings){
@@ -972,18 +977,15 @@ function drawScene(frameTime){
 		var activeProg;
 		
 		if (guiParams.display.renderViaTexture != "fisheye"){
-
 			gl.bindFramebuffer(gl.FRAMEBUFFER, rttStageOneView.framebuffer);
 			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
 			setRttSize( rttStageOneView, gl.viewportWidth, gl.viewportHeight );
 			var wSettings = drawWorldScene(frameTime, false);
 
-			//draw scene to penultimate screen (before FXAA)
-			gl.bindFramebuffer(gl.FRAMEBUFFER, rttView.framebuffer);
-			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
-			setRttSize( rttView, gl.viewportWidth, gl.viewportHeight );
-
-			drawTransparentStuff(rttStageOneView, rttView, gl.viewportWidth, gl.viewportHeight, wSettings);	
+			if (guiParams.display.drawTransparentStuff){
+				drawTransparentStuff(rttStageOneView, rttView, gl.viewportWidth, gl.viewportHeight, wSettings);
+				sceneDrawingOutputView = rttView;
+			}
 		}else{
 
 			//draw scene to penultimate screen (before FXAA)
@@ -991,7 +993,7 @@ function drawScene(frameTime){
 			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
 			setRttSize( rttView, gl.viewportWidth, gl.viewportHeight );
 
-			bind2dTextureIfRequired(rttFisheyeView2.texture);	
+			bind2dTextureIfRequired(sceneDrawingOutputView.texture);	
 			activeProg = shaderPrograms.fullscreenTexturedFisheye;
 			gl.useProgram(activeProg);
 			enableDisableAttributes(activeProg);
@@ -1008,12 +1010,14 @@ function drawScene(frameTime){
 			gl.depthFunc(gl.ALWAYS);
 			drawObjectFromBuffers(fsBuffers, activeProg);
 			//gl.depthFunc(gl.LESS);
+
+			sceneDrawingOutputView = rttView;
 		}
 		
 		//draw quad to screen using drawn texture
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);	//draw to screen.
 		gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);	//TODO check whether necessary to keep setting this
-		bind2dTextureIfRequired(rttView.texture);	
+		bind2dTextureIfRequired(sceneDrawingOutputView.texture);	
 		
 		//draw the simple quad object to the screen
 		switch (guiParams.display.renderViaTexture){
@@ -3298,6 +3302,7 @@ var guiParams={
 		flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
 		showHud:false,
 		renderViaTexture:'fisheye',
+		drawTransparentStuff:true,
 		perPixelLighting:true,
 		atmosShader:"atmos",
 		atmosThickness:0.2,
@@ -3450,6 +3455,7 @@ function init(){
 	displayFolder.add(guiParams.display, "flipReverseCamera");
 	displayFolder.add(guiParams.display, "showHud");
 	displayFolder.add(guiParams.display, "renderViaTexture", ['no','basic','bennyBoxLite','bennyBox','fisheye']);
+	displayFolder.add(guiParams.display, "drawTransparentStuff");
 	displayFolder.add(guiParams.display, "perPixelLighting");
 	//displayFolder.add(guiParams.display, "atmosShader", ['constant','atmos','atmos_v2']);	//basic is constant (contrast=0) 
 	displayFolder.add(guiParams.display, "atmosThickness", 0,0.5,0.05);
