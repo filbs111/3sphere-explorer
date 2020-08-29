@@ -483,6 +483,9 @@
 
 <!-- triplanar texture mapping for voxel terrain -->
 <script id="shader-texmap-triplanar-fs" type="x-shader/x-fragment">
+#ifdef CUSTOM_DEPTH
+	#extension GL_EXT_frag_depth : enable
+#endif
 	precision mediump float;
 	varying vec3 vTextureCoord;
 	uniform sampler2D uSampler;
@@ -492,7 +495,9 @@
 	varying vec3 veclight;
 	varying vec3 vPos;		//3vector position (before mapping onto duocyinder)
 	varying vec3 vTexAmounts;
-	
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif	
 	void main(void) {		
 		float texOffset = 0.5;
 		vec3 texColor = mat3(texture2D(uSampler, vec2(vPos.y, vPos.z)).xyz, texture2D(uSampler, vec2(vPos.x, vPos.z + texOffset )).xyz, texture2D(uSampler, vec2(vPos.x + texOffset, vPos.y + texOffset )).xyz) * vTexAmounts;
@@ -508,9 +513,16 @@
 		//gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		//gl_FragColor = (1.0-fog)*uFogColor;
 		gl_FragColor.a =1.0;
+#ifdef CUSTOM_DEPTH
+		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
+#endif
 	}
 </script>
 <script id="shader-texmap-perpixel-triplanar-fs" type="x-shader/x-fragment">
+#ifdef CUSTOM_DEPTH
+	#extension GL_EXT_frag_depth : enable
+#endif
+
 	precision mediump float;
 	varying vec3 vTextureCoord;
 	uniform sampler2D uSampler;
@@ -529,7 +541,9 @@
 	varying vec4 vColor;
 	varying vec3 vPos;		//3vector position (before mapping onto duocyinder)
 	varying vec3 vTexAmounts;
-	
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif		
 	void main(void) {
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
 		
@@ -594,6 +608,9 @@
 		//gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		//gl_FragColor = (1.0-fog)*uFogColor;
 		gl_FragColor.a =1.0;
+#ifdef CUSTOM_DEPTH
+		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
+#endif
 	}
 </script>
 
@@ -2308,11 +2325,16 @@
 	varying vec3 veclight;
 	varying vec3 vPos;		//3vector position (before mapping onto duocyinder)
 	varying vec3 vTexAmounts;
-	
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif	
 	void main(void) {
 		vec4 transformedCoord = uMVMatrix * aVertexPosition;
 		gl_Position = uPMatrix * transformedCoord;
-		
+#ifdef CUSTOM_DEPTH
+		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
+#endif
+
 #ifdef ATMOS_CONSTANT		
 		fog = 0.5*(1.0 + transformedCoord.w);
 #else
@@ -2422,11 +2444,16 @@
 	varying vec3 vTexAmounts;
 	varying vec4 vColor;
 	varying vec4 adjustedPos;
-	
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif	
 	void main(void) {
 		transformedCoord = uMVMatrix * aVertexPosition;
 		gl_Position = uPMatrix * transformedCoord;
-		
+#ifdef CUSTOM_DEPTH
+		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
+#endif		
+
 #ifdef ATMOS_CONSTANT		
 		fog = 0.5*(1.0 + transformedCoord.w);
 #else

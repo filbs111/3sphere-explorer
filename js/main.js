@@ -107,9 +107,9 @@ function initShaders(){
 	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','CUSTOM_DEPTH'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','CUSTOM_DEPTH'],true);
 	
 	//voxTerrain shaders
-	shaderPrograms.triplanarColor4Vec = genShaderVariants("shader-texmap-color-triplanar-vs-4vec", "shader-texmap-triplanar-fs");
+	shaderPrograms.triplanarColor4Vec = genShaderVariants("shader-texmap-color-triplanar-vs-4vec", "shader-texmap-triplanar-fs",['CUSTOM_DEPTH'],['CUSTOM_DEPTH']);
 	//shaderPrograms.triplanarPerPixel = genShaderVariants("shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['VCOLOR','SPECULAR_ACTIVE'],['VCOLOR','SPECULAR_ACTIVE']);
-	shaderPrograms.triplanarPerPixel = genShaderVariants("shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['SPECULAR_ACTIVE'],['SPECULAR_ACTIVE']);	//like texmap4VecPerPixelDiscard - vertex position, normal are varyings, light positions are uniform
+	shaderPrograms.triplanarPerPixel = genShaderVariants("shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['SPECULAR_ACTIVE','CUSTOM_DEPTH'],['SPECULAR_ACTIVE','CUSTOM_DEPTH']);	//like texmap4VecPerPixelDiscard - vertex position, normal are varyings, light positions are uniform
 	//shaderPrograms.triplanarPerPixelTwo = genShaderVariants("shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs-BASIC", ['VCOLOR','SPECULAR_ACTIVE'],['VCOLOR','SPECULAR_ACTIVE']);
 	shaderPrograms.triplanarPerPixelTwoAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs", ['SPECULAR_ACTIVE','CUSTOM_DEPTH'],['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE','CUSTOM_DEPTH'],true);	//calculate vertexMatrix, get light positions in this frame (light positions are varyings)
 	
@@ -3304,6 +3304,7 @@ var guiParams={
 		showHud:false,
 		renderViaTexture:'fisheye',
 		drawTransparentStuff:true,
+		voxNmapTest:false,	//just show normal map. more efficient pix shader than standard. for performance check
 		perPixelLighting:true,
 		atmosShader:"atmos",
 		atmosThickness:0.2,
@@ -3457,6 +3458,7 @@ function init(){
 	displayFolder.add(guiParams.display, "showHud");
 	displayFolder.add(guiParams.display, "renderViaTexture", ['no','basic','bennyBoxLite','bennyBox','fisheye']);
 	displayFolder.add(guiParams.display, "drawTransparentStuff");
+	displayFolder.add(guiParams.display, "voxNmapTest");
 	displayFolder.add(guiParams.display, "perPixelLighting");
 	//displayFolder.add(guiParams.display, "atmosShader", ['constant','atmos','atmos_v2']);	//basic is constant (contrast=0) 
 	displayFolder.add(guiParams.display, "atmosThickness", 0,0.5,0.05);
@@ -5244,8 +5246,8 @@ function drawDuocylinderObject(wSettings, duocylinderObj, zeroLevel, seaTime, de
 	//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
 	if (!duocylinderObj.isSea){
 		if (duocylinderObj.usesTriplanarMapping){	//means is voxTerrain.
-			//activeShaderProgram = guiParams.display.perPixelLighting? shaderPrograms.triplanarPerPixel[ guiParams.display.atmosShader ] : shaderPrograms.triplanarColor4Vec[ guiParams.display.atmosShader ];
-			activeShaderProgram = guiParams.display.perPixelLighting? shaderPrograms.triplanarPerPixelTwoAndDiffuse[ guiParams.display.atmosShader ] : shaderPrograms.triplanarColor4Vec[ guiParams.display.atmosShader ];
+			var selectedShaderSet = guiParams.display.perPixelLighting? (guiParams.display.voxNmapTest? 'triplanarPerPixel' : 'triplanarPerPixelTwoAndDiffuse' ) : 'triplanarColor4Vec';
+			activeShaderProgram = shaderPrograms[selectedShaderSet][guiParams.display.atmosShader];
 		}else{
 			//activeShaderProgram = duocylinderObj.useMapproject? shaderPrograms.texmap4VecMapproject[ guiParams.display.atmosShader ] : shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ] ;
 			activeShaderProgram = duocylinderObj.useMapproject? ( guiParams.display.useSpecular? shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse2Tex[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecMapprojectDiscardNormalmapVcolorAndDiffuse[ guiParams.display.atmosShader ] ) : ( guiParams.display.useSpecular? shaderPrograms.texmap4VecPerPixelDiscardPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscard[ guiParams.display.atmosShader ]);
