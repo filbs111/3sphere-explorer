@@ -3019,10 +3019,22 @@ function setMatrixUniforms(shaderProgram) {
 }
 
 var cubemapView={};
-var cubemapSize = 1024;
 //cube map code from http://www.humus.name/cubemapviewer.js (slightly modified)
 
+function power_of_2(n) {
+	if (typeof n !== 'number') 
+		return false;
+   
+	return (n >= 1) && (n & (n - 1)) === 0;
+}
+
 function initCubemapFramebuffer(view){
+	const urlParams = new URLSearchParams(window.location.search);
+	var manualCubemapSize = Number(urlParams.get('cms'));
+	var cubemapSize = ( power_of_2(manualCubemapSize) &&  manualCubemapSize<8192) ? manualCubemapSize : 512;	//disallow really big, because causes awful perf.
+																												//512 decent for 1080p end result. 1024 bit better. my machine handles 4096, but no point
+	console.log({manualCubemapSize, cubemapSize});
+
 	//for rendering to separate 2d textures, prior to cubemap
 	var intermediateFramebuffers = [];
 	var intermediateTextures = [];
