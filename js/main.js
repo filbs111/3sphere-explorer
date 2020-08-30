@@ -2782,10 +2782,11 @@ var enableDisableAttributes = (function generateEnableDisableAttributesFunc(){
 	var enabledSet = new Set();
 	
 	return function(shaderProg){
-		
+		//TODO seems like attribute indices run from 0 to n. if so, to disable/enable just need to know n from, to
+
 		var toBeEnabled = new Set();
 		Object.keys(shaderProg.attributes).forEach(function(item, index){
-			toBeEnabled.add(gl.getAttribLocation(shaderProg, item));	//TODO store attrib locations for shader at initialisation time?
+			toBeEnabled.add(index);
 		});
 		
 		enabledSet.forEach(item=>{
