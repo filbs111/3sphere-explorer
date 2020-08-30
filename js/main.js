@@ -1389,7 +1389,7 @@ function updateGunTargeting(matrix){
 	
 }
 
-var lgMat;
+var lgMat = mat4.create();
 
 
 function getWorldSceneSettings(isCubemapView){
@@ -2254,8 +2254,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//	drawLandingBall(gear.pos);
 		}
 		
-		function drawLandingBall(posn){			 
-			lgMat = mat4.create(sshipMatrix);
+		function drawLandingBall(posn){
+			mat4.set(sshipMatrix, lgMat)	 
 			xyzmove4mat(lgMat, posn);
 			
 			//mat4.set(invertedWorldCamera, mvMatrix);	//no shift version
@@ -2642,7 +2642,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 		}
 		
 		function drawLandingBall(posn){	//this is duplicated from elsewhere, but should be changed
-			lgMat = mat4.create(sshipMatrix);
+			mat4.set(sshipMatrix, lgMat)
 			xyzmove4mat(lgMat, posn.map(x=>x*sshipModelScale));
 			
 			//mat4.set(invertedWorldCamera, mvMatrix);	//no shift version
