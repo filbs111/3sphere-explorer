@@ -8,15 +8,43 @@ var seaHeight = (function(){
 	var wavePosIn;
 	var zeroLevel = 0;
 	
-	function addWaveContribution(peakiness, waveCycles){	
-		var invWavelength = Math.sqrt(waveCycles[0]*waveCycles[0] + waveCycles[1]*waveCycles[1]);	//TODO "hardcode" invWavelenth, freq, ampl as input function call - can calculate at startup and return function(pos,tt) that includes addWaveContribution with relevant parameters
+	//precalculate as much as pos.
+	var waveList = [
+		{peakiness:0.15, waveCycles:[1.0,9.0]},
+		{peakiness:0.15, waveCycles:[-13.0,2.0]},
+		{peakiness:0.15, waveCycles:[3.0,-7.0]},
+		{peakiness:0.15, waveCycles:[-4.0,5.0]},
+	];
+	
+	for (var wave of waveList){
+		addConstantsToWave(wave);
+	}
+
+	function addConstantsToWave(wave){
+		var peakiness = wave.peakiness;
+		var waveCycles = wave.waveCycles;
+
+		var invWavelength = Math.sqrt(waveCycles[0]*waveCycles[0] + waveCycles[1]*waveCycles[1]);
 		var freq = someConstant*Math.sqrt(invWavelength);
 		freq=Math.ceil(freq);
 		
+		var ampl = peakiness/(invWavelength*tau);
+
+		wave.invWavelength = invWavelength;
+		wave.freq = freq;
+		wave.ampl = ampl;
+
+		//note that peakiness is not subsequently used.
+	}
+
+	function addWaveContribution(wave){	
+		var waveCycles = wave.waveCycles;
+		var invWavelength = wave.invWavelength;
+		var freq = wave.freq;
+		var ampl = wave.ampl;
+		
 		var dotProd = waveCycles[0]*wavePosIn[0] + waveCycles[1]*wavePosIn[1];
 		var phase = tau* (currentTime*freq + dotProd);	
-		
-		var ampl = peakiness/(invWavelength*tau);
 		var multiplier = ampl*Math.cos(phase)/invWavelength;
 		
 		wavePosAccum[0]+= multiplier*waveCycles[0];
@@ -29,21 +57,10 @@ var seaHeight = (function(){
 			wavePosAccum = [pos[0],pos[1],zeroLevel];
 			currentTime=tt;
 			wavePosIn=pos;
-		//	addWaveContribution(0.15, [4.0,0.0]);
-		//	addWaveContribution(0.15, [0.0,2.0]);
-		//	addWaveContribution(0.15, [3.0,0.0]);
-		//	addWaveContribution(0.3, [0.0,5.0]);
-		//	addWaveContribution(0.15, [9.0,0.0]);
-		//	addWaveContribution(0.15, [1.0,1.0]);
-		
-			addWaveContribution(0.15, [1.0,9.0]);
-			addWaveContribution(0.15, [-13.0,2.0]);
-			addWaveContribution(0.15, [3.0,-7.0]);
-			addWaveContribution(0.15, [-4.0,5.0]);
-			
-		//	console.log(wavePosAccum);
-		
-			//wavePosAccum[2]*=3;	//make waves more severe for testing
+
+			for (var wave of waveList){
+				addWaveContribution(wave);
+			}
 		
 			return wavePosAccum;
 		},
