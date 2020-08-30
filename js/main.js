@@ -3716,6 +3716,9 @@ var iterateMechanics = (function iterateMechanics(){
 	
 	var playerCameraDuocylinderFrame = mat4.create(playerCamera);		//todo resuse from pool
 	
+	var bulletMatrixTransposed = mat4.create();	//TODO? instead of transposing matrices describing possible colliding objects orientation.
+	var bulletMatrixTransposedDCRefFrame=mat4.create();		//alternatively might store transposed other objects orientation permanently		
+
 	return function(frameTime){
 		
 		reverseCamera=keyThing.keystate(82) || (mouseInfo.buttons & 4); 	//R or middle mouse click
@@ -4481,11 +4484,10 @@ var iterateMechanics = (function iterateMechanics(){
 		function checkBulletCollision(bullet, bulletMoveAmount){
 			var bulletMatrix=bullet.matrix;
 			var tmpVec4 = vec4.create([0,0,0,0]);
-			var bulletMatrixTransposed = mat4.create();	//instead of transposing matrices describing possible colliding objects orientation.
-			mat4.set(bulletMatrix,bulletMatrixTransposed);	//alternatively might store transposed other objects orientation permanently
+			mat4.set(bulletMatrix,bulletMatrixTransposed);
 			mat4.transpose(bulletMatrixTransposed);
 			
-			var bulletMatrixTransposedDCRefFrame=mat4.create(bulletMatrixTransposed);	//in frame of duocylinder
+			mat4.set(bulletMatrixTransposed,bulletMatrixTransposedDCRefFrame);	//in frame of duocylinder
 			rotate4mat(bulletMatrixTransposedDCRefFrame, 0, 1, duocylinderSpin);
 			
 			var bulletPos = bulletMatrix.slice(12);	//todo use this elsewhere?
