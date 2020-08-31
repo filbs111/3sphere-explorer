@@ -3,7 +3,7 @@
 var seaHeight = (function(){
 	var tau = 6.2831853;
 	var someConstant = 0.4;	//affects speed of animation
-	var wavePosAccum;
+	var wavePosAccum=new Array(3);
 	var currentTime;
 	var wavePosIn;
 	var zeroLevel = 0;
@@ -54,7 +54,10 @@ var seaHeight = (function(){
 	
 	return {
 		get:function(pos,tt){	//pos is [xx,yy]
-			wavePosAccum = [pos[0],pos[1],zeroLevel];
+			//wavePosAccum=new Array(3);	//might want to do this if don't want returned array to be affected by subsequent calls
+			wavePosAccum[0]=pos[0];
+			wavePosAccum[1]=pos[1]
+			wavePosAccum[2]=zeroLevel;
 			currentTime=tt;
 			wavePosIn=pos;
 
