@@ -3311,11 +3311,11 @@ var guiParams={
 	},
 	display:{
 		cameraType:"far 3rd person",
-		cameraFov:135,
+		cameraFov:125,
 		uVarOne:-0.01,
 		flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
 		showHud:false,
-		renderViaTexture:'fisheye',
+		renderViaTexture:'bennyBox',
 		drawTransparentStuff:true,
 		voxNmapTest:false,	//just show normal map. more efficient pix shader than standard. for performance check
 		perPixelLighting:true,
