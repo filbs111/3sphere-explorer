@@ -5312,6 +5312,11 @@ var explosionParticles = (function(){
 		//ideally buffers should be position, direction, positon, direction .... to reduce calls to buffer sub data.
 	var blockOffs;
 	
+	var dirn=new Array(4);
+	var newPosn=new Array(4);
+	var newDirn=new Array(4);
+	var dirvec3;
+
 	return {
 		makeExplosion: function makeExplosion(posn, time, colr, normalness){
 			blockOffs = nextBlock*blockLen;
@@ -5323,14 +5328,11 @@ var explosionParticles = (function(){
 			var time_angle = time*0.0005;	//this will change depending on shader cycle time. 
 			var ct = Math.cos(time_angle);
 			var st = Math.sin(time_angle);
-			var dirn=[];
-			var newPosn;
-			var newDirn;
 			
+			var ui8color = colr.map(elem=>Math.floor(elem*255));
+
 			for (var pp=0;pp<blockLen;pp++){
-				var dirvec3 = randomNormalised3vec(normalness);	//get direction vector for time = 0
-				newPosn=[];
-				newDirn=[];
+				dirvec3 = randomNormalised3vec(normalness);	//get direction vector for time = 0
 				//do a matrix multiplication. TODO use matrix methods to reduce code length!
 				for (var bb=0;bb<4;bb++){
 					dirn[bb]=0;
@@ -5351,7 +5353,7 @@ var explosionParticles = (function(){
 				}
 				posnDirnsI16.set(newPosn, 8*pp);
 				posnDirnsI16.set(newDirn, 8*pp+4);
-				colrsUI8.set(colr.map(elem=>Math.floor(elem*255)), 4*pp);
+				colrsUI8.set(ui8color, 4*pp);
 			}
 			bufferArraySubDataGeneral(posnDirnsGlBuffer, blockOffs*16, posnDirnsI16);
 			bufferArraySubDataGeneral(colrsGlBuffer, blockOffs*4, colrsUI8);
@@ -5394,17 +5396,36 @@ var explosionParticles = (function(){
 	}
 })();
 
-function randomNormalised3vec(normalness=1){	//TODO uniformly distributed angle (gauss ok, IIRC trig solution for 3d is neat), maybe precalculate, maybe want nonrandom for better sphere coverage for particles
-	var vec=[]
-	var lensq=0;
-	for (var cc=0;cc<3;cc++){
-		var thisElem = Math.random()+Math.random()-1;	//add lots of these to approach gaussian
-		vec.push(thisElem);	
-		lensq+=thisElem*thisElem;
+
+var randomNormalised3vec = (function generate3vecRandomiser(){
+
+	var numArrs = 128;	//ensure power of 2
+	var bitwiseOr = numArrs-1;
+
+	var vecArrs = new Array(numArrs);
+	for (var ii=0;ii<numArrs;ii++){
+		vecArrs[ii]=new Array(3);
 	}
-	var len = Math.sqrt(lensq);
-	//len = normalness*len + (1-normalness);	
-	len = 1 + normalness*(len-1);
-	
-	return vec.map(elem=>elem/len);	
-}
+	var nextArrId = 0;
+
+	return function randomNormalised3vec(normalness=1){	
+			//TODO precalculate?, if still want control over normalness, can precalc all but that last step.
+		var vec=vecArrs[nextArrId++];
+		nextArrId = nextArrId && bitwiseOr;
+		var lensq=0;
+		for (var cc=0;cc<3;cc++){
+			var thisElem = Math.random()+Math.random()-1;	//add lots of these to approach gaussian
+			vec[cc] = thisElem;	
+			lensq+=thisElem*thisElem;
+		}
+		var len = Math.sqrt(lensq);
+		//len = normalness*len + (1-normalness);	
+		len = 1 + normalness*(len-1);
+		
+		//return vec.map(elem=>elem/len);	//creates a new array
+		for (var cc=0;cc<3;cc++){
+			vec[cc]/=len;
+		}
+		return vec;
+	}
+})();
