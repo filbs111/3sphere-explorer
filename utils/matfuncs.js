@@ -34,9 +34,17 @@ var matPool = (function makeMatPool(){
 })();
 
 
-function xyzmove4mat(mat, movevector){
+var xyzmove4mat = (function generateXyzMove4mat(){
+	
+	var newMatrix = mat4.create();
+	var movevector = new Array(3);
+
+	return function xyzmove4mat(mat, movevectorin){
+		//TODO take separate values input to save creating arrays.
+
+	//TODO use a separate function and call as appropriate (otherwise wastes cycles checking here)
 	if (mat.qPair){
-		mat.qPair = multiply_qpairs( mat.qPair, makemovequatpair(scalarvectorprod(0.5,movevector)) );
+		mat.qPair = multiply_qpairs( mat.qPair, makemovequatpair(scalarvectorprod(0.5,movevectorin)) );
 		convert_quats_to_4matrix(mat.qPair, mat);	//this func now sets a matrix passed in to be equivalent to qpair
 		return;
 	}
@@ -44,7 +52,7 @@ function xyzmove4mat(mat, movevector){
 	//movevector is axis*angle
 	//rotating x,y,z into w (3rd )
 	
-	var moveLength = Math.sqrt(movevector[0]*movevector[0] + movevector[1]*movevector[1] + movevector[2]*movevector[2]);
+	var moveLength = Math.sqrt(movevectorin[0]*movevectorin[0] + movevectorin[1]*movevectorin[1] + movevectorin[2]*movevectorin[2]);
 	var sAng = Math.sin(moveLength);
 	var cAng = Math.cos(moveLength);
 	var cAngMinusOne = cAng-1;
@@ -53,59 +61,39 @@ function xyzmove4mat(mat, movevector){
 	//work these out, then insert into a matrix (try row, column), rotate
 	if (moveLength == 0){return;}	//avoid division by zero
 	
-	//just make a fresh matrix, then multiply the input matrix by that.
-	var newMatrix = matPool.create();
-	
 	//unknown if changing passed in movevector will cause problems, so make new one
-	movevector = movevector.map(function(val){return val/moveLength;});
+	for (var ii=0;ii<3;ii++){
+		movevector[ii]=movevectorin[ii]/moveLength;
+	}
 	
-	var newW= [ -sAng*movevector[0], -sAng*movevector[1], -sAng*movevector[2], cAng];
-	//x starts as [1,0,0,0]. if movevector is along x, becomes [cAng,0,0,sAng]. if movevector perpendicular to x, stays as [1,0,0,0]
-	//let's guess... ( suspect there may be cross terms though)
+	
+	//newX
+	newMatrix[0] = 1.0 + cAngMinusOne*movevector[0]*movevector[0];
+	newMatrix[1] = cAngMinusOne*movevector[0]*movevector[1];
+	newMatrix[2] = cAngMinusOne*movevector[0]*movevector[2];
+	newMatrix[3] = sAng*movevector[0];
+	
+	//newY
+	newMatrix[4] = cAngMinusOne*movevector[1]*movevector[0];
+	newMatrix[5] = 1.0 + cAngMinusOne*movevector[1]*movevector[1];
+	newMatrix[6] = cAngMinusOne*movevector[1]*movevector[2];
+	newMatrix[7] = sAng*movevector[1];
+	
+	//newZ
+	newMatrix[8] = cAngMinusOne*movevector[2]*movevector[0];
+	newMatrix[9] = cAngMinusOne*movevector[2]*movevector[1];
+	newMatrix[10] = 1.0 + cAngMinusOne*movevector[2]*movevector[2];
+	newMatrix[11] = sAng*movevector[2];
 
-	//guess at signs - seems like a cross producty kind of thing
-	var newX= [1.0 + cAngMinusOne*movevector[0]*movevector[0],
-								cAngMinusOne*movevector[0]*movevector[1], 
-													cAngMinusOne*movevector[0]*movevector[2],
-																				sAng*movevector[0]]; //*(movevector[0]/moveLength)];
-	
-	//guess at signs - seems like a cross producty kind of thing
-	var newY= [cAngMinusOne*movevector[1]*movevector[0],
-								1.0 + cAngMinusOne*movevector[1]*movevector[1],
-														cAngMinusOne*movevector[1]*movevector[2],
-																				sAng*movevector[1]];	//*(movevector[1]/moveLength)];
-	
-	var newZ= [cAngMinusOne*movevector[2]*movevector[0],
-								cAngMinusOne*movevector[2]*movevector[1],
-														1.0 + cAngMinusOne*movevector[2]*movevector[2],
-																				sAng*movevector[2]];
+	//newW:
+	newMatrix[12] = -sAng*movevector[0];
+	newMatrix[13] = -sAng*movevector[1];
+	newMatrix[14] = -sAng*movevector[2];
+	newMatrix[15] = cAng;
 
-	//calculate lengths - should be 1
-	//console.log("length squared newX : " + ( newX[0]*newX[0] + newX[1]*newX[1] + newX[2]*newX[2] + newX[3]*newX[3]));
-	//console.log("length squared newY : " + ( newY[0]*newY[0] + newY[1]*newY[1] + newY[2]*newY[2] + newY[3]*newY[3]));
-	//console.log("length squared newZ : " + ( newZ[0]*newZ[0] + newZ[1]*newZ[1] + newZ[2]*newZ[2] + newZ[3]*newZ[3]));
-	//console.log("length squared newW : " + ( newW[0]*newW[0] + newW[1]*newW[1] + newW[2]*newW[2] + newW[3]*newW[3]));
-	//console.log(newW);
-	//console.log(newX);
-	
-	//lengths of columns should also be 1
-	//console.log("length squared col0 : " + ( newX[0]*newX[0] + newY[0]*newY[0] + newZ[0]*newZ[0] + newW[0]*newW[0]));
-	//console.log("length squared col1 : " + ( newX[1]*newX[1] + newY[1]*newY[1] + newZ[1]*newZ[1] + newW[1]*newW[1]));
-	//console.log("length squared col2 : " + ( newX[2]*newX[2] + newY[2]*newY[2] + newZ[2]*newZ[2] + newW[2]*newW[2]));
-	//console.log("length squared col3 : " + ( newX[3]*newX[3] + newY[3]*newY[3] + newZ[3]*newZ[3] + newW[3]*newW[3]));
-
-	
-	//set matrix components (not sure if rows or columns better)
-	newMatrix[0] = newX[0];		newMatrix[1] = newX[1];		newMatrix[2] = newX[2];		newMatrix[3] = newX[3];
-	newMatrix[4] = newY[0];		newMatrix[5] = newY[1];		newMatrix[6] = newY[2];		newMatrix[7] = newY[3];
-	newMatrix[8] = newZ[0];		newMatrix[9] = newZ[1];		newMatrix[10] = newZ[2];	newMatrix[11] = newZ[3];
-	newMatrix[12] = newW[0];	newMatrix[13] = newW[1];	newMatrix[14] = newW[2];	newMatrix[15] = newW[3];
-
-	
 	mat4.multiply(mat, newMatrix);
-
-	matPool.destroy(newMatrix);
 }
+})();
 
 function xmove4mat(mat, angle){
 	xyzmove4mat(mat, [angle,0,0]);
