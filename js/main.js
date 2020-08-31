@@ -1007,7 +1007,7 @@ function drawScene(frameTime){
 			gl.uniform1f(activeProg.uniforms.uOversize, fisheyeParams.uOversize);
 			
 			gl.uniform1i(activeProg.uniforms.uSampler, 0);		
-			gl.uniform2fv(activeProg.uniforms.uInvSize, [1/gl.viewportWidth , 1/gl.viewportHeight]);		
+			gl.uniform2f(activeProg.uniforms.uInvSize, 1/gl.viewportWidth , 1/gl.viewportHeight);		
 			gl.depthFunc(gl.ALWAYS);
 			drawObjectFromBuffers(fsBuffers, activeProg);
 			//gl.depthFunc(gl.LESS);
@@ -1037,7 +1037,7 @@ function drawScene(frameTime){
 		//gl.activeTexture(gl.TEXTURE0);
 
 		gl.uniform1i(activeProg.uniforms.uSampler, 0);		
-		gl.uniform2fv(activeProg.uniforms.uInvSize, [1/gl.viewportWidth , 1/gl.viewportHeight]);
+		gl.uniform2f(activeProg.uniforms.uInvSize, 1/gl.viewportWidth , 1/gl.viewportHeight);
 		gl.depthFunc(gl.ALWAYS);		
 		drawObjectFromBuffers(fsBuffers, activeProg);
 		gl.depthFunc(gl.LESS);
@@ -1097,7 +1097,7 @@ function drawScene(frameTime){
 	
 	function drawTargetDecal(scale, color, pos){
 			//scale*= 0.01/pos[2];
-			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [scale,scale,scale]);
+			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, scale,scale,scale);
 			gl.uniform4fv(activeShaderProgram.uniforms.uColor, color);
 			mat4.identity(mvMatrix);
 			xyzmove4mat(mvMatrix,[0.01*pos[0]/pos[2],0.01*pos[1]/pos[2],0.01]);
@@ -1499,7 +1499,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
 		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 		
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
 		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 
 		
@@ -1529,7 +1529,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	function shaderSetup(shader, tex){
 		activeShaderProgram = shader;
 		performShaderSetup(shader, wSettings, tex, boxSize);
-		gl.uniform3fv(shader.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
+		gl.uniform3f(shader.uniforms.uModelScale, boxSize,boxSize,boxSize);
 	}	
 	
 	
@@ -1561,7 +1561,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			
 			boxSize = guiParams['random boxes'].size;
 			boxRad = boxSize*Math.sqrt(3);
-			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
+			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
 			
 		//	var criticalWPos = Math.cos(Math.atan(guiParams.reflector.scale) + Math.atan(boxRad));
 						
@@ -1589,7 +1589,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			
 			boxSize = guiParams['random boxes'].size;
 			boxRad = boxSize*Math.sqrt(3);
-			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
+			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
 			
 		//	var criticalWPos = Math.cos(Math.atan(guiParams.reflector.scale) + Math.atan(boxRad));
 			
@@ -1618,7 +1618,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.red);
 			boxSize = guiParams['random boxes'].size;
 			boxRad = boxSize*Math.sqrt(3);
-			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
+			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
 			
 			//numRandomBoxes = Math.min(randomMats.length, numRandomBoxes);	//todo figure out how to draw part of array of boxes. also for "singleBuffer" version
 			
@@ -1768,7 +1768,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	shaderSetup(guiParams.debug.nmapUseShader2 ? (guiParams.display.useSpecular ? shaderPrograms.texmapPerPixelDiscardNormalmapPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmapPerPixelDiscardNormalmap[ guiParams.display.atmosShader ]) : shaderPrograms.texmapPerPixelDiscardNormalmapV1[ guiParams.display.atmosShader ], nmapTexture);
 	
 	
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
+	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale);
 	prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
 	
 	//draw boxes on duocylinder surface. 
@@ -1781,7 +1781,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//switch to non-normal map version to draw some objects.
 	activeShaderProgram=shaderProgramTexmap;
 	shaderSetup(activeShaderProgram, texture);
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
+	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale);
 	prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
 	
 	if (guiParams.drawShapes.stonehenge){	
@@ -1803,7 +1803,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 	if (worldInfo.duocylinderModel == 'procTerrain'){
 		terrainCollisionTestBoxPos = terrainGetHeightFor4VecPos(playerPos);		//TODO in position update (not rendering)
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.001,0.001,0.001]);
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, 0.001,0.001,0.001);
 		drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h *Math.sqrt(2), [1.0, 0.4, 1.0, 1.0], cubeBuffers);
 	}
 	
@@ -1838,21 +1838,21 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		if (guiParams.debug.buoys){
 			//buoy to track surface
-			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.4,0.01,0.01]);
+			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, 0.4,0.01,0.01);
 			drawPreppedBufferOnDuocylinder(shiftX-currentSeaHeight[0]*tau,-currentSeaHeight[1]*tau,currentSeaHeight[2]*tau, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
-			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.01,0.1,0.1]);
+			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, 0.01,0.1,0.1);
 			drawPreppedBufferOnDuocylinder(shiftX-currentSeaHeight[0]*tau,-currentSeaHeight[1]*tau,currentSeaHeight[2]*tau, [1.0, 0.4, 1.0, 1.0], cubeBuffers);
 			
 			//reference static buoy
-			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.4,0.01,0.01]);
+			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, 0.4,0.01,0.01);
 			drawPreppedBufferOnDuocylinder(shiftX,0,0, [0.0, 0.4, 1.0, 1.0], cubeBuffers);
-			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.01,0.1,0.1]);
+			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, 0.01,0.1,0.1);
 			drawPreppedBufferOnDuocylinder(shiftX,0,0, [0.0, 0.4, 1.0, 1.0], cubeBuffers);
 		}
 		if (guiParams.debug.closestPoint){
 			//red box on sea under player
 			var testBuoyPos = seaHeightFor4VecPos(playerPos, seaTime);
-			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.001,0.01,0.01]);
+			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, 0.001,0.01,0.01);
 			drawPreppedBufferOnDuocylinder(testBuoyPos.b,testBuoyPos.a,testBuoyPos.h, [1, 0, 0, 1], cubeBuffers);
 		}
 	}
@@ -1871,7 +1871,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		mat4.multiply(mvMatrix, collisionTestObj2Mat);
 		mat4.set(collisionTestObj2Mat, mMatrix);
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.magenta);
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [2*testObjScale,2*testObjScale,2*testObjScale]);
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, 2*testObjScale,2*testObjScale,2*testObjScale);
 		drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
 		//draw object shifted by normal
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.green);
@@ -1933,7 +1933,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	//draw blender object - a csg cube minus sphere. draw 8 cells for tesseract.
 	var modelScale = guiParams["8-cell scale"];
-	gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
 
 	if (guiParams["draw 8-cell"]){
@@ -1947,7 +1947,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	if (guiParams["draw 16-cell"]){
 		var cellScale = 4/Math.sqrt(6);		//in the model, vertices are 0.75*sqrt(2) from the centre, and want to scale to tan(PI/3)=sqrt(3)		
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [cellScale,cellScale,cellScale]);
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, cellScale,cellScale,cellScale);
 		
 		drawArrayOfModels(
 			cellMatData.d16,
@@ -1960,7 +1960,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	if (guiParams["draw 24-cell"]){
 		modelScale = 1.0;
 		modelScale*=guiParams["24-cell scale"];
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
 	
 		drawArrayOfModels(
 			cellMatData.d24.cells,
@@ -1972,7 +1972,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	if (guiParams["draw 5-cell"]){
 		var moveDist = Math.acos(-0.25);
 		modelScale = 2*moveDist;		
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
 		
 		drawArrayOfModels(
 			cellMatData.d5,
@@ -1990,7 +1990,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	//new draw dodeca stuff...
 	if (guiParams["draw 120-cell"]){
 		var cullVal =  dodecaScale*(0.4/0.515);
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [dodecaScale,dodecaScale,dodecaScale]);
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, dodecaScale,dodecaScale,dodecaScale);
 		drawArrayOfModels(
 			cellMatData.d120[sortId],
 			(guiParams.display.culling ? cullVal: false),
@@ -2000,7 +2000,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	if (guiParams["draw 600-cell"]){		
 		var myscale=0.386;	//todo use correct scale
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [myscale,myscale,myscale]);
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, myscale,myscale,myscale);
 		
 		drawArrayOfModels(
 			cellMatData.d600[sortId],
@@ -2099,7 +2099,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform1f(activeShaderProgram.uniforms.uVertexMove, guiParams.normalMove);
 	}
 	
-	gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);	//no emmision
+	gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);	//no emmision
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
 	if (activeShaderProgram.uniforms.uReflectorDiffColor){
 			gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
@@ -2118,10 +2118,10 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	if (guiParams.drawShapes.teapot){
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.teapot);	//BLUE
-		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0.1,0.3]);	//some emission
+		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0.1,0.3);	//some emission
 
 		modelScale = guiParams.drawShapes["teapot scale"];
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,teapotMatrix);		
 		drawObjectFromBuffers(teapotBuffers, shaderProgramColored);
@@ -2129,9 +2129,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	if (guiParams.drawShapes.hyperboloid){
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.gray);
-		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);	//no emission
+		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);	//no emission
 		modelScale = 1.0;
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
 		/*
 		//draw a single tower
 		mat4.set(invertedWorldCamera, mvMatrix);
@@ -2177,7 +2177,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		if (activeShaderProgram.uniforms.uReflectorPosVShaderCopy){gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPosVShaderCopy, reflectorPosTransformed);}
 		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 		
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [boxSize,boxSize,boxSize]);
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
 		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 		
 		if (activeShaderProgram.uniforms.thrustAmount){
@@ -2189,11 +2189,11 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		modelScale=25*sshipModelScale;	//TODO use object that doesn't require scaling
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.gray);
-		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [modelScale,modelScale,modelScale]);
+		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
 		
 		//special uniform for this shader
-		gl.uniform3fv(activeShaderProgram.uniforms.uLightPosPlayerFrame, [-rotatedMatrix[3],-rotatedMatrix[7],-rotatedMatrix[11]]);
+		gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame, -rotatedMatrix[3],-rotatedMatrix[7],-rotatedMatrix[11]);
 		
 		mat4.set(invertedWorldCamera, mvMatrix);
 		
@@ -2211,9 +2211,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 		mat4.set(matrix, mMatrix);
 		
 		var gunScale = 50*sshipModelScale;
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [gunScale,gunScale,gunScale]);
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, gunScale,gunScale,gunScale);
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.guns);	//GREY
-		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [gunHeat/15,gunHeat/30,gunHeat/45]);
+		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, gunHeat/15,gunHeat/30,gunHeat/45);
 														
 		prepBuffersForDrawing(gunBuffers, shaderProgramColored);
 		
@@ -2246,9 +2246,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//landing gear - just 3 balls.
 		prepBuffersForDrawing(sphereBuffers, shaderProgramColored);
 		//prepBuffersForDrawing(gunBuffers, shaderProgramColored);
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [0.001,0.001,0.001]);
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, 0.001,0.001,0.001);
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.superDarkGray);	//DARK
-		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);
+		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);
 		
 		for (gear of landingLegData){
 		//	drawLandingBall(gear.pos);
@@ -2278,13 +2278,13 @@ function drawWorldScene(frameTime, isCubemapView) {
 	function drawBall(matrix){
 		//draw "light" object
 		var sphereRad = settings.playerBallRad;
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [sphereRad,sphereRad,sphereRad]);
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, sphereRad,sphereRad,sphereRad);
 		var voxColliding = (voxCollisionCentralLevel>0) || (distBetween4mats(playerCamera, closestPointTestMat) < sphereRad); 
 						//sphere centre inside voxel volume OR sphere intersects with voxel zero surface.
 			//note could just have a simple signed distance, of vox field value divided by magnitide of gradient. however, current gradient is in abc space. TODO make work with this clunky version, then try abc-> player space gradient conversion, check results are consistent.
 		
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, voxColliding ? colorArrs.red: colorArrs.white);
-		gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0,0,0]);
+		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,	matrix);
 		if (frustumCull(mvMatrix,sphereRad)){
@@ -2312,11 +2312,11 @@ function drawWorldScene(frameTime, isCubemapView) {
 			case "sphere":
 				if (frustumCull(mvMatrix,targetRad)){	//normally use +ve radius
 											//-ve to make disappear when not entirely inside view frustum (for testing)
-					gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,targetRad]);
+					gl.uniform3f(activeShaderProgram.uniforms.uModelScale, targetRad,targetRad,targetRad);
 					gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.target);
 					var emitColor = Math.sin(frameTime*0.01);
 					//emitColor*=emitColor
-					gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [emitColor, emitColor, emitColor/2]);	//YELLOW
+					gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, emitColor, emitColor, emitColor/2);	//YELLOW
 					//gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0.5, 0.5, 0.5]);
 					drawObjectFromBuffers(sphereBuffers, activeShaderProgram);
 					//drawObjectFromBuffers(icoballBuffers, activeShaderProgram);
@@ -2329,7 +2329,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 																//minimise shader switching
 					activeShaderProgram = shaderProgramTexmap;
 					gl.useProgram(activeShaderProgram);
-					gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [targetRad,targetRad,targetRad]);
+					gl.uniform3f(activeShaderProgram.uniforms.uModelScale, targetRad,targetRad,targetRad);
 					gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
 					drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
 					activeShaderProgram = savedActiveProg;
@@ -2383,7 +2383,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			//todo keep this around. also used in fisheye shader.
 			var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
 			var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
-			gl.uniform2fv(activeShaderProgram.uniforms.uFNumber, [fx, fy]);
+			gl.uniform2f(activeShaderProgram.uniforms.uFNumber, fx, fy);
 			gl.uniform3fv(activeShaderProgram.uniforms.uCentrePosScaledFSCopy, reflectorInfo.centreTanAngleVectorScaled	);
 			
 			if (activeShaderProgram.uniforms.uPortalRad){	//specific stuff to special
@@ -2414,13 +2414,13 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uPortaledMatrix, false, matrixToPortal);
 		}
 
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [reflectorInfo.rad,reflectorInfo.rad, reflectorInfo.rad]);
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, reflectorInfo.rad,reflectorInfo.rad, reflectorInfo.rad);
 	
 		gl.uniform1f(activeShaderProgram.uniforms.uPolarity, reflectorInfo.polarity);
 		
 			
 		if(['vertex projection','screen space'].includes(guiParams.reflector.mappingType) ){
-			gl.uniform3fv(activeShaderProgram.uniforms.uCentrePosScaled, reflectorInfo.centreTanAngleVectorScaled	);
+			gl.uniform3fv(activeShaderProgram.uniforms.uCentrePosScaled, reflectorInfo.centreTanAngleVectorScaled);
 		}
 		drawObjectFromBuffers(sphereBuffersHiRes, activeShaderProgram, true);
 		
@@ -2442,7 +2442,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		activeShaderProgram=shaderProgramTexmap;
 		shaderSetup(activeShaderProgram, texture);
-		gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, [duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale]);
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale);
 		prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
 		
 		//draw something at player position
@@ -2539,8 +2539,8 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 	
 	prepBuffersForDrawing(sphereBuffers, transpShadProg);
 	targetRad=sshipModelScale*150;
-	gl.uniform3fv(transpShadProg.uniforms.uModelScale, [targetRad/50,targetRad/50,targetRad]);	//long streaks
-	gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [1.0, 1.0, 0.5]);	//YELLOW
+	gl.uniform3f(transpShadProg.uniforms.uModelScale, targetRad/50,targetRad/50,targetRad);	//long streaks
+	gl.uniform3f(transpShadProg.uniforms.uEmitColor, 1.0, 1.0, 0.5);	//YELLOW
 	
 	gl.enable(gl.BLEND);
 	gl.blendFunc(gl.SRC_ALPHA , gl.ONE);	
@@ -2583,7 +2583,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 		if (currentThrustInput[2]>0){					//rearward thrusters
 			for (var oo=-38.5, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo-=separation,rr-=thrustTaper){
 				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [rr,rr,thrustlong].map(x=>x*sshipModelScale));
-				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
+				gl.uniform3f(transpShadProg.uniforms.uEmitColor, 0.05*opac,0.15*opac,0.4*opac);
 				drawLandingBall([28.5,18,oo], matrix);	//	left ,down	,fwd
 				drawLandingBall([28.5,-18,oo], matrix);
 				drawLandingBall([-28.5,18,oo], matrix);
@@ -2593,7 +2593,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 		if (currentThrustInput[2]<0){				//forward thrusters
 			for (var oo=18, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo+=separation,rr-=thrustTaper){
 				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [rr,rr,thrustlong].map(x=>x*sshipModelScale));
-				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
+				gl.uniform3f(transpShadProg.uniforms.uEmitColor, 0.05*opac,0.15*opac,0.4*opac);
 				drawLandingBall([28.5,18,oo], matrix);
 				drawLandingBall([28.5,-18,oo], matrix);		
 				drawLandingBall([-28.5,18,oo], matrix);		
@@ -2603,7 +2603,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 		if (currentThrustInput[0]<0){				//left
 			for (var oo=35, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo+=separation,rr-=thrustTaper){
 				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [thrustlong,rr,rr].map(x=>x*sshipModelScale));
-				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
+				gl.uniform3f(transpShadProg.uniforms.uEmitColor, 0.05*opac,0.15*opac,0.4*opac);
 				drawLandingBall([oo,17.5,12.5]);
 				drawLandingBall([oo,-17.5,12.5]);
 				drawLandingBall([oo,17.5,-32.5]);
@@ -2613,7 +2613,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 		if (currentThrustInput[0]>0){				//right
 			for (var oo=-35, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo-=separation,rr-=thrustTaper){
 				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [thrustlong,rr,rr].map(x=>x*sshipModelScale));
-				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
+				gl.uniform3f(transpShadProg.uniforms.uEmitColor, 0.05*opac,0.15*opac,0.4*opac);
 				drawLandingBall([oo,17.5,12.5]);
 				drawLandingBall([oo,-17.5,12.5]);
 				drawLandingBall([oo,17.5,-32.5]);
@@ -2623,7 +2623,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 		if (currentThrustInput[1]>0){				//top
 			for (var oo=-22.5, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo-=separation,rr-=thrustTaper){
 				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [rr,thrustlong,rr].map(x=>x*sshipModelScale));
-				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
+				gl.uniform3f(transpShadProg.uniforms.uEmitColor, 0.05*opac,0.15*opac,0.4*opac);
 				drawLandingBall([30,oo,12.5]);
 				drawLandingBall([-30,oo,12.5]);
 				drawLandingBall([30,oo,-32.5]);
@@ -2633,7 +2633,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 		if (currentThrustInput[1]<0){				//bottom
 			for (var oo=22.5, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo+=separation,rr-=thrustTaper){
 				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [rr,thrustlong,rr].map(x=>x*sshipModelScale));
-				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [0.05*opac,0.15*opac,0.4*opac]);
+				gl.uniform3f(transpShadProg.uniforms.uEmitColor, 0.05*opac,0.15*opac,0.4*opac);
 				drawLandingBall([30,oo,12.5]);
 				drawLandingBall([-30,oo,12.5]);
 				drawLandingBall([30,oo,-32.5]);
@@ -2688,7 +2688,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 			if (frustumCull(mvMatrix,radius)){	
 					//TODO check is draw order independent transparency
 				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, singleExplosion.color.map(function(val){return val*opac;}));
-				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [radius,radius,radius]);
+				gl.uniform3f(transpShadProg.uniforms.uModelScale, radius,radius,radius);
 				drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
 			}
 			
@@ -2700,7 +2700,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 				if (frustumCull(mvMatrix,largeRadius)){	//todo larger max shock rad for larger singleExplosion.size
 					var largeOpac = 0.1*(1-(largeRadiusAng/maxShockRadAng));	//linearly drop opacity as sphere expands (simple)
 					gl.uniform3fv(transpShadProg.uniforms.uEmitColor, singleExplosion.color.map(function(val){return val*largeOpac;}));	//TODO neutral colour
-					gl.uniform3fv(transpShadProg.uniforms.uModelScale, [largeRadius,largeRadius,largeRadius]);
+					gl.uniform3f(transpShadProg.uniforms.uModelScale, largeRadius,largeRadius,largeRadius);
 					drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
 				}
 			}
@@ -2713,13 +2713,13 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 		//if (gg>0) continue;
 		var mfRad = 0.005;
 		var flashAmount = muzzleFlashAmounts[gg]
-		gl.uniform3fv(transpShadProg.uniforms.uEmitColor, [flashAmount, flashAmount/2, flashAmount/4]);
+		gl.uniform3f(transpShadProg.uniforms.uEmitColor, flashAmount, flashAmount/2, flashAmount/4);
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,gunMatrices[gg]);
 		xyzmove4mat(mvMatrix,[0,0,0.0075]);
 
 		for (var xx=0;xx<3;xx++){	//nested spheres
-			gl.uniform3fv(transpShadProg.uniforms.uModelScale, [mfRad/5,mfRad/5,mfRad]);
+			gl.uniform3f(transpShadProg.uniforms.uModelScale, mfRad/5,mfRad/5,mfRad);
 			drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
 			mfRad-=.0005;
 		}
@@ -5164,11 +5164,11 @@ function initTextureFramebuffer(view, useNearestFiltering) {
 
 function drawTriAxisCross(scale){
 	var smallScale = scale/20;
-	gl.uniform3fv(shaderProgramTexmap.uniforms.uModelScale, [smallScale,smallScale,scale]);
+	gl.uniform3f(shaderProgramTexmap.uniforms.uModelScale, smallScale,smallScale,scale);
 	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
-	gl.uniform3fv(shaderProgramTexmap.uniforms.uModelScale, [smallScale,scale,smallScale]);
+	gl.uniform3f(shaderProgramTexmap.uniforms.uModelScale, smallScale,scale,smallScale);
 	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
-	gl.uniform3fv(shaderProgramTexmap.uniforms.uModelScale, [scale,smallScale,smallScale]);
+	gl.uniform3f(shaderProgramTexmap.uniforms.uModelScale, scale,smallScale,smallScale);
 	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
 };
 function drawTriAxisCrossForMatrix(mat){
