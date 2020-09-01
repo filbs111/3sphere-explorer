@@ -1179,16 +1179,14 @@ function updateGunTargeting(matrix){
 		selectedTargeting = targetingSolution.selected;
 		targetWorldFrame = targetingSolution.targetWorldFrame;
 	}
+		
+	setGunMatrixRelativeToSpacehip(0, [gunHoriz,gunVert,gunFront]); //left, down, forwards
+	setGunMatrixRelativeToSpacehip(1, [-gunHoriz,gunVert,gunFront]);
+	setGunMatrixRelativeToSpacehip(2, [-gunHoriz,-gunVert,gunFront]);
+	setGunMatrixRelativeToSpacehip(3, [gunHoriz,-gunVert,gunFront]);
 	
-	gunMatrices=[];	//todo reuse instead of clear and push
-	
-	pushGunMatrixRelativeToSpacehip([gunHoriz,gunVert,gunFront]); //left, down, forwards
-	pushGunMatrixRelativeToSpacehip([-gunHoriz,gunVert,gunFront]);
-	pushGunMatrixRelativeToSpacehip([-gunHoriz,-gunVert,gunFront]);
-	pushGunMatrixRelativeToSpacehip([gunHoriz,-gunVert,gunFront]);
-	
-	function pushGunMatrixRelativeToSpacehip(vec){	//todo reuse matrices for gunMatrixCosmetic (fixed array) - not simple to use pool since pushing onto gunMatrices //todo precalc gunmatrices relative to spaceship?
-		var gunMatrixCosmetic = mat4.create();
+	function setGunMatrixRelativeToSpacehip(gunnum, vec){	//todo reuse matrices for gunMatrixCosmetic (fixed array) - not simple to use pool since pushing onto gunMatrices //todo precalc gunmatrices relative to spaceship?
+		var gunMatrixCosmetic = gunMatrices[gunnum];
 		mat4.set(matrix, gunMatrixCosmetic);
 		xyzmove4mat(gunMatrixCosmetic,vec);
 		
@@ -1205,7 +1203,6 @@ function updateGunTargeting(matrix){
 		xyzrotate4mat(gunMatrixCosmetic, rotvec);		
 			
 		xyzmove4mat(gunMatrixCosmetic,[0,0,25*modelScale]);	//move forwards
-		gunMatrices.push(gunMatrixCosmetic);
 	}
 	
 	
@@ -3379,7 +3376,7 @@ var targetingResultOne=[];
 var targetingResultTwo=[];
 var selectedTargeting="none";
 var bullets=[];
-var gunMatrices=[];
+var gunMatrices=[mat4.create(),mat4.create(),mat4.create(),mat4.create()];	//? what happens if draw before set these to something sensible?
 var canvas;
 
 var collisionTestObjMat = mat4.identity();
