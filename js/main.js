@@ -732,8 +732,10 @@ var offsetCam = (function(){
 			offsetVecTargetReverse = targetForTypeReverse[type].map(x=>sshipModelScale*x);
 		},
 		iterate: function(){
-			offsetVec = offsetVec.map(function(val,ii){return val*mult1+offsetVecTarget[ii]*mult2;})
-			offsetVecReverse = offsetVecReverse.map(function(val,ii){return val*mult1+offsetVecTargetReverse[ii]*mult2;})
+			for (var cc=0;cc<3;cc++){
+				offsetVec[cc] = offsetVec[cc]*mult1+offsetVecTarget[cc]*mult2;
+				offsetVecReverse[cc] = offsetVecReverse[cc]*mult1+offsetVecTargetReverse[cc]*mult2;
+			}
 		}
 	}
 })();
@@ -760,21 +762,30 @@ function drawScene(frameTime){
 
 	var offsetSteps = 500;	//todo proper move thru portal taking into account path. or can make more efficient by binary search (~log(n) tests)
 	var tmp4mat = mat4.create();
+	var offsetVec = offsetCam.getVec();
+	var tmpOffsetArr = new Array(3);
 	var wentThrough = false;
+
 	for (var ii=0;ii<offsetSteps;ii++){	//TODO more efficient. if insufficient subdivision, transition stepped.
 		mat4.set(offsetPlayerCamera, tmp4mat);	//TODO check order
-		xyzmove4mat(tmp4mat,offsetCam.getVec().map(function(item){return item*ii/offsetSteps;}));
+		for (var cc=0;cc<3;cc++){
+			tmpOffsetArr[cc] = offsetVec[cc]*ii/offsetSteps;
+		}
+		xyzmove4mat(tmp4mat,tmpOffsetArr);
 		if (checkWithinReflectorRange(tmp4mat, reflectorInfo.rad)){
 			//portalTest will pass, so repeat with original matrix
-			xyzmove4mat(offsetPlayerCamera,offsetCam.getVec().map(function(item){return item*ii/offsetSteps;}));
+			xyzmove4mat(offsetPlayerCamera,tmpOffsetArr);
 			portalTest(offsetCameraContainer,0);
 			wentThrough = true;
 			//assume wont cross twice, move remainder of way
-			xyzmove4mat(offsetPlayerCamera,offsetCam.getVec().map(function(item){return item*(offsetSteps-ii)/offsetSteps;}));
+			for (var cc=0;cc<3;cc++){
+				tmpOffsetArr[cc] = offsetVec[cc]-tmpOffsetArr[cc];
+			}
+			xyzmove4mat(offsetPlayerCamera,tmpOffsetArr);
 		}
 	}
 	if (!wentThrough){
-		xyzmove4mat(offsetPlayerCamera,offsetCam.getVec());
+		xyzmove4mat(offsetPlayerCamera,offsetVec);
 	}
 	
 	
