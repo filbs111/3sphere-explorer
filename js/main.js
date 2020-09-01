@@ -2757,7 +2757,8 @@ var explosions ={};		//todo how to contain this? eg should constructor be eg exp
 var Explosion=function(){
 	var nextExplId = 0;
 	return function(objcontainer, size, color, rotateWithDuocylinder, hasSound){
-		this.matrix = objcontainer.matrix;
+		//this.matrix = objcontainer.matrix;
+		this.matrix = mat4.create(objcontainer.matrix);	//TODO pool explosions
 		this.world= objcontainer.world;
 		this.size = size;
 		this.color = color;
@@ -4808,18 +4809,24 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 		}
 		function detonateBullet(bullet, moveWithDuocylinder, color=[1,1,1,1]){	//TODO what scope does this have? best practice???
+
+			if (!bullet.active){console.log("attempting to destroy bullet that is already destroyed.");return;}
+
 			bullet.vel = [0,0,0];	//if colliding with target, stop bullet.
 			bullet.active=false;
 			
+			var matrix = bullet.matrix;
+
 			if (!moveWithDuocylinder){
 				new Explosion(bullet, 0.0003, [1,0.5,0.25], false, true);
-				explosionParticles.makeExplosion(bullet.matrix.slice(12), frameTime, color,0);
+				explosionParticles.makeExplosion(matrix.slice(12), frameTime, color,0);
 			}else{
-				var tmpMat = mat4.create(bullet.matrix);
-				rotate4matCols(tmpMat, 0, 1, duocylinderSpin);	//get bullet matrix in frame of duocylinder. might be duplicating work from elsewhere.
-				new Explosion({matrix:tmpMat, world:bullet.world}, 0.0003, [0.2,0.4,0.6],true, true);	//different colour for debugging
-				explosionParticles.makeExplosion(tmpMat.slice(12), frameTime, color,0);
+				rotate4matCols(matrix, 0, 1, duocylinderSpin);	//get bullet matrix in frame of duocylinder. might be duplicating work from elsewhere.
+				new Explosion(bullet, 0.0003, [0.2,0.4,0.6],true, true);	//different colour for debugging
+				explosionParticles.makeExplosion(matrix.slice(12), frameTime, color,0);
 			}
+
+			matPool.destroy(matrix);
 			
 			//singleExplosion.life = 100;
 			//singleExplosion.matrix = bulletMatrix;
@@ -5065,7 +5072,7 @@ function fireGun(){
 			
 			xyzrotate4mat(gunMatrix,[0.02*(Math.random()-0.5),0.02*(Math.random()-0.5),0]);	//random spread TODO gaussian
 			
-			var newBulletMatrix = mat4.create();	//TODO pooling - bullet pool instead of use matrix pool? 
+			var newBulletMatrix = matPool.create(); 
 			mat4.set(gunMatrix,newBulletMatrix);
 			
 			//work out what fireDirectionVec should be in frame of gun/bullet (rather than player ship body)
@@ -5075,13 +5082,13 @@ function fireGun(){
 			mat4.transpose(relativeMatrix);
 			mat4.multiply(relativeMatrix, gunMatrix);
 			
-			var newFireDirectionVec = [];
+			var newFireDirectionVec = new Array(3);
 			for (var ii=0;ii<3;ii++){
 				var sum=0;
 				for (var jj=0;jj<3;jj++){
 					sum+=relativeMatrix[ii*4+jj]*playerVelVec[jj];
 				}
-				newFireDirectionVec.push(sum);
+				newFireDirectionVec[ii]=sum;
 			}			
 			newFireDirectionVec[2]+=muzzleVel;
 			bullets.push({matrix:newBulletMatrix,vel:newFireDirectionVec,world:sshipWorld,active:true});
@@ -5093,7 +5100,11 @@ function fireGun(){
 			
 			//limit number of bullets
 			if (bullets.length>200){
-				bullets.shift();
+				var bulletToDestroy = bullets.shift();
+				//console.log("removing bullet because too many. ",bulletToDestroy.matrix,"pool:",matPool.getMats());
+				if (bulletToDestroy.active){
+					matPool.destroy(bulletToDestroy.matrix);
+				}
 			}
 		}
 	}
