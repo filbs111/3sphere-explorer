@@ -4487,20 +4487,28 @@ var iterateMechanics = (function iterateMechanics(){
 		var critValueDCBox = 1/Math.sqrt(1+3*duocylinderSurfaceBoxScale*duocylinderSurfaceBoxScale);
 		var critValueRingBox = 1/Math.sqrt(1+3*ringBoxSize*ringBoxSize);
 		
+		var tmpVec4Zero = vec4.create([0,0,0,0]);	//TODO move to outer scope to avoid recreating vectors? should there also be a local 
+		var tmpVec4 = vec4.create();				//variable referring to this to make quicker to reference?
+		var bulletPos = new Array(4); 
+		var bulletPos4V = vec4.create();
+		var bulletPosDCF4V = vec4.create();
+
 		//slightly less ridiculous place for this - not declaring functions inside for loop!
 		function checkBulletCollision(bullet, bulletMoveAmount){
 			var bulletMatrix=bullet.matrix;
-			var tmpVec4 = vec4.create([0,0,0,0]);
+			mat4.set(tmpVec4Zero, tmpVec4);
 			mat4.set(bulletMatrix,bulletMatrixTransposed);
 			mat4.transpose(bulletMatrixTransposed);
 			
 			mat4.set(bulletMatrixTransposed,bulletMatrixTransposedDCRefFrame);	//in frame of duocylinder
 			rotate4mat(bulletMatrixTransposedDCRefFrame, 0, 1, duocylinderSpin);
 			
-			var bulletPos = bulletMatrix.slice(12);	//todo use this elsewhere?
-			var bulletPos4V = vec4.create(bulletPos);
-			var bulletPosDCF4V = vec4.create([bulletMatrixTransposedDCRefFrame[3],bulletMatrixTransposedDCRefFrame[7],bulletMatrixTransposedDCRefFrame[11],bulletMatrixTransposedDCRefFrame[15]]);
-
+			for (var cc=0;cc<4;cc++){
+				bulletPos[cc] = bulletMatrix[12+cc];
+				bulletPos4V[cc]= bulletPos[cc];
+				bulletPosDCF4V[cc] = bulletMatrixTransposedDCRefFrame[3+4*cc];
+			}
+			
 			var bulletVel=bullet.vel;
 			xyzmove4mat(bulletMatrix,scalarvectorprod(bulletMoveAmount,bulletVel));
 			
