@@ -3970,10 +3970,6 @@ var iterateMechanics = (function iterateMechanics(){
 				playerVelVec[cc]+=currentThrustInput[cc];	//todo either write vector addition func or use glmatrix vectors
 			}
 			
-			//print speed
-			var infoToShow ="";
-			var speed = Math.hypot.apply(null, playerVelVec);
-			infoToShow += "spd:" + speed.toFixed(2);
 			
 			playerAngVelVec=scalarvectorprod(angVelDampMultiplier,playerAngVelVec);
 						
@@ -4007,13 +4003,20 @@ var iterateMechanics = (function iterateMechanics(){
 			//var spd = Math.sqrt(airSpdVec.map(function(val){return val*val;}).reduce(function(val, sum){return val+sum;}));
 			var spd = Math.hypot.apply(null, airSpdVec);
 			
-			infoToShow+=", airspd: " + spd.toFixed(2);
-		//	infoToShow+=", sshipMat:" + Array.from(sshipMatrix).map(elem=>elem.toFixed(3)).join(",");	//toFixed doesn't work right on float32 array so use Array.from first
-			infoToShow+=", portalDraw: "+testPortalDraw;
-			infoToShow+=", debugRoll: " + debugRoll;
-			
-			document.querySelector("#info2").innerHTML = infoToShow;
-			//document.querySelector("#info2").innerHTML = myDebugStr;
+			//print speed
+			if (guiParams.debug.showSpeedOverlay){		
+				var infoToShow ="";
+				var speed = Math.hypot.apply(null, playerVelVec);
+				infoToShow += "spd:" + speed.toFixed(2);
+
+				infoToShow+=", airspd: " + spd.toFixed(2);
+			//	infoToShow+=", sshipMat:" + Array.from(sshipMatrix).map(elem=>elem.toFixed(3)).join(",");	//toFixed doesn't work right on float32 array so use Array.from first
+				infoToShow+=", portalDraw: "+testPortalDraw;
+				infoToShow+=", debugRoll: " + debugRoll;
+
+				document.querySelector("#info2").innerHTML = infoToShow;
+				//document.querySelector("#info2").innerHTML = myDebugStr;
+			}
 			
 			if (guiParams.control.handbrake){
 				for (var cc=0;cc<3;cc++){
