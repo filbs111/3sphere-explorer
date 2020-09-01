@@ -3547,7 +3547,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 		mouseInfo.x = evt.offsetX;
 		mouseInfo.y = evt.offsetY;
 		mouseInfo.dragging = evt.buttons & 1;
-		mouseInfo.lastPointingDir = getPointingDirectionFromScreenCoordinate({x:mouseInfo.x, y: mouseInfo.y});
+		mouseInfo.lastPointingDir = getPointingDirectionFromScreenCoordinate(mouseInfo.x, mouseInfo.y);
 		mouseInfo.buttons = evt.buttons;
 		evt.preventDefault();
 	});
@@ -3560,7 +3560,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 		mouseInfo.buttons = 0;
 	});
 	canvas.addEventListener("mousemove", function(evt){
-		mouseInfo.currentPointingDir = getPointingDirectionFromScreenCoordinate({x:evt.offsetX, y: evt.offsetY});
+		mouseInfo.currentPointingDir = getPointingDirectionFromScreenCoordinate(evt.offsetX, evt.offsetY);
 		if (mouseInfo.dragging){
 			var pointingDir = mouseInfo.currentPointingDir;
 			//console.log("pointingDir = " + pointingDir);
@@ -4936,13 +4936,13 @@ function rotatePlayer(vec){
 }
 
 
-function getPointingDirectionFromScreenCoordinate(coords){
+function getPointingDirectionFromScreenCoordinate(coordx, coordy){
 	
 	var maxyvert = 1.0;	
 	var maxxvert = screenAspect;
 	
-	var xpos = maxxvert*(coords.x*2.0/gl.viewportWidth   -1.0 );
-	var ypos = maxyvert*(coords.y*2.0/gl.viewportHeight   -1.0 );
+	var xpos = maxxvert*(coordx*2.0/gl.viewportWidth   -1.0 );
+	var ypos = maxyvert*(coordy*2.0/gl.viewportHeight   -1.0 );
 	var radsq = xpos*xpos + ypos*ypos;
 	var zpos = 1.0/Math.tan(mainCamFov*Math.PI/360); //TODO precalc
 
@@ -5002,8 +5002,8 @@ function handleTouchMove(evt){
 		if (i==0){
 			//what behaviour will be if there are >1 touches?
 			
-			var oldPointingDir = getPointingDirectionFromScreenCoordinate({x:thisTouch.oldx, y: thisTouch.oldy});
-			var pointingDir = getPointingDirectionFromScreenCoordinate({x:thisTouch.x, y: thisTouch.y});
+			var oldPointingDir = getPointingDirectionFromScreenCoordinate(thisTouch.oldx, thisTouch.oldy);
+			var pointingDir = getPointingDirectionFromScreenCoordinate(thisTouch.x, thisTouch.y);
 			
 			var crossProd = crossProductHomgenous(pointingDir, oldPointingDir);
 			mouseInfo.lastPointingDir = pointingDir;
