@@ -2757,8 +2757,8 @@ var explosions ={};		//todo how to contain this? eg should constructor be eg exp
 var Explosion=function(){
 	var nextExplId = 0;
 	return function(objcontainer, size, color, rotateWithDuocylinder, hasSound){
-		//this.matrix = objcontainer.matrix;
-		this.matrix = mat4.create(objcontainer.matrix);	//TODO pool explosions
+		this.matrix = matPool.create();
+		mat4.set(objcontainer.matrix, this.matrix);
 		this.world= objcontainer.world;
 		this.size = size;
 		this.color = color;
@@ -3837,6 +3837,7 @@ var iterateMechanics = (function iterateMechanics(){
 			var singleExplosion = explosions[ee];
 			singleExplosion.life-=0.4*numSteps;
 			if (singleExplosion.life<1){
+				matPool.destroy(singleExplosion.matrix);
 				delete explosions[ee];
 			}
 			if (singleExplosion.sound){
