@@ -4499,7 +4499,7 @@ var iterateMechanics = (function iterateMechanics(){
 		var critValueDCBox = 1/Math.sqrt(1+3*duocylinderSurfaceBoxScale*duocylinderSurfaceBoxScale);
 		var critValueRingBox = 1/Math.sqrt(1+3*ringBoxSize*ringBoxSize);
 		
-		var tmpVec4Zero = vec4.create([0,0,0,0]);	//TODO move to outer scope to avoid recreating vectors? should there also be a local 
+
 		var tmpVec4 = vec4.create();				//variable referring to this to make quicker to reference?
 		var bulletPos = new Array(4); 
 		var bulletPos4V = vec4.create();
@@ -4508,7 +4508,7 @@ var iterateMechanics = (function iterateMechanics(){
 		//slightly less ridiculous place for this - not declaring functions inside for loop!
 		function checkBulletCollision(bullet, bulletMoveAmount){
 			var bulletMatrix=bullet.matrix;
-			mat4.set(tmpVec4Zero, tmpVec4);
+			tmpVec4[0]=tmpVec4[1]=tmpVec4[2]=tmpVec4[3]=0;
 			mat4.set(bulletMatrix,bulletMatrixTransposed);
 			mat4.transpose(bulletMatrixTransposed);
 			
