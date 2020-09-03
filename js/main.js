@@ -3725,7 +3725,8 @@ var iterateMechanics = (function iterateMechanics(){
 	
 	//gamepad
 	var activeGp, buttons, axes;
-	
+	var gpMove=new Array(3);
+
 	var autoFireCountdown=0;
 	//var autoFireCountdownStartVal=6;
 	var autoFireCountdownStartVal=Math.ceil(5 / (timeStep/10));	//note due to rounding, fire rate somewhat dependent on timestep 
@@ -3925,9 +3926,12 @@ var iterateMechanics = (function iterateMechanics(){
 			}else{
 				fractionToKeep = Math.exp(-timeStep/guiParams.control.smoothMouse);	//smoothMouse ~ smoothing time (ms)
 			}
-			var amountToMove = mouseInfo.pendingMovement.map(function(elem){return elem*(1-fractionToKeep);});
-			mouseInfo.pendingMovement[0]*=fractionToKeep;		//TODO vector class!!!
-			mouseInfo.pendingMovement[1]*=fractionToKeep;
+			
+			var amountToMove = new Array(2);
+			for (var cc=0;cc<2;cc++){
+				amountToMove[cc]=mouseInfo.pendingMovement[cc]*(1-fractionToKeep);
+				mouseInfo.pendingMovement[cc]*=fractionToKeep;
+			}
 			
 			rotatePlayer([ amountToMove[1], amountToMove[0], 0]);	
 			
@@ -3946,16 +3950,15 @@ var iterateMechanics = (function iterateMechanics(){
 			if (activeGp){
 				//TODO move calculation of total input from keys/gamepad outside this loop
 				if (gpSettings.moveEnabled){
-					var gpMove=[];
-					
 					gpMove[0] = Math.abs(axes[0])>gpSettings.deadZone ? -moveSpeed*axes[0] : 0; //lateral
 					gpMove[1] = Math.abs(axes[1])>gpSettings.deadZone ? moveSpeed*axes[1] : 0; //vertical
 					gpMove[2] = moveSpeed*(buttons[7].value-buttons[6].value); //fwd/back	//note Firefox at least fails to support analog triggers https://bugzilla.mozilla.org/show_bug.cgi?id=1434408
 					
 					var magsq = gpMove.reduce(function(total, val){return total+ val*val;}, 0);
-					gpMove = scalarvectorprod(10000000000*magsq,gpMove);
 					
-					currentThrustInput = currentThrustInput.map(function(elem,idx){return elem+gpMove[idx];});
+					for (var cc=0;cc<3;cc++){
+						currentThrustInput[cc]*=gpMove[cc]*10000000000*magsq;
+					}
 					
 					//testInfo=[axes,buttons,gpMove,magsq];
 					
@@ -3981,12 +3984,10 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			for (var cc=0;cc<3;cc++){
 				playerAngVelVec[cc]+= timeStepMultiplier*currentRotateInput[cc];
+				playerAngVelVec[cc]*=angVelDampMultiplier;
 				playerVelVec[cc]+=currentThrustInput[cc];	//todo either write vector addition func or use glmatrix vectors
 			}
-			
-			
-			playerAngVelVec=scalarvectorprod(angVelDampMultiplier,playerAngVelVec);
-						
+									
 			//blend velocity with velocity of rotating duosphere. (todo angular vel to use this too)
 			//matrix entries 12-15 describe position. (remain same when rotate player and don't move)
 			//playerVel is in frame of player though - so apply matrix rotation to this.
@@ -4850,7 +4851,10 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 		}
 		
-		fireDirectionVec = playerVelVec.map(function(val,ii){return (ii==2)? val+muzzleVel:val;});
+		for(var cc=0;cc<3;cc++){
+			fireDirectionVec[cc]=playerVelVec[cc];
+		}
+		fireDirectionVec[2]+=muzzleVel;
 			//TODO velocity in frame of bullet? (different if gun aimed off-centre)
 		
 		var flashAmount = 0.1;	//default "player light" when not firing
@@ -4937,11 +4941,16 @@ function moveMatrixThruPortal(matrix, rad, hackMultiplier){
 	var mag = Math.sqrt(magsq);
 
 	var multiplier = Math.PI/mag;
-	var rotate = [matrix[3],matrix[7],matrix[11]].map(function(val){return multiplier*val});	
-	xyzrotate4mat(matrix, rotate);	//180 degree rotate about direction to reflector
+	var multiplier2 = -2*hackMultiplier*Math.atan(rad)/mag;
+	var rotate = new Array(3);
+	var move = new Array(3);
 
-	multiplier = -2*hackMultiplier*Math.atan(rad)/mag;
-	var move = [matrix[3],matrix[7],matrix[11]].map(function(val){return multiplier*val});	
+	for (var cc=0;cc<3;cc++){
+		var matElem = matrix[4*cc-1];
+		rotate[cc]=multiplier*matElem;
+		move[cc]=multiplier2*matElem;
+	}
+	xyzrotate4mat(matrix, rotate);	//180 degree rotate about direction to reflector
 	xyzmove4mat(matrix, move);
 }
 
