@@ -4952,7 +4952,7 @@ function moveMatrixThruPortal(matrix, rad, hackMultiplier){
 	var move = new Array(3);
 
 	for (var cc=0;cc<3;cc++){
-		var matElem = matrix[4*cc-1];
+		var matElem = matrix[4*cc+3];
 		rotate[cc]=multiplier*matElem;
 		move[cc]=multiplier2*matElem;
 	}
