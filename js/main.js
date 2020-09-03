@@ -2794,6 +2794,23 @@ function generateCullFunc(pMat){
 	}
 }
 
+var enabledDisabledAttributeLog = (function(){
+	var thelog = [];
+	return {
+		print:function(){
+			for (var logline of thelog){
+				console.log(logline);
+			}
+		},
+		add:function(newlogline){
+			if (thelog.length>99){
+				thelog.shift();
+			}
+			thelog.push(JSON.stringify(newlogline));
+		}
+	}
+})();
+
 var enableDisableAttributes = (function generateEnableDisableAttributesFunc(){
 	var enabledSet = new Set();
 	
@@ -2805,8 +2822,12 @@ var enableDisableAttributes = (function generateEnableDisableAttributesFunc(){
 			toBeEnabled.add(index);
 		});
 		
+		var enabledItems = [];	//for loggin purposes only.
+		var disabledItems = [];
+
 		enabledSet.forEach(item=>{
 			if (!toBeEnabled.has(item)){
+				disabledItems.push(item);
 				enabledSet.delete(item);
 				gl.disableVertexAttribArray(item);	
 			}
@@ -2814,10 +2835,13 @@ var enableDisableAttributes = (function generateEnableDisableAttributesFunc(){
 		
 		toBeEnabled.forEach(item=>{
 			if (!enabledSet.has(item)){
+				enabledItems.push(item);
 				enabledSet.add(item);
 				gl.enableVertexAttribArray(item);	
 			}
 		});
+
+		enabledDisabledAttributeLog.add({enabledItems, disabledItems});
 	};
 })();
 
