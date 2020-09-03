@@ -2794,54 +2794,23 @@ function generateCullFunc(pMat){
 	}
 }
 
-var enabledDisabledAttributeLog = (function(){
-	var thelog = [];
-	return {
-		print:function(){
-			for (var logline of thelog){
-				console.log(logline);
-			}
-		},
-		add:function(newlogline){
-			if (thelog.length>99){
-				thelog.shift();
-			}
-			thelog.push(JSON.stringify(newlogline));
-		}
-	}
-})();
-
 var enableDisableAttributes = (function generateEnableDisableAttributesFunc(){
-	var enabledSet = new Set();
+	var numEnabled = 0;
 	
 	return function(shaderProg){
-		//TODO seems like attribute indices run from 0 to n. if so, to disable/enable just need to know n from, to
-
-		var toBeEnabled = new Set();
-		Object.keys(shaderProg.attributes).forEach(function(item, index){
-			toBeEnabled.add(index);
-		});
 		
-		var enabledItems = [];	//for loggin purposes only.
-		var disabledItems = [];
-
-		enabledSet.forEach(item=>{
-			if (!toBeEnabled.has(item)){
-				disabledItems.push(item);
-				enabledSet.delete(item);
-				gl.disableVertexAttribArray(item);	
+		var numToBeEnabled = shaderProg.numActiveAttribs;
+		if (numToBeEnabled>numEnabled){
+			for (var ii=numEnabled;ii<numToBeEnabled;ii++){
+				gl.enableVertexAttribArray(ii);
 			}
-		});
-		
-		toBeEnabled.forEach(item=>{
-			if (!enabledSet.has(item)){
-				enabledItems.push(item);
-				enabledSet.add(item);
-				gl.enableVertexAttribArray(item);	
+		}
+		if (numToBeEnabled<numEnabled){
+			for (var ii=numToBeEnabled;ii<numEnabled;ii++){
+				gl.disableVertexAttribArray(ii);
 			}
-		});
-
-		enabledDisabledAttributeLog.add({enabledItems, disabledItems});
+		}
+		numEnabled = numToBeEnabled;
 	};
 })();
 

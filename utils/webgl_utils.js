@@ -127,6 +127,7 @@ function getLocationsForShaders(){
 				shaderProgram.attributes[aName] = gl.getAttribLocation(shaderProgram, aName);
 			}
 		}
+		shaderProgram.numActiveAttribs = numActiveAttribs;
 		
 		var numActiveUniforms = gl.getProgramParameter(shaderProgram, gl.ACTIVE_UNIFORMS);
 		if (numActiveUniforms>0){
