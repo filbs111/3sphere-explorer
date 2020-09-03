@@ -1165,8 +1165,6 @@ var colorArrs = (function () {
 	return typedArrColors;
 })();
 
-Object.keys(colorArrs).map(function(key){colorArrs[key]=new Float32Array(colorArrs[key]);});	//maybe more efficient?
-
 
 function updateGunTargeting(matrix){
 	var modelScale = sshipModelScale;
@@ -3709,10 +3707,7 @@ var iterateMechanics = (function iterateMechanics(){
 	var lastTime=Date.now();
 	var moveSpeed=0.000075;
 	var rotateSpeed=-0.0005;
-	var bulletSpeed=0.001;
-	
-	var playerVelVecBodge=[];
-	
+		
 	var playerAngVelVec = [0,0,0];
 	
 	var timeTracker =0;
@@ -3734,9 +3729,7 @@ var iterateMechanics = (function iterateMechanics(){
 	var duoCylinderAngVelConst=0;
 	
 	var currentPen=0;	//for bodgy box collision (todo use collision points array)
-	
-	var playerCameraDuocylinderFrame = mat4.create(playerCamera);		//todo resuse from pool
-	
+		
 	var bulletMatrixTransposed = mat4.create();	//TODO? instead of transposing matrices describing possible colliding objects orientation.
 	var bulletMatrixTransposedDCRefFrame=mat4.create();		//alternatively might store transposed other objects orientation permanently		
 
@@ -3832,9 +3825,6 @@ var iterateMechanics = (function iterateMechanics(){
 		//equivalent for frame of duocylinder, to reduce complexity of drawing, collision checks etc
 		mat4.set(invertedWorldCamera, invertedWorldCameraDuocylinderFrame);
 		rotate4mat(invertedWorldCameraDuocylinderFrame, 0, 1, duocylinderSpin);
-		
-		//mat4.set(playerCamera, playerCameraDuocylinderFrame);
-		//rotate4mat(playerCameraDuocylinderFrame, 0, 1, duocylinderSpin);
 		
 		var soundspd = 2;	//TODO change delaynode creation param (faster sound means less possible delay)
 		
@@ -3991,8 +3981,6 @@ var iterateMechanics = (function iterateMechanics(){
 			//blend velocity with velocity of rotating duosphere. (todo angular vel to use this too)
 			//matrix entries 12-15 describe position. (remain same when rotate player and don't move)
 			//playerVel is in frame of player though - so apply matrix rotation to this.
-			
-			var playerPos = playerCamera.slice(12);			//guess what this is
 			
 			var spinVelWorldCoords = [ duoCylinderAngVelConst*playerPos[1],-duoCylinderAngVelConst*playerPos[0],0,0];	
 							
@@ -4923,7 +4911,6 @@ function rotateVelVec(velVec,rotateVec){
 
 function portalTest(obj, amount){
 	var mat = obj.matrix;
-	var world = obj.world;
 	var adjustedRad = reflectorInfo.rad + amount;	//avoid issues with rendering very close to surface
 	if (checkWithinReflectorRange(mat, adjustedRad)){	
 		moveMatrixThruPortal(mat, adjustedRad, 1.00000001);
