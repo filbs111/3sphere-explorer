@@ -3874,7 +3874,6 @@ var iterateMechanics = (function iterateMechanics(){
 			//todo combine these
 			//todo account for rotation while moving wrt duocylinder ? 
 			
-			var playerPos = playerCamera.slice(12);			//guess what this is	
 			var axisDirWorldCoords = [ 0,0,playerCamera[15],-playerCamera[14]];						
 			var axisDirPlayerCoords = [
 				axisDirWorldCoords[2]*playerCamera[2] + axisDirWorldCoords[3]*playerCamera[3],
@@ -3982,6 +3981,8 @@ var iterateMechanics = (function iterateMechanics(){
 			//matrix entries 12-15 describe position. (remain same when rotate player and don't move)
 			//playerVel is in frame of player though - so apply matrix rotation to this.
 			
+			var playerPos = playerCamera.slice(12);			//guess what this is
+
 			var spinVelWorldCoords = [ duoCylinderAngVelConst*playerPos[1],-duoCylinderAngVelConst*playerPos[0],0,0];	
 							
 			var spinVelPlayerCoords = [
