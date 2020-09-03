@@ -3394,11 +3394,22 @@ var procTerrainNearestPointTestMat = mat4.identity();
 
 var atmosThicknessMultiplier;	//TODO different settings for different worlds
 
-function init(){
-
-	stats = new Stats();
+function setupStats(dummyStats){
+	if(dummyStats){
+		return {
+			begin:()=>{},
+			end:()=>{}
+		}
+	}
+	var stats = new Stats();
 	stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
 	document.body.appendChild( stats.dom );
+	return stats;
+}
+
+function init(){
+
+	stats = setupStats();	//setupStats(true) for disabled stats.
 
 	guiParams.control.lockPointer = function(){
 		canvas.requestPointerLock();
