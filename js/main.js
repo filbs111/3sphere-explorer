@@ -2584,6 +2584,8 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 		
 		var thrustrad = 4;
 		var thrustlong = 2;
+
+		var posnOffset = new Array(3);
 		
 		//gl.uniform4fv(transpShadProg.uniforms.uColor, colorArrs.blue);
 			//draw "thrusters". TODO make look better, brightness according to analog input, "playerlight" to match (direction+magnitude)
@@ -2593,70 +2595,88 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 		var opacStep=0.08;
 		//var thrustTaper= -0.00003;
 		var thrustTaper= 0.1;
+		var scalex=scaley=scalez=0;
 		if (currentThrustInput[2]>0){					//rearward thrusters
+			scalez=thrustlong*sshipModelScale;
 			for (var oo=-38.5, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo-=separation,rr-=thrustTaper){
-				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [rr,rr,thrustlong].map(x=>x*sshipModelScale));
+				scalex=scaley=rr*sshipModelScale;
+				gl.uniform3f(transpShadProg.uniforms.uModelScale, scalex,scaley,scalez);
 				gl.uniform3f(transpShadProg.uniforms.uEmitColor, 0.05*opac,0.15*opac,0.4*opac);
-				drawLandingBall([28.5,18,oo], matrix);	//	left ,down	,fwd
-				drawLandingBall([28.5,-18,oo], matrix);
-				drawLandingBall([-28.5,18,oo], matrix);
-				drawLandingBall([-28.5,-18,oo], matrix);
+				drawLandingBall(28.5,18,oo);	//	left ,down	,fwd
+				drawLandingBall(28.5,-18,oo);
+				drawLandingBall(-28.5,18,oo);
+				drawLandingBall(-28.5,-18,oo);
 			}
 		}
 		if (currentThrustInput[2]<0){				//forward thrusters
+			scalez=thrustlong*sshipModelScale;
 			for (var oo=18, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo+=separation,rr-=thrustTaper){
-				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [rr,rr,thrustlong].map(x=>x*sshipModelScale));
+				scalex=scaley=rr*sshipModelScale;
+				gl.uniform3f(transpShadProg.uniforms.uModelScale, scalex,scaley,scalez);
 				gl.uniform3f(transpShadProg.uniforms.uEmitColor, 0.05*opac,0.15*opac,0.4*opac);
-				drawLandingBall([28.5,18,oo], matrix);
-				drawLandingBall([28.5,-18,oo], matrix);		
-				drawLandingBall([-28.5,18,oo], matrix);		
-				drawLandingBall([-28.5,-18,oo]);
+				drawLandingBall(28.5,18,oo);
+				drawLandingBall(28.5,-18,oo);		
+				drawLandingBall(-28.5,18,oo);		
+				drawLandingBall(-28.5,-18,oo);
 			}
 		}
 		if (currentThrustInput[0]<0){				//left
+			scalex=thrustlong*sshipModelScale;
 			for (var oo=35, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo+=separation,rr-=thrustTaper){
-				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [thrustlong,rr,rr].map(x=>x*sshipModelScale));
+				scaley=scalez=rr*sshipModelScale;
+				gl.uniform3f(transpShadProg.uniforms.uModelScale, scalex,scaley,scalez);
 				gl.uniform3f(transpShadProg.uniforms.uEmitColor, 0.05*opac,0.15*opac,0.4*opac);
-				drawLandingBall([oo,17.5,12.5]);
-				drawLandingBall([oo,-17.5,12.5]);
-				drawLandingBall([oo,17.5,-32.5]);
-				drawLandingBall([oo,-17.5,-32.5]);
+				drawLandingBall(oo,17.5,12.5);
+				drawLandingBall(oo,-17.5,12.5);
+				drawLandingBall(oo,17.5,-32.5);
+				drawLandingBall(oo,-17.5,-32.5);
 			}
 		}
 		if (currentThrustInput[0]>0){				//right
+			scalex=thrustlong*sshipModelScale;
 			for (var oo=-35, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo-=separation,rr-=thrustTaper){
-				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [thrustlong,rr,rr].map(x=>x*sshipModelScale));
+				scaley=scalez=rr*sshipModelScale;
+				gl.uniform3f(transpShadProg.uniforms.uModelScale, scalex,scaley,scalez);
 				gl.uniform3f(transpShadProg.uniforms.uEmitColor, 0.05*opac,0.15*opac,0.4*opac);
-				drawLandingBall([oo,17.5,12.5]);
-				drawLandingBall([oo,-17.5,12.5]);
-				drawLandingBall([oo,17.5,-32.5]);
-				drawLandingBall([oo,-17.5,-32.5]);
+				drawLandingBall(oo,17.5,12.5);
+				drawLandingBall(oo,-17.5,12.5);
+				drawLandingBall(oo,17.5,-32.5);
+				drawLandingBall(oo,-17.5,-32.5);
 			}
 		}
 		if (currentThrustInput[1]>0){				//top
+			scaley=thrustlong*sshipModelScale;
 			for (var oo=-22.5, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo-=separation,rr-=thrustTaper){
-				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [rr,thrustlong,rr].map(x=>x*sshipModelScale));
+				scalex=scalez=rr*sshipModelScale;
+				gl.uniform3f(transpShadProg.uniforms.uModelScale, scalex,scaley,scalez);
 				gl.uniform3f(transpShadProg.uniforms.uEmitColor, 0.05*opac,0.15*opac,0.4*opac);
-				drawLandingBall([30,oo,12.5]);
-				drawLandingBall([-30,oo,12.5]);
-				drawLandingBall([30,oo,-32.5]);
-				drawLandingBall([-30,oo,-32.5]);
+				drawLandingBall(30,oo,12.5);
+				drawLandingBall(-30,oo,12.5);
+				drawLandingBall(30,oo,-32.5);
+				drawLandingBall(-30,oo,-32.5);
 			}
 		}
 		if (currentThrustInput[1]<0){				//bottom
+			scaley=thrustlong*sshipModelScale;
 			for (var oo=22.5, opac=1, rr=thrustrad;opac>0;opac-=opacStep,oo+=separation,rr-=thrustTaper){
-				gl.uniform3fv(transpShadProg.uniforms.uModelScale, [rr,thrustlong,rr].map(x=>x*sshipModelScale));
+				scalex=scalez=rr*sshipModelScale;
+				gl.uniform3f(transpShadProg.uniforms.uModelScale, scalex,scaley,scalez);
 				gl.uniform3f(transpShadProg.uniforms.uEmitColor, 0.05*opac,0.15*opac,0.4*opac);
-				drawLandingBall([30,oo,12.5]);
-				drawLandingBall([-30,oo,12.5]);
-				drawLandingBall([30,oo,-32.5]);
-				drawLandingBall([-30,oo,-32.5]);
+				drawLandingBall(30,oo,12.5);
+				drawLandingBall(-30,oo,12.5);
+				drawLandingBall(30,oo,-32.5);
+				drawLandingBall(-30,oo,-32.5);
 			}
 		}
 		
-		function drawLandingBall(posn){	//this is duplicated from elsewhere, but should be changed
-			mat4.set(sshipMatrix, lgMat)
-			xyzmove4mat(lgMat, posn.map(x=>x*sshipModelScale));
+		function drawLandingBall(posx,posy,posz){	//this is duplicated from elsewhere, but should be changed
+			mat4.set(sshipMatrix, lgMat);
+
+			posnOffset[0]=sshipModelScale*posx;
+			posnOffset[1]=sshipModelScale*posy;
+			posnOffset[2]=sshipModelScale*posz;
+			
+			xyzmove4mat(lgMat, posnOffset);
 			
 			//mat4.set(invertedWorldCamera, mvMatrix);	//no shift version
 			//mat4.multiply(mvMatrix, lgMat);
