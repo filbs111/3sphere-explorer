@@ -16,14 +16,19 @@ var matPool = (function makeMatPool(){
 		},
 		destroy:function(toBeDestroyed){	//might be bug prone since can keep using a matrix after "destroying" it!
 			var theIndex = thePool.indexOf(toBeDestroyed);
-			if (theIndex!=-1){
+			//if (theIndex!=-1){
+			if (theIndex>=numSpare){
 				var swap = thePool[theIndex];
 				thePool[theIndex] = thePool[numSpare];
 				thePool[numSpare] = swap;
 				numSpare++;
 				return true;
 			}else{
-				alert("whoops!");
+				if (theIndex!=-1){
+					console.log("attempting to delete a matrix from pool that has already been freed!");
+					return false;
+				}
+				alert("whoops! attempting to delete matrix, not found in pool");
 				return false;
 			}
 		},
