@@ -2418,7 +2418,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, worldCamera.slice(12));
 		}
 		if (activeShaderProgram.uniforms.uPortalCameraPos){
-			gl.uniform4fv(activeShaderProgram.uniforms.uPortalCameraPos, [worldCamera[3],worldCamera[7],worldCamera[11],worldCamera[15]]);
+			gl.uniform4f(activeShaderProgram.uniforms.uPortalCameraPos, worldCamera[3],worldCamera[7],worldCamera[11],worldCamera[15]);
 		}
 		
 		mat4.set(invertedWorldCamera, mvMatrix);
