@@ -1416,35 +1416,53 @@ function updateGunTargeting(matrix){
 
 var lgMat = mat4.create();
 
-
-function getWorldSceneSettings(isCubemapView){
-	var colorsSwitch = ((isCubemapView && guiParams.reflector.isPortal)?1:0)^offsetCameraContainer.world;
-	var worldInfo = (colorsSwitch==0) ? guiParams.world0 : guiParams.world1;	//todo use array
-	var localVecFogColor = worldColors[colorsSwitch];
-	var localVecReflectorColor = guiParams.reflector.isPortal? worldColors[1-colorsSwitch]: worldColors[colorsSwitch];
-	var localVecReflectorDiffColor = [ localVecReflectorColor[0]-localVecFogColor[0],
-										localVecReflectorColor[1]-localVecFogColor[1],
-										localVecReflectorColor[2]-localVecFogColor[2]];	//todo use a vector class!
-
-	//calculate stuff for discard shaders
-	//position of reflector in frame of camera (after MVMatrix transformation)
-	var reflectorPosTransformed = [worldCamera[3],worldCamera[7],worldCamera[11],worldCamera[15]];
-	var cosReflector = 1.0/Math.sqrt(1+reflectorInfo.rad*reflectorInfo.rad);
-	
+var getWorldSceneSettings = (function generateGetWorldSettings(){
+	var portaledMatrix = mat4.create();
 	var sshipDrawMatrix;
-	if (sshipWorld == colorsSwitch){ //only draw spaceship if it's in the world that currently drawing. (TODO this for other objects eg shots)
-		sshipDrawMatrix = sshipMatrix;
-	}else{
-		if (checkWithinReflectorRange(sshipMatrix, Math.tan(Math.atan(reflectorInfo.rad) +0.1))){
-			var portaledMatrix = mat4.create();
-			mat4.set(sshipMatrix, portaledMatrix);
-			moveMatrixThruPortal(portaledMatrix, reflectorInfo.rad, 1);
-			sshipDrawMatrix = portaledMatrix;
-		}	
+	var localVecReflectorDiffColor = new Array(3);
+	var reflectorPosTransformed = new Array(4);
+	var returnObj = {
+		colorsSwitch:0,
+		worldInfo:0,
+		localVecFogColor:0,
+		localVecReflectorDiffColor:new Array(3),
+		reflectorPosTransformed:new Array(4),
+		cosReflector:0,
+		sshipDrawMatrix:0,
 	}
-	
-	return {colorsSwitch, worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, sshipDrawMatrix};
-}
+	var colorsSwitch;
+
+	return function getWorldSceneSettings(isCubemapView){
+		
+		returnObj.colorsSwitch = colorsSwitch = ((isCubemapView && guiParams.reflector.isPortal)?1:0)^offsetCameraContainer.world;
+		returnObj.worldInfo = (colorsSwitch==0) ? guiParams.world0 : guiParams.world1;	//todo use array
+		returnObj.localVecFogColor = localVecFogColor = worldColors[colorsSwitch];
+		returnObj.localVecReflectorColor = guiParams.reflector.isPortal? worldColors[1-colorsSwitch]: worldColors[colorsSwitch];
+
+		for (var cc=0;cc<3;cc++){
+			returnObj.localVecReflectorDiffColor[cc] = returnObj.localVecReflectorColor[cc]-returnObj.localVecFogColor[cc];
+		}
+		//calculate stuff for discard shaders
+		for (var cc=0;cc<4;cc++){
+			returnObj.reflectorPosTransformed[cc] = worldCamera[4*cc+3];	//position of reflector in frame of camera (after MVMatrix transformation)
+		}
+		returnObj.cosReflector = 1.0/Math.sqrt(1+reflectorInfo.rad*reflectorInfo.rad);
+		
+		if (sshipWorld == returnObj.colorsSwitch){ //only draw spaceship if it's in the world that currently drawing. (TODO this for other objects eg shots)
+			returnObj.sshipDrawMatrix = sshipMatrix;
+		}else{
+			if (checkWithinReflectorRange(sshipMatrix, Math.tan(Math.atan(reflectorInfo.rad) +0.1))){
+				mat4.set(sshipMatrix, portaledMatrix);
+				moveMatrixThruPortal(portaledMatrix, reflectorInfo.rad, 1);
+				returnObj.sshipDrawMatrix = portaledMatrix;
+			}	
+		}
+		
+		return returnObj;
+	}
+})();
+
+
 
 function drawWorldScene(frameTime, isCubemapView) {
 	var wSettings = getWorldSceneSettings(isCubemapView);
