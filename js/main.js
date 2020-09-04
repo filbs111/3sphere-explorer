@@ -3202,12 +3202,12 @@ var texture,diffuseTexture,hudTexture,hudTextureSmallCircles,hudTexturePlus,hudT
 
 function loadTmpFFTexture(id,directory){
 	directory = directory || 'img/';
-	diffuseTexture = makeTexture(directory+id+"/"+id+"-diffuse.jpg",false);
-	nmapTexture = makeTexture(directory+id+"/"+id+"-normal.jpg",false);
+	diffuseTexture = makeTexture(directory+id+"/"+id+"-diffuse.jpg",gl.RGB,gl.UNSIGNED_SHORT_5_6_5,false);
+	nmapTexture = makeTexture(directory+id+"/"+id+"-normal.jpg",gl.RGB,gl.UNSIGNED_SHORT_5_6_5,false);
 }
 
 function initTexture(){
-	texture = makeTexture("img/0033.jpg");
+	texture = makeTexture("img/0033.jpg",gl.RGB,gl.UNSIGNED_SHORT_5_6_5);
 	
 	//nmapTexture = makeTexture("img/images.squarespace-cdn.com.png");	//button cushion
 //	diffuseTexture = makeTexture("img/4431-diffuse.jpg",false);nmapTexture = makeTexture("img/4431-normal.jpg",false);	//concrete blocks
@@ -3221,13 +3221,13 @@ function initTexture(){
 	//loadTmpFFTexture(14206,'img/no-git/');	//https://www.filterforge.com/filters/14206.html	"Sedimentary Boulders Rock Face"
 	//loadTmpFFTexture(1893,'img/no-git/');	//dry lakebed
 	
-	hudTexture = makeTexture("img/circles.png");
-	hudTextureSmallCircles = makeTexture("img/smallcircles.png");
-	hudTexturePlus = makeTexture("img/plus.png");
-	hudTextureX = makeTexture("img/x.png");
-	hudTextureBox = makeTexture("img/box.png");
-	duocylinderObjects.grid.tex = makeTexture("img/grid-omni.png");
-	duocylinderObjects.terrain.tex = makeTexture("data/terrain/turbulent-seamless.png");
+	hudTexture = makeTexture("img/circles.png",gl.RGBA,gl.UNSIGNED_SHORT_4_4_4_4);
+	hudTextureSmallCircles = makeTexture("img/smallcircles.png",gl.RGB,gl.UNSIGNED_SHORT_4_4_4_4);
+	hudTexturePlus = makeTexture("img/plus.png",gl.RGBA,gl.UNSIGNED_SHORT_4_4_4_4);
+	hudTextureX = makeTexture("img/x.png",gl.RGBA,gl.UNSIGNED_SHORT_4_4_4_4);
+	hudTextureBox = makeTexture("img/box.png",gl.RGBA,gl.UNSIGNED_SHORT_4_4_4_4);
+	duocylinderObjects.grid.tex = makeTexture("img/grid-omni.png",gl.RGB,gl.UNSIGNED_SHORT_5_6_5);
+	duocylinderObjects.terrain.tex = makeTexture("data/terrain/turbulent-seamless.png",gl.RGB,gl.UNSIGNED_SHORT_5_6_5);
 	//duocylinderObjects.procTerrain.tex = texture;
 	//duocylinderObjects.procTerrain.tex = makeTexture("img/14131-diffuse.jpg");  //sand
 	duocylinderObjects.procTerrain.tex = nmapTexture;
@@ -3243,7 +3243,7 @@ function initTexture(){
 	duocylinderObjects.procTerrain.tex2B = diffuseTexture;
 	
 	//duocylinderObjects.sea.tex = null;
-	duocylinderObjects.sea.tex = makeTexture("img/4141.jpg");
+	duocylinderObjects.sea.tex = makeTexture("img/4141.jpg",gl.RGB,gl.UNSIGNED_SHORT_5_6_5);
 	//duocylinderObjects.sea.tex = makeTexture("img/ash_uvgrid01.jpg");
 	duocylinderObjects.sea.isSea=true;
 	
@@ -3269,7 +3269,7 @@ function initTexture(){
 	//texture = makeTexture("img/ash_uvgrid01-grey.tiny.png");	//numbered grid
 }
 
-function makeTexture(src, yFlip = true) {	//to do OO
+function makeTexture(src, imgformat=gl.RGBA, imgtype=gl.UNSIGNED_BYTE, yFlip = true) {	//to do OO
 	var texture = gl.createTexture();
 		
 	bind2dTextureIfRequired(texture);
@@ -3285,8 +3285,7 @@ function makeTexture(src, yFlip = true) {	//to do OO
 		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, yFlip);
 
 		gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);	//linear colorspace grad light texture (TODO handle other texture differently?)
-		
-		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
+		gl.texImage2D(gl.TEXTURE_2D, 0, imgformat, imgformat, imgtype, texture.image);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
 		//gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
