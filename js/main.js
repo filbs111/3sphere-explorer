@@ -4092,8 +4092,10 @@ var iterateMechanics = (function iterateMechanics(){
 			//particle stream
 			if (guiParams.debug.emitFire){
 				if (Math.random()<0.5){
+					//making a new matrix is inefficient - expect better if reused a temp matrix, copied it into buffer
+					var newm4 = mat4.create(sshipMatrix);
 					xyzmove4mat(newm4, [1,1,1].map(elem => {return sshipModelScale*60*elem*(Math.random()-0.5)}));	//square uniform distibution
-					new Explosion({matrix:sshipMatrix,world:sshipWorld}, sshipModelScale*0.5, [0.2,0.06,0.06]);
+					new Explosion({matrix:newm4,world:sshipWorld}, sshipModelScale*0.5, [0.2,0.06,0.06]);
 				}
 			}
 			if (guiParams.debug.fireworks){
