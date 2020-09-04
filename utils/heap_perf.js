@@ -27,6 +27,7 @@ var heapPerfMon = (function(){
     var lastHeapSize = 0;
     var lastSampleTime=0;
     var gcEventCount=0;
+    var updateReady=false;
 
     //fill with something to start (so doesn't break if read too soon)
     for (var ii=0;ii<eventsToAverage;ii++){
@@ -48,6 +49,7 @@ var heapPerfMon = (function(){
         setTimeout(sample,timer);
     }
     function addGCEvent(time, amount){
+        updateReady=true;
         gcEventCount++;
         for(var ii=0;ii<eventsToAverage-1;ii++){
             recentGCEventTimes[ii] = recentGCEventTimes[ii+1];
@@ -69,13 +71,18 @@ var heapPerfMon = (function(){
         var avgAmount=totalAmount/eventsToAverage;
         var avgPeriod=timePeriod/(eventsToAverage-1);
         var collectionRate = avgAmount/avgPeriod;
-        return {
-            avgAmount,                              //average memory GCed each GC event
-            avgPeriod,                              //average time (ms) between GC events
-            collectionRate,                         //rate of garbage collection
-            gcEventCount,                           //num GC events detected since start
-            ratio:totalGCEventWindows/timePeriod    //want this to be low. 1 worst. 0 best. if large, likely underestimating avgAmount
-        };  //TODO don't return new object
+        if (updateReady){
+            updateReady=false;
+            return {
+                avgAmount,                              //average memory GCed each GC event
+                avgPeriod,                              //average time (ms) between GC events
+                collectionRate,                         //rate of garbage collection
+                gcEventCount,                           //num GC events detected since start
+                ratio:totalGCEventWindows/timePeriod    //want this to be low. 1 worst. 0 best. if large, likely underestimating avgAmount
+            };  //TODO don't return new object
+        }else{
+            return; //no need to refresh display, since info unchanged (no new GC events)
+        }
     }
     return {
         sample,
