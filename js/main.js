@@ -2590,9 +2590,9 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 	gl.depthMask(false);
 	
 	
-	for (var b in bullets){
-		if (bullets[b].active && bullets[b].world == colorsSwitch){
-			var bulletMatrix=bullets[b].matrix;
+	for (var b of bullets){
+		if (b.active && b.world == colorsSwitch){
+			var bulletMatrix=b.matrix;
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix,bulletMatrix);
 			if (frustumCull(mvMatrix,targetRad)){	
@@ -3429,7 +3429,7 @@ var targetWorldFrame=[];
 var targetingResultOne=[];
 var targetingResultTwo=[];
 var selectedTargeting="none";
-var bullets=[];
+var bullets=new Set();
 var gunMatrices=[mat4.create(),mat4.create(),mat4.create(),mat4.create()];	//? what happens if draw before set these to something sensible?
 var canvas;
 
@@ -4885,11 +4885,10 @@ var iterateMechanics = (function iterateMechanics(){
 		var singleStepMove = timeStep*moveSpeed;
 		if (numSteps>0){
 			for (var ii=0;ii<numSteps;ii++){	//TODO make more performant
-				for (var b in bullets){
-					var bullet = bullets[b];
-					if (bullet.active){	//TODO just delete/unlink removed objects
-						checkBulletCollision(bullet, singleStepMove);
-						portalTest(bullet, 0);
+				for (var b of bullets){
+					if (b.active){	//TODO just delete/unlink removed objects
+						checkBulletCollision(b, singleStepMove);
+						portalTest(b, 0);
 					}
 				}
 			}
@@ -5148,7 +5147,7 @@ function fireGun(){
 				newFireDirectionVec[ii]=sum;
 			}			
 			newFireDirectionVec[2]+=muzzleVel;
-			bullets.push({matrix:newBulletMatrix,vel:newFireDirectionVec,world:sshipWorld,active:true});
+			bullets.add({matrix:newBulletMatrix,vel:newFireDirectionVec,world:sshipWorld,active:true});
 			
 			new Explosion({matrix:gunMatrix,world:sshipWorld}, sshipModelScale*0.5, [0.06,0.06,0.06]);	//smoke/steam fx.
 															//TODO emit from hot gun (continue after firing), lighting for smoke (don't see in dark) ...
@@ -5156,12 +5155,13 @@ function fireGun(){
 			matPool.destroy(relativeMatrix);
 			
 			//limit number of bullets
-			if (bullets.length>200){
-				var bulletToDestroy = bullets.shift();
+			if (bullets.size>200){
+				var bulletToDestroy = bullets.keys().next().value;
 				//console.log("removing bullet because too many. ",bulletToDestroy.matrix,"pool:",matPool.getMats());
 				if (bulletToDestroy.active){
 					matPool.destroy(bulletToDestroy.matrix);
 				}
+				bullets.delete(bulletToDestroy);
 			}
 		}
 	}
