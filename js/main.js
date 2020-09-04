@@ -4304,10 +4304,11 @@ var iterateMechanics = (function iterateMechanics(){
 			//start with just player centre. 
 			var gridSqs = getGridSqFor4Pos(playerPos);
 			//get transposed playerpos in frame of duocylinder. this is generally useful, maybe should have some func to convert? code copied from bullet collision stuff...
-			var playerMatrixTransposed = mat4.create();	//instead of transposing matrices describing possible colliding objects orientation.
-			mat4.set(playerCamera,playerMatrixTransposed);	//alternatively might store transposed other objects orientation permanently
+			var playerMatrixTransposed = mat4.create(playerCamera);	//instead of transposing matrices describing possible colliding objects orientation.
+																//alternatively might store transposed other objects orientation permanently
 			mat4.transpose(playerMatrixTransposed);
-			var playerMatrixTransposedDCRefFrame=mat4.create(playerMatrixTransposed);	//in frame of duocylinder
+			var playerMatrixTransposedDCRefFrame=playerMatrixTransposed;	//in frame of duocylinder
+					//not using create, because playerMatrixTransposed is not subsequently used
 			rotate4mat(playerMatrixTransposedDCRefFrame, 0, 1, duocylinderSpin);
 			
 			
