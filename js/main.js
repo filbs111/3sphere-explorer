@@ -4550,6 +4550,36 @@ var iterateMechanics = (function iterateMechanics(){
 		var critValueDCBox = 1/Math.sqrt(1+3*duocylinderSurfaceBoxScale*duocylinderSurfaceBoxScale);
 		var critValueRingBox = 1/Math.sqrt(1+3*ringBoxSize*ringBoxSize);
 		
+		var targetCollisionFunc = (function(targetType){
+			if (targetType == "sphere"){
+				return (rMat => rMat[15]>critValue);
+			}else if (targetType == "box"){
+				return (rMat => rMat[15]>0 && Math.max(Math.abs(rMat[12]),	Math.abs(rMat[13]), Math.abs(rMat[14]))<guiParams.target.scale);
+			}else{
+				return (x => false);
+			}
+		})(guiParams.target.type);
+
+		function boxCollideArray(bArray){
+			for (var bb of bArray){
+				boxCollideCheck(bb.matrixT,duocylinderSurfaceBoxScale,critValueDCBox, bulletPosDCF4V, true);
+			}
+		}
+		var currentBullet;	//hack to pull funcs out of checkBulletCollision. set currentBullet=bullet inside checkBulletCollision
+		function boxCollideCheck(cellMatT,thisBoxSize,boxCritValue, bulletPos4V, moveWithDuocylinder){
+				mat4.multiplyVec4(cellMatT, bulletPos4V, tmpVec4);
+				if (tmpVec4[3]<boxCritValue){return;}	//early sphere check
+				if (Math.max(Math.abs(tmpVec4[0]),
+							Math.abs(tmpVec4[1]),
+							Math.abs(tmpVec4[2]))<thisBoxSize*tmpVec4[3]){
+					detonateBullet(currentBullet, moveWithDuocylinder, [1,0.8,0.6,1]);
+			}
+		}
+		function checkCollisionForBoxRing(ringCellMatsT){
+			for (var ii=0;ii<ringCellMatsT.length;ii++){
+				boxCollideCheck(ringCellMatsT[ii],ringBoxSize,critValueRingBox,bulletPos4V);
+			}
+		}
 
 		var tmpVec4 = vec4.create();				//variable referring to this to make quicker to reference?
 		var bulletPos = new Array(4); 
@@ -4558,6 +4588,8 @@ var iterateMechanics = (function iterateMechanics(){
 
 		//slightly less ridiculous place for this - not declaring functions inside for loop!
 		function checkBulletCollision(bullet, bulletMoveAmount){
+			currentBullet=bullet;
+
 			var bulletMatrix=bullet.matrix;
 			tmpVec4[0]=tmpVec4[1]=tmpVec4[2]=tmpVec4[3]=0;
 			mat4.set(bulletMatrix,bulletMatrixTransposed);
@@ -4578,19 +4610,8 @@ var iterateMechanics = (function iterateMechanics(){
 			mat4.set(invTargetMat,relativeMat);
 			mat4.multiply(relativeMat, bulletMatrix);
 			
-			switch (guiParams.target.type){
-				case "sphere":
-					if (relativeMat[15]>critValue){
-						detonateBullet(bullet);
-					}
-					break;
-				case "box":
-					if (relativeMat[15]>0 && Math.max(Math.abs(relativeMat[12]),
-								Math.abs(relativeMat[13]),
-								Math.abs(relativeMat[14]))<guiParams.target.scale){
-						detonateBullet(bullet);
-					}
-					break;
+			if (targetCollisionFunc(relativeMat)){
+				detonateBullet(bullet);
 			}
 			
 			var worldInfo = (bullet.world==0) ? guiParams.world0 : guiParams.world1;
@@ -4622,12 +4643,6 @@ var iterateMechanics = (function iterateMechanics(){
 			if (guiBoxes['y=w=0']){checkCollisionForBoxRing(ringCellsT[4]);}
 			if (guiBoxes['x=w=0']){checkCollisionForBoxRing(ringCellsT[5]);}
 			
-			function checkCollisionForBoxRing(ringCellMatsT){	//todo combine with below (random boxes)
-				for (var ii=0;ii<ringCellMatsT.length;ii++){
-					boxCollideCheck(ringCellMatsT[ii],ringBoxSize,critValueRingBox,bulletPos4V);
-				}
-			}
-			
 			if (numRandomBoxes>0 && guiParams["random boxes"].collision){
 				for (var ii=0;ii<numRandomBoxes;ii++){
 					boxCollideCheck(randomMatsT[ii],boxSize,critValueRandBox,bulletPos4V);
@@ -4651,24 +4666,9 @@ var iterateMechanics = (function iterateMechanics(){
 					boxCollideArray(boxArr[gs]);
 				}
 			}
-			function boxCollideArray(bArray){
-				for (var bb of bArray){
-					boxCollideCheck(bb.matrixT,duocylinderSurfaceBoxScale,critValueDCBox, bulletPosDCF4V, true);
-				}
-			}
-				
-			function boxCollideCheck(cellMatT,thisBoxSize,boxCritValue, bulletPos4V, moveWithDuocylinder){
-					mat4.multiplyVec4(cellMatT, bulletPos4V, tmpVec4);
-					if (tmpVec4[3]<boxCritValue){return;}	//early sphere check
-					if (Math.max(Math.abs(tmpVec4[0]),
-								Math.abs(tmpVec4[1]),
-								Math.abs(tmpVec4[2]))<thisBoxSize*tmpVec4[3]){
-						detonateBullet(bullet, moveWithDuocylinder, [1,0.8,0.6,1]);
-				}
-			}
+			
 			
 			//hyperbolas
-			hyperboloidData
 			if (guiParams.drawShapes.hyperboloid){
 				for (var mm of duocylinderBoxInfo.hyperboloids.list){
 					mat4.set(bulletMatrixTransposedDCRefFrame, relativeMat);
