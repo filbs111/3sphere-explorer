@@ -1418,9 +1418,6 @@ var lgMat = mat4.create();
 
 var getWorldSceneSettings = (function generateGetWorldSettings(){
 	var portaledMatrix = mat4.create();
-	var sshipDrawMatrix;
-	var localVecReflectorDiffColor = new Array(3);
-	var reflectorPosTransformed = new Array(4);
 	var returnObj = {
 		colorsSwitch:0,
 		worldInfo:0,
@@ -1433,7 +1430,8 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 	var colorsSwitch;
 
 	return function getWorldSceneSettings(isCubemapView){
-		
+		returnObj.reflectorPosTransformed=new Array(4);	//workaround bug (see comments near return statement)
+
 		returnObj.colorsSwitch = colorsSwitch = ((isCubemapView && guiParams.reflector.isPortal)?1:0)^offsetCameraContainer.world;
 		returnObj.worldInfo = (colorsSwitch==0) ? guiParams.world0 : guiParams.world1;	//todo use array
 		returnObj.localVecFogColor = localVecFogColor = worldColors[colorsSwitch];
@@ -1458,7 +1456,11 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 			}	
 		}
 		
-		return returnObj;
+		//return returnObj;		//causes bug currently because other properties are added to this object after it is returned and assigned to 
+								//wSettings, which are particular to the (cubemap) view, eg light position in camera frame.
+								//TODO handle those specific variables separately, to avoid allocation of new objects.
+
+		return {...returnObj}	//shallow clone
 	}
 })();
 
