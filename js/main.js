@@ -743,6 +743,15 @@ var offsetCam = (function(){
 var lastSeaTime=0;
 function drawScene(frameTime){
 	resizecanvas();
+	heapPerfMon.sample();	//suspect not right place for this, better at end
+
+	var heapPerfData = heapPerfMon.read();
+	if (heapPerfData){
+		document.getElementById("info3").innerHTML ="GC avg amount:" + (heapPerfData.avgAmount / 1000000).toFixed(1) + "MB, "+ 
+													"period:" + heapPerfData.avgPeriod.toFixed(0) + "ms, "+
+													"rate:" + (heapPerfData.collectionRate/1000).toFixed(1) + "MB/s"
+													"ratio:" + (heapPerfData.ratio/100).toFixed(1) + "%";
+	}
 
 	iterateMechanics(frameTime);	//TODO make movement speed independent of framerate
 	
@@ -1115,6 +1124,9 @@ function drawScene(frameTime){
 			drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
 	}
 	
+
+	heapPerfMon.sample();
+	heapPerfMon.delaySample(0);
 }
 
 var mainCamFov = 105;	//degrees.
@@ -3368,6 +3380,7 @@ var guiParams={
 		buoys:false,
 		nmapUseShader2:true,
 		showSpeedOverlay:false,
+		showGCInfo:false,
 		emitFire:false,
 		fireworks:false
 	},
@@ -3528,6 +3541,10 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	debugFolder.add(guiParams.debug, "showSpeedOverlay").onChange(() => {
 		var ols = document.querySelector('#info2').style;
 		console.log(ols);
+		ols.display = (ols.display == 'block')? 'none':'block';
+		});
+	debugFolder.add(guiParams.debug, "showGCInfo").onChange(() => {
+		var ols = document.querySelector('#info3').style;
 		ols.display = (ols.display == 'block')? 'none':'block';
 		});
 	debugFolder.add(guiParams.debug, "emitFire");

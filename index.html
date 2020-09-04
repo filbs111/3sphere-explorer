@@ -13,23 +13,32 @@
 		overflow: hidden;
 	}
 
-	#info {
+	#info, .debuginfo {
 		position: absolute;
-		top: 0px; width: 100%;
 		padding: 20px;
+	}
+
+	.debuginfo {
+		text-align: left;
+		background: #0007;
+		font-family: 'Lucida Console', Monaco, monospace;
+		font-weight: bold;
+	}
+
+	#info {
+		top: 0px; width: 100%;
 		color: white;
 		text-align: center;
 	}
 	
 	#info2 {
-		position: absolute;
-		top: 90%; width: 100%;
-		padding: 20px;
+		top: 89%; width: 100%;
 		color: red;
-		text-align: left;
-		background: #0007;
-		font-family: 'Lucida Console', Monaco, monospace;
-		font-weight: bold;
+	}
+
+	#info3 {
+		top: 95%; width: 100%;
+		color: greenyellow;
 	}
 	
 	#info a:link {
@@ -45,6 +54,7 @@
 <script type="text/javascript" src="lib/stats.min.js"></script>
 <script type="text/javascript" src="lib/perlin.js"></script><!-- https://github.com/josephg/noisejs/blob/master/perlin.js -->
 <script type="text/javascript" src="lib/gl-matrix-min.js"></script>
+<script type="text/javascript" src="utils/heap_perf.js"></script>
 <script type="text/javascript" src="utils/matfuncs.js"></script>
 <script type="text/javascript" src="utils/perlinfuncs.js"></script>
 <script type="text/javascript" src="utils/fullscreen.js"></script>
@@ -3352,7 +3362,8 @@
 
 <body onload="init()">
 <div id="info">3-sphere visualised in WebGL demo. Arrow keys, QE, click+drag mouse to rotate. WASD, space/ctrl to translate.<a href="https://github.com/filbs111/3sphere-explorer" target="_blank">https://github.com/filbs111/3sphere-explorer</a></div>
-<div id="info2" style="display:none">TEST</div>
+<div id="info2" class="debuginfo" style="display:none">TEST</div>
+<div id="info3" class="debuginfo" style="display:none">GC INFO TO GO HERE. IF SEE NOTHING, TRY A CHROMIUM BROWSER</div>
 		
 <!--<svg style="position:absolute;background:#0000;left:780px;top:330px" height="200" width="200">
   <circle cx="100" cy="100" r="80" stroke="yellow" stroke-width="2" fill="none" />
