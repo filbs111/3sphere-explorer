@@ -2202,7 +2202,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 	}
 	
 	function drawSpaceship(matrix){
-		
+		var rotatedMatrix = drawSsshipRotatedMat;	//avoid repeatedly looking up global scope variables
+		var inverseSshipMat = drawSsshipInverseSshipMat; //""
+
 		//temp switch back to texmap shader (assume have already set general uniforms for this)	-	TODO put uniforms in!!
 		//activeShaderProgram = shaderProgramTexmap;
 		activeShaderProgram = shaderPrograms.texmapPerPixelDiscardAtmosGradLight[guiParams.display.atmosShader];
@@ -2229,7 +2231,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniform1f(activeShaderProgram.uniforms.thrustAmount, currentThrustInput[2]>0 ? 1:0);
 		}
 		
-		var rotatedMatrix = mat4.create(matrix);	//because using rotated model data for sship model
+		mat4.set(matrix, rotatedMatrix);	//because using rotated model data for sship model
 		xyzrotate4mat(rotatedMatrix, [-Math.PI/2,0,0]); 
 		
 		modelScale=25*sshipModelScale;	//TODO use object that doesn't require scaling
@@ -2262,7 +2264,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 														
 		prepBuffersForDrawing(gunBuffers, shaderProgramColored);
 		
-		var inverseSshipMat = mat4.create(sshipMatrixNoInterp); //todo persist this matrix/ store inverseSshipMat*gunMatrix
+		mat4.set(sshipMatrixNoInterp,inverseSshipMat);	//todo store inverseSshipMat*gunMatrix ? 
 		mat4.transpose(inverseSshipMat);
 					
 		for (var mm of gunMatrices){
@@ -3062,6 +3064,9 @@ var invertedPlayerCamera = mat4.create();
 
 var tmpRelativeMat = mat4.create();
 var identMat = mat4.identity();
+
+var drawSsshipRotatedMat = mat4.create();		//TODO IIFE with drawspaceship?
+var drawSsshipInverseSshipMat = mat4.create();	//""
 
 var closestPointTestMat = mat4.create();	//TODO maybe more efficient to just use a point here. (matrix is used to draw debug something, but could convert to matrix only when debug drawing...
 var voxCollisionCentralLevel =0;
