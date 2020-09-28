@@ -2260,8 +2260,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 		var gunScale = 50*sshipModelScale;
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, gunScale,gunScale,gunScale);
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.guns);	//GREY
-		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, gunHeat/15,gunHeat/30,gunHeat/45);
-														
+		var heatEmit = gunHeat/(gunHeat+1.5);	//something that => 1. TODO check how this num interpreted in shader. logic here just temporary
+		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, heatEmit, Math.pow(heatEmit,3), Math.pow(heatEmit,5));
+		
 		prepBuffersForDrawing(gunBuffers, shaderProgramColored);
 		
 		mat4.set(sshipMatrixNoInterp,inverseSshipMat);	//todo store inverseSshipMat*gunMatrix ? 
@@ -3362,9 +3363,9 @@ var guiParams={
 	"targeting":"off",
 	//fogColor0:'#b2dede',
 	//fogColor0:'#b451c5',
-	fogColor0:'#bbbbbb',
+	fogColor0:'#222222',
 	fogColor1:'#aaaaaa',
-	playerLight:'#0000ff',
+	playerLight:'#000088',
 	control:{
 		onRails:false,
 		handbrake:false,
@@ -4111,6 +4112,11 @@ var iterateMechanics = (function iterateMechanics(){
 					fireGun();
 					autoFireCountdown=autoFireCountdownStartVal;
 				}
+			}
+
+			var heatEmit = gunHeat/(gunHeat+1.5);	//reuse logic from drawSpaceship
+			if (10*Math.random()<heatEmit){
+				smokeGuns();	//TODO independently random smoking guns? blue noise not white noise, smoke from end of gun, ...
 			}
 			
 			//particle stream
@@ -5179,6 +5185,16 @@ function fireGun(){
 //	rotatePlayer([(Math.random()-0.5)*gunJerkAmount, (Math.random()-0.5)*gunJerkAmount,0]);
 }
 
+function smokeGuns(){
+	for (var g in gunMatrices){
+		if (g%2 == gunEven){
+			var gunMatrix = gunMatrices[g];
+			new Explosion({matrix:gunMatrix,world:sshipWorld}, sshipModelScale*0.5, [0.06,0.06,0.06]);	//smoke/steam fx.
+															//TODO emit from hot gun (continue after firing), lighting for smoke (don't see in dark) ...
+															//TODO get correct world (which side of portal end of gun is in)
+		}
+	}
+}
 
 
 //rtt code from webgl-wideanglecamera project via webglPostprocess project
