@@ -2749,7 +2749,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 			mat4.multiply(mvMatrix,singleExplosion.matrix);
 			
 			//var radius = singleExplosion.life*0.0002;
-			var radius = (100-singleExplosion.life)*singleExplosion.size;
+			var radius = (120-singleExplosion.life)*singleExplosion.size;	// increased from 100 so has initial size
 			//var radius = 0.01;
 			var opac = 0.01*singleExplosion.life;
 			
