@@ -459,7 +459,8 @@ function initBuffers(){
 		//remove uv data for now to check works like previous model. 
 		//sshipObject.uvcoords = false;
 	
-	var gunObject = loadBlenderExport(guncyldata.meshes[0]);
+	var gunObject = loadBlenderExport(cannonData);	
+
 	var icoballObj = loadBlenderExport(icoballdata);
 
 	//loadBufferData(sphereBuffers, makeSphereData(99,200,1)); //todo use normalized box/icosohedron,subdivided octohedron etc, triangle strips
@@ -1182,8 +1183,8 @@ function updateGunTargeting(matrix){
 	var modelScale = sshipModelScale;
 	var matrixForTargeting = matrix;
 	
-	var gunHoriz = 20*sshipModelScale;
-	var gunVert = 10*sshipModelScale;
+	var gunHoriz = 16*sshipModelScale;
+	var gunVert = 8*sshipModelScale;
 	var gunFront = 5*sshipModelScale;
 	
 	var gunAngRangeRad = 0.35;
@@ -2246,24 +2247,19 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		mat4.multiply(mvMatrix,rotatedMatrix);
 		mat4.set(rotatedMatrix, mMatrix);
-		drawObjectFromBuffers(sshipBuffers, shaderPrograms.texmapPerPixelDiscardAtmosGradLight[guiParams.display.atmosShader]);
+		drawObjectFromBuffers(sshipBuffers, activeShaderProgram);
 		
-		//switch back to coloured shader
-		activeShaderProgram = shaderProgramColored;
-		gl.useProgram(activeShaderProgram);
 		
 		//draw guns
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,matrix);
 		mat4.set(matrix, mMatrix);
 		
-		var gunScale = 50*sshipModelScale;
+		var gunScale = 2.3*sshipModelScale;
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, gunScale,gunScale,gunScale);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.guns);	//GREY
-		var heatEmit = gunHeat/(gunHeat+1.5);	//something that => 1. TODO check how this num interpreted in shader. logic here just temporary
-		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, heatEmit, Math.pow(heatEmit,3), Math.pow(heatEmit,5));
-		
-		prepBuffersForDrawing(gunBuffers, shaderProgramColored);
+
+		bind2dTextureIfRequired(cannonTexture);	
+		prepBuffersForDrawing(gunBuffers, activeShaderProgram);
 		
 		mat4.set(sshipMatrixNoInterp,inverseSshipMat);	//todo store inverseSshipMat*gunMatrix ? 
 		mat4.transpose(inverseSshipMat);
@@ -2280,46 +2276,21 @@ function drawWorldScene(frameTime, isCubemapView) {
 			mat4.multiply(mvMatrix, inverseSshipMat);
 			mat4.multiply(mvMatrix, gunMatrix);
 			
-			//mat4.set(invertedWorldCamera, mvMatrix);
-			//mat4.multiply(mvMatrix,gunMatrixCosmetic);
 			
-			//mat4.set(gunMatrix, mMatrix);	//this is wrong!
+			xyzrotate4mat(mvMatrix, [0,-Math.PI/2,0]);	//bodge to account for saving gun in wrong orientation (pointing -x in blender)
+														//TODO just save in correct orientation!
+
 			mat4.set(matrix, mMatrix);	//todo make this more efficient by combining with above
 			mat4.multiply(mMatrix, inverseSshipMat);
 			mat4.multiply(mMatrix, gunMatrix);
+			xyzrotate4mat(mMatrix, [0,-Math.PI/2,0]);	////bodge to account for saving gun in wrong orientation (pointing -x in blender)
 			
-			drawObjectFromPreppedBuffers(gunBuffers, shaderProgramColored);
-		}
-		
-		//landing gear - just 3 balls.
-		prepBuffersForDrawing(sphereBuffers, shaderProgramColored);
-		//prepBuffersForDrawing(gunBuffers, shaderProgramColored);
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, 0.001,0.001,0.001);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.superDarkGray);	//DARK
-		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);
-		
-		for (gear of landingLegData){
-		//	drawLandingBall(gear.pos);
-		}
-		
-		function drawLandingBall(posn){
-			mat4.set(sshipMatrix, lgMat)	 
-			xyzmove4mat(lgMat, posn);
-			
-			//mat4.set(invertedWorldCamera, mvMatrix);	//no shift version
-			//mat4.multiply(mvMatrix, lgMat);
-			
-			//apply the shift hack as with guns.
-			mat4.set(matrix, mMatrix);
-			mat4.multiply(mMatrix, inverseSshipMat);
-			mat4.multiply(mMatrix, lgMat);
-			
-			
-			mat4.set(invertedWorldCamera, mvMatrix);
-			mat4.multiply(mvMatrix, mMatrix);
+			gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame, -mMatrix[3],-mMatrix[7],-mMatrix[11]);
+			gl.uniform1f(activeShaderProgram.uniforms.thrustAmount, 0);	//no thruster light used here currently
 
-			drawObjectFromPreppedBuffers(sphereBuffers, shaderProgramColored);
+			drawObjectFromPreppedBuffers(gunBuffers, activeShaderProgram);
 		}
+		
 	}
 	
 	
@@ -3204,7 +3175,7 @@ function setupScene() {
 	targetMatrix = cellMatData.d16[0];
 }
 
-var texture,diffuseTexture,hudTexture,hudTextureSmallCircles,hudTexturePlus,hudTextureX,hudTextureBox,sshipTexture,nmapTexture;
+var texture,diffuseTexture,hudTexture,hudTextureSmallCircles,hudTexturePlus,hudTextureX,hudTextureBox,sshipTexture,cannonTexture,nmapTexture;
 
 function loadTmpFFTexture(id,directory){
 	directory = directory || 'img/';
@@ -3254,6 +3225,7 @@ function initTexture(){
 	duocylinderObjects.sea.isSea=true;
 	
 	sshipTexture = makeTexture("data/dirLight/SshipTexCombouv5FR40pc.png");
+	cannonTexture = makeTexture("data/cannon/cannon-combo.png");
 	
 	//duocylinderObjects.voxTerrain.tex = makeTexture("img/ash_uvgrid01.jpg");
 	//duocylinderObjects.voxTerrain.tex = makeTexture("img/cretish0958.png");
