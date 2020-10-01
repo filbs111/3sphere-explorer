@@ -459,7 +459,7 @@ function initBuffers(){
 		//remove uv data for now to check works like previous model. 
 		//sshipObject.uvcoords = false;
 	
-	var gunObject = loadBlenderExport(cannonData);	
+	
 
 	var icoballObj = loadBlenderExport(icoballdata);
 
@@ -481,9 +481,10 @@ function initBuffers(){
 	loadBufferData(teapotBuffers, teapotObject);
 	console.log("will load spaceship...");
 	loadBufferData(sshipBuffers, sshipObject);
-	loadBufferData(gunBuffers, gunObject);
 	loadBufferData(icoballBuffers, icoballObj);
 	loadBufferData(hyperboloidBuffers, hyperboloidData);
+
+	loadBuffersFromObjFile(gunBuffers, "./data/cannon/cannon-pointz-yz.obj", loadBufferData);
 
 	var thisMatT;
 	for (var ii=0;ii<maxRandBoxes;ii++){
@@ -2251,41 +2252,45 @@ function drawWorldScene(frameTime, isCubemapView) {
 		
 		
 		//draw guns
-		mat4.set(invertedWorldCamera, mvMatrix);
-		mat4.multiply(mvMatrix,matrix);
-		mat4.set(matrix, mMatrix);
-		
-		var gunScale = 2.3*sshipModelScale;
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, gunScale,gunScale,gunScale);
+		if (gunBuffers.isLoaded){
+			mat4.set(invertedWorldCamera, mvMatrix);
+			mat4.multiply(mvMatrix,matrix);
+			mat4.set(matrix, mMatrix);
+			
+			var gunScale = 2.3*sshipModelScale;
+			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, gunScale,gunScale,gunScale);
 
-		bind2dTextureIfRequired(cannonTexture);	
-		prepBuffersForDrawing(gunBuffers, activeShaderProgram);
-		
-		mat4.set(sshipMatrixNoInterp,inverseSshipMat);	//todo store inverseSshipMat*gunMatrix ? 
-		mat4.transpose(inverseSshipMat);
-					
-		for (var mm of gunMatrices){
-			drawGun(mm);
+			bind2dTextureIfRequired(cannonTexture);
+			
+			prepBuffersForDrawing(gunBuffers, activeShaderProgram);
+			
+			mat4.set(sshipMatrixNoInterp,inverseSshipMat);	//todo store inverseSshipMat*gunMatrix ? 
+			mat4.transpose(inverseSshipMat);
+						
+			for (var mm of gunMatrices){
+				drawGun(mm);
+			}
 		}
 		
 		function drawGun(gunMatrix){
-			//taking the gun matrix rotation relative to the spaceship matrix, then applying this to the cosmetic spaceship matrix (therefore including rendering hack position shift, and version reflected in portal)
-			mat4.identity(mvMatrix);
-			mat4.multiply(mvMatrix, invertedWorldCamera);
-			mat4.multiply(mvMatrix, matrix);
-			mat4.multiply(mvMatrix, inverseSshipMat);
-			mat4.multiply(mvMatrix, gunMatrix);
 			
-			
-			xyzrotate4mat(mvMatrix, [0,-Math.PI/2,0]);	//bodge to account for saving gun in wrong orientation (pointing -x in blender)
-														//TODO just save in correct orientation!
-
 			mat4.set(matrix, mMatrix);	//todo make this more efficient by combining with above
 			mat4.multiply(mMatrix, inverseSshipMat);
 			mat4.multiply(mMatrix, gunMatrix);
-			xyzrotate4mat(mMatrix, [0,-Math.PI/2,0]);	////bodge to account for saving gun in wrong orientation (pointing -x in blender)
-			
-			gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame, -mMatrix[3],-mMatrix[7],-mMatrix[11]);
+			//xyzrotate4mat(mMatrix, [0,-Math.PI/2,0]);	//bodge to account for saving gun in wrong orientation (pointing -x in blender)
+		//	xyzrotate4mat(mMatrix, [-Math.PI/2,0,0]);	//facing +y in blender. still not what want!
+
+			xyzrotate4mat(mMatrix, [Math.PI,0,0]);
+
+			//taking the gun matrix rotation relative to the spaceship matrix, then applying this to the cosmetic spaceship matrix (therefore including rendering hack position shift, and version reflected in portal)
+			mat4.identity(mvMatrix);
+			mat4.multiply(mvMatrix, invertedWorldCamera);
+			mat4.multiply(mvMatrix, mMatrix);
+
+		//	gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame, mMatrix[3],-mMatrix[7],-mMatrix[11]);
+			gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame, mMatrix[3],mMatrix[7],mMatrix[11]);
+						//note sign swapped vs spaceship. guess some sign swap on object export?
+
 			gl.uniform1f(activeShaderProgram.uniforms.thrustAmount, 0);	//no thruster light used here currently
 
 			drawObjectFromPreppedBuffers(gunBuffers, activeShaderProgram);
@@ -3225,7 +3230,7 @@ function initTexture(){
 	duocylinderObjects.sea.isSea=true;
 	
 	sshipTexture = makeTexture("data/dirLight/SshipTexCombouv5FR40pc.png");
-	cannonTexture = makeTexture("data/cannon/cannon-combo.png");
+	cannonTexture = makeTexture("data/cannon/cannon-pointz-combo.png");
 	
 	//duocylinderObjects.voxTerrain.tex = makeTexture("img/ash_uvgrid01.jpg");
 	//duocylinderObjects.voxTerrain.tex = makeTexture("img/cretish0958.png");
