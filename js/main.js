@@ -3985,7 +3985,7 @@ var iterateMechanics = (function iterateMechanics(){
 					var magsq = gpMove.reduce(function(total, val){return total+ val*val;}, 0);
 					
 					for (var cc=0;cc<3;cc++){
-						currentThrustInput[cc]*=gpMove[cc]*10000000000*magsq;
+						currentThrustInput[cc]+=gpMove[cc]*5000000000*magsq;
 					}
 					
 					//testInfo=[axes,buttons,gpMove,magsq];
