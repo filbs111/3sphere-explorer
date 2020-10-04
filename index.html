@@ -84,8 +84,6 @@
 <script type="text/javascript" src="data/tetra-frame1-subdiv.obj.json"></script>
 <script type="text/javascript" src="data/dodecahedron-frame-cubeproj.obj.json"></script>
 <script type="text/javascript" src="data/wt_teapot-trimmed.obj.json"></script>
-<!--<script type="text/javascript" src="data/sship-pointyc-tidy1-triang.obj.json"></script>-->
-<script type="text/javascript" src="data/dirLight/sship-pointyc-tidy1-uv5-YZ-p04scale.obj.json""></script>
 <script type="text/javascript" src="data/icoball.obj.json"></script>
 <script type="text/javascript" src="data/hyperboloidData.js"></script>
 <script type="text/javascript" src="data/cells.js"></script>
@@ -1433,9 +1431,10 @@
 	precision mediump float;
 	varying vec3 vTextureCoord;
 	uniform sampler2D uSampler;
+	uniform sampler2D uSampler2;
 	uniform vec4 uColor;
 	uniform vec3 uPlayerLightColor;
-	uniform float thrustAmount;
+	uniform vec4 uOtherLightAmounts;
 #ifdef VEC_ATMOS_THICK
 	varying vec3 fog;
 #else	
@@ -1514,9 +1513,15 @@
 		//litColor.b += sampleColor.r;	//light contribution from the left
 		//litColor.b += sampleColor.g;	//light contribution from behind
 		//litColor.b += sampleColor.b;	//light contribution from below
-		vec3 thrustLightColor = vec3(0.1,0.2,0.9)* thrustAmount;
-		litColor += thrustLightColor*max(sampleColor.g-0.5,0.0);	//bodge - lighting is half for normals perpendicular to fwd/back, but gets intended effect of light from behind
-		
+		vec3 thrustLightColor = vec3(0.1,0.2,0.9)* uOtherLightAmounts.b;
+		vec3 gunLightColor = vec3(1.0,1.0,0.1)* uOtherLightAmounts.g;
+
+		vec4 sampleColor2 = texture2DProj(uSampler2, vTextureCoord);
+
+								//TODO matrix formulation
+		litColor += thrustLightColor*sampleColor2.b;	//thruster bake
+		litColor += gunLightColor*sampleColor2.g;	//gun bake
+
 		//guess maybe similar to some gaussian light source
 		//vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		vec4 preGammaFragColor = vec4( fog*litColor + (1.0-fog)*uFogColor.xyz, 1.);

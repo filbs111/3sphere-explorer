@@ -454,13 +454,6 @@ function initBuffers(){
 	var tetraFrameSubdivObject = loadBlenderExportNoOutwardFaces(tetraFrameSubdivData);
 	var dodecaFrameBlenderObject = loadBlenderExportNoOutwardFaces(dodecaFrameData.meshes[0]);
 	var teapotObject = loadBlenderExport(teapotData);	//isn't actually a blender export - just a obj json
-	//var sshipObject = loadBlenderExport(sshipData.meshes[0]);		//""
-	var sshipObject = loadBlenderExport(sshipData);		//""
-		//remove uv data for now to check works like previous model. 
-		//sshipObject.uvcoords = false;
-	
-	
-
 	var icoballObj = loadBlenderExport(icoballdata);
 
 	//loadBufferData(sphereBuffers, makeSphereData(99,200,1)); //todo use normalized box/icosohedron,subdivided octohedron etc, triangle strips
@@ -479,11 +472,11 @@ function initBuffers(){
 	loadBufferData(tetraFrameSubdivBuffers, tetraFrameSubdivObject);
 	loadBufferData(dodecaFrameBuffers, dodecaFrameBlenderObject);
 	loadBufferData(teapotBuffers, teapotObject);
-	console.log("will load spaceship...");
-	loadBufferData(sshipBuffers, sshipObject);
+	//loadBufferData(sshipBuffers, sshipObject);
 	loadBufferData(icoballBuffers, icoballObj);
 	loadBufferData(hyperboloidBuffers, hyperboloidData);
-
+	
+	loadBuffersFromObjFile(sshipBuffers, "./data/spaceship/sship-pointyc-tidy1-uv3-2020b-cockpit1b-yz-2020-10-04.obj", loadBufferData);
 	loadBuffersFromObjFile(gunBuffers, "./data/cannon/cannon-pointz-yz.obj", loadBufferData);
 
 	var thisMatT;
@@ -706,7 +699,7 @@ var offsetCam = (function(){
 		"mid 3rd person":[0,-50,-75],
 		//"far 3rd person":[0,-100,-125],	
 		"far 3rd person":[0,-75,-100],	
-		"cockpit":[0,0,11.5],
+		"cockpit":[0,0,15],
 		"side":[30,0,12.5]
 	}
 	var targetForTypeReverse = {
@@ -1184,7 +1177,7 @@ function updateGunTargeting(matrix){
 	var modelScale = sshipModelScale;
 	var matrixForTargeting = matrix;
 	
-	var gunHoriz = 16*sshipModelScale;
+	var gunHoriz = 18*sshipModelScale;
 	var gunVert = 8*sshipModelScale;
 	var gunFront = 5*sshipModelScale;
 	
@@ -2213,6 +2206,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.useProgram(activeShaderProgram);
 		
 		bind2dTextureIfRequired(sshipTexture);	
+		bind2dTextureIfRequired(sshipTexture2, gl.TEXTURE2);
 		
 		//set uniforms - todo generalise this code (using for many shaders)
 		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
@@ -2229,27 +2223,30 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
 		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 		
-		if (activeShaderProgram.uniforms.thrustAmount){
-			gl.uniform1f(activeShaderProgram.uniforms.thrustAmount, currentThrustInput[2]>0 ? 1:0);
-		}
+		if (activeShaderProgram.uniforms.uOtherLightAmounts){
+			gl.uniform4f(activeShaderProgram.uniforms.uOtherLightAmounts, 0, 100*(muzzleFlashAmounts[0]+muzzleFlashAmounts[1]), 20*(currentThrustInput[2]>0 ? 1:0) , 0);
+		}				//note muzzleFlashAmounts should be summed over all guns, just doing 2 because symmetric
 		
 		mat4.set(matrix, rotatedMatrix);	//because using rotated model data for sship model
 		xyzrotate4mat(rotatedMatrix, [-Math.PI/2,0,0]); 
 		
-		modelScale=25*sshipModelScale;	//TODO use object that doesn't require scaling
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.gray);
+		modelScale=sshipModelScale;	//TODO use object that doesn't require scaling
+		//gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.gray);
 		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
 		
 		//special uniform for this shader
-		gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame, -rotatedMatrix[3],-rotatedMatrix[7],-rotatedMatrix[11]);
+		//gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame, -rotatedMatrix[3],-rotatedMatrix[7],-rotatedMatrix[11]);
+		gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame, rotatedMatrix[3],rotatedMatrix[7],rotatedMatrix[11]);
 		
 		mat4.set(invertedWorldCamera, mvMatrix);
 		
 		mat4.multiply(mvMatrix,rotatedMatrix);
 		mat4.set(rotatedMatrix, mMatrix);
-		drawObjectFromBuffers(sshipBuffers, activeShaderProgram);
-		
+
+		if (sshipBuffers.isLoaded){
+			drawObjectFromBuffers(sshipBuffers, activeShaderProgram);
+		}
 		
 		//draw guns
 		if (gunBuffers.isLoaded){
@@ -2291,7 +2288,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame, mMatrix[3],mMatrix[7],mMatrix[11]);
 						//note sign swapped vs spaceship. guess some sign swap on object export?
 
-			gl.uniform1f(activeShaderProgram.uniforms.thrustAmount, 0);	//no thruster light used here currently
+			gl.uniform4f(activeShaderProgram.uniforms.uOtherLightAmounts, 0,0,0,0);	//no thruster/gun light used here currently
 
 			drawObjectFromPreppedBuffers(gunBuffers, activeShaderProgram);
 		}
@@ -2954,7 +2951,10 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 		//bind2dTextureIfRequired(texture);
 		gl.uniform1i(shaderProg.uniforms.uSampler, 0);
 	}
-	
+	if (shaderProg.uniforms.uSampler2){
+		gl.uniform1i(shaderProg.uniforms.uSampler2, 2);
+	}
+
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
 
 	if (usesCubeMap){
@@ -3180,7 +3180,7 @@ function setupScene() {
 	targetMatrix = cellMatData.d16[0];
 }
 
-var texture,diffuseTexture,hudTexture,hudTextureSmallCircles,hudTexturePlus,hudTextureX,hudTextureBox,sshipTexture,cannonTexture,nmapTexture;
+var texture,diffuseTexture,hudTexture,hudTextureSmallCircles,hudTexturePlus,hudTextureX,hudTextureBox,sshipTexture,sshipTexture2,cannonTexture,nmapTexture;
 
 function loadTmpFFTexture(id,directory){
 	directory = directory || 'img/';
@@ -3229,7 +3229,8 @@ function initTexture(){
 	//duocylinderObjects.sea.tex = makeTexture("img/ash_uvgrid01.jpg");
 	duocylinderObjects.sea.isSea=true;
 	
-	sshipTexture = makeTexture("data/dirLight/SshipTexCombouv5FR40pc.png");
+	sshipTexture = makeTexture("data/spaceship/spaceship-2020-10-04a-combo.png");	//note this texture is not normalised for maxalbedo
+	sshipTexture2 = makeTexture("data/spaceship/spaceship-otherlights-2020-10-04a.png");	//""
 	cannonTexture = makeTexture("data/cannon/cannon-pointz-combo.png");
 	
 	//duocylinderObjects.voxTerrain.tex = makeTexture("img/ash_uvgrid01.jpg");
