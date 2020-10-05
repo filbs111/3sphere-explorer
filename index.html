@@ -674,6 +674,7 @@
 		float nmapStrength = -0.7;
 			//TODO check whether normal maps use linear or sRGB space
 			//TODO include ambient occlusion/colour map to match normal map (don't need z component of normal map anyway)
+
 		vec3 nmapA = vec3 ( texture2D(uSampler, vec2(vPos.y, vPos.z)).xy - vec2(0.5) , 0.0);	//TODO matrix formulation?
 		vec3 nmapB = vec3 ( texture2D(uSampler, vec2(vPos.x, vPos.z + texOffset )).xy - vec2(0.5) ,0.0);
 		vec3 nmapC = vec3 ( texture2D(uSampler, vec2(vPos.x + texOffset, vPos.y + texOffset )).xy - vec2(0.5) ,0.0);
@@ -930,8 +931,15 @@
 	varying float fog;
 #endif
 	uniform float uAtmosContrast;
+#ifdef BENDY_
+	uniform mat4 uMMatrixA;
+	uniform mat4 uMVMatrixA;
+	uniform mat4 uMMatrixB;
+	uniform mat4 uMVMatrixB;	//TODO don't have separate mmatrix, mvmatrix x 2 for bendy. should be able to have fewer inputs
+#else
 	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
+#endif
 	uniform mat4 uPMatrix;
 	uniform vec4 uCameraWorldPos;
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
@@ -943,13 +951,49 @@
 	varying vec2 vZW;
 #endif	
 	void main(void) {	
+
+#ifdef BENDY_
+
+//todo simpler formulation!
+
+vec4 scaledCoord = vec4( uModelScale*aVertexPosition, 1.0);
+vec4 xyFlatCoord = normalize(scaledCoord * vec4(1.0,1.0,0.0,1.0));
+//vec4 zFlatCoord = scaledCoord * vec4(0.0,0.0,1.0,1.0);	//TODO simply maths by using fact that transformedCoord-flatCoord = ?
+
+vec2 blendWeights = 0.5*(1.0 + aVertexPosition.z*vec2(1.0,-1.0));
+
+vec4 transformedCoordEndA = uMVMatrixA * xyFlatCoord;
+vec4 transformedCoordEndB = uMVMatrixB * xyFlatCoord;
+vec4 avgCoord1 = blendWeights.x*transformedCoordEndA + blendWeights.y*transformedCoordEndB;
+
+vec4 aVertexPositionNormalizedA = normalize(vec4(uModelScale*(aVertexPosition-vec3(0.0,0.0,1.0)), 1.0));
+vec4 aVertexPositionNormalizedB = normalize(vec4(uModelScale*(aVertexPosition+vec3(0.0,0.0,1.0)), 1.0));
+vec4 transformedCoordA = uMVMatrixA * aVertexPositionNormalizedA;
+vec4 transformedCoordB = uMVMatrixB * aVertexPositionNormalizedB;
+vec4 avgCoord2 = blendWeights.x*transformedCoordA + blendWeights.y*transformedCoordB;
+
+float weighting = aVertexPosition.z*aVertexPosition.z;
+
+//transformedCoord = normalize(0.5*(avgCoord1*(1.0-weighting) + avgCoord2*(1.0+weighting)));	//guess, but seems bit wrong at ends
+transformedCoord = normalize(0.5*(avgCoord1*(3.0-weighting) + avgCoord2*(3.0+weighting)));	//seems about right. 
+
+vec4 transformedNormalA = uMVMatrixA * vec4(aVertexNormal,0.0);
+vec4 transformedNormalB = uMVMatrixB * vec4(aVertexNormal,0.0);
+transformedNormal = blendWeights.x*transformedNormalA + blendWeights.y*transformedNormalB;	//approx. TODO use equivalent logic as vertex position
+
+#else
 		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
 		transformedCoord = uMVMatrix * aVertexPositionNormalized;
+		transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
+#endif
+
 #ifdef CUSTOM_DEPTH
 		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
 #endif	
-		transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
+		
 		adjustedPos = transformedCoord - uDropLightPos;
+
+
 		gl_Position = uPMatrix * transformedCoord;
 	
 #ifdef ATMOS_CONSTANT		
@@ -959,8 +1003,11 @@
 		fog = 0.5*(1.0 + transformedCoord.w);
 #endif
 #else		
+#ifdef BENDY_
+		vec4 worldCoord = uMMatrixA * aVertexPositionNormalizedA;	//TODO interpolation (currently just using val for 1 matrix)
+#else
 		vec4 worldCoord = uMMatrix * aVertexPositionNormalized;
-		
+#endif		
 		float dotProd = dot(uCameraWorldPos,worldCoord);
 		
 		vec4 normalDirection = normalize(worldCoord - dotProd*uCameraWorldPos);	//point 90 deg around world from camera, in direction of worldCoord

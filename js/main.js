@@ -1,6 +1,7 @@
 var shaderPrograms={};
 
 var shaderProgramColored,	//these are variables that are set to different shaders during running, but could just as well go inside shaderPrograms.
+	shaderProgramColoredBendy,
 	shaderProgramTexmap;	//but keeping separate for now so know that all shaderPrograms.something are unchanging
 
 var angle_ext;
@@ -78,6 +79,7 @@ function initShaders(){
 	shaderPrograms.coloredPerVertex = loadShader( "shader-simple-vs", "shader-simple-fs");
 	//shaderPrograms.coloredPerPixel = loadShader( "shader-perpixel-vs", "shader-perpixel-fs");		//unused
 	shaderPrograms.coloredPerPixelDiscard = genShaderVariants( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs", ['CUSTOM_DEPTH'],['CUSTOM_DEPTH'],true);
+	shaderPrograms.coloredPerPixelDiscardBendy = genShaderVariants( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs", ['CUSTOM_DEPTH','BENDY_'],['CUSTOM_DEPTH'],true);
 
 	shaderPrograms.coloredPerPixelTransparentDiscard = loadShader("shader-perpixel-transparent-discard-vs", "shader-perpixel-transparent-discard-fs",['CUSTOM_DEPTH'],['CUSTOM_DEPTH']);	//TODO fog variants, vector fog
 	
@@ -169,7 +171,8 @@ var octoFrameSubdivBuffers={};
 var tetraFrameBuffers={};
 var tetraFrameSubdivBuffers={};		
 var dodecaFrameBuffers={};	
-var teapotBuffers={};	
+var teapotBuffers={};
+var pillarBuffers={};
 var sshipBuffers={};
 var gunBuffers={};
 var icoballBuffers={};
@@ -472,10 +475,10 @@ function initBuffers(){
 	loadBufferData(tetraFrameSubdivBuffers, tetraFrameSubdivObject);
 	loadBufferData(dodecaFrameBuffers, dodecaFrameBlenderObject);
 	loadBufferData(teapotBuffers, teapotObject);
-	//loadBufferData(sshipBuffers, sshipObject);
 	loadBufferData(icoballBuffers, icoballObj);
 	loadBufferData(hyperboloidBuffers, hyperboloidData);
 	
+	loadBuffersFromObjFile(pillarBuffers, "./data/pillar/pillar.obj", loadBufferData);
 	loadBuffersFromObjFile(sshipBuffers, "./data/spaceship/sship-pointyc-tidy1-uv3-2020b-cockpit1b-yz-2020-10-04.obj", loadBufferData);
 	loadBuffersFromObjFile(gunBuffers, "./data/cannon/cannon-pointz-yz.obj", loadBufferData);
 
@@ -1482,6 +1485,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	var relevantTexmapShader = guiParams.display.useSpecular? shaderPrograms.texmapPerPixelDiscardPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmapPerPixelDiscard[ guiParams.display.atmosShader ];
 	
 	shaderProgramColored = guiParams.display.perPixelLighting?relevantColorShader:shaderPrograms.coloredPerVertex;
+	shaderProgramColoredBendy = shaderPrograms.coloredPerPixelDiscardBendy[ guiParams.display.atmosShader ];	//NOTE no non-perpixel option here
 	shaderProgramTexmap = guiParams.display.perPixelLighting?relevantTexmapShader:shaderPrograms.texmapPerVertex;	
 	
 	var dropLightPos;
@@ -2163,8 +2167,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 		modelScale = guiParams.drawShapes["teapot scale"];
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
 		mat4.set(invertedWorldCamera, mvMatrix);
-		mat4.multiply(mvMatrix,teapotMatrix);		
-		drawObjectFromBuffers(teapotBuffers, shaderProgramColored);
+		mat4.multiply(mvMatrix,teapotMatrix);
+		mat4.set(teapotMatrix, mMatrix);	
+		drawObjectFromBuffers(teapotBuffers, activeShaderProgram);
 	}
 	
 	if (guiParams.drawShapes.hyperboloid){
@@ -2189,6 +2194,65 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}
 	}
 	
+	if (guiParams.drawShapes.pillars && pillarBuffers.isLoaded){
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.darkGray);
+		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);	//no emission
+		modelScale=0.1;
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale/4,modelScale/4,modelScale);
+
+		prepBuffersForDrawing(pillarBuffers, activeShaderProgram);
+		for (var ii=0;ii<pillarMatrices.length;ii++){
+			mat4.set(invertedWorldCamera, mvMatrix);
+			mat4.multiply(mvMatrix,pillarMatrices[ii]);
+			mat4.set(pillarMatrices[ii], mMatrix);
+			drawObjectFromBuffers(pillarBuffers, activeShaderProgram);
+		}
+	}
+	if (guiParams.drawShapes.bendyPillars && pillarBuffers.isLoaded){
+		//use special shader that takes 2 mv matrices, blends between the two, weighting by vertex coordinate.
+		// TODO fix coloured object shader (seems broken when halfway around world. fog? )
+
+		activeShaderProgram = shaderProgramColoredBendy;
+
+		//copy setup for coloured object shader. TODO deduplicate
+
+		gl.useProgram(activeShaderProgram);
+		
+		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
+		if (activeShaderProgram.uniforms.uReflectorDiffColor){
+				gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
+		}
+		if (activeShaderProgram.uniforms.uPlayerLightColor){
+			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
+		}
+		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
+
+		//TODO this only 
+		//if (activeShaderProgram.uniforms.uReflectorPos){
+		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, reflectorPosTransformed);
+		if (activeShaderProgram.uniforms.uReflectorPosVShaderCopy){gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPosVShaderCopy, reflectorPosTransformed);}
+		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
+
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.veryDarkGray);
+		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);	//no emission
+		modelScale=0.1;
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale/4,modelScale/4,modelScale);
+
+		prepBuffersForDrawing(pillarBuffers, activeShaderProgram);
+
+		for (var ii=0;ii<pillarMatrices.length -1;ii++){
+			mat4.set(invertedWorldCamera, mvMatrixA);
+			mat4.multiply(mvMatrixA,pillarMatrices[ii]);
+			mat4.set(pillarMatrices[ii],mMatrixA);
+
+			mat4.set(invertedWorldCamera, mvMatrixB);
+			mat4.multiply(mvMatrixB,pillarMatrices[ii+1]);	
+			mat4.set(pillarMatrices[ii+1], mMatrixB);
+
+			drawObjectFromPreppedBuffers(pillarBuffers, activeShaderProgram);
+		}
+
+	}
 	
 	var drawFunc = guiParams["draw spaceship"]? drawSpaceship : drawBall;
 	
@@ -2862,9 +2926,20 @@ function setupShaderAtmos(shaderProg){	//TODO generalise more shader stuff
 function drawObjectFromPreppedBuffers(bufferObj, shaderProg, skipM){
 	//skipM = skipM | false;
 	//skipM = false;
-	gl.uniformMatrix4fv(shaderProg.uniforms.uMVMatrix, false, mvMatrix);
-	//if (shaderProg.uniforms.uMMatrix  && (!skipM)){gl.uniformMatrix4fv(shaderProg.uniforms.uMMatrix, false, mMatrix);}
-	if (shaderProg.uniforms.uMMatrix  ){gl.uniformMatrix4fv(shaderProg.uniforms.uMMatrix, false, mMatrix);}
+
+	if (shaderProg.uniforms.uMVMatrix){
+		gl.uniformMatrix4fv(shaderProg.uniforms.uMVMatrix, false, mvMatrix);
+		//if (shaderProg.uniforms.uMMatrix  && (!skipM)){gl.uniformMatrix4fv(shaderProg.uniforms.uMMatrix, false, mMatrix);}
+	}
+	if (shaderProg.uniforms.uMMatrix){gl.uniformMatrix4fv(shaderProg.uniforms.uMMatrix, false, mMatrix);}
+
+	if (shaderProg.uniforms.uMVMatrixA){	//bendy stuff with interpolated matrices
+		gl.uniformMatrix4fv(shaderProg.uniforms.uMVMatrixA, false, mvMatrixA);
+		gl.uniformMatrix4fv(shaderProg.uniforms.uMMatrixA, false, mMatrixA);
+		gl.uniformMatrix4fv(shaderProg.uniforms.uMVMatrixB, false, mvMatrixB);
+		gl.uniformMatrix4fv(shaderProg.uniforms.uMMatrixB, false, mMatrixB);
+	}
+	
 	gl.drawElements(gl.TRIANGLES, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 	//gl.drawElements(gl.LINES, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 }
@@ -2893,6 +2968,12 @@ var bind2dTextureIfRequired = (function createBind2dTextureIfRequiredFunction(){
 //need all of these???
 var mMatrix = mat4.create();
 var mvMatrix = mat4.create();
+
+var mMatrixA = mat4.create();
+var mvMatrixA = mat4.create();
+var mMatrixB = mat4.create();
+var mvMatrixB = mat4.create();
+
 var pMatrix = mat4.create();
 var nonCmapPMatrix = mat4.create();
 var playerCamera = mat4.create();
@@ -3164,7 +3245,7 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	world0:{duocylinderModel:"voxTerrain",seaActive:true},
+	world0:{duocylinderModel:"none",seaActive:true},
 	world1:{duocylinderModel:"none",seaActive:false},
 	duocylinderRotateSpeed:0,
 	seaLevel:-0.012,
@@ -3179,6 +3260,8 @@ var guiParams={
 		},
 		teapot:false,
 		"teapot scale":0.7,
+		pillars:false,
+		bendyPillars:true,
 		towers:false,
 		singleBufferTowers:true,
 		explodingBox:false,
@@ -3215,7 +3298,7 @@ var guiParams={
 	//fogColor0:'#b451c5',
 	fogColor0:'#222222',
 	fogColor1:'#aaaaaa',
-	playerLight:'#000088',
+	playerLight:'#808080',
 	control:{
 		onRails:false,
 		handbrake:false,
@@ -3275,9 +3358,27 @@ var worldColorsPlain=[];
 var playerLightUnscaled;
 var playerLight;
 var muzzleFlashAmounts=[0,0,0,0];
-var teapotMatrix=mat4.create();mat4.identity(teapotMatrix);
+var teapotMatrix=mat4.identity();
 //xyzmove4mat(teapotMatrix,[0,1.85,0]);
 xyzmove4mat(teapotMatrix,[0,0,-0.5]);
+
+var pillarMatrices=[];
+/*
+for (var ii=0,ang=0,angstep=2*Math.PI/30;ii<30;ii++,ang+=angstep){	//number of reps obtained by trial and error. TODO calculate
+	var thisPillarMat = mat4.identity();
+	xyzmove4mat(thisPillarMat,[0,0,ang]);
+	xyzmove4mat(thisPillarMat,[0.4,0,0]);
+	pillarMatrices.push(thisPillarMat);
+}
+*/
+for (var ii=0,ang=0,angstep=2*Math.PI/25;ii<25;ii++,ang+=angstep){	//number of reps obtained by trial and error. TODO calculate
+	var thisPillarMat = mat4.identity();
+	xyzmove4mat(thisPillarMat,[0,0,ang]);
+	xyzmove4mat(thisPillarMat,[0.7,0,0]);
+	pillarMatrices.push(thisPillarMat);
+}
+
+
 var sshipMatrix=mat4.create();mat4.identity(sshipMatrix);
 var sshipMatrixNoInterp=mat4.create();mat4.identity(sshipMatrixNoInterp);
 var sshipMatDCFrame=mat4.create();
@@ -3354,6 +3455,8 @@ function init(){
 	randBoxesFolder.add(guiParams["random boxes"],"numToMove", 0,maxRandBoxes,64);
 	drawShapesFolder.add(guiParams.drawShapes,"teapot");
 	drawShapesFolder.add(guiParams.drawShapes,"teapot scale",0.05,2.0,0.05);
+	drawShapesFolder.add(guiParams.drawShapes,"pillars");
+	drawShapesFolder.add(guiParams.drawShapes,"bendyPillars");
 	drawShapesFolder.add(guiParams.drawShapes,"towers");
 	drawShapesFolder.add(guiParams.drawShapes,"singleBufferTowers");
 	drawShapesFolder.add(guiParams.drawShapes,"explodingBox");
