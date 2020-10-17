@@ -5462,7 +5462,8 @@ var explosionParticles = (function(){
 
 var randomNormalised3vec = (function generate3vecRandomiser(){
 
-	var numArrs = 128;	//ensure power of 2
+	var numArrs = 1024;	//ensure power of 2. if too small will see perferred directions when multiple explosions in same spot, unless
+						// add a random rotation to whole explosion (not doing this currently)
 	var bitwiseOr = numArrs-1;
 
 	var vecArrs = new Array(numArrs);
@@ -5471,23 +5472,33 @@ var randomNormalised3vec = (function generate3vecRandomiser(){
 	}
 	var nextArrId = 0;
 
-	return function randomNormalised3vec(normalness=1){	
-			//TODO precalculate?, if still want control over normalness, can precalc all but that last step.
-		var vec=vecArrs[nextArrId++];
-		nextArrId = nextArrId & bitwiseOr;
-		var lensq=0;
+	//precalculate. store normalised vector and length (before normalisation)
+	//then can efficiently calculate randomised 3vec with some blend of normalised/not.
+
+	var precalcVecArrs = new Array(numArrs);
+	for (var ii=0;ii<numArrs;ii++){
+		precalcVecArrs[ii]=new Array(4);
+		var precalcVec=precalcVecArrs[ii];
+		var lensq=0.000001;	//bodge to cover case that length might be 0 (guess a small number)
 		for (var cc=0;cc<3;cc++){
-			var thisElem = Math.random()+Math.random()-1;	//add lots of these to approach gaussian
-			vec[cc] = thisElem;	
+			var thisElem = Math.random()+Math.random()-1;	//add lots of these for better gaussian approx
+			precalcVec[cc] = thisElem;
 			lensq+=thisElem*thisElem;
 		}
 		var len = Math.sqrt(lensq);
-		//len = normalness*len + (1-normalness);	
-		len = 1 + normalness*(len-1);
-		
-		//return vec.map(elem=>elem/len);	//creates a new array
 		for (var cc=0;cc<3;cc++){
-			vec[cc]/=len;
+			precalcVec[cc]/=len;
+		}
+		precalcVec[3]=len;
+	}
+
+	return function randomNormalised3vec(normalness=1){
+		var vec = vecArrs[nextArrId];
+		var precalcVec = precalcVecArrs[nextArrId];
+		nextArrId = (nextArrId+1) & bitwiseOr;
+		var lengthMultiplier = normalness + (1-normalness)*precalcVec[3];
+		for (var cc=0;cc<3;cc++){
+			vec[cc] = lengthMultiplier*precalcVec[cc];
 		}
 		return vec;
 	}
