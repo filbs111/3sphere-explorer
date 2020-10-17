@@ -5474,7 +5474,7 @@ var randomNormalised3vec = (function generate3vecRandomiser(){
 	return function randomNormalised3vec(normalness=1){	
 			//TODO precalculate?, if still want control over normalness, can precalc all but that last step.
 		var vec=vecArrs[nextArrId++];
-		nextArrId = nextArrId && bitwiseOr;
+		nextArrId = nextArrId & bitwiseOr;
 		var lensq=0;
 		for (var cc=0;cc<3;cc++){
 			var thisElem = Math.random()+Math.random()-1;	//add lots of these to approach gaussian
