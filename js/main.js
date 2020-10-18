@@ -107,6 +107,7 @@ function initShaders(){
 	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','CUSTOM_DEPTH'], ['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE','CUSTOM_DEPTH'],true);
 	shaderPrograms.texmap4VecPerPixelDiscardNormalmapVcolorAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR'], ['DIFFUSE_TEX_ACTIVE','VCOLOR'],true),
 	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','CUSTOM_DEPTH'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','CUSTOM_DEPTH'],true);
+	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse2Tex = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','CUSTOM_DEPTH'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','DOUBLE_TEXTURES','CUSTOM_DEPTH'],true);
 	
 	//voxTerrain shaders
 	shaderPrograms.triplanarColor4Vec = genShaderVariants("shader-texmap-color-triplanar-vs-4vec", "shader-texmap-triplanar-fs",['CUSTOM_DEPTH'],['CUSTOM_DEPTH']);
@@ -3145,15 +3146,13 @@ function initTexture(){
 	texture = makeTexture("img/0033.jpg",gl.RGB,gl.UNSIGNED_SHORT_5_6_5);
 	
 	//nmapTexture = makeTexture("img/images.squarespace-cdn.com.png");	//button cushion
-//	diffuseTexture = makeTexture("img/4431-diffuse.jpg",false);nmapTexture = makeTexture("img/4431-normal.jpg",false);	//concrete blocks
 	//diffuseTexture = makeTexture("img/no-git/6133-diffuse.jpg",false);nmapTexture = makeTexture("img/no-git/6133-normal.jpg",false);	//metal crate
 	//diffuseTexture = makeTexture("img/no-git/4483-diffuse.jpg",false);nmapTexture = makeTexture("img/no-git/4483-normal.jpg",false);	//rust
 	//loadTmpFFTexture(11581);
 	//loadTmpFFTexture(14196,'img/no-git/');
 	//loadTmpFFTexture(9701,'img/no-git/');	//craters. good for out-of-atmosphere part?
 	//loadTmpFFTexture(4241,'img/no-git/');
-	loadTmpFFTexture(6481);
-	//loadTmpFFTexture(14206,'img/no-git/');	//https://www.filterforge.com/filters/14206.html	"Sedimentary Boulders Rock Face"
+	loadTmpFFTexture(14131);	//sand dunes
 	//loadTmpFFTexture(1893,'img/no-git/');	//dry lakebed
 	
 	hudTexture = makeTexture("img/circles.png",gl.RGBA,gl.UNSIGNED_SHORT_4_4_4_4);
@@ -3168,14 +3167,15 @@ function initTexture(){
 	duocylinderObjects.procTerrain.tex = nmapTexture;
 	duocylinderObjects.procTerrain.texB = diffuseTexture;
 
-	duocylinderObjects.procTerrain.useMapproject = true;
+	duocylinderObjects.procTerrain.useMapproject = true;	//only affects things when terrainMapProject:true
 
 	//load 2 more textures. already set textures still reference what was loaded already
 	//loadTmpFFTexture(4999,'img/no-git/');	//chequerboard
-	loadTmpFFTexture(14206);	//https://www.filterforge.com/filters/14206.html	"Sedimentary Boulders Rock Face"
-
+	loadTmpFFTexture(5876);
+	//loadTmpFFTexture(4431);	//concrete blocks
 	duocylinderObjects.procTerrain.tex2 = nmapTexture;
 	duocylinderObjects.procTerrain.tex2B = diffuseTexture;
+	
 	
 	//duocylinderObjects.sea.tex = null;
 	duocylinderObjects.sea.tex = makeTexture("img/4141.jpg",gl.RGB,gl.UNSIGNED_SHORT_5_6_5);
@@ -3186,23 +3186,16 @@ function initTexture(){
 	sshipTexture2 = makeTexture("data/spaceship/spaceship-otherlights-2020-10-04a.png");	//""
 	cannonTexture = makeTexture("data/cannon/cannon-pointz-combo.png");
 	
-	//duocylinderObjects.voxTerrain.tex = makeTexture("img/ash_uvgrid01.jpg");
-	//duocylinderObjects.voxTerrain.tex = makeTexture("img/cretish0958.png");
-	//duocylinderObjects.voxTerrain.tex = makeTexture("img/13787.jpg");
-//	duocylinderObjects.voxTerrain.tex = makeTexture("img/2100-v1.jpg");
-	
-	duocylinderObjects.voxTerrain.texB = diffuseTexture;
-	duocylinderObjects.voxTerrain.tex = nmapTexture;
-	
-	//duocylinderObjects.voxTerrain.tex = makeTexture("img/4483-v7.jpg");	//rust
-
-	duocylinderObjects.voxTerrain.usesTriplanarMapping=true;
-	
 	randBoxBuffers.tex=texture;
 	towerBoxBuffers.tex=nmapTexture;towerBoxBuffers.texB=diffuseTexture;
 	stonehengeBoxBuffers.tex=texture;stonehengeBoxBuffers.texB=diffuseTexture;
 	roadBoxBuffers.tex=nmapTexture;roadBoxBuffers.texB=diffuseTexture;
 	
+	loadTmpFFTexture(11581);	//note voxTerrain normal mapping currently reversed/inverted vs procTerrain, boxes.
+	duocylinderObjects.voxTerrain.texB = diffuseTexture;
+	duocylinderObjects.voxTerrain.tex = nmapTexture;
+	duocylinderObjects.voxTerrain.usesTriplanarMapping=true;
+
 	//texture = makeTexture("img/ash_uvgrid01-grey.tiny.png");	//numbered grid
 }
 
@@ -3245,7 +3238,7 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	world0:{duocylinderModel:"none",seaActive:true},
+	world0:{duocylinderModel:"procTerrain",seaActive:false},
 	world1:{duocylinderModel:"none",seaActive:false},
 	duocylinderRotateSpeed:0,
 	seaLevel:-0.012,
@@ -3315,6 +3308,7 @@ var guiParams={
 		renderViaTexture:'bennyBox',
 		drawTransparentStuff:true,
 		voxNmapTest:false,	//just show normal map. more efficient pix shader than standard. for performance check
+		terrainMapProject:false,
 		perPixelLighting:true,
 		atmosShader:"atmos",
 		atmosThickness:0.2,
@@ -3501,6 +3495,7 @@ function init(){
 	displayFolder.add(guiParams.display, "renderViaTexture", ['no','basic','bennyBoxLite','bennyBox','fisheye']);
 	displayFolder.add(guiParams.display, "drawTransparentStuff");
 	displayFolder.add(guiParams.display, "voxNmapTest");
+	displayFolder.add(guiParams.display, "terrainMapProject");
 	displayFolder.add(guiParams.display, "perPixelLighting");
 	//displayFolder.add(guiParams.display, "atmosShader", ['constant','atmos','atmos_v2']);	//basic is constant (contrast=0) 
 	displayFolder.add(guiParams.display, "atmosThickness", 0,0.5,0.05);
@@ -5327,16 +5322,21 @@ function performCommon4vecShaderSetup(activeShaderProgram, wSettings, logtag){	/
 	performGeneralShaderSetup(activeShaderProgram);
 }
 function drawDuocylinderObject(wSettings, duocylinderObj, zeroLevel, seaTime, depthMap){	
-	var activeShaderProgram;
+	var activeShaderProgram, selectedShaderSet;
 	//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
 	if (!duocylinderObj.isSea){
 		if (duocylinderObj.usesTriplanarMapping){	//means is voxTerrain.
-			var selectedShaderSet = guiParams.display.perPixelLighting? (guiParams.display.voxNmapTest? 'triplanarPerPixel' : 'triplanarPerPixelTwoAndDiffuse' ) : 'triplanarColor4Vec';
-			activeShaderProgram = shaderPrograms[selectedShaderSet][guiParams.display.atmosShader];
+			selectedShaderSet = guiParams.display.perPixelLighting? (guiParams.display.voxNmapTest? 'triplanarPerPixel' : 'triplanarPerPixelTwoAndDiffuse' ) : 'triplanarColor4Vec';
 		}else{
-			//activeShaderProgram = duocylinderObj.useMapproject? shaderPrograms.texmap4VecMapproject[ guiParams.display.atmosShader ] : shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ] ;
-			activeShaderProgram = duocylinderObj.useMapproject? ( guiParams.display.useSpecular? shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse2Tex[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecMapprojectDiscardNormalmapVcolorAndDiffuse[ guiParams.display.atmosShader ] ) : ( guiParams.display.useSpecular? shaderPrograms.texmap4VecPerPixelDiscardPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscard[ guiParams.display.atmosShader ]);
+			selectedShaderSet = duocylinderObj.useMapproject? 
+			( guiParams.display.terrainMapProject?
+			 ( guiParams.display.useSpecular? 
+				'texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse2Tex':'texmap4VecMapprojectDiscardNormalmapVcolorAndDiffuse' ):
+					'texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse2Tex'
+					):
+			 ( guiParams.display.useSpecular? 'texmap4VecPerPixelDiscardPhong':'texmap4VecPerPixelDiscard' );
 		}
+		activeShaderProgram = shaderPrograms[selectedShaderSet][guiParams.display.atmosShader];
 		gl.useProgram(activeShaderProgram);
 	}else{
 		//activeShaderProgram = guiParams.display.perPixelLighting? ( guiParams.display.useSpecular? shaderPrograms.duocylinderSeaPerPixelDiscardPhong[ guiParams.display.atmosShader ] :shaderPrograms.duocylinderSeaPerPixelDiscard[ guiParams.display.atmosShader ]) : shaderPrograms.duocylinderSea[ guiParams.display.atmosShader ];
