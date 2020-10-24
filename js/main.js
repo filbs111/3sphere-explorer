@@ -1802,10 +1802,13 @@ function drawWorldScene(frameTime, isCubemapView) {
 	}
 	
 	function zeroAttributeDivisors(shaderProg){
-			//seems like these carry over between invokations of drawElementsInstancedANGLE, loading different shaders. TODO proper method to only change when required, but for now, set all to zero before setting those wanted to 1
-		Object.keys(shaderProg.attributes).forEach(function(item, index){
-			angle_ext.vertexAttribDivisorANGLE(gl.getAttribLocation(shaderProg, item),0);
-		});
+		//seems like these carry over between invokations of drawElementsInstancedANGLE, loading different shaders.
+		//for now, set all to zero before setting those wanted to 1
+		//TODO store last value, only call angle_ext.vertexAttribDivisorANGLE when different (do values carry over when change shader?)
+
+		for (var ii=0;ii<shaderProg.numActiveAttribs;ii++){
+			angle_ext.vertexAttribDivisorANGLE(ii,0);
+		}
 		
 	}
 	
