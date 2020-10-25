@@ -1,5 +1,5 @@
 var terrainCollisionTestBoxPos={a:0,b:0,h:0};
-var procTerrainSize=256;
+var procTerrainSize=128;
 
 function getFourHeights(aaFloor,bbFloor){
 	var aaCeil = (aaFloor + 1)%procTerrainSize;	//&255 maybe faster
@@ -317,13 +317,13 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 	//create vertices first. for 3-sphere grid, loops, so different (here have vertices on opposite sides (and 4 corners) that share z-position
 	var vertex2dData=[];
 	var thisLine;
-	for (var ii=0;ii<gridSize;ii++){
+	for (var ii=0;ii<=gridSize;ii++){
 		thisLine = [];
 		vertex2dData.push(thisLine);
-		for (var jj=0;jj<gridSize;jj++){
+		for (var jj=0;jj<=gridSize;jj++){
 			vertices.push(4*ii/gridSize);			//TODO how to push multiple things onto an array? 
 			
-			var height = terrainGetHeight(ii,jj);
+			var height = terrainGetHeight(ii&terrainSizeMinusOne,jj&terrainSizeMinusOne);
 			thisLine.push(height);
 			
 			vertices.push(height);	
@@ -338,10 +338,10 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 	}
 
 	//generate gradient/normal data.
-	var nx,nz,ninvmag;
+	var nx,nz,invmag;
 	var twiceSquareSize = 8/gridSize;	//think this maybe some dumb thing whereby 4vec mapping stuff designed for -1 to +1, with 4x4 tiles. see duocylinderObjects.grid  
-	for (var ii=0;ii<gridSize;ii++){
-		for (var jj=0;jj<gridSize;jj++){
+	for (var ii=0;ii<=gridSize;ii++){
+		for (var jj=0;jj<=gridSize;jj++){
 			nx= -vertex2dData[(ii+1)&terrainSizeMinusOne][jj] + vertex2dData[(ii-1)&terrainSizeMinusOne][jj];
 			nz= -vertex2dData[ii][(jj+1)&terrainSizeMinusOne] + vertex2dData[ii][(jj-1)&terrainSizeMinusOne];
 			nx/=twiceSquareSize;
@@ -363,8 +363,8 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 			tangents.push(invmag);
 			
 			//tmp - for use in existing shader, requires some uv coord. since grid will wrap, this is not ideal - might reproject texture later, but for time being, just stick something here.
-			uvcoords.push(8*ii/gridSize);
-			uvcoords.push(8*jj/gridSize);
+			uvcoords.push(16*jj/gridSize);
+			uvcoords.push(16*ii/gridSize);
 		}
 	}
 		
@@ -383,7 +383,7 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 	
 	//this is a inefficient but comprehension more important. should swap to indexed strips anyway.
 	function lookupIndex(xx,yy){
-		return (xx&terrainSizeMinusOne)+gridSize*(yy&terrainSizeMinusOne)
+		return xx+(gridSize+1)*yy;
 	}
 	return {vertices:vertices, normals:normals, binormals:binormals, tangents:tangents, uvcoords:uvcoords, colors:colors, faces:indices};
 })(procTerrainSize);
