@@ -1349,6 +1349,7 @@ transformedNormal = blendWeights.x*transformedNormalA + blendWeights.y*transform
 	uniform float uReflectorCos;
 	uniform float uSpecularStrength;
 	uniform float uSpecularPower;
+	uniform float uTexBias;
 
 	varying vec4 vPlayerLightPosTangentSpace;
 	varying vec4 vPortalLightPosTangentSpace;
@@ -1376,7 +1377,13 @@ transformedNormal = blendWeights.x*transformedNormalA + blendWeights.y*transform
 		texSample = mix(texSample, texSample2, vColor.a);	//use tex vertex colour 4th channel
 #endif
 #else
-		vec3 texSample = texture2DProj(uSampler, vTextureCoord).xyz;
+
+#ifdef CUSTOM_TEXBIAS
+	vec3 texSample = texture2DProj(uSampler, vTextureCoord, uTexBias).xyz;
+#else
+	vec3 texSample = texture2DProj(uSampler, vTextureCoord).xyz;	//is this case ever used?
+#endif
+
 #endif
 				
 		vec3 texSampleAdjusted = texSample*vec3(2.)-vec3(1.);
