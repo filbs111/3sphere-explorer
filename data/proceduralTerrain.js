@@ -380,12 +380,49 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 	//remove 1st, last index
 	indices.pop();
 	indices.shift();
+
+	//use shorter strips in hope of hitting vertex cache more often.
+	//no observed speed difference when vert shader artificially expensive (eg 'CONST_ITERS 4096.0')
+	//TODO initialise cache with 1 side of 1st strip, expect can double strip length before falls out of cache
+	// http://www.ludicon.com/castano/blog/2009/02/optimal-grid-rendering/
+	//TOOD try order vertex ids.
+	//still useful to use short strips for culling (don't draw sections of terrain that are out of view)
+
+	var indices_b=[];	//TODO return both options, allow live switching for perf comparison
+	var stripLength = 16;
+
+	for (var st=0;st<gridSize;st+=stripLength){
+		var endidx = st+stripLength;
+
+		//push a strip of degenerate tris to get 1 side of 1st strip into vertex cache.
+		indices_b.push(lookupIndex(ii,st));	//duplicate vert at start of strip
+		for (var jj=st;jj<=endidx;jj++){
+			indices_b.push(lookupIndex(ii,jj));
+			indices_b.push(lookupIndex(ii,jj));
+		}
+		indices_b.push(indices_b[indices_b.length-1]);	//this and following idx unnecessary?
+
+		for (var ii=0;ii<gridSize;ii++){
+			indices_b.push(lookupIndex(ii,st));	//duplicate vert at start of strip
+			for (var jj=st;jj<=endidx;jj++){
+				indices_b.push(lookupIndex(ii,jj));
+				indices_b.push(lookupIndex(ii+1,jj));
+			}
+			indices_b.push(indices_b[indices_b.length-1]);
+		}
+	}
+	//remove 1st, last index
+	indices_b.pop();
+	indices_b.shift();
 	
 	//this is a inefficient but comprehension more important. should swap to indexed strips anyway.
 	function lookupIndex(xx,yy){
 		return xx+(gridSize+1)*yy;
 	}
-	return {vertices:vertices, normals:normals, binormals:binormals, tangents:tangents, uvcoords:uvcoords, colors:colors, faces:indices};
+	return {vertices:vertices, normals:normals, binormals:binormals, tangents:tangents, uvcoords:uvcoords, colors:colors, 
+		//faces:indices
+		faces:indices_b
+	};
 })(procTerrainSize);
 
 var procTerrainSurfaceParticleMats = (function(){
