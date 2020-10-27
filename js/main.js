@@ -2802,11 +2802,11 @@ function drawTennisBall(duocylinderObj, shader, depthMap){
 		gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexTextureCoordBuffer);
 		gl.vertexAttribPointer(shader.attributes.aTextureCoord, duocylinderObj.vertexTextureCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	}
-	if (duocylinderObj.vertexTriCoordBuffer){
+	if (duocylinderObj.vertexTriCoordBuffer && shader.attributes.aTriCoord){
 		gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexTriCoordBuffer);
 		gl.vertexAttribPointer(shader.attributes.aTriCoord, duocylinderObj.vertexTriCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	}
-	if (duocylinderObj.vertexTriNormalBuffer){	//note could combo if with vertexTriCoordBuffer
+	if (duocylinderObj.vertexTriNormalBuffer && shader.attributes.aTriNormal){	//note could combo if with vertexTriCoordBuffer
 		gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexTriNormalBuffer);
 		gl.vertexAttribPointer(shader.attributes.aTriNormal, duocylinderObj.vertexTriNormalBuffer.itemSize, gl.FLOAT, false, 0, 0);
 	}
