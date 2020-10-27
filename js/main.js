@@ -109,6 +109,8 @@ function initShaders(){
 	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','CUSTOM_DEPTH'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','CUSTOM_DEPTH'],true);
 	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse2Tex = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','CUSTOM_DEPTH'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','DOUBLE_TEXTURES','CUSTOM_DEPTH',"CUSTOM_TEXBIAS"],true);
 	
+	shaderPrograms.zPrepass4Vec = loadShader("shader-simple-nofog-vs-4vec", "shader-simple-nofog-fs",['CUSTOM_DEPTH'],['CUSTOM_DEPTH']);	//for z prepass. 
+	
 	//voxTerrain shaders
 	shaderPrograms.triplanarColor4Vec = genShaderVariants("shader-texmap-color-triplanar-vs-4vec", "shader-texmap-triplanar-fs",['CUSTOM_DEPTH'],['CUSTOM_DEPTH']);
 	//shaderPrograms.triplanarPerPixel = genShaderVariants("shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['VCOLOR','SPECULAR_ACTIVE'],['VCOLOR','SPECULAR_ACTIVE']);
@@ -3313,6 +3315,7 @@ var guiParams={
 		voxNmapTest:false,	//just show normal map. more efficient pix shader than standard. for performance check
 		terrainMapProject:false,
 		texBias:0.0,
+		zPrepass:true,	//currently applies only to 4vec objects (eg terrain), and only affect overdraw for that object. 
 		perPixelLighting:true,
 		atmosShader:"atmos",
 		atmosThickness:0.2,
@@ -3501,6 +3504,7 @@ function init(){
 	displayFolder.add(guiParams.display, "voxNmapTest");
 	displayFolder.add(guiParams.display, "terrainMapProject");
 	displayFolder.add(guiParams.display, "texBias",-4.0,4.0,0.25);
+	displayFolder.add(guiParams.display, "zPrepass");
 	displayFolder.add(guiParams.display, "perPixelLighting");
 	//displayFolder.add(guiParams.display, "atmosShader", ['constant','atmos','atmos_v2']);	//basic is constant (contrast=0) 
 	displayFolder.add(guiParams.display, "atmosThickness", 0,0.5,0.05);
@@ -5331,6 +5335,17 @@ function performCommon4vecShaderSetup(activeShaderProgram, wSettings, logtag){	/
 }
 function drawDuocylinderObject(wSettings, duocylinderObj, zeroLevel, seaTime, depthMap){	
 	var activeShaderProgram, selectedShaderSet;
+
+	//draw using z prepass if enabled. objects with substancial overdraw may draw faster, though increases num vertices drawn
+	//TODO config options, disable z calculation and drawing in 2nd pass if prepass perf good, move prepasses to as early as pos
+	//to avoid overdraw for other objects occluded by this one
+	if (!duocylinderObj.isSea && guiParams.display.zPrepass){
+		activeShaderProgram = shaderPrograms.zPrepass4Vec;
+		gl.useProgram(activeShaderProgram);
+		drawTennisBall(duocylinderObj, activeShaderProgram, depthMap);	//depthMap expect is always undef/false here.
+		gl.depthFunc(gl.LEQUAL);
+	}
+
 	//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
 	if (!duocylinderObj.isSea){
 		if (duocylinderObj.usesTriplanarMapping){	//means is voxTerrain.
@@ -5361,6 +5376,12 @@ function drawDuocylinderObject(wSettings, duocylinderObj, zeroLevel, seaTime, de
 	performCommon4vecShaderSetup(activeShaderProgram, wSettings);
 	
 	drawTennisBall(duocylinderObj, activeShaderProgram, depthMap);
+
+
+	if (!duocylinderObj.isSea && guiParams.display.zPrepass){
+		gl.depthFunc(gl.LESS);	//switch back. TODO maybe use LEQUAL always.
+	}
+
 }
 
 

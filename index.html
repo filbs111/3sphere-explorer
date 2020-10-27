@@ -2039,6 +2039,39 @@ transformedNormal = blendWeights.x*transformedNormalA + blendWeights.y*transform
 	}
 </script>
 
+
+<!-- vertex shader with tex coords and 4vector input positions (instead of projected 3vectors.)-->
+<script id="shader-simple-nofog-vs-4vec" type="x-shader/x-vertex">
+	attribute vec4 aVertexPosition;
+	uniform mat4 uMVMatrix;
+	uniform mat4 uPMatrix;
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif
+	void main(void) {
+		vec4 transformedCoord = uMVMatrix * aVertexPosition;
+#ifdef CUSTOM_DEPTH
+		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
+#endif
+		gl_Position = uPMatrix * transformedCoord;
+	}
+</script>
+<script id="shader-simple-nofog-fs" type="x-shader/x-fragment">
+#ifdef CUSTOM_DEPTH
+	#extension GL_EXT_frag_depth : enable
+#endif
+	precision mediump float;
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif	
+	void main(void) {
+		gl_FragColor = vec4(1.0,0.0,1.0,1.0);	//magenta
+#ifdef CUSTOM_DEPTH
+		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
+#endif
+	}
+</script>
+
 <!-- vertex shader with tex coords and 4vector input positions (instead of projected 3vectors.)-->
 <script id="shader-texmap-vs-4vec" type="x-shader/x-vertex">
 	attribute vec4 aVertexPosition;
