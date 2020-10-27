@@ -663,6 +663,11 @@
 			discard;
 		}
 	
+		//discard some pix, see if makes drawing faster
+		vec3 vPosMod = ( 100.*vPos - floor(100.*vPos) ) - 0.5;
+		float vPosModDot = dot(vPosMod,vPosMod);
+		if (vPosModDot<0.2){discard;}
+
 		float texOffset = 0.5;
 		
 #ifdef DIFFUSE_TEX_ACTIVE

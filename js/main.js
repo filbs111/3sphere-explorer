@@ -3243,7 +3243,7 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	world0:{duocylinderModel:"procTerrain",seaActive:false},
+	world0:{duocylinderModel:"voxTerrain",seaActive:false},
 	world1:{duocylinderModel:"none",seaActive:false},
 	duocylinderRotateSpeed:0,
 	seaLevel:-0.012,
