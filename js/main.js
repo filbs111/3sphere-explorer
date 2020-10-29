@@ -56,7 +56,7 @@ var genShaderVariants = function(vs_id, fs_id, vs_defines=[], fs_defines=[], use
 	
 	for (var variant of atmosVariants){
 		var variantString = "ATMOS_"+variant;
-		shaders[variant]=loadShader(vs_id, fs_id, vs_defines.concat(variantString), fs_defines.concat(variantString));
+		shaders[variant]=loadShaderOld(vs_id, fs_id, vs_defines.concat(variantString), fs_defines.concat(variantString));
 		shaders[variant].usesVecAtmosThickness = usesVecAtmosThickness;
 	}
 	//temp:
@@ -70,20 +70,20 @@ var genShaderVariants = function(vs_id, fs_id, vs_defines=[], fs_defines=[], use
 function initShaders(){	
 	var initShaderTimeStart = performance.now();
 	
-	shaderPrograms.fullscreenTextured = loadShader( "shader-fullscreen-vs", "shader-fullscreen-fs"); 
-	shaderPrograms.fullscreenTexturedWithDepthmap = loadShader( "shader-fullscreen-vs", "shader-fullscreen-with-depthmap-fs"); 
-	shaderPrograms.fullscreenTexturedFisheye = loadShader( "shader-fullscreen-vs", "shader-fullscreen-fs-fisheye");
-	shaderPrograms.fullscreenBennyBoxLite = loadShader( "shader-fullscreen-vs", "shader-fullscreen-fs-bennybox-lite");
-	shaderPrograms.fullscreenBennyBox = loadShader( "shader-fullscreen-vs", "shader-fullscreen-fs-bennybox");	//https://www.youtube.com/watch?v=Z9bYzpwVINA
+	shaderPrograms.fullscreenTextured = loadShader( "fullscreen-vs", "fullscreen-fs");
+	shaderPrograms.fullscreenTexturedWithDepthmap = loadShader( "fullscreen-vs", "fullscreen-with-depthmap-fs"); 
+	shaderPrograms.fullscreenTexturedFisheye = loadShader( "fullscreen-vs", "fullscreen-fs-fisheye");
+	shaderPrograms.fullscreenBennyBoxLite = loadShader( "fullscreen-vs", "fullscreen-fs-bennybox-lite");
+	shaderPrograms.fullscreenBennyBox = loadShader( "fullscreen-vs", "fullscreen-fs-bennybox");	//https://www.youtube.com/watch?v=Z9bYzpwVINA
 		
-	shaderPrograms.coloredPerVertex = loadShader( "shader-simple-vs", "shader-simple-fs");
+	shaderPrograms.coloredPerVertex = loadShader( "simple-vs", "simple-fs");
 	//shaderPrograms.coloredPerPixel = loadShader( "shader-perpixel-vs", "shader-perpixel-fs");		//unused
 	shaderPrograms.coloredPerPixelDiscard = genShaderVariants( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs", ['CUSTOM_DEPTH'],['CUSTOM_DEPTH'],true);
 	shaderPrograms.coloredPerPixelDiscardBendy = genShaderVariants( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs", ['CUSTOM_DEPTH','BENDY_'],['CUSTOM_DEPTH'],true);
 
-	shaderPrograms.coloredPerPixelTransparentDiscard = loadShader("shader-perpixel-transparent-discard-vs", "shader-perpixel-transparent-discard-fs",['CUSTOM_DEPTH'],['CUSTOM_DEPTH']);	//TODO fog variants, vector fog
+	shaderPrograms.coloredPerPixelTransparentDiscard = loadShader("perpixel-transparent-discard-vs", "perpixel-transparent-discard-fs",['CUSTOM_DEPTH'],['CUSTOM_DEPTH']);	//TODO fog variants, vector fog
 	
-	shaderPrograms.texmapPerVertex = loadShader( "shader-texmap-vs", "shader-texmap-fs");
+	shaderPrograms.texmapPerVertex = loadShader( "texmap-vs", "texmap-fs");
 					
 	//shaderPrograms.texmapPerPixel = loadShader( "shader-texmap-perpixel-vs", "shader-texmap-perpixel-fs");
 	shaderPrograms.texmapPerPixelDiscard = genShaderVariants("shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", [],[],true);
@@ -109,7 +109,7 @@ function initShaders(){
 	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','CUSTOM_DEPTH'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','CUSTOM_DEPTH'],true);
 	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse2Tex = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','CUSTOM_DEPTH'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','DOUBLE_TEXTURES','CUSTOM_DEPTH',"CUSTOM_TEXBIAS"],true);
 	
-	shaderPrograms.zPrepass4Vec = loadShader("shader-simple-nofog-vs-4vec", "shader-simple-nofog-fs",['CUSTOM_DEPTH'],['CUSTOM_DEPTH']);	//for z prepass. 
+	shaderPrograms.zPrepass4Vec = loadShader("simple-nofog-vs-4vec", "simple-nofog-fs",['CUSTOM_DEPTH'],['CUSTOM_DEPTH']);	//for z prepass. 
 	
 	//voxTerrain shaders
 	shaderPrograms.triplanarColor4Vec = genShaderVariants("shader-texmap-color-triplanar-vs-4vec", "shader-texmap-triplanar-fs",['CUSTOM_DEPTH'],['CUSTOM_DEPTH']);
@@ -135,16 +135,17 @@ function initShaders(){
 	shaderPrograms.specialCubemap = genShaderVariants("shader-cubemap-vs", "shader-cubemap-fs", ['VERTPROJ','SPECIAL'],['SPECIAL'],true);		//try calculating using screen space coordinates, to work around buggy wobbly rendering close to portal. initially use inefficient frag shader code to get screen coord, and solve problem of getting from screen coord to correct pix value. if works, might move to using scaled homogeneous coords that linearly interpolate	on screen. 	
 	shaderPrograms.vertprojMix = genShaderVariants("shader-cubemap-vs", "shader-cubemap-fs", ['VERTPROJ','SPECIAL','CUSTOM_DEPTH'],['VPROJ_MIX','CUSTOM_DEPTH'],true);		
 	
-				
-	shaderPrograms.decal = loadShader("shader-decal-vs", "shader-decal-fs");
+
+	shaderPrograms.decal = loadShader("decal-vs", "decal-fs");
 					
-	shaderPrograms.billboardQuads = loadShader("shader-simple-moving-billboard-vs", "shader-very-simple-fs",['CUSTOM_DEPTH','INSTANCE_COLOR'],['CUSTOM_DEPTH','INSTANCE_COLOR']);				
+	shaderPrograms.billboardQuads = loadShader("simple-moving-billboard-vs", "very-simple-fs",['CUSTOM_DEPTH','INSTANCE_COLOR'],['CUSTOM_DEPTH','INSTANCE_COLOR']);				
 	
 	//get locations later by calling completeShaders (when expect compiles/links to have completed)
 	console.log("time to init shaders: " + ( performance.now() - initShaderTimeStart ) + "ms");
 }
-function completeShaders(){
+function completeShaders(cb){
 	getLocationsForShaders();
+	getLocationsForShadersUsingPromises(cb);
 }
 
 var duocylinderObjects={
@@ -3630,7 +3631,11 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	initTexture();
 	initCubemapFramebuffer(cubemapView);
 	initBuffers();
-	completeShaders();
+	completeShaders(
+		()=>{
+			requestAnimationFrame(drawScene);	//in callback because need to wait until shaders loaded
+		}
+	);
 	setFog(0,guiParams.fogColor0);
 	setFog(1,guiParams.fogColor1);
 	setAtmosThicknessMultiplier(guiParams.display.atmosThicknessMultiplier);
@@ -3638,7 +3643,6 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
     gl.enable(gl.DEPTH_TEST);
 	gl.enable(gl.CULL_FACE);
 	setupScene();
-	requestAnimationFrame(drawScene);
 	
 	function setFog(world,color){
 		worldColorsPlain[world]=colorArrFromUiString(color).concat(1);

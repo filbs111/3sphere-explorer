@@ -81,7 +81,7 @@ function getShader(gl, id, defines = []) {
 
 var shadersToGetLocationsFor = [];
 
-function loadShader(vs_id,fs_id, vs_defines, fs_defines) {
+function loadShaderOld(vs_id,fs_id, vs_defines, fs_defines) {
 	var startTime =performance.now();
 	
 	var fragmentShader = getShader(gl, vs_id, vs_defines);
