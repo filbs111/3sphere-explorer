@@ -29,123 +29,6 @@ function bufferArraySubDataGeneral(buffer, offs, arr){
 	gl.bufferSubData(gl.ARRAY_BUFFER, offs, arr);
 }
 
-//var atmosVariants = ['CONSTANT','ONE','TWO'];
-var atmosVariants = ['ONE'];	//disable variants to speed up loading
-var genShaderVariants = function(vs_id, fs_id, vs_defines=[], fs_defines=[], usesVecAtmosThickness){
-	var shaders = {};
-	if (usesVecAtmosThickness){
-		vs_defines.push('VEC_ATMOS_THICK');
-		fs_defines.push('VEC_ATMOS_THICK');
-	//	vs_defines.push('CUSTOM_DEPTH');
-	//	fs_defines.push('CUSTOM_DEPTH');
-	}
-	vs_defines.push('CONST_ITERS 4.0');	//TODO compare. suspect that by shifting samples by 0.5 (0.5->n-0.5 instead of 0->n-1) might get decent approximation with few samples
-								//effect with very few samples (even 2) looks OK, but might have edge cases. 
-	
-	//try deleting CUSTOM_DEPTH - use this to test if can get decent z-buffer performance (increase range without introducing z-fighting), without recourse to custom depth, by increasing depth buffer precision,
-	/*
-	var index = vs_defines.indexOf('CUSTOM_DEPTH');
-	if (index > -1) {
-	  vs_defines.splice(index, 1);
-	}
-	index = fs_defines.indexOf('CUSTOM_DEPTH');
-	if (index > -1) {
-	  fs_defines.splice(index, 1);
-	}
-	*/
-	
-	for (var variant of atmosVariants){
-		var variantString = "ATMOS_"+variant;
-		shaders[variant]=loadShader(vs_id, fs_id, vs_defines.concat(variantString), fs_defines.concat(variantString));
-		shaders[variant].usesVecAtmosThickness = usesVecAtmosThickness;
-	}
-	//temp:
-	//shaders.constant = shaders.CONSTANT;
-	shaders.atmos = shaders.ONE;
-	//shaders.atmos_v2 = shaders.TWO;
-	
-	return shaders;
-};
-
-function initShaders(){	
-	var initShaderTimeStart = performance.now();
-	
-	shaderPrograms.fullscreenTextured = loadShader( "shader-fullscreen-vs", "shader-fullscreen-fs"); 
-	shaderPrograms.fullscreenTexturedWithDepthmap = loadShader( "shader-fullscreen-vs", "shader-fullscreen-with-depthmap-fs"); 
-	shaderPrograms.fullscreenTexturedFisheye = loadShader( "shader-fullscreen-vs", "shader-fullscreen-fs-fisheye");
-	shaderPrograms.fullscreenBennyBoxLite = loadShader( "shader-fullscreen-vs", "shader-fullscreen-fs-bennybox-lite");
-	shaderPrograms.fullscreenBennyBox = loadShader( "shader-fullscreen-vs", "shader-fullscreen-fs-bennybox");	//https://www.youtube.com/watch?v=Z9bYzpwVINA
-		
-	shaderPrograms.coloredPerVertex = loadShader( "shader-simple-vs", "shader-simple-fs");
-	//shaderPrograms.coloredPerPixel = loadShader( "shader-perpixel-vs", "shader-perpixel-fs");		//unused
-	shaderPrograms.coloredPerPixelDiscard = genShaderVariants( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs", ['CUSTOM_DEPTH'],['CUSTOM_DEPTH'],true);
-	shaderPrograms.coloredPerPixelDiscardBendy = genShaderVariants( "shader-perpixel-discard-vs", "shader-perpixel-discard-fs", ['CUSTOM_DEPTH','BENDY_'],['CUSTOM_DEPTH'],true);
-
-	shaderPrograms.coloredPerPixelTransparentDiscard = loadShader("shader-perpixel-transparent-discard-vs", "shader-perpixel-transparent-discard-fs",['CUSTOM_DEPTH'],['CUSTOM_DEPTH']);	//TODO fog variants, vector fog
-	
-	shaderPrograms.texmapPerVertex = loadShader( "shader-texmap-vs", "shader-texmap-fs");
-					
-	//shaderPrograms.texmapPerPixel = loadShader( "shader-texmap-perpixel-vs", "shader-texmap-perpixel-fs");
-	shaderPrograms.texmapPerPixelDiscard = genShaderVariants("shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", [],[],true);
-	shaderPrograms.texmapPerPixelDiscardPhong = genShaderVariants("shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['CUSTOM_DEPTH'],['SPECULAR_ACTIVE','CUSTOM_DEPTH'],true);
-	shaderPrograms.texmapPerPixelDiscardNormalmapV1 = genShaderVariants("shader-texmap-perpixel-discard-normalmap-vs", "shader-texmap-perpixel-discard-normalmap-fs", [],[],true);
-	shaderPrograms.texmapPerPixelDiscardNormalmap = genShaderVariants("shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", [],[],true);	
-	shaderPrograms.texmapPerPixelDiscardNormalmapPhong = genShaderVariants("shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','CUSTOM_DEPTH'], ['SPECULAR_ACTIVE','CUSTOM_DEPTH'],true);
-	shaderPrograms.texmapPerPixelDiscardNormalmapPhongVsMatmult = genShaderVariants("shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VS_MATMULT','SPECULAR_ACTIVE'], ['SPECULAR_ACTIVE'],true);
-	shaderPrograms.texmapPerPixelDiscardNormalmapPhongInstanced = genShaderVariants("shader-texmap-perpixel-discard-normalmap-efficient-vs", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['INSTANCED','VS_MATMULT','SPECULAR_ACTIVE','CUSTOM_DEPTH'], ['SPECULAR_ACTIVE','CUSTOM_DEPTH'],true);
-	
-	shaderPrograms.texmapPerPixelDiscardAtmosGradLight = genShaderVariants("shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-gradlight-discard-fs", ['CUSTOM_DEPTH'],['CUSTOM_DEPTH'],true); 	//could do more work in vert shader currently because light calculated per vertex - could just pass channel weights to frag shader...
-	
-	shaderPrograms.texmapPerPixelDiscardExplode = genShaderVariants("shader-texmap-perpixel-discard-vs", "shader-texmap-perpixel-discard-fs", ['VERTVEL_ACTIVE'],[],true);			
-	shaderPrograms.texmap4Vec = genShaderVariants("shader-texmap-vs-4vec", "shader-texmap-fs", []);
-	shaderPrograms.texmap4VecPerPixelDiscard = genShaderVariants("shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", [],[],true);
-
-	shaderPrograms.texmap4VecPerPixelDiscardVcolor = genShaderVariants("shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['VCOLOR'],['VCOLOR'],true);
-	shaderPrograms.texmap4VecPerPixelDiscardPhong = genShaderVariants("shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['CUSTOM_DEPTH'], ['SPECULAR_ACTIVE','CUSTOM_DEPTH'],true);
-	shaderPrograms.texmap4VecPerPixelDiscardPhongVcolor = genShaderVariants("shader-texmap-perpixel-vs-4vec", "shader-texmap-perpixel-discard-fs", ['VCOLOR','CUSTOM_DEPTH'], ['VCOLOR','SPECULAR_ACTIVE','CUSTOM_DEPTH'],true);
-	shaderPrograms.texmap4VecPerPixelDiscardNormalmapAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", [],['DIFFUSE_TEX_ACTIVE'],true);
-	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE','CUSTOM_DEPTH'], ['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE','CUSTOM_DEPTH'],true);
-	shaderPrograms.texmap4VecPerPixelDiscardNormalmapVcolorAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR'], ['DIFFUSE_TEX_ACTIVE','VCOLOR'],true),
-	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','CUSTOM_DEPTH'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','CUSTOM_DEPTH'],true);
-	shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse2Tex = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','CUSTOM_DEPTH'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','DOUBLE_TEXTURES','CUSTOM_DEPTH',"CUSTOM_TEXBIAS"],true);
-	
-	shaderPrograms.zPrepass4Vec = loadShader("shader-simple-nofog-vs-4vec", "shader-simple-nofog-fs",['CUSTOM_DEPTH'],['CUSTOM_DEPTH']);	//for z prepass. 
-	
-	//voxTerrain shaders
-	shaderPrograms.triplanarColor4Vec = genShaderVariants("shader-texmap-color-triplanar-vs-4vec", "shader-texmap-triplanar-fs",['CUSTOM_DEPTH'],['CUSTOM_DEPTH']);
-	//shaderPrograms.triplanarPerPixel = genShaderVariants("shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['VCOLOR','SPECULAR_ACTIVE'],['VCOLOR','SPECULAR_ACTIVE']);
-	shaderPrograms.triplanarPerPixel = genShaderVariants("shader-texmap-perpixel-color-triplanar-vs-4vec", "shader-texmap-perpixel-triplanar-fs", ['SPECULAR_ACTIVE','CUSTOM_DEPTH'],['SPECULAR_ACTIVE','CUSTOM_DEPTH']);	//like texmap4VecPerPixelDiscard - vertex position, normal are varyings, light positions are uniform
-	//shaderPrograms.triplanarPerPixelTwo = genShaderVariants("shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs-BASIC", ['VCOLOR','SPECULAR_ACTIVE'],['VCOLOR','SPECULAR_ACTIVE']);
-	shaderPrograms.triplanarPerPixelTwoAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-color-triplanar-vs-4vec", "shader-texmap-perpixel-normalmap-triplanar-fs", ['SPECULAR_ACTIVE','CUSTOM_DEPTH'],['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE','CUSTOM_DEPTH','REDUCED_TEXLOOKUPS'],true);	//calculate vertexMatrix, get light positions in this frame (light positions are varyings)
-	
-	//procTerrain shaders
-	shaderPrograms.texmap4VecMapproject = genShaderVariants("shader-texmap-vs-4vec", "shader-texmap-fs", ['MAPPROJECT_ACTIVE'], ['MAPPROJECT_ACTIVE']);	//per vertex lighting
-	shaderPrograms.texmap4VecMapprojectDiscardNormalmapVcolorAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','MAPPROJECT_ACTIVE'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','MAPPROJECT_ACTIVE'],true);	//per pixel tangent space lighting
-	shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE'],true);
-	shaderPrograms.texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse2Tex = genShaderVariants("shader-texmap-perpixel-normalmap-vs-4vec", "shader-texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','CUSTOM_DEPTH'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','DOUBLE_TEXTURES','CUSTOM_DEPTH'],true);
-	
-	//sea shaders
-	//shaderPrograms.duocylinderSea = genShaderVariants("shader-texmap-vs-duocylinder-sea", "shader-texmap-fs", []);
-	//shaderPrograms.duocylinderSeaPerPixelDiscard = genShaderVariants("shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", [],[],true);
-	shaderPrograms.duocylinderSeaPerPixelDiscardPhong = genShaderVariants("shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['CUSTOM_DEPTH'], ['SPECULAR_ACTIVE','CUSTOM_DEPTH'],true),
-	shaderPrograms.duocylinderSeaPerPixelDiscardPhongDepthAware = genShaderVariants("shader-texmap-perpixel-vs-duocylinder-sea", "shader-texmap-perpixel-discard-fs", ['CUSTOM_DEPTH','DEPTH_AWARE'], ['SPECULAR_ACTIVE','CUSTOM_DEPTH','DEPTH_AWARE'],true),
-	
-	shaderPrograms.cubemap = genShaderVariants( "shader-cubemap-vs", "shader-cubemap-fs",[],[],true);
-	shaderPrograms.vertprojCubemap = genShaderVariants("shader-cubemap-vs", "shader-cubemap-fs", ['VERTPROJ','CUSTOM_DEPTH'],['CUSTOM_DEPTH'],true);
-	shaderPrograms.specialCubemap = genShaderVariants("shader-cubemap-vs", "shader-cubemap-fs", ['VERTPROJ','SPECIAL'],['SPECIAL'],true);		//try calculating using screen space coordinates, to work around buggy wobbly rendering close to portal. initially use inefficient frag shader code to get screen coord, and solve problem of getting from screen coord to correct pix value. if works, might move to using scaled homogeneous coords that linearly interpolate	on screen. 	
-	shaderPrograms.vertprojMix = genShaderVariants("shader-cubemap-vs", "shader-cubemap-fs", ['VERTPROJ','SPECIAL','CUSTOM_DEPTH'],['VPROJ_MIX','CUSTOM_DEPTH'],true);		
-	
-				
-	shaderPrograms.decal = loadShader("shader-decal-vs", "shader-decal-fs");
-					
-	shaderPrograms.billboardQuads = loadShader("shader-simple-moving-billboard-vs", "shader-very-simple-fs",['CUSTOM_DEPTH','INSTANCE_COLOR'],['CUSTOM_DEPTH','INSTANCE_COLOR']);				
-	
-	//get locations later by calling completeShaders (when expect compiles/links to have completed)
-	console.log("time to init shaders: " + ( performance.now() - initShaderTimeStart ) + "ms");
-}
-function completeShaders(){
-	getLocationsForShaders();
-}
 
 var duocylinderObjects={
 	grid:{divs:4,step:Math.PI/2},
@@ -3626,11 +3509,15 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	initTextureFramebuffer(rttView);
 	initTextureFramebuffer(rttStageOneView, true);
 	initTextureFramebuffer(rttFisheyeView2);
-	initShaders();
+	initShaders(shaderPrograms);initShaders=null;
 	initTexture();
 	initCubemapFramebuffer(cubemapView);
 	initBuffers();
-	completeShaders();
+	getLocationsForShadersUsingPromises(
+		()=>{
+			requestAnimationFrame(drawScene);	//in callback because need to wait until shaders loaded
+		}
+	);
 	setFog(0,guiParams.fogColor0);
 	setFog(1,guiParams.fogColor1);
 	setAtmosThicknessMultiplier(guiParams.display.atmosThicknessMultiplier);
@@ -3638,7 +3525,6 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
     gl.enable(gl.DEPTH_TEST);
 	gl.enable(gl.CULL_FACE);
 	setupScene();
-	requestAnimationFrame(drawScene);
 	
 	function setFog(world,color){
 		worldColorsPlain[world]=colorArrFromUiString(color).concat(1);
