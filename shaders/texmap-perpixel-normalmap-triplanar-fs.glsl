@@ -4,6 +4,10 @@
 	precision mediump float;
 	uniform sampler2D uSampler;
 	uniform sampler2D uSamplerB;
+#ifdef DEPTH_AWARE
+	uniform sampler2D uSamplerDepthmap;
+	varying vec3 vScreenSpaceCoord;
+#endif
 	uniform vec4 uColor;
 	uniform vec3 uPlayerLightColor;
 	uniform vec4 uFogColor;
@@ -30,17 +34,32 @@
 	varying vec2 vZW;
 #endif	
 	void main(void) {
+
+#ifdef DEPTH_AWARE
+		float currentDepth =  texture2DProj(uSamplerDepthmap, vec3(.5,.5,1.)*vScreenSpaceCoord.xyz + vec3(.5,.5,0.)*vScreenSpaceCoord.z).r;
+		float newDepth = .5*(vZW.x/vZW.y) + .5;	//this is duplicate of custom depth calculation
+		if (newDepth>currentDepth){
+			discard;
+		}
+#endif		
+
+#ifndef DEPTH_AWARE
+#ifdef CUSTOM_DEPTH
+		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
+#endif
+#endif
+
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
 		
 		if (posCosDiff>0.0){
 			discard;
 		}
-	
+/*	
 		//discard some pix, see if makes drawing faster
 		vec3 vPosMod = ( 100.*vPos - floor(100.*vPos) ) - 0.5;
 		float vPosModDot = dot(vPosMod,vPosMod);
 		if (vPosModDot<0.2){discard;}
-
+*/
 		float texOffset = 0.5;
 		
 #ifdef DIFFUSE_TEX_ACTIVE
@@ -129,7 +148,4 @@
 		
 		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
 		gl_FragColor.a =1.0;
-#ifdef CUSTOM_DEPTH
-		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
-#endif
 	}

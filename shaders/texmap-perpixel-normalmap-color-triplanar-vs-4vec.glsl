@@ -31,7 +31,10 @@
 	varying vec3 vNormal;	
 #ifdef CUSTOM_DEPTH
 	varying vec2 vZW;
-#endif	
+#endif
+#ifdef DEPTH_AWARE
+	varying vec3 vScreenSpaceCoord;
+#endif
 	void main(void) {
 		//calculate vectors moved quarter way around world from this vertex, in the direction of each voxel axis. this is like TBNP "vertexMatrix" matrix, for a normal in one of these directions. (true normal is aVertexNormal though)
 		// guess top/bottom world axes x=y=0, z=w=0. up/down turns x,y into z,w. sideways turns x into y and w into z
@@ -49,6 +52,9 @@
 		gl_Position = uPMatrix * transformedCoord;
 #ifdef CUSTOM_DEPTH
 		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
+#endif
+#ifdef DEPTH_AWARE
+		vScreenSpaceCoord = gl_Position.xyw;
 #endif		
 		vPlayerLightPosTangentSpace = uDropLightPos* vertexMatrix;
 		vPortalLightPosTangentSpace = uReflectorPosVShaderCopy*vertexMatrix;

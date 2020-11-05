@@ -8,6 +8,10 @@
 	uniform sampler2D uSamplerB;
 	uniform sampler2D uSampler2;
 	uniform sampler2D uSampler2B;
+#ifdef DEPTH_AWARE
+	uniform sampler2D uSamplerDepthmap;
+	varying vec3 vScreenSpaceCoord;
+#endif
 	uniform vec4 uColor;
 	uniform vec3 uPlayerLightColor;
 #ifdef VEC_ATMOS_THICK
@@ -35,6 +39,21 @@
 	varying vec2 vZW;
 #endif
 	void main(void) {
+
+#ifdef DEPTH_AWARE
+		float currentDepth =  texture2DProj(uSamplerDepthmap, vec3(.5,.5,1.)*vScreenSpaceCoord.xyz + vec3(.5,.5,0.)*vScreenSpaceCoord.z).r;
+		float newDepth = .5*(vZW.x/vZW.y) + .5;	//this is duplicate of custom depth calculation
+		if (newDepth>currentDepth){
+			discard;
+		}
+#endif		
+
+#ifndef DEPTH_AWARE
+#ifdef CUSTOM_DEPTH
+		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
+#endif
+#endif
+
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;	//TODO is transformedcoord still needed if have vPortalLightPosTangentSpace ? 
 	
 		if (posCosDiff>0.0){
@@ -142,8 +161,5 @@
 
 		gl_FragColor.a =1.0;
 
-#ifdef CUSTOM_DEPTH
-		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;	//should run from 0->1. TODO varyings that don't require *,+.5
-#endif
 		//gl_FragDepthEXT = gl_FragCoord.z;	//reproduces standard behaviour. TODO try z/(1+w) for stereographic projection (with some scaling to get inside capped range. 0->1 or -1->1 ?) , to avoid near/far clipping
 	}

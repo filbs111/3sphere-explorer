@@ -29,6 +29,22 @@
 	varying vec2 vZW;
 #endif	
 	void main(void) {
+#ifdef DEPTH_AWARE
+		float currentDepth =  texture2DProj(uSamplerDepthmap, vec3(.5,.5,1.)*vScreenSpaceCoord.xyz + vec3(.5,.5,0.)*vScreenSpaceCoord.z).r;
+		float newDepth = .5*(vZW.x/vZW.y) + .5;	//this is duplicate of custom depth calculation
+		if (newDepth>currentDepth){
+			discard;
+		}
+#endif
+
+//#ifndef DEPTH_AWARE	//other depth aware frag shaders disable depth write, because already done z prepass. 
+	//, but still want to write depth when drawing sea, which this shader used for
+	//TODO separate shader for sea if impacts perf
+#ifdef CUSTOM_DEPTH
+		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
+#endif
+//#endif
+
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
 	
 		if (posCosDiff>0.0){
@@ -90,23 +106,13 @@
 		
 		//gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		//gl_FragColor = (1.0-fog)*uFogColor;
-		
 
 #ifdef DEPTH_AWARE
 		//preGammaFragColor.rgb = texture2D(uSamplerDepthmap, gl_FragCoord.xy).rgb;	//just something to show can use texture.
-		float currentDepth =  texture2DProj(uSamplerDepthmap, vec3(.5,.5,1.)*vScreenSpaceCoord.xyz + vec3(.5,.5,0.)*vScreenSpaceCoord.z).r;
-		float newDepth = .5*(vZW.x/vZW.y) + .5;	//this is duplicate of custom depth calculation
 		float depthDifference = newDepth - currentDepth;	//TODO calculate actual length difference
 		//preGammaFragColor = vec4( vec3(depthDifference) ,1.);	//TODO use coords that project without extra term
-		
 		gl_FragColor.a = 1.-exp(depthDifference*1000.);
 #else
 		gl_FragColor.a =1.0;
-#endif		
-
-
-		
-#ifdef CUSTOM_DEPTH
-		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
-#endif
+#endif	
 	}

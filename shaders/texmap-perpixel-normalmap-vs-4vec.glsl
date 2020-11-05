@@ -30,6 +30,9 @@
 #ifdef CUSTOM_DEPTH
 	varying vec2 vZW;
 #endif
+#ifdef DEPTH_AWARE
+	varying vec3 vScreenSpaceCoord;
+#endif
 	void main(void) {
 		mat4 vertexMatrix = uMVMatrix*mat4( aVertexTangent, aVertexBinormal, aVertexNormal, aVertexPosition);
 		transformedCoord = vertexMatrix[3];
@@ -113,7 +116,9 @@
 #else
 		vTextureCoord = vec3( aTextureCoord, 1.0 );	//todo pass in unnormalised, use z tex coord for length (and normalise before passing onto frag shader)
 #endif
-
+#ifdef DEPTH_AWARE
+		vScreenSpaceCoord = gl_Position.xyw;
+#endif
 	}
 
 //vertex shader with tex coords and 4vector input positions (instead of projected 3vectors.)

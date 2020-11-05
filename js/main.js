@@ -2481,10 +2481,6 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 	
 	({worldInfo, sshipDrawMatrix} = wSettings);
 	
-
-	gl.enable(gl.BLEND);
-	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-	
 	mat4.set(worldCamera, invertedWorldCamera);
 	mat4.transpose(invertedWorldCamera);
 	//equivalent for frame of duocylinder, to reduce complexity of drawing, collision checks etc
@@ -2497,6 +2493,17 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 	mat4.identity(mMatrix);							//better to set M, V matrices and leave MV for shader?
 	rotate4mat(mMatrix, 0, 1, duocylinderSpin);
 	
+	if (worldInfo.duocylinderModel!='none' && guiParams.display.zPrepass){
+		gl.depthFunc(gl.ALWAYS);	//TODO try no z check - since discarding with using depth texture, this check is redundant
+		gl.depthMask(false);
+		drawDuocylinderObject(wSettings, duocylinderObjects[worldInfo.duocylinderModel], 0,0, depthMap);
+		gl.depthFunc(gl.LESS);
+		gl.depthMask(true);
+	}
+	
+	gl.enable(gl.BLEND);
+	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
 	var seaTime = 0.00005*(frameTime % 20000 ); //20s loop	//note this is duplicated from drawWorldScene
 	if (worldInfo.seaActive){
 		drawDuocylinderObject(wSettings, duocylinderObjects['sea'], guiParams.seaLevel, seaTime, depthMap);
@@ -2714,16 +2721,16 @@ function drawTennisBall(duocylinderObj, shader, depthMap){
 	}
 	
 	if (shader.uniforms.uSamplerB){
-		bind2dTextureIfRequired(duocylinderObj.texB, gl.TEXTURE2);
-		gl.uniform1i(shader.uniforms.uSamplerB, 2);
+		bind2dTextureIfRequired(duocylinderObj.texB, gl.TEXTURE3);
+		gl.uniform1i(shader.uniforms.uSamplerB, 3);
 	}
 	if (shader.uniforms.uSampler2){ 
-		bind2dTextureIfRequired(duocylinderObj.tex2, gl.TEXTURE3);
-		gl.uniform1i(shader.uniforms.uSampler2, 3);
+		bind2dTextureIfRequired(duocylinderObj.tex2, gl.TEXTURE4);
+		gl.uniform1i(shader.uniforms.uSampler2, 4);
 	}
 	if (shader.uniforms.uSampler2B){
-		bind2dTextureIfRequired(duocylinderObj.tex2B, gl.TEXTURE4);
-		gl.uniform1i(shader.uniforms.uSampler2B, 4);
+		bind2dTextureIfRequired(duocylinderObj.tex2B, gl.TEXTURE5);
+		gl.uniform1i(shader.uniforms.uSampler2B, 5);
 	}
 	
 	//for (var side=0;side<2;side++){	//draw 2 sides
@@ -5225,25 +5232,39 @@ function drawDuocylinderObject(wSettings, duocylinderObj, zeroLevel, seaTime, de
 	//draw using z prepass if enabled. objects with substancial overdraw may draw faster, though increases num vertices drawn
 	//TODO config options, disable z calculation and drawing in 2nd pass if prepass perf good, move prepasses to as early as pos
 	//to avoid overdraw for other objects occluded by this one
-	if (!duocylinderObj.isSea && guiParams.display.zPrepass){
+
+	//depthMap flag means use depthmap texture (ie this pass is depth aware). prepass is not depth aware, and draws to depthmap texture.
+	//afterwards, depth aware pass made with depthMap=true 
+
+	if (!duocylinderObj.isSea && guiParams.display.zPrepass && !depthMap){
 		activeShaderProgram = shaderPrograms.zPrepass4Vec;
 		gl.useProgram(activeShaderProgram);
-		drawTennisBall(duocylinderObj, activeShaderProgram, depthMap);	//depthMap expect is always undef/false here.
-		gl.depthFunc(gl.LEQUAL);
+		drawTennisBall(duocylinderObj, activeShaderProgram);
+		return;
 	}
 
 	//use a different shader program for solid objects (with 4-vector vertices, premapped onto duocylinder), and for sea (2-vector verts. map onto duocylinder in shader)
 	if (!duocylinderObj.isSea){
 		if (duocylinderObj.usesTriplanarMapping){	//means is voxTerrain.
-			selectedShaderSet = guiParams.display.perPixelLighting? (guiParams.display.voxNmapTest? 'triplanarPerPixel' : 'triplanarPerPixelTwoAndDiffuse' ) : 'triplanarColor4Vec';
+			if (!depthMap){
+				selectedShaderSet = guiParams.display.perPixelLighting? (guiParams.display.voxNmapTest? 'triplanarPerPixel' : 'triplanarPerPixelTwoAndDiffuse' ) : 'triplanarColor4Vec';
+			}else{
+				selectedShaderSet = 'triplanarPerPixelTwoAndDiffuseDepthAware';
+			}
 		}else{
-			selectedShaderSet = duocylinderObj.useMapproject? 
-			( guiParams.display.terrainMapProject?
-			 ( guiParams.display.useSpecular? 
-				'texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse2Tex':'texmap4VecMapprojectDiscardNormalmapVcolorAndDiffuse' ):
-					'texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse2Tex'
-					):
-			 ( guiParams.display.useSpecular? 'texmap4VecPerPixelDiscardPhong':'texmap4VecPerPixelDiscard' );
+			if (!depthMap){
+				selectedShaderSet = duocylinderObj.useMapproject? 
+				( guiParams.display.terrainMapProject?
+				( guiParams.display.useSpecular? 
+					'texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse2Tex':'texmap4VecMapprojectDiscardNormalmapVcolorAndDiffuse' ):
+						'texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse2Tex'
+						):
+				( guiParams.display.useSpecular? 'texmap4VecPerPixelDiscardPhong':'texmap4VecPerPixelDiscard' );
+			}else{
+				selectedShaderSet = duocylinderObj.useMapproject?
+				 'texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse2TexDepthAware':
+				 'texmap4VecPerPixelDiscardPhongDepthAware';
+			}
 		}
 		activeShaderProgram = shaderPrograms[selectedShaderSet][guiParams.display.atmosShader];
 		gl.useProgram(activeShaderProgram);
@@ -5262,12 +5283,6 @@ function drawDuocylinderObject(wSettings, duocylinderObj, zeroLevel, seaTime, de
 	performCommon4vecShaderSetup(activeShaderProgram, wSettings);
 	
 	drawTennisBall(duocylinderObj, activeShaderProgram, depthMap);
-
-
-	if (!duocylinderObj.isSea && guiParams.display.zPrepass){
-		gl.depthFunc(gl.LESS);	//switch back. TODO maybe use LEQUAL always.
-	}
-
 }
 
 

@@ -29,12 +29,18 @@
 #ifdef CUSTOM_DEPTH
 	varying vec2 vZW;
 #endif
+#ifdef DEPTH_AWARE
+	varying vec3 vScreenSpaceCoord;
+#endif
 	void main(void) {
 		transformedCoord = uMVMatrix * aVertexPosition;
 #ifdef CUSTOM_DEPTH
 		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
 #endif
 		gl_Position = uPMatrix * transformedCoord;
+#ifdef DEPTH_AWARE
+		vScreenSpaceCoord = gl_Position.xyw;
+#endif
 #ifdef ATMOS_CONSTANT		
 #ifdef VEC_ATMOS_THICK
 		fog = vec3(0.5*(1.0 + transformedCoord.w));
