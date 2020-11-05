@@ -76,18 +76,9 @@
 		//vec3 normsq = sqrt(vNormal*vNormal);	//maybe not exactly right - something to stop texture stretching
 		vec3 normsq = abs(vNormal);	//maybe not exactly right - something to stop texture stretching
 
-#ifdef REDUCED_TEXLOOKUPS
-		float limitVal = 0.5;	//TODO cleaner transitions. guess should map normsq, then make limitVal ~0
-								//TODO also apply to diffuse lookup
-		vec3 flatVal = vec3(0.0);
-		vec3 nmapA = (normsq.x>limitVal) ? vec3 (texture2D(uSampler, vec2(vPos.y, vPos.z)).xy - vec2(0.5) , 0.0) : flatVal;
-		vec3 nmapB = (normsq.y>limitVal) ? vec3 ( texture2D(uSampler, vec2(vPos.x, vPos.z + texOffset )).xy - vec2(0.5) ,0.0) : flatVal;
-		vec3 nmapC = (normsq.z>limitVal) ? vec3 ( texture2D(uSampler, vec2(vPos.x + texOffset, vPos.y + texOffset )).xy - vec2(0.5) ,0.0) : flatVal;
-#else
 		vec3 nmapA = vec3 ( texture2D(uSampler, vec2(vPos.y, vPos.z)).xy - vec2(0.5) , 0.0);	//TODO matrix formulation?
 		vec3 nmapB = vec3 ( texture2D(uSampler, vec2(vPos.x, vPos.z + texOffset )).xy - vec2(0.5) ,0.0);
 		vec3 nmapC = vec3 ( texture2D(uSampler, vec2(vPos.x + texOffset, vPos.y + texOffset )).xy - vec2(0.5) ,0.0);
-#endif
 		
 		vec3 nmapNormal = normalize( vNormal + nmapStrength * (normsq.x*nmapA.zxy + normsq.y*nmapB.xzy + normsq.z*nmapC.xyz ) );
 		
