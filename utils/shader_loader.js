@@ -145,6 +145,7 @@ function initShaders(shaderProgs){
 		fullscreenTexturedFisheye:["fullscreen-vs", "fullscreen-fs-fisheye"],
 		fullscreenBennyBoxLite:["fullscreen-vs", "fullscreen-fs-bennybox-lite"],
 		fullscreenBennyBox:["fullscreen-vs", "fullscreen-fs-bennybox"],		//https://www.youtube.com/watch?v=Z9bYzpwVINA
+		fullscreenBlur:["fullscreen-vs", "fullscreen-fs-blur"],
 		coloredPerVertex:["simple-vs", "simple-fs"],
 		//coloredPerPixel:["perpixel-vs", "perpixel-fs"],		//unused
 		coloredPerPixelTransparentDiscard:["perpixel-transparent-discard-vs", "perpixel-transparent-discard-fs",['CUSTOM_DEPTH'],['CUSTOM_DEPTH']],

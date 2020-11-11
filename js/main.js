@@ -851,6 +851,19 @@ function drawScene(frameTime){
 				sceneDrawingOutputView = rttFisheyeView2;
 			}
 		}
+		if (guiParams.display.renderViaTexture == "blur"){
+			gl.bindFramebuffer(gl.FRAMEBUFFER, rttStageOneView.framebuffer);
+			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );			//already set? maybe should add some buffer zone around image, 
+																				//but with clamp sampling, result should be OK.
+			setRttSize( rttStageOneView, gl.viewportWidth, gl.viewportHeight );	//todo stop setting this repeatedly
+			
+			var wSettings = drawWorldScene(frameTime, false);
+			
+			if (guiParams.display.drawTransparentStuff){
+				drawTransparentStuff(rttStageOneView, rttFisheyeView2, gl.viewportWidth, gl.viewportHeight, wSettings);
+				sceneDrawingOutputView = rttFisheyeView2;
+			}
+		}
 		
 		function drawTransparentStuff(fromView, toView, sizeX, sizeY, wSettings){
 			//switch to another view of same size, asign textures for existing rgb(a) and depth map, and draw these to new rgb(a), depth map (fullscreen quad)
@@ -881,18 +894,7 @@ function drawScene(frameTime){
 		
 		var activeProg;
 		
-		if (guiParams.display.renderViaTexture != "fisheye"){
-			gl.bindFramebuffer(gl.FRAMEBUFFER, rttStageOneView.framebuffer);
-			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
-			setRttSize( rttStageOneView, gl.viewportWidth, gl.viewportHeight );
-			var wSettings = drawWorldScene(frameTime, false);
-
-			if (guiParams.display.drawTransparentStuff){
-				drawTransparentStuff(rttStageOneView, rttView, gl.viewportWidth, gl.viewportHeight, wSettings);
-				sceneDrawingOutputView = rttView;
-			}
-		}else{
-
+		if (guiParams.display.renderViaTexture == "fisheye"){
 			//draw scene to penultimate screen (before FXAA)
 			gl.bindFramebuffer(gl.FRAMEBUFFER, rttView.framebuffer);
 			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
@@ -917,6 +919,39 @@ function drawScene(frameTime){
 			//gl.depthFunc(gl.LESS);
 
 			sceneDrawingOutputView = rttView;
+		} else if (guiParams.display.renderViaTexture == "blur"){
+					//TODO depth aware blur. for now, simple
+			//draw scene to penultimate screen (before FXAA)
+			gl.bindFramebuffer(gl.FRAMEBUFFER, rttView.framebuffer);
+			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
+			setRttSize( rttView, gl.viewportWidth, gl.viewportHeight );
+
+			bind2dTextureIfRequired(sceneDrawingOutputView.texture);	
+			activeProg = shaderPrograms.fullscreenBlur;
+			gl.useProgram(activeProg);
+			enableDisableAttributes(activeProg);
+			gl.cullFace(gl.BACK);
+			
+			var blurScale = 2;
+			gl.uniform2f(activeProg.uniforms.uInvSize, blurScale/gl.viewportWidth , blurScale/gl.viewportHeight);
+				//TODO blur constant angle - currently blurs constant pixels, so behaviour depends on display resolution.
+			gl.uniform1i(activeProg.uniforms.uSampler, 0);		
+			
+			gl.depthFunc(gl.ALWAYS);
+			drawObjectFromBuffers(fsBuffers, activeProg);
+			//gl.depthFunc(gl.LESS);
+
+			sceneDrawingOutputView = rttView;
+		} else {
+			gl.bindFramebuffer(gl.FRAMEBUFFER, rttStageOneView.framebuffer);
+			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
+			setRttSize( rttStageOneView, gl.viewportWidth, gl.viewportHeight );
+			var wSettings = drawWorldScene(frameTime, false);
+
+			if (guiParams.display.drawTransparentStuff){
+				drawTransparentStuff(rttStageOneView, rttView, gl.viewportWidth, gl.viewportHeight, wSettings);
+				sceneDrawingOutputView = rttView;
+			}
 		}
 		
 		//draw quad to screen using drawn texture
@@ -3389,7 +3424,7 @@ function init(){
 	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.005);
 	displayFolder.add(guiParams.display, "flipReverseCamera");
 	displayFolder.add(guiParams.display, "showHud");
-	displayFolder.add(guiParams.display, "renderViaTexture", ['no','basic','bennyBoxLite','bennyBox','fisheye']);
+	displayFolder.add(guiParams.display, "renderViaTexture", ['no','basic','bennyBoxLite','bennyBox','fisheye','blur']);
 	displayFolder.add(guiParams.display, "drawTransparentStuff");
 	displayFolder.add(guiParams.display, "voxNmapTest");
 	displayFolder.add(guiParams.display, "terrainMapProject");
