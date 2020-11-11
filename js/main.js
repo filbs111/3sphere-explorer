@@ -927,16 +927,20 @@ function drawScene(frameTime){
 			setRttSize( rttView, gl.viewportWidth, gl.viewportHeight );
 
 			bind2dTextureIfRequired(sceneDrawingOutputView.texture);	
+			bind2dTextureIfRequired(sceneDrawingOutputView.depthTexture,gl.TEXTURE2);
+
 			activeProg = shaderPrograms.fullscreenBlur;
 			gl.useProgram(activeProg);
 			enableDisableAttributes(activeProg);
 			gl.cullFace(gl.BACK);
 			
-			var blurScale = 2;
+			var blurScale = 2.5;
 			gl.uniform2f(activeProg.uniforms.uInvSize, blurScale/gl.viewportWidth , blurScale/gl.viewportHeight);
 				//TODO blur constant angle - currently blurs constant pixels, so behaviour depends on display resolution.
-			gl.uniform1i(activeProg.uniforms.uSampler, 0);		
 			
+			gl.uniform1i(activeProg.uniforms.uSampler, 0);
+			gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);
+
 			gl.depthFunc(gl.ALWAYS);
 			drawObjectFromBuffers(fsBuffers, activeProg);
 			//gl.depthFunc(gl.LESS);
@@ -965,6 +969,7 @@ function drawScene(frameTime){
 				activeProg = shaderPrograms.fullscreenTextured;break;
 			case "bennyBox":
 			case "fisheye":
+			case "blur":
 				activeProg = shaderPrograms.fullscreenBennyBox;break;
 			case "bennyBoxLite":
 				activeProg = shaderPrograms.fullscreenBennyBoxLite;break;
