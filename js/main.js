@@ -529,7 +529,8 @@ function initBuffers(){
 		return loadBlenderExport(alteredMesh);
 	}
 	
-	explosionParticles.init();
+	explosionParticleArrs[0].init();
+	explosionParticleArrs[1].init();
 }
 
 var reflectorInfo={
@@ -1700,6 +1701,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//normally in drawObjectFromPreppedBuffers
 		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uMVMatrix, false, mvMatrix);
 		
+		var explosionParticles = explosionParticleArrs[colorsSwitch];
 		var expParticleBuffers = explosionParticles.getBuffers();
 		explosionParticles.getRangesToDraw(frameTime).forEach(elem=>{
 			//	console.log(elem);
@@ -4020,7 +4022,7 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 			if (guiParams.debug.fireworks){
 				if (Math.random()<0.05){
-					explosionParticles.makeExplosion(random_quaternion(), frameTime, [Math.random(),Math.random(),Math.random(),1],1);	//TODO guarantee bright colour
+					explosionParticleArrs[0].makeExplosion(random_quaternion(), frameTime, [Math.random(),Math.random(),Math.random(),1],1);	//TODO guarantee bright colour
 				}
 			}
 			
@@ -4769,6 +4771,8 @@ var iterateMechanics = (function iterateMechanics(){
 			bullet.active=false;
 			
 			var matrix = bullet.matrix;
+
+			var explosionParticles = explosionParticleArrs[bullet.world];
 
 			if (!moveWithDuocylinder){
 				new Explosion(bullet, 0.0003, [1,0.5,0.25], false, true);

@@ -105,5 +105,3 @@ var explosionParticleArrs = (function(){
 
     return [new ExplosionParticleArr(),new ExplosionParticleArr()];
 })();
-
-explosionParticles = explosionParticleArrs[0];  //TODO use both arrays (1 per world)
