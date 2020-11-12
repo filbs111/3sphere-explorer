@@ -42,6 +42,14 @@ void main(void) {
     //vec4 avg = 0.2*(mid + NW + NE + SW + SE);
     //avg.a=1.0;
 
+    //for some shaders output a is not 1 (seen for grid terrain)
+    //if can ensure input has a=1, can lose the following.
+    mid.a=1.0;
+    NE.a=1.0;
+    NW.a=1.0;
+    SE.a=1.0;
+    SW.a=1.0;
+
     vec4 total = 2.0*mid + sampleWeightNE*NE + sampleWeightNW*NW + sampleWeightSE*SE + sampleWeightSW*SW;
     vec4 avg = vec4(total.rgb/total.a , 1.0);
 
