@@ -183,6 +183,7 @@ function initShaders(shaderProgs){
 		texmap4VecPerPixelDiscardNormalmapVcolorAndDiffuse:["texmap-perpixel-normalmap-vs-4vec", "texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR'], ['DIFFUSE_TEX_ACTIVE','VCOLOR'],true],
 		texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse:["texmap-perpixel-normalmap-vs-4vec", "texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','CUSTOM_DEPTH'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','CUSTOM_DEPTH'],true],
 		texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse2Tex:["texmap-perpixel-normalmap-vs-4vec", "texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','CUSTOM_DEPTH'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','DOUBLE_TEXTURES','CUSTOM_DEPTH',"CUSTOM_TEXBIAS"],true],
+		texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse2TexDepthAware:["texmap-perpixel-normalmap-vs-4vec", "texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','CUSTOM_DEPTH','DEPTH_AWARE'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','DOUBLE_TEXTURES','CUSTOM_DEPTH',"CUSTOM_TEXBIAS",'DEPTH_AWARE'],true],
 
 		//voxTerrain shaders
 		triplanarColor4Vec:["texmap-color-triplanar-vs-4vec", "texmap-triplanar-fs",['CUSTOM_DEPTH'],['CUSTOM_DEPTH']],
@@ -198,8 +199,7 @@ function initShaders(shaderProgs){
 		texmap4VecMapprojectDiscardNormalmapVcolorAndDiffuse:["texmap-perpixel-normalmap-vs-4vec", "texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','MAPPROJECT_ACTIVE'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','MAPPROJECT_ACTIVE'],true],	//per pixel tangent space lighting
 		texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse:["texmap-perpixel-normalmap-vs-4vec", "texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE'],true],
 		texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse2Tex:["texmap-perpixel-normalmap-vs-4vec", "texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','CUSTOM_DEPTH'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','DOUBLE_TEXTURES','CUSTOM_DEPTH'],true],	
-		texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse2TexDepthAware:["texmap-perpixel-normalmap-vs-4vec", "texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','CUSTOM_DEPTH','DEPTH_AWARE'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','DOUBLE_TEXTURES','CUSTOM_DEPTH','DEPTH_AWARE'],true],	
-
+		
 		//sea shaders
 		//duocylinderSea:["texmap-vs-duocylinder-sea", "texmap-fs", []],
 		//duocylinderSeaPerPixelDiscard:["texmap-perpixel-vs-duocylinder-sea", "texmap-perpixel-discard-fs", [],[],true],
