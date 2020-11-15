@@ -1392,6 +1392,13 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 
 
 function drawWorldScene(frameTime, isCubemapView) {
+
+	if (!guiParams["drop spaceship"]){
+		mat4.set(playerCameraInterp,sshipMatrix);	//copy current player 4-rotation matrix to the spaceship object
+	}else{
+		mat4.set(sshipMatrixNoInterp, sshipMatrix);		
+	}
+
 	var wSettings = getWorldSceneSettings(isCubemapView);
 	({colorsSwitch,worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, sshipDrawMatrix} = wSettings);
 		//above could just paste getWorldSceneSettings function stuff here instead.
@@ -1416,11 +1423,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	shaderProgramTexmap = guiParams.display.perPixelLighting?relevantTexmapShader:shaderPrograms.texmapPerVertex;	
 	
 	var dropLightPos;
-	if (!guiParams["drop spaceship"]){
-		mat4.set(playerCameraInterp,sshipMatrix);	//copy current player 4-rotation matrix to the spaceship object
-	}else{
-		mat4.set(sshipMatrixNoInterp, sshipMatrix);		
-	}
+	
 	
 	//get light pos in frame of camera. light is at spaceship
 	var lightMat = mat4.create();	//TODO mat*mat is unnecessary - only need to do dropLightPos = sshipMatrix*lightPosInWorld 
