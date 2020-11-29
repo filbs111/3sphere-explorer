@@ -17,8 +17,17 @@
 	varying vec4 vVertexPos;
 	varying vec3 vTextureCoord;
 
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif
+
 	void main(void) {
 		vec4 transformedCoord = uMVMatrix * aVertexPosition;
+
+#ifdef CUSTOM_DEPTH
+		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
+#endif
+
 		gl_Position = uPMatrix * transformedCoord;
 #ifdef ATMOS_CONSTANT		
 		fog = 0.5*(1.0 + transformedCoord.w);

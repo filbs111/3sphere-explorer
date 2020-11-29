@@ -9,10 +9,18 @@ varying float fog;
 uniform vec3 uModelScale;
 varying vec3 veclight;
 
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif
+
 void main(void) {
     vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
     vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
     
+#ifdef CUSTOM_DEPTH
+		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
+#endif
+
     gl_Position = uPMatrix * transformedCoord;
 
     vec4 transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);

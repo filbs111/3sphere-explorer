@@ -1,7 +1,14 @@
 #define CONST_TAU 6.2831853
 #define CONST_REPS 16.0
-	
+
+#ifdef CUSTOM_DEPTH
+	#extension GL_EXT_frag_depth : enable
+#endif
 	precision mediump float;
+#ifdef CUSTOM_DEPTH
+	varying vec2 vZW;
+#endif
+
 	uniform sampler2D uSampler;
 	uniform vec4 uColor;
 	varying float fog;
@@ -12,6 +19,10 @@
 	
 	void main(void) {
 		//gl_FragColor = uColor*texture2D(uSampler, vTextureCoord);
+
+#ifdef CUSTOM_DEPTH
+		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
+#endif
 
 #ifdef MAPPROJECT_ACTIVE
 		vec2 newTexCoord = vec2( atan(vVertexPos.x,vVertexPos.y)*CONST_REPS/CONST_TAU, atan(vVertexPos.z,vVertexPos.w)*CONST_REPS/CONST_TAU);
