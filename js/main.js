@@ -730,6 +730,11 @@ function drawScene(frameTime){
 			}
 			
 			if (guiParams.display.drawTransparentStuff){
+
+				var fullscreenShader = guiParams.display.copyDepthToAlpha ?
+					shaderPrograms.fullscreenTexturedWithDepthmapCopyDepthToAlpha:
+					shaderPrograms.fullscreenTexturedWithDepthmap;
+
 				for (var ii=0;ii<numFacesToUpdate;ii++){
 					var framebuffer = cubemapView.framebuffers[ii];
 					gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
@@ -738,7 +743,7 @@ function drawScene(frameTime){
 					xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);	
 					rotateCameraForFace(ii);
 					
-					var activeProg = shaderPrograms.fullscreenTexturedWithDepthmap;
+					var activeProg = fullscreenShader;
 					gl.useProgram(activeProg);
 					enableDisableAttributes(activeProg);
 
@@ -2376,6 +2381,9 @@ function drawWorldScene(frameTime, isCubemapView) {
 			case 'vertproj mix':
 			activeShaderProgram = shaderPrograms.vertprojMix[ guiParams.display.atmosShader ];
 			break;
+			case 'depth to alpha copy':	//test
+			activeShaderProgram = shaderPrograms.vertprojCubemapTestDepthAlpha[ guiParams.display.atmosShader ];
+			break;
 		}
 		gl.useProgram(activeShaderProgram);
 		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uPosShiftMat, false, reflectorInfo.shaderMatrix);
@@ -2438,7 +2446,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform1f(activeShaderProgram.uniforms.uPolarity, reflectorInfo.polarity);
 		
 			
-		if(['vertex projection','screen space'].includes(guiParams.reflector.mappingType) ){
+		if(['vertex projection','screen space','depth to alpha copy'].includes(guiParams.reflector.mappingType) ){
 			gl.uniform3fv(activeShaderProgram.uniforms.uCentrePosScaled, reflectorInfo.centreTanAngleVectorScaled);
 		}
 		drawObjectFromBuffers(sphereBuffersHiRes, activeShaderProgram, true);
@@ -3251,6 +3259,7 @@ var guiParams={
 		terrainMapProject:false,
 		texBias:0.0,
 		zPrepass:true,	//currently applies only to 4vec objects (eg terrain), and only affect overdraw for that object. 
+		copyDepthToAlpha:false,
 		perPixelLighting:true,
 		atmosShader:"atmos",
 		atmosThickness:0.2,
@@ -3440,6 +3449,7 @@ function init(){
 	displayFolder.add(guiParams.display, "terrainMapProject");
 	displayFolder.add(guiParams.display, "texBias",-4.0,4.0,0.25);
 	displayFolder.add(guiParams.display, "zPrepass");
+	displayFolder.add(guiParams.display, "copyDepthToAlpha");
 	displayFolder.add(guiParams.display, "perPixelLighting");
 	//displayFolder.add(guiParams.display, "atmosShader", ['constant','atmos','atmos_v2']);	//basic is constant (contrast=0) 
 	displayFolder.add(guiParams.display, "atmosThickness", 0,0.5,0.05);
@@ -3474,7 +3484,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	var reflectorFolder = gui.addFolder('reflector');
 	reflectorFolder.add(guiParams.reflector, "draw");
 	reflectorFolder.add(guiParams.reflector, "cmFacesUpdated", 0,6,1);
-	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection','screen space','vertproj mix']);
+	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection','screen space','vertproj mix','depth to alpha copy']);
 	reflectorFolder.add(guiParams.reflector, "scale", 0.05,2,0.01);
 	reflectorFolder.add(guiParams.reflector, "isPortal");
 	reflectorFolder.add(guiParams.reflector, "test1");

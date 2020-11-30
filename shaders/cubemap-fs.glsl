@@ -26,7 +26,7 @@
 
 #ifndef SPECIAL
 #ifndef VPROJ_MIX
-		vec3 preGammaFragColor = pow(textureCube(uSampler, vPos).xyz,vec3(2.2));
+		vec3 cubeFragCoords = vPos;
 #else
 		vec2 interpCoords = vScreenSpaceCoord.xy/vScreenSpaceCoord.z;
 		vec4 pointingDirection = normalize(vec4(-uFNumber*interpCoords,1.,0.));
@@ -36,7 +36,7 @@
 		
 		float closeness = dot(uCentrePosScaledFSCopy,uCentrePosScaledFSCopy);	//something that goes to 1 in shaky regime, 0 outside
 		closeness = pow(closeness,6.);
-		vec3 preGammaFragColor = pow(textureCube(uSampler, vPos - 0.05*closeness*simplePlanarPortalDir.xyz).xyz,vec3(2.2));	//simplePlanar will become dominant when other term small
+		vec3 cubeFragCoords = vPos - 0.05*closeness*simplePlanarPortalDir.xyz;	//simplePlanar will become dominant when other term small
 #endif
 #else
 		//preGammaFragColor.rg*=0.5*(1.+sin(10.*vScreenSpaceCoord));
@@ -79,11 +79,13 @@
 		vec4 simplePlanarPortalDir = pointingDirection*uPortaledMatrix;
 		float closeness = dot(uCentrePosScaledFSCopy,uCentrePosScaledFSCopy);	//something that goes to 1 in shaky regime, 0 outside
 		closeness = pow(closeness,6.);
-		vec3 preGammaFragColor = pow(textureCube(uSampler, normalize(-collisonPoint.xyz) - uCentrePosScaledFSCopy - 0.05*closeness*simplePlanarPortalDir.xyz).xyz,vec3(2.2));	//simplePlanar will become dominant when other term small
-
-
+		vec3 cubeFragCoords = normalize(-collisonPoint.xyz) - uCentrePosScaledFSCopy - 0.05*closeness*simplePlanarPortalDir.xyz;
+				//simplePlanar will become dominant when other term small
 #endif
 		
+		vec4 fragColorRGBA = textureCube(uSampler, cubeFragCoords);
+		vec3 preGammaFragColor =  pow(fragColorRGBA.xyz,vec3(2.2));
+
 		//undo tone mapping . y=1/(1+x) => x=y/(1-y)
 		//seems like in practice, undoing, redoing tone mapping has little value, but guess because currently not using very bright lighting.
 		//TODO check whether still need this - 
@@ -97,6 +99,10 @@
 		
 		gl_FragColor = vec4( pow(preGammaFragColor, vec3(0.455)) , 1.0);
 		
+#ifdef GREY_ALPHA
+	    gl_FragColor = vec4(vec3(fragColorRGBA.a),1.0);
+#endif
+
 #ifdef CUSTOM_DEPTH
 		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
 		//vec2 normZW= normalize(vZW);
