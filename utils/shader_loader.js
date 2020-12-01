@@ -154,6 +154,7 @@ function initShaders(shaderProgs){
 		fullscreenBennyBoxLite:["fullscreen-vs", "fullscreen-fs-bennybox-lite"],
 		fullscreenBennyBox:["fullscreen-vs", "fullscreen-fs-bennybox"],		//https://www.youtube.com/watch?v=Z9bYzpwVINA
 		fullscreenBlur:["fullscreen-vs", "fullscreen-fs-blur"],
+		fullscreenBlurB:["fullscreen-vs", "fullscreen-fs-blur-b"],
 		coloredPerVertex:["simple-vs", "simple-fs"],
 		//coloredPerPixel:["perpixel-vs", "perpixel-fs"],		//unused
 		coloredPerPixelTransparentDiscard:["perpixel-transparent-discard-vs", "perpixel-transparent-discard-fs",[],[]],

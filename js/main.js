@@ -857,7 +857,7 @@ function drawScene(frameTime){
 				sceneDrawingOutputView = rttFisheyeView2;
 			}
 		}
-		if (guiParams.display.renderViaTexture == "blur"){
+		if (guiParams.display.renderViaTexture == "blur" || guiParams.display.renderViaTexture == "blur-b"){
 			gl.bindFramebuffer(gl.FRAMEBUFFER, rttStageOneView.framebuffer);
 			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );			//already set? maybe should add some buffer zone around image, 
 																				//but with clamp sampling, result should be OK.
@@ -925,7 +925,7 @@ function drawScene(frameTime){
 			//gl.depthFunc(gl.LESS);
 
 			sceneDrawingOutputView = rttView;
-		} else if (guiParams.display.renderViaTexture == "blur"){
+		} else if (guiParams.display.renderViaTexture == "blur" || guiParams.display.renderViaTexture == "blur-b" ){
 					//TODO depth aware blur. for now, simple
 			//draw scene to penultimate screen (before FXAA)
 			gl.bindFramebuffer(gl.FRAMEBUFFER, rttView.framebuffer);
@@ -935,7 +935,7 @@ function drawScene(frameTime){
 			bind2dTextureIfRequired(sceneDrawingOutputView.texture);	
 			bind2dTextureIfRequired(sceneDrawingOutputView.depthTexture,gl.TEXTURE2);
 
-			activeProg = shaderPrograms.fullscreenBlur;
+			activeProg = guiParams.display.renderViaTexture == "blur" ? shaderPrograms.fullscreenBlur: shaderPrograms.fullscreenBlurB;
 			gl.useProgram(activeProg);
 			enableDisableAttributes(activeProg);
 			gl.cullFace(gl.BACK);
@@ -976,6 +976,7 @@ function drawScene(frameTime){
 			case "bennyBox":
 			case "fisheye":
 			case "blur":
+			case "blur-b":
 				activeProg = shaderPrograms.fullscreenBennyBox;break;
 			case "bennyBoxLite":
 				activeProg = shaderPrograms.fullscreenBennyBoxLite;break;
@@ -3443,7 +3444,7 @@ function init(){
 	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.005);
 	displayFolder.add(guiParams.display, "flipReverseCamera");
 	displayFolder.add(guiParams.display, "showHud");
-	displayFolder.add(guiParams.display, "renderViaTexture", ['no','basic','bennyBoxLite','bennyBox','fisheye','blur']);
+	displayFolder.add(guiParams.display, "renderViaTexture", ['no','basic','bennyBoxLite','bennyBox','fisheye','blur','blur-b']);
 	displayFolder.add(guiParams.display, "drawTransparentStuff");
 	displayFolder.add(guiParams.display, "voxNmapTest");
 	displayFolder.add(guiParams.display, "terrainMapProject");
