@@ -23,12 +23,16 @@ float random( vec2 p )
 
 void main(void) {
 
+    vec4 mid = texture2D(uSampler, vTextureCoord);
+
+#ifdef USE_ALPHA
+    float depthVal = mid.a;
+#else
     float depthVal = texture2D(uSamplerDepthmap, vTextureCoord).r;
+#endif
 
     float blurAmount = 0.5 + (1.0/3.14)*( atan(40.0*(depthVal-0.5)) );
     vec2 offsetAmount = uInvSize*blurAmount;
-
-    vec4 mid = texture2D(uSampler, vTextureCoord);
 
     float valA = 0.8;
     float valB = 1.2;
@@ -41,22 +45,28 @@ void main(void) {
 
     vec2 NWCoord = vTextureCoord + offsetAmount*vec2(-valA,-valB);
     vec4 NW = texture2D(uSampler, NWCoord);
-    float depthNW = texture2D(uSamplerDepthmap, NWCoord).r;
-    float sampleWeightNW = sampleWeight(depthNW - depthVal);
-    
     vec2 NECoord = vTextureCoord + offsetAmount*vec2(valB,-valA);
     vec4 NE = texture2D(uSampler, NECoord);
-    float depthNE = texture2D(uSamplerDepthmap, NECoord).r;
-    float sampleWeightNE = sampleWeight(depthNE - depthVal);
-
     vec2 SWCoord = vTextureCoord + offsetAmount*vec2(-valB,valA);
     vec4 SW = texture2D(uSampler, SWCoord);
-    float depthSW = texture2D(uSamplerDepthmap, SWCoord).r;
-    float sampleWeightSW = sampleWeight(depthSW - depthVal);
-
     vec2 SECoord = vTextureCoord + offsetAmount*vec2(valA,valB);
     vec4 SE = texture2D(uSampler, SECoord);
+
+#ifdef USE_ALPHA
+    float depthNW = NW.a;
+    float depthNE = NE.a;
+    float depthSW = SW.a;
+    float depthSE = SE.a;
+#else
+    float depthNW = texture2D(uSamplerDepthmap, NWCoord).r;
+    float depthNE = texture2D(uSamplerDepthmap, NECoord).r;
+    float depthSW = texture2D(uSamplerDepthmap, SWCoord).r;
     float depthSE = texture2D(uSamplerDepthmap, SECoord).r;
+#endif
+
+    float sampleWeightNW = sampleWeight(depthNW - depthVal);
+    float sampleWeightNE = sampleWeight(depthNE - depthVal);
+    float sampleWeightSW = sampleWeight(depthSW - depthVal);
     float sampleWeightSE = sampleWeight(depthSE - depthVal);
 
     //vec4 avg = 0.2*(mid + NW + NE + SW + SE);

@@ -41,5 +41,7 @@
 		
 		//gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		//gl_FragColor = (1.0-fog)*uFogColor;
-		gl_FragColor.a =1.0;
+
+		float depthVal = .5*(vZW.x/vZW.y) + .5;	//assumes passing though vZW.
+		gl_FragColor.a = depthVal;
 	}

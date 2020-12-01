@@ -97,7 +97,7 @@
 		//reapply tone mapping
 		preGammaFragColor = preToneMap/(1.+preToneMap);
 		
-		gl_FragColor = vec4( pow(preGammaFragColor, vec3(0.455)) , 1.0);
+		gl_FragColor = vec4( pow(preGammaFragColor, vec3(0.455)), fragColorRGBA.a);	//copy depth info from alpha channel
 		
 #ifdef GREY_ALPHA
 	    gl_FragColor = vec4(vec3(fragColorRGBA.a),1.0);

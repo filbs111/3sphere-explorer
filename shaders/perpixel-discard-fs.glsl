@@ -58,7 +58,9 @@
 		
 		gl_FragColor.a =uColor.a;	//TODO confirm check logic for transparent objects
 #ifdef CUSTOM_DEPTH
-		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
+		float depthVal = .5*(vZW.x/vZW.y) + .5;
+		gl_FragDepthEXT = depthVal;
+		gl_FragColor.a = depthVal;
 #endif
 	}
 

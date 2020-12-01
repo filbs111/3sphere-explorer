@@ -138,5 +138,7 @@
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
 		
 		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
-		gl_FragColor.a =1.0;
+		
+		float depthVal = .5*(vZW.x/vZW.y) + .5;
+		gl_FragColor.a = depthVal;
 	}

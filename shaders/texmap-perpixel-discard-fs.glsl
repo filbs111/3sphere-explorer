@@ -41,7 +41,8 @@
 	//, but still want to write depth when drawing sea, which this shader used for
 	//TODO separate shader for sea if impacts perf
 #ifdef CUSTOM_DEPTH
-		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
+		float depthVal = .5*(vZW.x/vZW.y) + .5;
+		gl_FragDepthEXT = depthVal;
 #endif
 //#endif
 
@@ -113,6 +114,12 @@
 		//preGammaFragColor = vec4( vec3(depthDifference) ,1.);	//TODO use coords that project without extra term
 		gl_FragColor.a = 1.-exp(depthDifference*1000.);
 #else
-		gl_FragColor.a =1.0;
+
+	#ifdef CUSTOM_DEPTH
+			gl_FragColor.a = depthVal;	//note this is missed ifdef depth_aware, so blur on sea won't be right
+	#else
+			gl_FragColor.a =1.0;
+	#endif
+
 #endif	
 	}

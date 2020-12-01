@@ -730,11 +730,6 @@ function drawScene(frameTime){
 			}
 			
 			if (guiParams.display.drawTransparentStuff){
-
-				var fullscreenShader = guiParams.display.copyDepthToAlpha ?
-					shaderPrograms.fullscreenTexturedWithDepthmapCopyDepthToAlpha:
-					shaderPrograms.fullscreenTexturedWithDepthmap;
-
 				for (var ii=0;ii<numFacesToUpdate;ii++){
 					var framebuffer = cubemapView.framebuffers[ii];
 					gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
@@ -743,7 +738,7 @@ function drawScene(frameTime){
 					xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);	
 					rotateCameraForFace(ii);
 					
-					var activeProg = fullscreenShader;
+					var activeProg = shaderPrograms.fullscreenTexturedWithDepthmap;
 					gl.useProgram(activeProg);
 					enableDisableAttributes(activeProg);
 
@@ -857,7 +852,8 @@ function drawScene(frameTime){
 				sceneDrawingOutputView = rttFisheyeView2;
 			}
 		}
-		if (guiParams.display.renderViaTexture == "blur" || guiParams.display.renderViaTexture == "blur-b"){
+		if (guiParams.display.renderViaTexture == "blur" || guiParams.display.renderViaTexture == "blur-b" 
+			|| guiParams.display.renderViaTexture == "blur-b-use-alpha"){
 			gl.bindFramebuffer(gl.FRAMEBUFFER, rttStageOneView.framebuffer);
 			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );			//already set? maybe should add some buffer zone around image, 
 																				//but with clamp sampling, result should be OK.
@@ -925,7 +921,8 @@ function drawScene(frameTime){
 			//gl.depthFunc(gl.LESS);
 
 			sceneDrawingOutputView = rttView;
-		} else if (guiParams.display.renderViaTexture == "blur" || guiParams.display.renderViaTexture == "blur-b" ){
+		} else if (guiParams.display.renderViaTexture == "blur" || guiParams.display.renderViaTexture == "blur-b"
+			|| guiParams.display.renderViaTexture == "blur-b-use-alpha"){
 					//TODO depth aware blur. for now, simple
 			//draw scene to penultimate screen (before FXAA)
 			gl.bindFramebuffer(gl.FRAMEBUFFER, rttView.framebuffer);
@@ -935,7 +932,9 @@ function drawScene(frameTime){
 			bind2dTextureIfRequired(sceneDrawingOutputView.texture);	
 			bind2dTextureIfRequired(sceneDrawingOutputView.depthTexture,gl.TEXTURE2);
 
-			activeProg = guiParams.display.renderViaTexture == "blur" ? shaderPrograms.fullscreenBlur: shaderPrograms.fullscreenBlurB;
+			activeProg = guiParams.display.renderViaTexture == "blur" ? shaderPrograms.fullscreenBlur:
+				guiParams.display.renderViaTexture == "blur-b" ? shaderPrograms.fullscreenBlurB :
+				shaderPrograms.fullscreenBlurBUseAlpha;
 			gl.useProgram(activeProg);
 			enableDisableAttributes(activeProg);
 			gl.cullFace(gl.BACK);
@@ -973,10 +972,13 @@ function drawScene(frameTime){
 		switch (guiParams.display.renderViaTexture){
 			case "basic": 
 				activeProg = shaderPrograms.fullscreenTextured;break;
+			case "showAlpha":
+				activeProg = shaderPrograms.fullscreenTexturedShowAlphaChan;break;
 			case "bennyBox":
 			case "fisheye":
 			case "blur":
 			case "blur-b":
+			case "blur-b-use-alpha":
 				activeProg = shaderPrograms.fullscreenBennyBox;break;
 			case "bennyBoxLite":
 				activeProg = shaderPrograms.fullscreenBennyBoxLite;break;
@@ -3254,7 +3256,7 @@ var guiParams={
 		uVarOne:-0.01,
 		flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
 		showHud:false,
-		renderViaTexture:'bennyBox',
+		renderViaTexture:'blur-b-use-alpha',
 		drawTransparentStuff:true,
 		voxNmapTest:false,	//just show normal map. more efficient pix shader than standard. for performance check
 		terrainMapProject:false,
@@ -3444,13 +3446,12 @@ function init(){
 	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.005);
 	displayFolder.add(guiParams.display, "flipReverseCamera");
 	displayFolder.add(guiParams.display, "showHud");
-	displayFolder.add(guiParams.display, "renderViaTexture", ['no','basic','bennyBoxLite','bennyBox','fisheye','blur','blur-b']);
+	displayFolder.add(guiParams.display, "renderViaTexture", ['no','basic','showAlpha','bennyBoxLite','bennyBox','fisheye','blur','blur-b','blur-b-use-alpha']);
 	displayFolder.add(guiParams.display, "drawTransparentStuff");
 	displayFolder.add(guiParams.display, "voxNmapTest");
 	displayFolder.add(guiParams.display, "terrainMapProject");
 	displayFolder.add(guiParams.display, "texBias",-4.0,4.0,0.25);
 	displayFolder.add(guiParams.display, "zPrepass");
-	displayFolder.add(guiParams.display, "copyDepthToAlpha");
 	displayFolder.add(guiParams.display, "perPixelLighting");
 	//displayFolder.add(guiParams.display, "atmosShader", ['constant','atmos','atmos_v2']);	//basic is constant (contrast=0) 
 	displayFolder.add(guiParams.display, "atmosThickness", 0,0.5,0.05);

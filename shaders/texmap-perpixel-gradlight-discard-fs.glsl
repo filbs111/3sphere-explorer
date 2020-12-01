@@ -108,10 +108,12 @@
 		
 		//gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		//gl_FragColor = (1.0-fog)*uFogColor;
-		gl_FragColor.a =1.0;
-		
+
+		float depthVal = .5*(vZW.x/vZW.y) + .5;
+		gl_FragColor.a = depthVal;
+
 #ifdef CUSTOM_DEPTH
-		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
+		gl_FragDepthEXT = depthVal;
 		//vec2 normZW=normalize(vZW);
 		//gl_FragDepthEXT = .5*(normZW.x/normZW.y) + .5;
 #endif

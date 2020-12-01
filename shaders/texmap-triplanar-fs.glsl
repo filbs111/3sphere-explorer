@@ -29,7 +29,9 @@
 		//gl_FragColor = (1.0-fog)*uFogColor;
 		gl_FragColor.a =1.0;
 #ifdef CUSTOM_DEPTH
-		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
+		float depthVal = .5*(vZW.x/vZW.y) + .5;
+		gl_FragDepthEXT = depthVal;
+		gl_FragColor.a = depthVal;
 #endif
 	}
 

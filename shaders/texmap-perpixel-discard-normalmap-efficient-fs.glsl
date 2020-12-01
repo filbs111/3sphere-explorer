@@ -159,7 +159,8 @@
 		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
 	
 
-		gl_FragColor.a =1.0;
+		float depthVal = .5*(vZW.x/vZW.y) + .5;
+		gl_FragColor.a = depthVal;
 
 		//gl_FragDepthEXT = gl_FragCoord.z;	//reproduces standard behaviour. TODO try z/(1+w) for stereographic projection (with some scaling to get inside capped range. 0->1 or -1->1 ?) , to avoid near/far clipping
 	}
