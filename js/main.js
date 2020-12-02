@@ -2578,7 +2578,8 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 	targetRad=sshipModelScale*150;
 	gl.uniform3f(transpShadProg.uniforms.uModelScale, targetRad/50,targetRad/50,targetRad);	//long streaks
 	gl.uniform3f(transpShadProg.uniforms.uEmitColor, 1.0, 1.0, 0.5);	//YELLOW
-	
+	gl.uniform1f(transpShadProg.uniforms.uOpacity, 1.0);
+
 	gl.enable(gl.BLEND);
 	gl.blendFunc(gl.SRC_ALPHA , gl.ONE);	
 	gl.depthMask(false);
@@ -2616,7 +2617,8 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 			
 			if (frustumCull(mvMatrix,radius)){	
 					//TODO check is draw order independent transparency
-				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, singleExplosion.color.map(function(val){return val*opac;}));
+				gl.uniform1f(transpShadProg.uniforms.uOpacity, opac);
+				gl.uniform3fv(transpShadProg.uniforms.uEmitColor, singleExplosion.color);	//TODO neutral colour
 				gl.uniform3f(transpShadProg.uniforms.uModelScale, radius,radius,radius);
 				drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
 			}
@@ -2627,8 +2629,11 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 			if (largeRadiusAng<maxShockRadAng){
 				var largeRadius = Math.tan(largeRadiusAng);
 				if (frustumCull(mvMatrix,largeRadius)){	//todo larger max shock rad for larger singleExplosion.size
-					var largeOpac = 0.1*(1-(largeRadiusAng/maxShockRadAng));	//linearly drop opacity as sphere expands (simple)
-					gl.uniform3fv(transpShadProg.uniforms.uEmitColor, singleExplosion.color.map(function(val){return val*largeOpac;}));	//TODO neutral colour
+					var largeOpac = 2.0*(1-(largeRadiusAng/maxShockRadAng));	//linearly drop opacity as sphere expands (simple)
+					largeOpac*=2000.0*singleExplosion.size;	//fudge to make bigger explosions more opaque
+						//note results in small muzzle flash shockwaves near invisible therefore maybe a waste.
+					gl.uniform1f(transpShadProg.uniforms.uOpacity, largeOpac);
+					gl.uniform3f(transpShadProg.uniforms.uEmitColor, 0.05,0.05,0.05);
 					gl.uniform3f(transpShadProg.uniforms.uModelScale, largeRadius,largeRadius,largeRadius);
 					drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
 				}
@@ -2638,11 +2643,12 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 	
 	
 	//muzzle flash? 
+	gl.uniform3f(transpShadProg.uniforms.uEmitColor, 1, 0.5, 0.25);
 	for (var gg in gunMatrices){
 		//if (gg>0) continue;
 		var mfRad = 0.005;
-		var flashAmount = muzzleFlashAmounts[gg]
-		gl.uniform3f(transpShadProg.uniforms.uEmitColor, flashAmount, flashAmount/2, flashAmount/4);
+		var flashAmount = muzzleFlashAmounts[gg];
+		gl.uniform1f(transpShadProg.uniforms.uOpacity, flashAmount);
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,gunMatrices[gg]);
 		xyzmove4mat(mvMatrix,[0,0,0.0075]);
@@ -3799,7 +3805,7 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		for (var ee in explosions){
 			var singleExplosion = explosions[ee];
-			singleExplosion.life-=0.4*numSteps;
+			singleExplosion.life-=0.2*numSteps;
 			if (singleExplosion.life<1){
 				matPool.destroy(singleExplosion.matrix);
 				delete explosions[ee];

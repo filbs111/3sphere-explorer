@@ -3,6 +3,7 @@
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
 	uniform vec3 uModelScale;
+	uniform float uOpacity;
 	varying float fog;
 	varying vec4 transformedCoord;
 	varying vec4 transformedNormal;
@@ -18,4 +19,5 @@
 		gl_Position = uPMatrix * transformedCoord;
 		
 		fog = 0.5*(1.0 + transformedCoord.w);
+		fog*=uOpacity;
 	}
