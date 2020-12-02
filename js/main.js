@@ -711,6 +711,14 @@ function drawScene(frameTime){
 		
 		frustumCull = squareFrustumCull;
 		if (guiParams.reflector.cmFacesUpdated>0){
+			var cubemapLevel = guiParams.reflector.cubemapDownsize == "auto" ? 
+				(playerCamera[15]>0.8 ? 0:(playerCamera[15]>0.5? 1:2))	:	//todo calculate angular resolution of cubemap in final camera,  
+						//dependent on distance, FOV, blur, screen resolution etc, and choose appropriate detail level
+						//currently just manually, roughly tuned for 1080p, current settings.
+				guiParams.reflector.cubemapDownsize ;
+
+			setCubemapTexLevel(cubemapLevel);	//set texture#1
+			var cubemapView = cubemapViews[cubemapLevel];
 			
 			var wSettingsArr = [];	//TODO is this always same?
 			
@@ -2971,7 +2979,7 @@ function setMatrixUniforms(shaderProgram) {
 	setupShaderAtmos(shaderProgram);
 }
 
-var cubemapView={};
+var cubemapViews;
 //cube map code from http://www.humus.name/cubemapviewer.js (slightly modified)
 
 function power_of_2(n) {
@@ -2981,12 +2989,36 @@ function power_of_2(n) {
 	return (n >= 1) && (n & (n - 1)) === 0;
 }
 
-function initCubemapFramebuffer(view){
+function initCubemapFramebuffers(){
 	const urlParams = new URLSearchParams(window.location.search);
 	var manualCubemapSize = Number(urlParams.get('cms'));
-	var cubemapSize = ( power_of_2(manualCubemapSize) &&  manualCubemapSize<8192) ? manualCubemapSize : 512;	//disallow really big, because causes awful perf.
-																												//512 decent for 1080p end result. 1024 bit better. my machine handles 4096, but no point
+	var cubemapSize = power_of_2(manualCubemapSize) ? manualCubemapSize : 512;
+										//512 decent for 1080p end result. 1024 bit better. my machine handles 4096, but no point
+	cubemapSize = Math.min(cubemapSize, 4096);	//disallow really big, because causes awful perf.
+	cubemapSize = Math.max(cubemapSize, 64);	//disallow very small.
+	
 	console.log({manualCubemapSize, cubemapSize});
+
+	var numLevels = 4;
+	var viewsArr = new Array(numLevels);
+	for (var ii=0;ii<numLevels;ii++){
+		viewsArr[ii]=initCubemapFramebuffer({}, cubemapSize >> ii);
+	}
+	return viewsArr;
+}
+
+var setCubemapTexLevel = (function generateGetCubemapTexLevelFunc(){
+	var currentLevel;
+	return function(newLevel){
+		if (newLevel!=currentLevel){
+			gl.activeTexture(gl.TEXTURE1);	//use texture 1 always for cubemap
+			gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubemapViews[newLevel].cubemapTexture);
+			currentLevel=newLevel;
+		}
+	}
+})();
+
+function initCubemapFramebuffer(view, cubemapSize){
 
 	//for rendering to separate 2d textures, prior to cubemap
 	var intermediateFramebuffers = [];
@@ -3076,6 +3108,7 @@ function initCubemapFramebuffer(view){
 	
 	//gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);	//this gets rid of errors being logged to console. 
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+	return view;
 }
 
 function setupScene() {
@@ -3282,6 +3315,7 @@ var guiParams={
 	reflector:{
 		draw:true,
 		cmFacesUpdated:6,
+		cubemapDownsize:'auto',
 		mappingType:'vertex projection',
 		scale:0.3,
 		isPortal:true,
@@ -3492,6 +3526,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	var reflectorFolder = gui.addFolder('reflector');
 	reflectorFolder.add(guiParams.reflector, "draw");
 	reflectorFolder.add(guiParams.reflector, "cmFacesUpdated", 0,6,1);
+	reflectorFolder.add(guiParams.reflector, "cubemapDownsize", [0,1,2,3,'auto']);
 	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection','screen space','vertproj mix','depth to alpha copy']);
 	reflectorFolder.add(guiParams.reflector, "scale", 0.05,2,0.01);
 	reflectorFolder.add(guiParams.reflector, "isPortal");
@@ -3581,7 +3616,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	initTextureFramebuffer(rttFisheyeView2);
 	initShaders(shaderPrograms);initShaders=null;
 	initTexture();
-	initCubemapFramebuffer(cubemapView);
+	cubemapViews = initCubemapFramebuffers();
 	initBuffers();
 	getLocationsForShadersUsingPromises(
 		()=>{
