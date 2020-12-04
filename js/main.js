@@ -2374,6 +2374,23 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}
 	}
 
+
+	//draw frame around portal/reflector
+	if (guiParams.reflector.drawFrame){
+		var frameScale = guiParams.reflector.scale;
+		activeShaderProgram = shaderProgramTexmap;
+		shaderSetup(activeShaderProgram, texture);
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, frameScale,frameScale,frameScale);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, localVecFogColor);	//same colour as world this frame is in
+
+		mat4.set(invertedWorldCamera, mvMatrix);
+		//mat4.multiply(mvMatrix,thisCell);	//identity currently
+		//mat4.set(thisCell, mMatrix);	//set to identity directly
+		mat4.identity(mMatrix);
+
+		drawObjectFromBuffers(cubeFrameSubdivBuffers, activeShaderProgram);
+	}
+
 	//DRAW PORTAL/REFLECTOR
 	if (guiParams.reflector.draw && !isCubemapView && frustumCull(invertedWorldCamera,reflectorInfo.rad)){
 		var savedActiveProg = activeShaderProgram;
@@ -3317,8 +3334,9 @@ var guiParams={
 		cmFacesUpdated:6,
 		cubemapDownsize:'auto',
 		mappingType:'vertex projection',
-		scale:0.3,
+		scale:0.2,
 		isPortal:true,
+		drawFrame:true,
 		test1:false
 	},
 	debug:{
@@ -3530,6 +3548,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection','screen space','vertproj mix','depth to alpha copy']);
 	reflectorFolder.add(guiParams.reflector, "scale", 0.05,2,0.01);
 	reflectorFolder.add(guiParams.reflector, "isPortal");
+	reflectorFolder.add(guiParams.reflector, "drawFrame");
 	reflectorFolder.add(guiParams.reflector, "test1");
 
 	window.addEventListener("keydown",function(evt){
