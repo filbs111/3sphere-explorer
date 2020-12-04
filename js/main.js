@@ -2389,6 +2389,25 @@ function drawWorldScene(frameTime, isCubemapView) {
 		mat4.identity(mMatrix);
 
 		drawObjectFromBuffers(cubeFrameSubdivBuffers, activeShaderProgram);
+
+
+		//draw coloured axis objects
+		var smallScale = frameScale*0.1;
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, smallScale,smallScale,smallScale);
+		var moveAmount = Math.atan(guiParams.reflector.scale) + smallScale;	//to portal surface then by small frame size
+
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.red);
+		mat4.set(invertedWorldCamera, mvMatrix);
+		xyzmove4mat(mvMatrix, [moveAmount,0,0]);	//TODO correct mMatrix, but IIRC only impacts lighting 
+		drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.green);
+		mat4.set(invertedWorldCamera, mvMatrix);
+		xyzmove4mat(mvMatrix, [0,moveAmount,0]);	//TODO correct mMatrix, but IIRC only impacts lighting 
+		drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.blue);
+		mat4.set(invertedWorldCamera, mvMatrix);
+		xyzmove4mat(mvMatrix, [0,0,moveAmount]);	//TODO correct mMatrix, but IIRC only impacts lighting 
+		drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
 	}
 
 	//DRAW PORTAL/REFLECTOR
@@ -3246,7 +3265,7 @@ var stats;
 var pointerLocked=false;
 var guiParams={
 	world0:{duocylinderModel:"voxTerrain",seaActive:false},
-	world1:{duocylinderModel:"none",seaActive:false},
+	world1:{duocylinderModel:"procTerrain",seaActive:false},
 	duocylinderRotateSpeed:0,
 	seaLevel:-0.012,
 	drawShapes:{
@@ -3296,8 +3315,8 @@ var guiParams={
 	"targeting":"off",
 	//fogColor0:'#b2dede',
 	//fogColor0:'#b451c5',
-	fogColor0:'#222222',
-	fogColor1:'#aaaaaa',
+	fogColor0:'#dca985',
+	fogColor1:'#5cd5e6',
 	playerLight:'#808080',
 	control:{
 		onRails:false,
