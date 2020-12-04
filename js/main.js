@@ -2376,6 +2376,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 
 
 	var portalMat = portalMats[colorsSwitch];
+	var portalInCamera = mat4.create(invertedWorldCamera);	//might reuse invertedWorldCamera for effeciency,			
+	mat4.multiply(portalInCamera, portalMat);			//but use new matrix for safety/code clarity.
 
 	//draw frame around portal/reflector
 	if (guiParams.reflector.drawFrame){
@@ -2385,7 +2387,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, frameScale,frameScale,frameScale);
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, localVecFogColor);	//same colour as world this frame is in
 
-		mat4.set(invertedWorldCamera, mvMatrix);mat4.multiply(mvMatrix,portalMat);mat4.set(portalMat, mMatrix);
+		mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
 
 		drawObjectFromBuffers(cubeFrameSubdivBuffers, activeShaderProgram);
 
@@ -2395,21 +2397,22 @@ function drawWorldScene(frameTime, isCubemapView) {
 		var moveAmount = Math.atan(guiParams.reflector.scale) + smallScale;	//to portal surface then by small frame size
 
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.red);
-		mat4.set(invertedWorldCamera, mvMatrix);mat4.multiply(mvMatrix,portalMat);mat4.set(portalMat, mMatrix);
+		mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
 		xyzmove4mat(mvMatrix, [moveAmount,0,0]);	//TODO correct mMatrix, but IIRC only impacts lighting 
 		drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.green);
-		mat4.set(invertedWorldCamera, mvMatrix);mat4.multiply(mvMatrix,portalMat);mat4.set(portalMat, mMatrix);
+		mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
 		xyzmove4mat(mvMatrix, [0,moveAmount,0]);	//TODO correct mMatrix, but IIRC only impacts lighting 
 		drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.blue);
-		mat4.set(invertedWorldCamera, mvMatrix);mat4.multiply(mvMatrix,portalMat);mat4.set(portalMat, mMatrix);
+		mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
 		xyzmove4mat(mvMatrix, [0,0,moveAmount]);	//TODO correct mMatrix, but IIRC only impacts lighting 
 		drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
 	}
 
 	//DRAW PORTAL/REFLECTOR
-	if (guiParams.reflector.draw && !isCubemapView && frustumCull(invertedWorldCamera,reflectorInfo.rad)){
+
+	if (guiParams.reflector.draw && !isCubemapView && frustumCull(portalInCamera,reflectorInfo.rad)){
 		var savedActiveProg = activeShaderProgram;
 		
 		//TODO have some variable for activeReflectorShader, avoid switch.
@@ -2448,8 +2451,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniform4f(activeShaderProgram.uniforms.uPortalCameraPos, worldCamera[3],worldCamera[7],worldCamera[11],worldCamera[15]);
 		}
 		
-		mat4.set(invertedWorldCamera, mvMatrix);
-		mat4.multiply(mvMatrix,portalMat);
+		mat4.set(portalInCamera, mvMatrix);
 		mat4.set(portalMat,mMatrix);
 		
 		if (activeShaderProgram.uniforms.uFNumber){
