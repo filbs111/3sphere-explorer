@@ -2383,13 +2383,11 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, frameScale,frameScale,frameScale);
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, localVecFogColor);	//same colour as world this frame is in
 
-		mat4.set(invertedWorldCamera, mvMatrix);
-		//mat4.multiply(mvMatrix,thisCell);	//identity currently
-		//mat4.set(thisCell, mMatrix);	//set to identity directly
-		mat4.identity(mMatrix);
+		var portalMat = portalMats[colorsSwitch];
+
+		mat4.set(invertedWorldCamera, mvMatrix);mat4.multiply(mvMatrix,portalMat);mat4.set(portalMat, mMatrix);
 
 		drawObjectFromBuffers(cubeFrameSubdivBuffers, activeShaderProgram);
-
 
 		//draw coloured axis objects
 		var smallScale = frameScale*0.1;
@@ -2397,15 +2395,15 @@ function drawWorldScene(frameTime, isCubemapView) {
 		var moveAmount = Math.atan(guiParams.reflector.scale) + smallScale;	//to portal surface then by small frame size
 
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.red);
-		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.set(invertedWorldCamera, mvMatrix);mat4.multiply(mvMatrix,portalMat);mat4.set(portalMat, mMatrix);
 		xyzmove4mat(mvMatrix, [moveAmount,0,0]);	//TODO correct mMatrix, but IIRC only impacts lighting 
 		drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.green);
-		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.set(invertedWorldCamera, mvMatrix);mat4.multiply(mvMatrix,portalMat);mat4.set(portalMat, mMatrix);
 		xyzmove4mat(mvMatrix, [0,moveAmount,0]);	//TODO correct mMatrix, but IIRC only impacts lighting 
 		drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.blue);
-		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.set(invertedWorldCamera, mvMatrix);mat4.multiply(mvMatrix,portalMat);mat4.set(portalMat, mMatrix);
 		xyzmove4mat(mvMatrix, [0,0,moveAmount]);	//TODO correct mMatrix, but IIRC only impacts lighting 
 		drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
 	}
@@ -2978,7 +2976,8 @@ var mvMatrixB = mat4.create();
 
 var pMatrix = mat4.create();
 var nonCmapPMatrix = mat4.create();
-var playerCamera = mat4.create();
+var playerCamera = newIdMatWithQuats();
+var portalMats = ([0,0]).map(newIdMatWithQuats);	//dummy variables 0,0
 var playerCameraInterp = mat4.create();
 var offsetPlayerCamera = mat4.create();
 var playerContainer = {matrix:playerCamera, world:0}
@@ -3150,10 +3149,6 @@ function initCubemapFramebuffer(view, cubemapSize){
 function setupScene() {
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 	
-	mat4.identity(playerCamera);	//not sure why have 2 matrices here...
-	//bung extra quaternion stuff onto this for quick test
-	playerCamera.qPair = [[1,0,0,0],[1,0,0,0]];
-			
 	//start player off outside of boxes
 	xyzmove4mat(playerCamera,[0,0.4,-0.3]);	//left, down, fwd
 	

@@ -175,6 +175,12 @@ function scalarvectorprod(sca,vec){
 	return vec.map(function(val){return sca*val;});
 }
 
+function newIdMatWithQuats(){
+	var newMat = mat4.identity();
+	newMat.qPair = [[1,0,0,0],[1,0,0,0]];
+	return newMat;
+}
+
 function makemovequatpair(move){
 	//work out direction, length. move is a 3-vector
 	var lengthsq = move[0]*move[0] + move[1]*move[1] + move[2]*move[2];
