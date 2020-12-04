@@ -2375,6 +2375,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 	}
 
 
+	var portalMat = portalMats[colorsSwitch];
+
 	//draw frame around portal/reflector
 	if (guiParams.reflector.drawFrame){
 		var frameScale = guiParams.reflector.scale;
@@ -2382,8 +2384,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 		shaderSetup(activeShaderProgram, texture);
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, frameScale,frameScale,frameScale);
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, localVecFogColor);	//same colour as world this frame is in
-
-		var portalMat = portalMats[colorsSwitch];
 
 		mat4.set(invertedWorldCamera, mvMatrix);mat4.multiply(mvMatrix,portalMat);mat4.set(portalMat, mMatrix);
 
@@ -2449,7 +2449,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 		}
 		
 		mat4.set(invertedWorldCamera, mvMatrix);
-		mat4.identity(mMatrix);
+		mat4.multiply(mvMatrix,portalMat);
+		mat4.set(portalMat,mMatrix);
 		
 		if (activeShaderProgram.uniforms.uFNumber){
 			//todo keep this around. also used in fisheye shader.
