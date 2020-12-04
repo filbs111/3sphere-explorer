@@ -3926,6 +3926,9 @@ var iterateMechanics = (function iterateMechanics(){
 		}
 		
 		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
+
+			applyPortalMovement();
+
 			duocylinderSpin+=duoCylinderAngVelConst*timeStep*moveSpeed;
 		
 			//auto-roll upright. with view to using for character controller
