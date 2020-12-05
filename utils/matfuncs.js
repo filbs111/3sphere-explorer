@@ -243,6 +243,11 @@ function normalise_quat(q){
 	}
 }
 
+function cleanupMat(mat){	//might do nothing
+	normalise_qpair(mat.qPair);
+	convert_quats_to_4matrix(mat.qPair,mat);
+}
+
 function convert_quats_to_4matrix(qpair, m){
 	var q1=qpair[0], q2=qpair[1];
 		
@@ -270,6 +275,31 @@ function convert_quats_to_4matrix(qpair, m){
 	//matrices(m,3,1)=2.0*(b*d-a*c)    :matrices(m,3,2)=2.0*(c*d+a*b)   :matrices(m,3,3)=asq-bsq-csq+dsq
 	
 	return m;
+}
+
+function transpose_mat_with_qpair(mat){
+		//this might be invert, but matrices in question are SO4 so same thing.
+	var qpair=mat.qPair;
+	qpair[0][0]*=-1;
+	qpair[1][0]*=-1;
+
+	//should change code to not require keeping track of matrix part, maybe faster, but may as well
+	mat4.transpose(mat);
+}
+function multiply_mat_with_qpair(matrix,tomultiplyby){
+	var mqp=  tomultiplyby.qPair;
+	matrix.qPair = multiply_qpairs(matrix.qPair,mqp);
+	mat4.multiply(matrix, tomultiplyby);	//should be redundant.
+}
+function multiply_mat_with_qpair_transp(matrix, tomultiplyby){
+	//bodge! very similar to above. - tomultiplyby is transposed
+	var mqp=  tomultiplyby.qPair;
+	matrix.qPair = multiply_qpairs(matrix.qPair,[[-mqp[0][0],mqp[0][1],mqp[0][2],mqp[0][3]],
+		[-mqp[1][0],mqp[1][1],mqp[1][2],mqp[1][3]]]);
+	
+	var tmpTranspMat = mat4.create(tomultiplyby);
+	mat4.transpose(tmpTranspMat);
+	mat4.multiply(matrix, tmpTranspMat);	//should be redundant.
 }
 
 function multiply_quaternions(b,a){	//note switched input order for consistency with matrix multiplication

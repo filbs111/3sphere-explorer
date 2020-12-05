@@ -6,7 +6,7 @@ function applyPortalMovement(){
     var fwdmove = keyThing.keystate(105);   //numpad 9
     var backmove = keyThing.keystate(99);   //numpad 3
 
-    var holdToRotate = keyThing.keystate(96);   //numpad 0
+    var holdToRotate = !keyThing.keystate(96);   //numpad 0
 
     var movespeed = 0.001;
     var rotatespeed = 0.001; 
@@ -20,4 +20,7 @@ function applyPortalMovement(){
                                     movespeed*(downmove-upmove),
                                     movespeed*(fwdmove-backmove)]);
     }
+
+    //appears mats get wonky after a while. maybe should do this more routinely when making transformations
+    cleanupMat(portalMats[0]);
 }

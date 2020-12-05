@@ -666,7 +666,9 @@ function drawScene(frameTime){
 			tmpOffsetArr[cc] = offsetVec[cc]*ii/offsetSteps;
 		}
 		xyzmove4mat(tmp4mat,tmpOffsetArr);
-		if (checkWithinReflectorRange(tmp4mat, reflectorInfo.rad)){
+		if (checkWithinReflectorRange({matrix:tmp4mat}, reflectorInfo.rad)){
+				//TODO check/clean this. is world correct?
+
 			//portalTest will pass, so repeat with original matrix
 			xyzmove4mat(offsetPlayerCamera,tmpOffsetArr);
 			portalTest(offsetCameraContainer,0);
@@ -697,11 +699,20 @@ function drawScene(frameTime){
 	nonCmapCullFunc = generateCullFunc(nonCmapPMatrix);										//todo only update pmatrix, nonCmapCullFunc if input variables have changed
 	
 	testPortalDraw=false;
-	if (nonCmapCullFunc(invertedWorldCamera,reflectorInfo.rad)){
+
+	var portalInCameraCopy = mat4.create(invertedWorldCamera);	//portalInCamera is calculated in different scope
+		//TODO reorganise/tidy code, reduce duplication
+	mat4.multiply(portalInCameraCopy, portalMats[offsetCameraContainer.world]); //TODO is offsetCameraContainer.world updated yet?
+																				//if not may see 1 frame glitch on crossing
+	mat4.transpose(portalInCameraCopy);
+
+	//if (nonCmapCullFunc(portalInCameraCopy,reflectorInfo.rad)){		//TODO fix this. seems like culling done later
+																		//doesn't acheive same result
+	if (true){
 		testPortalDraw=true;
 		
 		mat4.set(offsetPlayerCamera, worldCamera);
-		calcReflectionInfo(worldCamera,reflectorInfo);
+		calcReflectionInfo(portalInCameraCopy,reflectorInfo);
 		
 		//draw cubemap views
 		mat4.identity(worldCamera);	//TODO use correct matrices
@@ -709,6 +720,9 @@ function drawScene(frameTime){
 		//TODO move pMatrix etc to only recalc on screen resize
 		//make a pmatrix for hemiphere perspective projection method.
 		
+		var otherPortalMat = guiParams.reflector.isPortal ? portalMats[1-offsetCameraContainer.world] : 
+				portalMats[offsetCameraContainer.world];
+
 		frustumCull = squareFrustumCull;
 		if (guiParams.reflector.cmFacesUpdated>0){
 			var cubemapLevel = guiParams.reflector.cubemapDownsize == "auto" ? 
@@ -730,8 +744,8 @@ function drawScene(frameTime){
 				//var framebuffer = cubemapView.framebuffers[ii];
 				gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
 				gl.viewport(0, 0, framebuffer.width, framebuffer.height);
-				mat4.identity(worldCamera);
-				xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);	
+				mat4.set(otherPortalMat, worldCamera);
+				xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);
 				rotateCameraForFace(ii);
 				
 				wSettingsArr.push( drawWorldScene(frameTime, true) );
@@ -742,7 +756,7 @@ function drawScene(frameTime){
 					var framebuffer = cubemapView.framebuffers[ii];
 					gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
 					gl.viewport(0, 0, framebuffer.width, framebuffer.height);
-					mat4.identity(worldCamera);
+					mat4.set(otherPortalMat, worldCamera);
 					xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);	
 					rotateCameraForFace(ii);
 					
@@ -1390,9 +1404,9 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 		if (sshipWorld == returnObj.colorsSwitch){ //only draw spaceship if it's in the world that currently drawing. (TODO this for other objects eg shots)
 			returnObj.sshipDrawMatrix = sshipMatrix;
 		}else{
-			if (checkWithinReflectorRange(sshipMatrix, Math.tan(Math.atan(reflectorInfo.rad) +0.1))){
+			if (checkWithinReflectorRange({matrix:sshipMatrix,world:-1}, Math.tan(Math.atan(reflectorInfo.rad) +0.1))){	//TODO correct this
 				mat4.set(sshipMatrix, portaledMatrix);
-				moveMatrixThruPortal(portaledMatrix, reflectorInfo.rad, 1);
+				moveMatrixThruPortal(portaledMatrix, reflectorInfo.rad, 1, sshipWorld);
 				returnObj.sshipDrawMatrix = portaledMatrix;
 			}	
 		}
@@ -2376,7 +2390,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 
 
 	var portalMat = portalMats[colorsSwitch];
-	var portalInCamera = mat4.create(invertedWorldCamera);	//might reuse invertedWorldCamera for effeciency,			
+	var portalInCamera = mat4.create(invertedWorldCamera);	//might reuse invertedWorldCamera for efficiency,			
 	mat4.multiply(portalInCamera, portalMat);			//but use new matrix for safety/code clarity.
 
 	//draw frame around portal/reflector
@@ -2445,16 +2459,17 @@ function drawWorldScene(frameTime, isCubemapView) {
 			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 		}
 		if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
-			gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, worldCamera.slice(12));
+			gl.uniform4f(activeShaderProgram.uniforms.uPortalCameraPos, portalInCamera[3], portalInCamera[7],portalInCamera[11],portalInCamera[15]);
 		}
 		if (activeShaderProgram.uniforms.uPortalCameraPos){
-			gl.uniform4f(activeShaderProgram.uniforms.uPortalCameraPos, worldCamera[3],worldCamera[7],worldCamera[11],worldCamera[15]);
+			gl.uniform4f(activeShaderProgram.uniforms.uPortalCameraPos, portalInCamera.slice(12));
 		}
 		
 		mat4.set(portalInCamera, mvMatrix);
 		mat4.set(portalMat,mMatrix);
 		
-		if (activeShaderProgram.uniforms.uFNumber){
+		if (false){	//TODO fix this. screenspace portal shader is currently broken for non default pose portal
+		//if (activeShaderProgram.uniforms.uFNumber){
 			//todo keep this around. also used in fisheye shader.
 			var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
 			var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
@@ -4914,7 +4929,7 @@ var iterateMechanics = (function iterateMechanics(){
 		//bounce off portal if reflector
 		if (!guiParams.reflector.isPortal){
 			var effectiveRange = Math.tan(Math.atan(reflectorInfo.rad)+Math.atan(0.011)); //TODO reformulate more efficiently
-			if (checkWithinReflectorRange(playerCamera, effectiveRange)){					
+			if (checkWithinReflectorRange({matrix:playerCamera,world:-1}, effectiveRange)){					
 				var towardsPortal = [playerCamera[3],playerCamera[7],playerCamera[11],playerCamera[15]]; //in player frame
 				var normalisingFactor=1/Math.sqrt(1-towardsPortal[3]*towardsPortal[3])
 				towardsPortal = towardsPortal.map(function(elem){return elem*normalisingFactor;});
@@ -4967,20 +4982,39 @@ function rotateVelVec(velVec,rotateVec){
 }
 
 function portalTest(obj, amount){
-	var mat = obj.matrix;
 	var adjustedRad = reflectorInfo.rad + amount;	//avoid issues with rendering very close to surface
-	if (checkWithinReflectorRange(mat, adjustedRad)){	
-		moveMatrixThruPortal(mat, adjustedRad, 1.00000001);
+
+	//get obj matrix in frame of portal matrix. 
+	//for distance check, only required for moved portal, not rotated.
+
+	//then move through portal, and apply other portal matrix...
+
+	if (checkWithinReflectorRange(obj, adjustedRad)){	
+		moveMatrixThruPortal(obj.matrix, adjustedRad, 1.00000001, obj.world);
 		obj.world=1-obj.world;
 	//	console.log("currentWorld now = " + obj.world);
 	}
 }
 
-function checkWithinReflectorRange(matrix, rad){
+function checkWithinReflectorRange(obj, rad){
+	var matrix=obj.matrix;
 	return matrix[15]>1/Math.sqrt(1+rad*rad);
 }
 
-function moveMatrixThruPortal(matrix, rad, hackMultiplier){
+function moveMatrixThruPortal(matrix, rad, hackMultiplier, currentWorld){
+	//TODO just work with qpairs (and save on updating matrix)
+
+	//apply entrance portal matrix
+	if (matrix.qPair){
+		transpose_mat_with_qpair(matrix);
+		multiply_mat_with_qpair(matrix, portalMats[currentWorld]);
+		transpose_mat_with_qpair(matrix);
+	}else{
+		mat4.transpose(matrix);
+		mat4.multiply(matrix, portalMats[currentWorld]);
+		mat4.transpose(matrix);
+	}
+
 	var magsq = 1- matrix[15]*matrix[15];	
 	var mag = Math.sqrt(magsq);
 
@@ -4996,6 +5030,20 @@ function moveMatrixThruPortal(matrix, rad, hackMultiplier){
 	}
 	xyzrotate4mat(matrix, rotate);	//180 degree rotate about direction to reflector
 	xyzmove4mat(matrix, move);
+
+	//apply exit portal matrix
+	if (matrix.qPair){
+		transpose_mat_with_qpair(matrix);
+		multiply_mat_with_qpair_transp(matrix, portalMats[1-currentWorld]);
+		transpose_mat_with_qpair(matrix);
+	}else{
+		var invOtherPMat = mat4.create(portalMats[1-currentWorld]);
+		mat4.transpose(invOtherPMat);
+
+		mat4.transpose(matrix);
+		mat4.multiply(matrix, invOtherPMat);
+		mat4.transpose(matrix);
+	}
 }
 
 function movePlayer(vec){
