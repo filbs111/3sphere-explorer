@@ -8,19 +8,21 @@ function applyPortalMovement(){
 
     var holdToRotate = !keyThing.keystate(96);   //numpad 0
 
+    var portalId = keyThing.keystate(110);  //full stop
+
     var movespeed = 0.001;
     var rotatespeed = 0.001; 
 
     if (holdToRotate){
-        xyzrotate4mat(portalMats[0],[   rotatespeed*(downmove-upmove),
+        xyzrotate4mat(portalMats[portalId],[   rotatespeed*(downmove-upmove),
                                         rotatespeed*(leftmove-rightmove),
                                         rotatespeed*(fwdmove-backmove)]);
     }else{
-        xyzmove4mat(portalMats[0],[ movespeed*(leftmove-rightmove),
+        xyzmove4mat(portalMats[portalId],[ movespeed*(leftmove-rightmove),
                                     movespeed*(downmove-upmove),
                                     movespeed*(fwdmove-backmove)]);
     }
 
     //appears mats get wonky after a while. maybe should do this more routinely when making transformations
-    cleanupMat(portalMats[0]);
+    cleanupMat(portalMats[portalId]);
 }
