@@ -666,7 +666,7 @@ function drawScene(frameTime){
 			tmpOffsetArr[cc] = offsetVec[cc]*ii/offsetSteps;
 		}
 		xyzmove4mat(tmp4mat,tmpOffsetArr);
-		if (checkWithinReflectorRange({matrix:tmp4mat}, reflectorInfo.rad)){
+		if (checkWithinReflectorRange({matrix:tmp4mat,world:sshipWorld}, reflectorInfo.rad)){
 				//TODO check/clean this. is world correct?
 
 			//portalTest will pass, so repeat with original matrix
@@ -726,7 +726,7 @@ function drawScene(frameTime){
 		frustumCull = squareFrustumCull;
 		if (guiParams.reflector.cmFacesUpdated>0){
 			var cubemapLevel = guiParams.reflector.cubemapDownsize == "auto" ? 
-				(playerCamera[15]>0.8 ? 0:(playerCamera[15]>0.5? 1:2))	:	//todo calculate angular resolution of cubemap in final camera,  
+				(portalInCameraCopy[15]>0.8 ? 0:(portalInCameraCopy[15]>0.5? 1:2))	:	//todo calculate angular resolution of cubemap in final camera,  
 						//dependent on distance, FOV, blur, screen resolution etc, and choose appropriate detail level
 						//currently just manually, roughly tuned for 1080p, current settings.
 				guiParams.reflector.cubemapDownsize ;
@@ -1404,7 +1404,7 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 		if (sshipWorld == returnObj.colorsSwitch){ //only draw spaceship if it's in the world that currently drawing. (TODO this for other objects eg shots)
 			returnObj.sshipDrawMatrix = sshipMatrix;
 		}else{
-			if (checkWithinReflectorRange({matrix:sshipMatrix,world:-1}, Math.tan(Math.atan(reflectorInfo.rad) +0.1))){	//TODO correct this
+			if (checkWithinReflectorRange({matrix:sshipMatrix,world:sshipWorld}, Math.tan(Math.atan(reflectorInfo.rad) +0.1))){	//TODO correct this
 				mat4.set(sshipMatrix, portaledMatrix);
 				moveMatrixThruPortal(portaledMatrix, reflectorInfo.rad, 1, sshipWorld);
 				returnObj.sshipDrawMatrix = portaledMatrix;
@@ -4929,7 +4929,7 @@ var iterateMechanics = (function iterateMechanics(){
 		//bounce off portal if reflector
 		if (!guiParams.reflector.isPortal){
 			var effectiveRange = Math.tan(Math.atan(reflectorInfo.rad)+Math.atan(0.011)); //TODO reformulate more efficiently
-			if (checkWithinReflectorRange({matrix:playerCamera,world:-1}, effectiveRange)){					
+			if (checkWithinReflectorRange({matrix:playerCamera,world:colorsSwitch}, effectiveRange)){					
 				var towardsPortal = [playerCamera[3],playerCamera[7],playerCamera[11],playerCamera[15]]; //in player frame
 				var normalisingFactor=1/Math.sqrt(1-towardsPortal[3]*towardsPortal[3])
 				towardsPortal = towardsPortal.map(function(elem){return elem*normalisingFactor;});
@@ -4997,8 +4997,14 @@ function portalTest(obj, amount){
 }
 
 function checkWithinReflectorRange(obj, rad){
-	var matrix=obj.matrix;
-	return matrix[15]>1/Math.sqrt(1+rad*rad);
+
+	//calculate in frame of portal
+	var portalRelativeMat = mat4.create(portalMats[obj.world]);
+	mat4.transpose(portalRelativeMat);
+	mat4.multiply(portalRelativeMat,obj.matrix);
+
+	//return obj.matrix[15]>1/Math.sqrt(1+rad*rad);
+	return portalRelativeMat[15]>1/Math.sqrt(1+rad*rad);
 }
 
 function moveMatrixThruPortal(matrix, rad, hackMultiplier, currentWorld){
