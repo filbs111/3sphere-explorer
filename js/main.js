@@ -1396,8 +1396,15 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 			returnObj.localVecReflectorDiffColor[cc] = returnObj.localVecReflectorColor[cc]-returnObj.localVecFogColor[cc];
 		}
 		//calculate stuff for discard shaders
+
+		//moved portal - likely duplicated from elsewhere
+		var portalRelativeMat = mat4.create(worldCamera);
+		mat4.transpose(portalRelativeMat);
+		mat4.multiply(portalRelativeMat, portalMats[colorsSwitch]);
+		mat4.transpose(portalRelativeMat);
+
 		for (var cc=0;cc<4;cc++){
-			returnObj.reflectorPosTransformed[cc] = worldCamera[4*cc+3];	//position of reflector in frame of camera (after MVMatrix transformation)
+			returnObj.reflectorPosTransformed[cc] = portalRelativeMat[4*cc+3];	//position of reflector in frame of camera (after MVMatrix transformation)
 		}
 		returnObj.cosReflector = 1.0/Math.sqrt(1+reflectorInfo.rad*reflectorInfo.rad);
 		
