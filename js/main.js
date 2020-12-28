@@ -3356,7 +3356,6 @@ var guiParams={
 		terrainMapProject:false,
 		texBias:0.0,
 		zPrepass:true,	//currently applies only to 4vec objects (eg terrain), and only affect overdraw for that object. 
-		copyDepthToAlpha:false,
 		perPixelLighting:true,
 		atmosShader:"atmos",
 		atmosThickness:0.2,
