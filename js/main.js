@@ -10,7 +10,7 @@ var depthTex_ext;
 
 var myDebugStr = "TEST INFO TO GO HERE";
 var myfisheyedebug;
-var mytestMat111;
+//var mytestMat111;
 var testPortalDraw;
 
 function bufferArrayData(buffer, arr, size){
@@ -563,9 +563,8 @@ function calcReflectionInfo(toReflect,resultsObj){
 	var correctionFactorB = reflectionCentreTanAngle/mag;
 	correctionFactorB/=reflectorInfo.rad;
 	resultsObj.centreTanAngleVectorScaled = cubeViewShift.map(function(val){return -val*correctionFactorB});
-	
-	var reflectShaderMatrix = mat4.create();
-	mat4.identity(reflectShaderMatrix);
+
+	var reflectShaderMatrix = mat4.identity();
 	xyzmove4mat(reflectShaderMatrix, cubeViewShiftAdjustedMinus);	
 	resultsObj.shaderMatrix=reflectShaderMatrix;
 	
@@ -2506,7 +2505,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 				//result is still a bit glitchy. suspect because calculation of matrixToPortal isn't quite right - moves by 2*portal radius , which is fine if close to portal, but really should move by a little less than this (see calculation of portal cubemap camera position.)
 		
 		//for debugging
-			mytestMat111 = matrixToPortal;
+			//mytestMat111 = matrixToPortal;
 			
 			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uPortaledMatrix, false, matrixToPortal);
 		}
