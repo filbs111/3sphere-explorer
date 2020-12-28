@@ -35,8 +35,10 @@
 		vec4 simplePlanarPortalDir = pointingDirection*uPortaledMatrix;
 		
 		float closeness = dot(uCentrePosScaledFSCopy,uCentrePosScaledFSCopy);	//something that goes to 1 in shaky regime, 0 outside
-		closeness = pow(closeness,6.);
-		vec3 cubeFragCoords = vPos - 0.05*closeness*simplePlanarPortalDir.xyz;	//simplePlanar will become dominant when other term small
+		closeness = 1.-500.*(1.-closeness);	//TODO input blending factor instead of calculating every fragment!
+		closeness = max(closeness,0.);
+
+		vec3 cubeFragCoords = vPos*(1.0-closeness) - closeness*simplePlanarPortalDir.xyz;	//simplePlanar will become dominant when other term small
 #endif
 #else
 		//preGammaFragColor.rg*=0.5*(1.+sin(10.*vScreenSpaceCoord));

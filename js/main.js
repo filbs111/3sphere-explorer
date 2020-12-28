@@ -2516,7 +2516,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		gl.uniform1f(activeShaderProgram.uniforms.uPolarity, reflectorInfo.polarity);
 		
 			
-		if(['vertex projection','screen space','depth to alpha copy'].includes(guiParams.reflector.mappingType) ){
+		if(['vertex projection','screen space','depth to alpha copy','vertproj mix'].includes(guiParams.reflector.mappingType) ){
 			gl.uniform3fv(activeShaderProgram.uniforms.uCentrePosScaled, reflectorInfo.centreTanAngleVectorScaled);
 		}
 		drawObjectFromBuffers(sphereBuffersHiRes, activeShaderProgram, true);
