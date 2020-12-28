@@ -5056,6 +5056,10 @@ function moveMatrixThruPortal(matrix, rad, hackMultiplier, currentWorld){
 		transpose_mat_with_qpair(matrix);
 		multiply_mat_with_qpair_transp(matrix, portalMats[1-currentWorld]);
 		transpose_mat_with_qpair(matrix);
+
+		cleanupMat(matrix);	//unsure if here is best place for this, but cures issue with portal transitions getting wacky after a while.
+							//probably only need to normalise quaternions. recalculating matrices now maybe inefficient.
+
 	}else{
 		var invOtherPMat = mat4.create(portalMats[1-currentWorld]);
 		mat4.transpose(invOtherPMat);
