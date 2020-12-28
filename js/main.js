@@ -4935,9 +4935,16 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		//bounce off portal if reflector
 		if (!guiParams.reflector.isPortal){
-			var effectiveRange = Math.tan(Math.atan(reflectorInfo.rad)+Math.atan(0.011)); //TODO reformulate more efficiently
-			if (checkWithinReflectorRange({matrix:playerCamera,world:colorsSwitch}, effectiveRange)){					
-				var towardsPortal = [playerCamera[3],playerCamera[7],playerCamera[11],playerCamera[15]]; //in player frame
+			var effectiveRange = Math.tan(Math.atan(reflectorInfo.rad)+Math.atan(0.003)); //TODO reformulate more efficiently
+			if (checkWithinReflectorRange({matrix:playerCamera,world:colorsSwitch}, effectiveRange)){				
+				
+				//calculate in frame of portal
+				//logic is repeated from checkWithinReflectorRange
+				var portalRelativeMat = mat4.create(portalMats[colorsSwitch]);
+				mat4.transpose(portalRelativeMat);
+				mat4.multiply(portalRelativeMat,playerCamera);
+
+				var towardsPortal = [portalRelativeMat[3],portalRelativeMat[7],portalRelativeMat[11],portalRelativeMat[15]]; //in player frame
 				var normalisingFactor=1/Math.sqrt(1-towardsPortal[3]*towardsPortal[3])
 				towardsPortal = towardsPortal.map(function(elem){return elem*normalisingFactor;});
 				//vel toward portal 
