@@ -2475,8 +2475,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 		mat4.set(portalInCamera, mvMatrix);
 		mat4.set(portalMat,mMatrix);
 		
-		if (false){	//TODO fix this. screenspace portal shader is currently broken for non default pose portal
-		//if (activeShaderProgram.uniforms.uFNumber){
+
+		if (activeShaderProgram.uniforms.uFNumber){
 			//todo keep this around. also used in fisheye shader.
 			var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
 			var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
@@ -2490,8 +2490,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 			
 			//move matrix through portal for close rendering. 
 			var matrixToPortal = mat4.create(mvMatrix);	//should be inverted matrix or regular?
-			moveMatrixThruPortal(matrixToPortal, reflectorInfo.rad, 1);
-			//moveMatrixThruPortal probably doesn't work that great unless almost at portal. do calculate more proper "reflection" in calcReflectionInfo , where calculate position to put cubemap camera. should do something like that here. as approx bodge, make the position component of this matrix match position of cubemap camera. this will likely make matrix non orthogonal
+			moveMatrixThruPortal(matrixToPortal, reflectorInfo.rad, 1, colorsSwitch, true);
+				//skips start/end rotations. appears to fix rendering. TODO check for side effects
 
 		if (guiParams.reflector.test1){	//appears to do ~nothing
 			var matToCopyFrom = reflectorInfo.shaderMatrix;
@@ -5021,20 +5021,21 @@ function checkWithinReflectorRange(obj, rad){
 	return portalRelativeMat[15]>1/Math.sqrt(1+rad*rad);
 }
 
-function moveMatrixThruPortal(matrix, rad, hackMultiplier, currentWorld){
+function moveMatrixThruPortal(matrix, rad, hackMultiplier, currentWorld, skipStartEndRotations){
 	//TODO just work with qpairs (and save on updating matrix)
 
-	//apply entrance portal matrix
-	if (matrix.qPair){
-		transpose_mat_with_qpair(matrix);
-		multiply_mat_with_qpair(matrix, portalMats[currentWorld]);
-		transpose_mat_with_qpair(matrix);
-	}else{
-		mat4.transpose(matrix);
-		mat4.multiply(matrix, portalMats[currentWorld]);
-		mat4.transpose(matrix);
+	if (!skipStartEndRotations){
+		//apply entrance portal matrix
+		if (matrix.qPair){
+			transpose_mat_with_qpair(matrix);
+			multiply_mat_with_qpair(matrix, portalMats[currentWorld]);
+			transpose_mat_with_qpair(matrix);
+		}else{
+			mat4.transpose(matrix);
+			mat4.multiply(matrix, portalMats[currentWorld]);
+			mat4.transpose(matrix);
+		}
 	}
-
 	var magsq = 1- matrix[15]*matrix[15];	
 	var mag = Math.sqrt(magsq);
 
@@ -5050,6 +5051,9 @@ function moveMatrixThruPortal(matrix, rad, hackMultiplier, currentWorld){
 	}
 	xyzrotate4mat(matrix, rotate);	//180 degree rotate about direction to reflector
 	xyzmove4mat(matrix, move);
+
+
+	if (skipStartEndRotations){return;}
 
 	//apply exit portal matrix
 	if (matrix.qPair){
