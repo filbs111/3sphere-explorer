@@ -3383,8 +3383,7 @@ var guiParams={
 		showSpeedOverlay:false,
 		showGCInfo:false,
 		emitFire:false,
-		fireworks:false,
-		newcollision:false
+		fireworks:false
 	},
 	audio:{
 		volume:0.2,
@@ -3574,7 +3573,6 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 		});
 	debugFolder.add(guiParams.debug, "emitFire");
 	debugFolder.add(guiParams.debug, "fireworks");
-	debugFolder.add(guiParams.debug, "newcollision");
 	
 	var audioFolder = gui.addFolder('audio');
 	audioFolder.add(guiParams.audio, "volume", 0,1,0.1).onChange(MySound.setGlobalVolume);
@@ -4721,21 +4719,15 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			}
 			
-			
+			var cellIdxForBullet = getGridId.forPoint(bulletPos);
 			
 			//tetrahedron. (16-cell and 600-cell)
 			if (guiParams["draw 16-cell"]){
 				checkTetraCollisionForArray(1, cellMatData.d16);
 			}
 			if (guiParams["draw 600-cell"]){
-				if (!guiParams.debug.newcollision){
-					var idsToCheck = cellMatData.d600GridArrayArray[getGridId.forPoint(bulletPos)];
-					var arrayOfMats = idsToCheck.map(x=>cellMatData.d600[0][x]);	//construct an array listing these ids. TODO function that takes matrix and id list to remove this step, reduce garbage
-					checkTetraCollisionForArray(0.386/(4/Math.sqrt(6)), arrayOfMats);
-				}else{
-					var idsToCheck = cellMatData.d600GridArrayArray[getGridId.forPoint(bulletPos)];
-					checkTetraCollisionForArrayAndArrayIds(0.386/(4/Math.sqrt(6)), cellMatData.d600[0], idsToCheck);
-				}
+				var idsToCheck = cellMatData.d600GridArrayArray[cellIdxForBullet];
+				checkTetraCollisionForArrayAndArrayIds(0.386/(4/Math.sqrt(6)), cellMatData.d600[0], idsToCheck);
 			}
 			
 			function checkTetraCollisionForMatAndVals(thisMat,critVal,cellScale){
@@ -4857,7 +4849,7 @@ var iterateMechanics = (function iterateMechanics(){
 				
 				var cellMats=cellMatData.d120[0];	//some sort index
 
-				var idsToCheck = cellMatData.d120GridArrayArray[getGridId.forPoint(bulletPos)];
+				var idsToCheck = cellMatData.d120GridArrayArray[cellIdxForBullet];
 				
 				for (ii in idsToCheck){	//single element of array for convenience
 					var dd=idsToCheck[ii];
