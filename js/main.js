@@ -3777,7 +3777,7 @@ var iterateMechanics = (function iterateMechanics(){
 	var playerAngVelVec = [0,0,0];
 	
 	var timeTracker =0;
-	var timeStep = 2;	//2ms => 500 steps/s! this is small to prevent tunelling. TODO better collision system that does not require this!
+	var timeStep = 5;	//5ms => 200 steps/s! this is small to prevent tunelling. TODO better collision system that does not require this!
 	var timeStepMultiplier = timeStep/10;	//because stepSpeed initially tuned for timeStep=10;
 	var angVelDampMultiplier=Math.pow(0.85, timeStep/10);
 	var gunHeatMultiplier = Math.pow(0.995, timeStep/10);
