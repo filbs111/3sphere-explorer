@@ -4732,12 +4732,14 @@ var iterateMechanics = (function iterateMechanics(){
 			function checkTetraCollisionForArray(cellScale, matsArr){
 				var critVal = 1/Math.sqrt(1+cellScale*cellScale*3);
 				for (dd in matsArr){
-					mat4.set(bulletMatrixTransposed, relativeMat);
-					mat4.multiply(relativeMat, matsArr[dd]);
-						
-					if (relativeMat[15]>0){			
-						if (relativeMat[15]<critVal){continue;}	//early sphere check
-						
+					var thisMat = matsArr[dd];
+					var dotProd = thisMat[12]*bulletMatrix[12] + thisMat[13]*bulletMatrix[13] +
+							thisMat[14]*bulletMatrix[14] + thisMat[15]*bulletMatrix[15];
+
+					if (dotProd>critVal){
+						mat4.set(bulletMatrixTransposed, relativeMat);
+						mat4.multiply(relativeMat, matsArr[dd]);		
+
 						var projectedPos = [relativeMat[3],relativeMat[7],relativeMat[11]].map(function(val){return val/(cellScale*relativeMat[15]);});
 						
 						//initially just find a corner
@@ -4789,12 +4791,17 @@ var iterateMechanics = (function iterateMechanics(){
 			//octohedron collision
 			if (guiParams["draw 24-cell"]){
 				var cellSize24 = guiParams["24-cell scale"];
-				
+				var critVal = 1/Math.sqrt(1+cellSize24*cellSize24);
+
 				for (dd in cellMatData.d24.cells){
-					mat4.set(bulletMatrixTransposed, relativeMat);
-					mat4.multiply(relativeMat, cellMatData.d24.cells[dd]);
-											
-					if (relativeMat[15]>0){
+					var thisMat = cellMatData.d24.cells[dd];
+					var dotProd = thisMat[12]*bulletMatrix[12] + thisMat[13]*bulletMatrix[13] +
+						thisMat[14]*bulletMatrix[14] + thisMat[15]*bulletMatrix[15];
+
+					if (dotProd>critVal){
+						mat4.set(bulletMatrixTransposed, relativeMat);
+						mat4.multiply(relativeMat, thisMat);
+
 						//todo speed up. division for all vec parts not necessary
 						//change number inside if rhs comparison
 						//also should apply multiplier to 0.8 for inner check.
@@ -4827,12 +4834,14 @@ var iterateMechanics = (function iterateMechanics(){
 				var cellMats=cellMatData.d120[0];	//some sort index
 				
 				for (dd in cellMats){	//single element of array for convenience
-					mat4.set(bulletMatrixTransposed, relativeMat);
-					mat4.multiply(relativeMat, cellMats[dd]);
-											
-					if (relativeMat[15]>0){
-							//if outside bounding sphere
-						if (relativeMat[15]<critVal){continue;}
+
+					var thisMat = cellMats[dd];
+					var dotProd = thisMat[12]*bulletMatrix[12] + thisMat[13]*bulletMatrix[13] +
+							thisMat[14]*bulletMatrix[14] + thisMat[15]*bulletMatrix[15];
+
+					if (dotProd>critVal){
+						mat4.set(bulletMatrixTransposed, relativeMat);
+						mat4.multiply(relativeMat, cellMats[dd]);
 						
 						var projectedPos = [relativeMat[3],relativeMat[7],relativeMat[11]].map(function(val){return val/(dodecaScale*relativeMat[15]);});
 						
