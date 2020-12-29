@@ -379,7 +379,10 @@ function addMatsFromMat(thisMat){
 		}
 		return arrayOfSortedArrays;
 	}
-	
+
+	returnObj.d600GridArrayArray = generateGridArrayArray(returnObj.d600[0], 0.4094);	//from collision culling 0.386/(4/Math.sqrt(6) , then extra factor sqrt(3) in checkTetraCollisionForArray 
+																			//0.355); ?? used for drawing culling
+
 	return returnObj;
 })();
 
