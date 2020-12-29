@@ -4728,73 +4728,87 @@ var iterateMechanics = (function iterateMechanics(){
 				checkTetraCollisionForArray(1, cellMatData.d16);
 			}
 			if (guiParams["draw 600-cell"]){
-				if (guiParams.debug.newcollision){
+				if (!guiParams.debug.newcollision){
 					var idsToCheck = cellMatData.d600GridArrayArray[getGridId.forPoint(bulletPos)];
 					var arrayOfMats = idsToCheck.map(x=>cellMatData.d600[0][x]);	//construct an array listing these ids. TODO function that takes matrix and id list to remove this step, reduce garbage
 					checkTetraCollisionForArray(0.386/(4/Math.sqrt(6)), arrayOfMats);
 				}else{
-					checkTetraCollisionForArray(0.386/(4/Math.sqrt(6)), cellMatData.d600[0]);
+					var idsToCheck = cellMatData.d600GridArrayArray[getGridId.forPoint(bulletPos)];
+					checkTetraCollisionForArrayAndArrayIds(0.386/(4/Math.sqrt(6)), cellMatData.d600[0], idsToCheck);
 				}
 			}
 			
-			function checkTetraCollisionForArray(cellScale, matsArr){
-				var critVal = 1/Math.sqrt(1+cellScale*cellScale*3);
-				for (dd in matsArr){
-					var thisMat = matsArr[dd];
-					var dotProd = thisMat[12]*bulletMatrix[12] + thisMat[13]*bulletMatrix[13] +
-							thisMat[14]*bulletMatrix[14] + thisMat[15]*bulletMatrix[15];
+			function checkTetraCollisionForMatAndVals(thisMat,critVal,cellScale){
+				var dotProd = thisMat[12]*bulletMatrix[12] + thisMat[13]*bulletMatrix[13] +
+				thisMat[14]*bulletMatrix[14] + thisMat[15]*bulletMatrix[15];
 
-					if (dotProd>critVal){
-						mat4.set(bulletMatrixTransposed, relativeMat);
-						mat4.multiply(relativeMat, matsArr[dd]);		
+				if (dotProd>critVal){
+					mat4.set(bulletMatrixTransposed, relativeMat);
+					mat4.multiply(relativeMat, thisMat);		
 
-						var projectedPos = [relativeMat[3],relativeMat[7],relativeMat[11]].map(function(val){return val/(cellScale*relativeMat[15]);});
-						
-						//initially just find a corner
-						//seems is triangular pyramid, with "top" in 1-axis direction
-						//seems 0 - axis parrallel to one base edge
-						//1 - "up"
-						//2 - other base axis
-						// ie top point = (0,sqrt(3),0)
-						// therefore inside has to be above base ( pos[2] > -0.33*root(3) = 1/root(3)
-													
-						var isInside = true;
-						
-						var selection = -1;
-						var best = 1;
-						
-						//identify which quarter of tetrahedron are in (therefore which outer plane, set of 3 inner planes to check against.
-						for (var ii=0;ii<4;ii++){
-							var toPlane = planeCheck(tetraPlanesToCheck[ii],projectedPos);
-							if (toPlane < best){
-								best = toPlane;
-								selection = ii;
-							}
+					var projectedPos = [relativeMat[3],relativeMat[7],relativeMat[11]].map(function(val){return val/(cellScale*relativeMat[15]);});
+					
+					//initially just find a corner
+					//seems is triangular pyramid, with "top" in 1-axis direction
+					//seems 0 - axis parrallel to one base edge
+					//1 - "up"
+					//2 - other base axis
+					// ie top point = (0,sqrt(3),0)
+					// therefore inside has to be above base ( pos[2] > -0.33*root(3) = 1/root(3)
+												
+					var isInside = true;
+					
+					var selection = -1;
+					var best = 1;
+					
+					//identify which quarter of tetrahedron are in (therefore which outer plane, set of 3 inner planes to check against.
+					for (var ii=0;ii<4;ii++){
+						var toPlane = planeCheck(tetraPlanesToCheck[ii],projectedPos);
+						if (toPlane < best){
+							best = toPlane;
+							selection = ii;
 						}
-						
-						if (best < -1){
+					}
+					
+					if (best < -1){
+						isInside = false;
+					}
+					
+					//check is not inside all 3 inner planes for relevant quarter.
+					var innerPlanes = tetraInnerPlanesToCheck[selection];
+					if (planeCheck(innerPlanes[0],projectedPos) >-1 &&
+						planeCheck(innerPlanes[1],projectedPos) >-1 &&
+						planeCheck(innerPlanes[2],projectedPos) >-1){
 							isInside = false;
-						}
-						
-						//check is not inside all 3 inner planes for relevant quarter.
-						var innerPlanes = tetraInnerPlanesToCheck[selection];
-						if (planeCheck(innerPlanes[0],projectedPos) >-1 &&
-							planeCheck(innerPlanes[1],projectedPos) >-1 &&
-							planeCheck(innerPlanes[2],projectedPos) >-1){
-								isInside = false;
-						}
-						
-						if (isInside){
-							detonateBullet(bullet);
-						}
-						
-						//todo 4th number for comparison value - means can still work if plane thru origin.
-						function planeCheck(planeVec,pos){
-							return pos[0]*planeVec[0] + pos[1]*planeVec[1] +pos[2]*planeVec[2];
-						}
+					}
+					
+					if (isInside){
+						detonateBullet(bullet);
+					}
+					
+					//todo 4th number for comparison value - means can still work if plane thru origin.
+					function planeCheck(planeVec,pos){
+						return pos[0]*planeVec[0] + pos[1]*planeVec[1] +pos[2]*planeVec[2];
 					}
 				}
 			}
+
+			function checkTetraCollisionForArrayAndArrayIds(cellScale, matsArr, arrIds){
+				var critVal = 1/Math.sqrt(1+cellScale*cellScale*3);
+				for (ii in arrIds){
+					var dd=arrIds[ii];
+					checkTetraCollisionForMatAndVals(matsArr[dd], critVal, cellScale);
+				}
+			}
+
+			function checkTetraCollisionForArray(cellScale, matsArr){
+				var critVal = 1/Math.sqrt(1+cellScale*cellScale*3);
+				for (dd in matsArr){
+					checkTetraCollisionForMatAndVals(matsArr[dd], critVal, cellScale);
+				}
+			}
+
+
 			
 			//octohedron collision
 			if (guiParams["draw 24-cell"]){
@@ -4824,6 +4838,8 @@ var iterateMechanics = (function iterateMechanics(){
 						}
 					}
 				}
+				
+
 			}
 			
 			if (guiParams["draw 120-cell"]){
