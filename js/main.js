@@ -3283,8 +3283,8 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	world0:{duocylinderModel:"voxTerrain",seaActive:false},
-	world1:{duocylinderModel:"procTerrain",seaActive:false},
+	world0:{duocylinderModel:"none",seaActive:false},
+	world1:{duocylinderModel:"none",seaActive:false},
 	duocylinderRotateSpeed:0,
 	seaLevel:-0.012,
 	drawShapes:{
@@ -3299,15 +3299,15 @@ var guiParams={
 		teapot:false,
 		"teapot scale":0.7,
 		pillars:false,
-		bendyPillars:true,
+		bendyPillars:false,
 		towers:false,
-		singleBufferTowers:true,
+		singleBufferTowers:false,
 		explodingBox:false,
 		hyperboloid:false,
 		stonehenge:false,
-		singleBufferStonehenge:true,
+		singleBufferStonehenge:false,
 		roads:false,
-		singleBufferRoads:true
+		singleBufferRoads:false
 	},
 	'random boxes':{
 		number:maxRandBoxes,	//note ui controlled value does not affect singleBuffer
@@ -3324,7 +3324,7 @@ var guiParams={
 	"draw 24-cell":false,
 	"24-cell scale":1,
 	"draw 120-cell":false,
-	"draw 600-cell":false,
+	"draw 600-cell":true,
 	"draw spaceship":true,
 	"drop spaceship":false,
 	target:{
@@ -3349,7 +3349,7 @@ var guiParams={
 		cameraFov:125,
 		uVarOne:-0.01,
 		flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
-		showHud:false,
+		showHud:true,
 		renderViaTexture:'blur-b-use-alpha',
 		drawTransparentStuff:true,
 		voxNmapTest:false,	//just show normal map. more efficient pix shader than standard. for performance check
@@ -3383,7 +3383,8 @@ var guiParams={
 		showSpeedOverlay:false,
 		showGCInfo:false,
 		emitFire:false,
-		fireworks:false
+		fireworks:false,
+		newcollision:false
 	},
 	audio:{
 		volume:0.2,
@@ -3573,6 +3574,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 		});
 	debugFolder.add(guiParams.debug, "emitFire");
 	debugFolder.add(guiParams.debug, "fireworks");
+	debugFolder.add(guiParams.debug, "newcollision");
 	
 	var audioFolder = gui.addFolder('audio');
 	audioFolder.add(guiParams.audio, "volume", 0,1,0.1).onChange(MySound.setGlobalVolume);
@@ -4726,7 +4728,13 @@ var iterateMechanics = (function iterateMechanics(){
 				checkTetraCollisionForArray(1, cellMatData.d16);
 			}
 			if (guiParams["draw 600-cell"]){
-				checkTetraCollisionForArray(0.386/(4/Math.sqrt(6)), cellMatData.d600[0]);
+				if (guiParams.debug.newcollision){
+					var idsToCheck = cellMatData.d600GridArrayArray[getGridId.forPoint(bulletPos)];
+					var arrayOfMats = idsToCheck.map(x=>cellMatData.d600[0][x]);	//construct an array listing these ids. TODO function that takes matrix and id list to remove this step, reduce garbage
+					checkTetraCollisionForArray(0.386/(4/Math.sqrt(6)), arrayOfMats);
+				}else{
+					checkTetraCollisionForArray(0.386/(4/Math.sqrt(6)), cellMatData.d600[0]);
+				}
 			}
 			
 			function checkTetraCollisionForArray(cellScale, matsArr){
