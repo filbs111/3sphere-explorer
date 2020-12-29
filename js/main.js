@@ -4856,8 +4856,11 @@ var iterateMechanics = (function iterateMechanics(){
 				var critVal = 1/Math.sqrt(1+dodecaScaleFudge*dodecaScaleFudge);
 				
 				var cellMats=cellMatData.d120[0];	//some sort index
+
+				var idsToCheck = cellMatData.d120GridArrayArray[getGridId.forPoint(bulletPos)];
 				
-				for (dd in cellMats){	//single element of array for convenience
+				for (ii in idsToCheck){	//single element of array for convenience
+					var dd=idsToCheck[ii];
 
 					var thisMat = cellMats[dd];
 					var dotProd = thisMat[12]*bulletMatrix[12] + thisMat[13]*bulletMatrix[13] +
