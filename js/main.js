@@ -643,6 +643,7 @@ function drawScene(frameTime){
 	stats.end();
 	stats.begin();
 	
+	smoothGuiParams.update();
 	
 	reflectorInfo.rad = guiParams.reflector.draw? guiParams.reflector.scale : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
 	
@@ -1946,7 +1947,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	
 	
 	//draw blender object - a csg cube minus sphere. draw 8 cells for tesseract.
-	var modelScale = guiParams["8-cell scale"];
+	var modelScale = smoothGuiParams.get("8-cell scale");
 	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
 
@@ -3390,6 +3391,9 @@ var guiParams={
 	},
 	normalMove:0
 };
+
+smoothGuiParams.add("8-cell scale", guiParams, "8-cell scale");
+
 var settings = {
 	playerBallRad:0.003,
 	characterBallRad:0.001
