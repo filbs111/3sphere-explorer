@@ -10,14 +10,22 @@ var seaHeight = (function(){
 	
 	//precalculate as much as pos.
 	var waveList = [
-		{peakiness:0.15, waveCycles:[1.0,9.0]},
-		{peakiness:0.15, waveCycles:[-13.0,2.0]},
-		{peakiness:0.15, waveCycles:[3.0,-7.0]},
-		{peakiness:0.15, waveCycles:[-4.0,5.0]},
+		{waveCycles:[1.0,9.0]},
+		{waveCycles:[-13.0,2.0]},
+		{waveCycles:[3.0,-7.0]},
+		{waveCycles:[-4.0,5.0]},
 	];
 	
+	setPeakiness(0.15);	//TODO just call from outside before render
+
 	for (var wave of waveList){
 		addConstantsToWave(wave);
+	}
+
+	function setPeakiness(peakiness){
+		for (var wave of waveList){
+			wave.peakiness = peakiness;
+		}
 	}
 
 	function addConstantsToWave(wave){
@@ -56,7 +64,7 @@ var seaHeight = (function(){
 		get:function(pos,tt){	//pos is [xx,yy]
 			//wavePosAccum=new Array(3);	//might want to do this if don't want returned array to be affected by subsequent calls
 			wavePosAccum[0]=pos[0];
-			wavePosAccum[1]=pos[1]
+			wavePosAccum[1]=pos[1];
 			wavePosAccum[2]=zeroLevel;
 			currentTime=tt;
 			wavePosIn=pos;
@@ -67,6 +75,7 @@ var seaHeight = (function(){
 		
 			return wavePosAccum;
 		},
+		setPeakiness,
 		setZeroLevel:function(lev){zeroLevel=lev;}	//TODO instance sea objects with own zero level, to have different level for multiple seas without calling setZeroLevel repeatedly
 	}
 })();

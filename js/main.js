@@ -1843,7 +1843,8 @@ function drawWorldScene(frameTime, isCubemapView) {
 	lastSeaTime=seaTime;	//for use in mechanics. TODO switch to using mechanics time for rendering instead
 	if (worldInfo.seaActive){
 		seaHeight.setZeroLevel(guiParams.seaLevel);
-		
+		seaHeight.setPeakiness(guiParams.seaPeakiness);	//TODO only call on ui change
+
 		//var seaHeight = getSeaHeight([0,0], [0.00005*(frameTime % 20000 )]);	//actually this is a position not a height . todo time conversion in one place 
 		var currentSeaHeight = getSeaHeight([0,0], seaTime);	//actually this is a position not a height . todo time conversion in one place 
 		var tau = Math.PI*2;
@@ -2619,7 +2620,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 	if (worldInfo.duocylinderModel!='none' && guiParams.display.zPrepass){
 		gl.depthFunc(gl.ALWAYS);	//TODO try no z check - since discarding with using depth texture, this check is redundant
 		gl.depthMask(false);
-		drawDuocylinderObject(wSettings, duocylinderObjects[worldInfo.duocylinderModel], 0,0, depthMap);
+		drawDuocylinderObject(wSettings, duocylinderObjects[worldInfo.duocylinderModel], 0,0,0, depthMap);
 		gl.depthFunc(gl.LESS);
 		gl.depthMask(true);
 	}
@@ -2629,7 +2630,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 
 	var seaTime = 0.00005*(frameTime % 20000 ); //20s loop	//note this is duplicated from drawWorldScene
 	if (worldInfo.seaActive){
-		drawDuocylinderObject(wSettings, duocylinderObjects['sea'], guiParams.seaLevel, seaTime, depthMap);
+		drawDuocylinderObject(wSettings, duocylinderObjects['sea'], guiParams.seaLevel, guiParams.seaPeakiness, seaTime, depthMap);
 	}
 
 
@@ -3288,6 +3289,7 @@ var guiParams={
 	world1:{duocylinderModel:"none",seaActive:false},
 	duocylinderRotateSpeed:0,
 	seaLevel:-0.012,
+	seaPeakiness:0.0,
 	drawShapes:{
 		boxes:{
 		'y=z=0':false,	//x*x+w*w=1
@@ -5471,7 +5473,7 @@ function performCommon4vecShaderSetup(activeShaderProgram, wSettings, logtag){	/
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 	performGeneralShaderSetup(activeShaderProgram);
 }
-function drawDuocylinderObject(wSettings, duocylinderObj, zeroLevel, seaTime, depthMap){	
+function drawDuocylinderObject(wSettings, duocylinderObj, zeroLevel, seaPeakiness, seaTime, depthMap){	
 	var activeShaderProgram, selectedShaderSet;
 
 	//draw using z prepass if enabled. objects with substancial overdraw may draw faster, though increases num vertices drawn
@@ -5519,6 +5521,7 @@ function drawDuocylinderObject(wSettings, duocylinderObj, zeroLevel, seaTime, de
 		gl.useProgram(activeShaderProgram);
 		gl.uniform1f(activeShaderProgram.uniforms.uTime, seaTime);			
 		gl.uniform1f(activeShaderProgram.uniforms.uZeroLevel, zeroLevel);
+		gl.uniform1f(activeShaderProgram.uniforms.uPeakiness, seaPeakiness);
 	}
 		
 	if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader

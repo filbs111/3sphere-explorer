@@ -14,6 +14,7 @@
 	uniform mat4 uPMatrix;
 	uniform float uTime;
 	uniform float uZeroLevel;
+	uniform float uPeakiness;
 	uniform vec4 uCameraWorldPos;
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 	varying vec4 transformedCoord;
@@ -93,10 +94,10 @@
 		vec3 vDerivativeWRTY = vec3(0.,1./CONST_TAU,0.);
 		
 		vec3 vModifiedVertexPosition = vec3( aVertexPosition.xy, uZeroLevel);
-		addWaveContribution(aVertexPosition, vModifiedVertexPosition, vDerivativeWRTX, vDerivativeWRTY, 0.15, vec2(1.0,9.0));
-		addWaveContribution(aVertexPosition, vModifiedVertexPosition, vDerivativeWRTX, vDerivativeWRTY, 0.15, vec2(-13.0,2.0));
-		addWaveContribution(aVertexPosition, vModifiedVertexPosition, vDerivativeWRTX, vDerivativeWRTY, 0.15, vec2(3.0,-7.0));
-		addWaveContribution(aVertexPosition, vModifiedVertexPosition, vDerivativeWRTX, vDerivativeWRTY, 0.15, vec2(-4.0,5.0));
+		addWaveContribution(aVertexPosition, vModifiedVertexPosition, vDerivativeWRTX, vDerivativeWRTY, uPeakiness, vec2(1.0,9.0));
+		addWaveContribution(aVertexPosition, vModifiedVertexPosition, vDerivativeWRTX, vDerivativeWRTY, uPeakiness, vec2(-13.0,2.0));
+		addWaveContribution(aVertexPosition, vModifiedVertexPosition, vDerivativeWRTX, vDerivativeWRTY, uPeakiness, vec2(3.0,-7.0));
+		addWaveContribution(aVertexPosition, vModifiedVertexPosition, vDerivativeWRTX, vDerivativeWRTY, uPeakiness, vec2(-4.0,5.0));
 		
 		vec3 surfNorm = normalize(cross(vDerivativeWRTX,vDerivativeWRTY));	//get surface normal by cross product of derivative vectors
 				
