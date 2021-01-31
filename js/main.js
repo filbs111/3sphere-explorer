@@ -1959,6 +1959,53 @@ function drawWorldScene(frameTime, isCubemapView) {
 			(guiParams["subdiv frames"] ? cubeFrameSubdivBuffers: cubeFrameBuffers)
 		);	
 	}
+	if (guiParams["draw 8-cell net"]){
+		//don't bother with culling. only intended as aid to explain project
+		
+		prepBuffersForDrawing(cubeFrameSubdivBuffers, activeShaderProgram);
+		
+		var drawCubeFunc = function(){
+			drawObjectFromPreppedBuffers(cubeFrameSubdivBuffers, activeShaderProgram);
+				};
+		
+		var moveAmount = 2.0*Math.atan(modelScale);	//probably some trig func, but shoudl work for small scale
+		mat4.identity(mMatrix);
+		mat4.set(invertedWorldCamera, mvMatrix);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+		drawCubeFunc();
+		xyzmove4mat(mvMatrix, [0,0,moveAmount]);
+		xyzmove4mat(mMatrix, [0,0,moveAmount]);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.red);
+		drawCubeFunc();
+		xyzmove4mat(mvMatrix, [0,0,moveAmount]);
+		xyzmove4mat(mMatrix, [0,0,moveAmount]);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.black);
+		drawCubeFunc();
+		xyzmove4mat(mvMatrix, [0,0,-3*moveAmount]);
+		xyzmove4mat(mMatrix, [0,0,-3*moveAmount]);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.cyan);
+		drawCubeFunc();
+		xyzmove4mat(mvMatrix, [0,0,moveAmount]);
+		xyzmove4mat(mMatrix, [0,0,moveAmount]);
+		xyzmove4mat(mvMatrix, [0,moveAmount,0]);
+		xyzmove4mat(mMatrix, [0,moveAmount,0]);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.green);
+		drawCubeFunc();
+		xyzmove4mat(mvMatrix, [0,-2*moveAmount,0]);
+		xyzmove4mat(mMatrix, [0,-2*moveAmount,0]);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.magenta);
+		drawCubeFunc();
+		xyzmove4mat(mvMatrix, [0,moveAmount,0]);
+		xyzmove4mat(mMatrix, [0,moveAmount,0]);
+		xyzmove4mat(mvMatrix, [moveAmount,0,0]);
+		xyzmove4mat(mMatrix, [moveAmount,0,0]);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.blue);
+		drawCubeFunc();
+		xyzmove4mat(mvMatrix, [-2*moveAmount,0,0]);
+		xyzmove4mat(mMatrix, [-2*moveAmount,0,0]);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.yellow);
+		drawCubeFunc();
+	}
 	
 	
 	if (guiParams["draw 16-cell"]){
@@ -3518,7 +3565,8 @@ function init(){
 	var polytopesFolder = gui.addFolder('polytopes');
 	polytopesFolder.add(guiParams,"draw 5-cell");
 	polytopesFolder.add(guiParams,"draw 8-cell");
-	polytopesFolder.add(guiParams,"8-cell scale",0.05,2.0,0.05);
+	polytopesFolder.add(guiParams,"draw 8-cell net");
+	polytopesFolder.add(guiParams,"8-cell scale",0.05,1.0,0.05);
 	polytopesFolder.add(guiParams,"draw 16-cell");
 	polytopesFolder.add(guiParams,"subdiv frames");
 	polytopesFolder.add(guiParams,"draw 24-cell");
