@@ -3537,6 +3537,7 @@ function init(){
 	world1Folder.add(guiParams.world1, "duocylinderModel", ["grid","terrain","procTerrain",'voxTerrain','none'] );
 	world1Folder.add(guiParams.world1, "seaActive" );
 	drawShapesFolder.add(guiParams, "seaLevel", -0.05,0.05,0.005);
+	drawShapesFolder.add(guiParams, "seaPeakiness", 0.0,0.5,0.01);
 	drawShapesFolder.add(guiParams, "duocylinderRotateSpeed", -2.5,2.5,0.25);
 	var boxesFolder = drawShapesFolder.addFolder('boxes');
 	for (shape in guiParams.drawShapes.boxes){
