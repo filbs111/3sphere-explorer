@@ -1,3 +1,5 @@
+#define SMALL_AMOUNT 0.01
+
 #ifdef CUSTOM_DEPTH
 	#extension GL_EXT_frag_depth : enable
 #endif
@@ -57,17 +59,23 @@
 		float light = -dot( adjustedPosNormalised, transformedNormal);
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		
+
 #ifdef SPECULAR_ACTIVE
 	//other specular implementation is in tangent space.
 	//this uses 4vecs. guessed but appears to work fine.
 	vec4 eyePos = vec4(0.,0.,0.,1.);
-	vec4 vecToEye = normalize(transformedCoord-eyePos);
-	vec4 halfVec = normalize( vecToEye + adjustedPosNormalised);
-	float phongAmount = uSpecularStrength*pow( max(-dot(halfVec, transformedNormal), 0.),uSpecularPower);
+
+	//directions are what matter. approximate by using small_amount. TODO more efficient formulation
+	//TODO what is adjustedpos, what is transformedPos? 
+	vec4 directionToEye = normalize( normalize(transformedCoord+SMALL_AMOUNT*eyePos) -  normalize(transformedCoord));
+	vec4 directionToLight = normalize( normalize(transformedCoord-SMALL_AMOUNT*adjustedPosNormalised ) -  normalize(transformedCoord));
+	vec4 halfVec = normalize( directionToEye + directionToLight);
+
+	float phongAmount = uSpecularStrength*pow( max(dot(halfVec, normalize(transformedNormal)), 0.),uSpecularPower);
 	light*=(1.-uSpecularStrength);
 	light+=phongAmount;
 #endif
-		
+
 		//falloff
 		light/=0.1 + 5.0*dot(adjustedPos,adjustedPos);
 
@@ -76,10 +84,12 @@
 		float portalLight = dot( uReflectorPos, transformedNormal);
 		portalLight = max(0.5*portalLight +0.5+ posCosDiff,0.0);	//unnecessary if camera pos = light pos
 
-#ifdef SPECULAR_ACTIVE
-		//TODO take into account "size" of portal light. TODO suspect this is not right - speculat much stronger in shader-texmap-perpixel-discard-normalmap-efficient-fs . suspect due to zeroing w component there
-		halfVec = normalize( vecToEye + normalize(transformedCoord-uReflectorPos));
-		phongAmount = uSpecularStrength*pow( max(-dot(halfVec, transformedNormal), 0.),uSpecularPower);
+#ifdef SPECULAR_ACTIVE		
+		//note maybe faster if calculate half vector in vert shader. (expect interpolates ok).  		
+		vec4 directionToLight2 = normalize( normalize(transformedCoord+SMALL_AMOUNT*uReflectorPos ) -  normalize(transformedCoord));
+		halfVec = normalize( directionToEye + directionToLight2);
+		
+		phongAmount = uSpecularStrength*pow( max(dot(halfVec, normalize(transformedNormal)), 0.),uSpecularPower);
 		portalLight*=(1.-uSpecularStrength);
 		portalLight+=phongAmount;
 #endif
