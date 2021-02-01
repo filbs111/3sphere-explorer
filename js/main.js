@@ -3295,6 +3295,7 @@ var guiParams={
 	"draw 5-cell":false,
 	"subdiv frames":true,
 	"draw 8-cell":false,
+	"draw 8-cell net":false,
 	"8-cell scale":0.3,		//0.5 to tesselate
 	"draw 16-cell":false,
 	"draw 24-cell":false,
