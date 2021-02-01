@@ -1103,36 +1103,6 @@ function setProjectionMatrix(pMatrix, vFov, ratio, polarity){
 
 var sshipWorld=0;	//used for player light
 
-var colorArrs = (function () {
-	var typedArrColors = [];
-	var arrColors = {
-		white:[1.0, 1.0, 1.0, 1.0],
-		gray:[0.6,0.6,0.6,1.0],
-		darkGray:[0.4, 0.4, 0.4, 1.0],
-		veryDarkGray:[0.2, 0.2, 0.2, 1.0],
-		superDarkGray:[0.05, 0.05, 0.05, 1.0],
-		black:[0, 0, 0, 1.0],
-		red:[1.0, 0.1, 0.1, 1.0],
-		green:[0.1, 1.0, 0.1, 1.0],
-		blue:[0.1, 0.1, 1.0, 1.0],
-		yellow:[1.0, 1.0, 0.1, 1.0],
-		magenta:[1.0, 0.1, 1.0, 1.0],
-		cyan:[0.1, 1.0, 1.0, 1.0],
-		randBoxes:[0.9, 0.9, 1.0, 0.9],
-		teapot:[0.4, 0.4, 0.8, 1.0],
-		hudFlightDir:[0.0, 0.5, 1.0, 0.5],
-		hudBox:[1, 0.1, 0, 0.5],
-		hudYellow:[1.0, 1.0, 0.0, 0.5],
-		guns:[0.3, 0.3, 0.3, 1.0],
-		target:[1, 0.2, 0.2, 1],
-	}
-	for (key of Object.keys(arrColors) ){
-		typedArrColors[key]=new Float32Array(arrColors[key]);
-	}
-	return typedArrColors;
-})();
-
-
 function updateGunTargeting(matrix){
 	var modelScale = sshipModelScale;
 	var matrixForTargeting = matrix;
@@ -1960,51 +1930,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 		);	
 	}
 	if (guiParams["draw 8-cell net"]){
-		//don't bother with culling. only intended as aid to explain project
-		
-		prepBuffersForDrawing(cubeFrameSubdivBuffers, activeShaderProgram);
-		
-		var drawCubeFunc = function(){
-			drawObjectFromPreppedBuffers(cubeFrameSubdivBuffers, activeShaderProgram);
-				};
-		
-		var moveAmount = 2.0*Math.atan(modelScale);	//probably some trig func, but shoudl work for small scale
-		mat4.identity(mMatrix);
-		mat4.set(invertedWorldCamera, mvMatrix);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
-		drawCubeFunc();
-		xyzmove4mat(mvMatrix, [0,0,moveAmount]);
-		xyzmove4mat(mMatrix, [0,0,moveAmount]);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.red);
-		drawCubeFunc();
-		xyzmove4mat(mvMatrix, [0,0,moveAmount]);
-		xyzmove4mat(mMatrix, [0,0,moveAmount]);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.black);
-		drawCubeFunc();
-		xyzmove4mat(mvMatrix, [0,0,-3*moveAmount]);
-		xyzmove4mat(mMatrix, [0,0,-3*moveAmount]);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.cyan);
-		drawCubeFunc();
-		xyzmove4mat(mvMatrix, [0,0,moveAmount]);
-		xyzmove4mat(mMatrix, [0,0,moveAmount]);
-		xyzmove4mat(mvMatrix, [0,moveAmount,0]);
-		xyzmove4mat(mMatrix, [0,moveAmount,0]);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.green);
-		drawCubeFunc();
-		xyzmove4mat(mvMatrix, [0,-2*moveAmount,0]);
-		xyzmove4mat(mMatrix, [0,-2*moveAmount,0]);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.magenta);
-		drawCubeFunc();
-		xyzmove4mat(mvMatrix, [0,moveAmount,0]);
-		xyzmove4mat(mMatrix, [0,moveAmount,0]);
-		xyzmove4mat(mvMatrix, [moveAmount,0,0]);
-		xyzmove4mat(mMatrix, [moveAmount,0,0]);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.blue);
-		drawCubeFunc();
-		xyzmove4mat(mvMatrix, [-2*moveAmount,0,0]);
-		xyzmove4mat(mMatrix, [-2*moveAmount,0,0]);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.yellow);
-		drawCubeFunc();
+		draw8cellnet(activeShaderProgram, modelScale);	
 	}
 	
 	
