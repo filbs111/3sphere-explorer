@@ -20,7 +20,7 @@ function sumPerlinWrap(ii,jj,kk,amplscale){
 	var total=0;
 	var colorScale=1;
 	var amplitude=1.5;
-	for (var iter=0;iter<1;iter++){
+	for (var iter=0;iter<4;iter++){
 		colorScale/=2;
 		amplitude/=amplscale;	//TODO sum series to normalise sum of amplitudes
 		total+=amplitude*wrapPerlin(ii/colorScale,jj/colorScale,kk/colorScale,4);	//TODO consistent random offsets for levels (so doesn't spike at 0)

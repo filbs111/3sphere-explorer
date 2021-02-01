@@ -190,21 +190,67 @@ function decentMod(num,toModBy){	//handle crappy nature of mod function (gives -
 
 var terrainHeightData = (function generateTerrainHeightData(){
 	var allData=[];
+	var changeData=[];
 	for (ii=0;ii<procTerrainSize;ii++){
 		var dataForI = [];
 		allData.push(dataForI);
+		var changeDataForI = [];
+		changeData.push(changeDataForI);
 		for (jj=0;jj<procTerrainSize;jj++){
 			//dataForI.push(terrainPrecalcHeight(ii,jj));
 			//dataForI.push(terrainPrecalcHeightTest(ii,jj));
 			dataForI.push(terrainPrecalcHeightPerlin(ii,jj));
 			//dataForI.push(terrainPrecalcHeightCastellated(ii,jj));
 			//dataForI.push(terrainPrecalcHeight111(ii,jj));
+			changeDataForI.push(0);
 		}
 	}
-	
+
+	thermalErode();
+
 	//console.log(allData);
 		
 	return allData;
+
+
+	//terrain thermal erosion
+	//TODO not at runtime, or use GPU to make fast
+	//TODO proper implementation, but for now, do independent falling downhill in x,y directions. resulting diagonal slope limit
+	//will be greater, but gets presentable results, though with many diagonal coastlines
+	function thermalErode(){
+		var limitDiff = 0.01;
+		for (var it=0;it<200;it++){	//want at least as many iterations as scale of features. to be safe, size of terrain
+			for (ii=0;ii<procTerrainSize;ii++){
+				var iiplus = (ii+1)%procTerrainSize;
+				var iiminus = (ii+procTerrainSize-1)%procTerrainSize;
+				for (jj=0;jj<procTerrainSize;jj++){
+					var centreHeight = allData[ii][jj];
+
+					var diffX1 = allData[iiplus][jj] - centreHeight;
+					var diffX2 = centreHeight- allData[iiminus][jj];
+
+					var jjplus = (jj+1)%procTerrainSize;
+					var jjminus = (jj+procTerrainSize-1)%procTerrainSize;
+					var diffY1 = allData[ii][jjplus] - centreHeight;
+					var diffY2 = centreHeight- allData[ii][jjminus];
+
+					changeData[ii][jj] = 
+						(Math.max(0, diffX1-limitDiff) + Math.min(0, diffX1 + limitDiff)) -
+						(Math.max(0, diffX2-limitDiff) + Math.min(0, diffX2 + limitDiff)) +
+						(Math.max(0, diffY1-limitDiff) + Math.min(0, diffY1 + limitDiff)) -
+						(Math.max(0, diffY2-limitDiff) + Math.min(0, diffY2 + limitDiff));
+				}
+			}
+			for (ii=0;ii<procTerrainSize;ii++){
+				for (jj=0;jj<procTerrainSize;jj++){
+					allData[ii][jj]+=0.25*changeData[ii][jj];
+				}
+			}
+		}
+	}
+
+	
+	
 	
 	function terrainPrecalcHeight(ii,jj){		
 		//make a flat region
