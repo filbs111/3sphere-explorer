@@ -5485,7 +5485,10 @@ function drawDuocylinderObject(wSettings, duocylinderObj, zeroLevel, seaPeakines
 				( guiParams.display.useSpecular? 'texmap4VecPerPixelDiscardPhong':'texmap4VecPerPixelDiscard' );
 			}else{
 				selectedShaderSet = duocylinderObj.useMapproject?
-				 'texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse2TexDepthAware':
+				( guiParams.display.terrainMapProject?
+				'texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse2TexDepthAware':
+				 'texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse2TexDepthAware'
+				):
 				 'texmap4VecPerPixelDiscardPhongDepthAware';
 			}
 		}

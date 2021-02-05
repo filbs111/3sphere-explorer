@@ -64,15 +64,24 @@
 		vec2 newTexCoord = vec2( atan(vVertexPos.x,vVertexPos.y)*CONST_REPS/CONST_TAU, atan(vVertexPos.z,vVertexPos.w)*CONST_REPS/CONST_TAU);
 		vec3 texSample = texture2D(uSampler, newTexCoord).xyz;
 #ifdef DOUBLE_TEXTURES
-		vec3 texSample2 = texture2D(uSampler, newTexCoord).xyz;
+		vec3 texSample2 = texture2D(uSampler2, newTexCoord).xyz;
 		texSample = mix(texSample, texSample2, vColor.a);	//use tex vertex colour 4th channel
 #endif
 #else
 
+
 #ifdef CUSTOM_TEXBIAS
 	vec3 texSample = texture2DProj(uSampler, vTextureCoord, uTexBias).xyz;
+#ifdef DOUBLE_TEXTURES
+	vec3 texSample2 = texture2DProj(uSampler2, vTextureCoord, uTexBias).xyz;
+	texSample = mix(texSample, texSample2, vColor.a);	//use tex vertex colour 4th channel
+#endif
 #else
 	vec3 texSample = texture2DProj(uSampler, vTextureCoord).xyz;	//is this case ever used?
+#ifdef DOUBLE_TEXTURES
+	vec3 texSample2 = texture2DProj(uSampler2, vTextureCoord).xyz;
+	texSample = mix(texSample, texSample2, vColor.a);	//use tex vertex colour 4th channel
+#endif
 #endif
 
 #endif
@@ -100,7 +109,12 @@
 #endif		
 		adjustedColor*=pow(diffuseSample,vec4(2.2));	//convert rgb to linear. this is inefficient and expect interpolation won't work right. todo figure out how to use properly, or convert to linear before using in shader.
 #else
-		adjustedColor*=pow(texture2DProj(uSamplerB, vTextureCoord),vec4(2.2));
+
+		vec4 diffuseSample=texture2DProj(uSamplerB, vTextureCoord);
+#ifdef DOUBLE_TEXTURES
+		diffuseSample= mix(diffuseSample, texture2DProj(uSampler2B, vTextureCoord), vColor.a);
+#endif
+		adjustedColor*=pow(diffuseSample,vec4(2.2));
 #endif
 #endif
 		
