@@ -18,13 +18,10 @@ var seaHeight = (function(){
 	
 	setPeakiness(0.15);	//TODO just call from outside before render
 
-	for (var wave of waveList){
-		addConstantsToWave(wave);
-	}
-
 	function setPeakiness(peakiness){
 		for (var wave of waveList){
 			wave.peakiness = peakiness;
+			addConstantsToWave(wave);
 		}
 	}
 
