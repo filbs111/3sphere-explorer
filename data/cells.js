@@ -380,6 +380,7 @@ function addMatsFromMat(thisMat){
 		return arrayOfSortedArrays;
 	}
 
+	returnObj.d120GridArrayArray = generateGridArrayArray(returnObj.d120[0], 0.515 * (0.4/0.505));	//dodecaScale not yet defined. TODO move all constants to top
 	returnObj.d600GridArrayArray = generateGridArrayArray(returnObj.d600[0], 0.4094);	//from collision culling 0.386/(4/Math.sqrt(6) , then extra factor sqrt(3) in checkTetraCollisionForArray 
 																			//0.355); ?? used for drawing culling
 
