@@ -1,5 +1,5 @@
 var terrainCollisionTestBoxPos={a:0,b:0,h:0};
-var procTerrainSize=128;
+var procTerrainSize=240;	//strip length 16 so expect multiple 16?? 
 
 function getFourHeights(aaFloor,bbFloor){
 	var aaCeil = (aaFloor + 1)%procTerrainSize;	//&255 maybe faster
@@ -190,19 +190,25 @@ function decentMod(num,toModBy){	//handle crappy nature of mod function (gives -
 
 var terrainHeightData = (function generateTerrainHeightData(){
 	var allData=[];
-	var changeData=[];
+	var gradDataX=[];
+	var gradDataY=[];
 	for (ii=0;ii<procTerrainSize;ii++){
 		var dataForI = [];
 		allData.push(dataForI);
-		var changeDataForI = [];
-		changeData.push(changeDataForI);
+
+		var gradDataXForI = [];
+		var gradDataYForI = [];
+		gradDataX.push(gradDataXForI);
+		gradDataY.push(gradDataYForI);
+
 		for (jj=0;jj<procTerrainSize;jj++){
 			//dataForI.push(terrainPrecalcHeight(ii,jj));
 			//dataForI.push(terrainPrecalcHeightTest(ii,jj));
 			dataForI.push(terrainPrecalcHeightPerlin(ii,jj));
 			//dataForI.push(terrainPrecalcHeightCastellated(ii,jj));
 			//dataForI.push(terrainPrecalcHeight111(ii,jj));
-			changeDataForI.push(0);
+			gradDataXForI.push(0);
+			gradDataYForI.push(0);
 		}
 	}
 
@@ -218,32 +224,50 @@ var terrainHeightData = (function generateTerrainHeightData(){
 	//TODO proper implementation, but for now, do independent falling downhill in x,y directions. resulting diagonal slope limit
 	//will be greater, but gets presentable results, though with many diagonal coastlines
 	function thermalErode(){
-		var limitDiff = 0.01;
-		for (var it=0;it<200;it++){	//want at least as many iterations as scale of features. to be safe, size of terrain
+		var limitDiff = 0.004;
+		var limitDiffSq=limitDiff*limitDiff;
+		for (var it=0;it<100;it++){	//want at least as many iterations as scale of features. to be safe, size of terrain
 			for (ii=0;ii<procTerrainSize;ii++){
 				var iiplus = (ii+1)%procTerrainSize;
-				var iiminus = (ii+procTerrainSize-1)%procTerrainSize;
 				for (jj=0;jj<procTerrainSize;jj++){
 					var centreHeight = allData[ii][jj];
 
 					var diffX1 = allData[iiplus][jj] - centreHeight;
-					var diffX2 = centreHeight- allData[iiminus][jj];
 
 					var jjplus = (jj+1)%procTerrainSize;
-					var jjminus = (jj+procTerrainSize-1)%procTerrainSize;
 					var diffY1 = allData[ii][jjplus] - centreHeight;
-					var diffY2 = centreHeight- allData[ii][jjminus];
 
-					changeData[ii][jj] = 
-						(Math.max(0, diffX1-limitDiff) + Math.min(0, diffX1 + limitDiff)) -
-						(Math.max(0, diffX2-limitDiff) + Math.min(0, diffX2 + limitDiff)) +
-						(Math.max(0, diffY1-limitDiff) + Math.min(0, diffY1 + limitDiff)) -
-						(Math.max(0, diffY2-limitDiff) + Math.min(0, diffY2 + limitDiff));
+					//"surplus" gradient
+					var gradTotalSq = diffX1*diffX1 + diffY1*diffY1;
+					if (gradTotalSq<limitDiffSq){
+						gradDataX[ii][jj]=0;	//no surplus gradient (within limit)
+						gradDataY[ii][jj]=0;
+					}else{
+						//var extraScaleFactor = (Math.sqrt(gradTotalSq)- Math.sqrt(limitDiffSq))/Math.sqrt(gradTotalSq);
+						var extraScaleFactor = 1-limitDiff/Math.sqrt(gradTotalSq);
+						gradDataX[ii][jj]=diffX1*extraScaleFactor;
+						gradDataY[ii][jj]=diffY1*extraScaleFactor;
+
+						//this works ok too. maybe more efficient.
+						// gradDataX[ii][jj]=10.0*diffX1*(gradTotalSq-limitDiffSq);	//is equation right? might combo with above by min/max
+						// gradDataY[ii][jj]=10.0*diffY1*(gradTotalSq-limitDiffSq);
+					}
 				}
 			}
+			var multiplier = 0.2;
 			for (ii=0;ii<procTerrainSize;ii++){
 				for (jj=0;jj<procTerrainSize;jj++){
-					allData[ii][jj]+=0.25*changeData[ii][jj];
+					var iiplus = (ii+1)%procTerrainSize;
+					var jjplus = (jj+1)%procTerrainSize;
+
+					allData[iiplus][jjplus]+=multiplier*gradDataX[iiplus][jjplus];
+					allData[iiplus][jjplus]+=multiplier*gradDataY[iiplus][jjplus];
+					allData[iiplus][jjplus]-=multiplier*gradDataX[ii][jj];
+					allData[iiplus][jjplus]-=multiplier*gradDataY[ii][jj];
+					allData[iiplus][jjplus]+=multiplier*gradDataX[iiplus][jj];
+					allData[iiplus][jjplus]-=multiplier*gradDataY[iiplus][jj];
+					allData[iiplus][jjplus]-=multiplier*gradDataX[ii][jjplus];
+					allData[iiplus][jjplus]+=multiplier*gradDataY[ii][jjplus];
 				}
 			}
 		}
@@ -369,7 +393,8 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 		for (var jj=0;jj<=gridSize;jj++){
 			vertices.push(4*ii/gridSize);			//TODO how to push multiple things onto an array? 
 			
-			var height = terrainGetHeight(ii&terrainSizeMinusOne,jj&terrainSizeMinusOne);
+			var height = terrainGetHeight(ii%gridSize,jj%gridSize);
+
 			thisLine.push(height);
 			
 			vertices.push(height);	
@@ -388,8 +413,8 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 	var twiceSquareSize = 8/gridSize;	//think this maybe some dumb thing whereby 4vec mapping stuff designed for -1 to +1, with 4x4 tiles. see duocylinderObjects.grid  
 	for (var ii=0;ii<=gridSize;ii++){
 		for (var jj=0;jj<=gridSize;jj++){
-			nx= -vertex2dData[(ii+1)&terrainSizeMinusOne][jj] + vertex2dData[(ii-1)&terrainSizeMinusOne][jj];
-			nz= -vertex2dData[ii][(jj+1)&terrainSizeMinusOne] + vertex2dData[ii][(jj-1)&terrainSizeMinusOne];
+			nx= -vertex2dData[(ii+1)%gridSize][jj] + vertex2dData[(ii+gridSize-1)%gridSize][jj];
+			nz= -vertex2dData[ii][(jj+1)%gridSize] + vertex2dData[ii][(jj+gridSize-1)%gridSize];
 			nx/=twiceSquareSize;
 			nz/=twiceSquareSize;
 			invmag = 1/Math.sqrt(1+nx*nx+nz*nz);
