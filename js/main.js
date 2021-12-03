@@ -2072,8 +2072,17 @@ function drawWorldScene(frameTime, isCubemapView) {
 	gl.useProgram(activeShaderProgram);
 	performCommon4vecShaderSetup(activeShaderProgram, wSettings, "log3");
 	*/
-	if (worldInfo.duocylinderModel!='none'){
+	if (worldInfo.duocylinderModel!='none' && worldInfo.duocylinderModel!='l3dt-brute'){
 		drawDuocylinderObject(wSettings, duocylinderObjects[worldInfo.duocylinderModel]);
+	}
+
+	// special case for drawing terrain2. TODO fit into standard draw (above)
+	if (worldInfo.duocylinderModel=='l3dt-brute'){
+		if (terrain2Buffer.isInitialised){
+			drawTerrain2();
+		}else{
+			console.log("terrain2 not yet initialised");
+		}
 	}
 			
 	//if (worldInfo.seaActive && isCubemapView){	//draw this in drawWorldScene2 for standard view (using depth image from drawWorldScene) TODO move there for cubemap view also.
@@ -2590,7 +2599,10 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 	mat4.identity(mMatrix);							//better to set M, V matrices and leave MV for shader?
 	rotate4mat(mMatrix, 0, 1, duocylinderSpin);
 	
-	if (worldInfo.duocylinderModel!='none' && guiParams.display.zPrepass){
+
+	if (worldInfo.duocylinderModel!='none' && worldInfo.duocylinderModel!='l3dt-brute' && guiParams.display.zPrepass){
+		//TODO stop special case handling for l3dt-brute
+
 		gl.depthFunc(gl.ALWAYS);	//TODO try no z check - since discarding with using depth texture, this check is redundant
 		gl.depthMask(false);
 		drawDuocylinderObject(wSettings, duocylinderObjects[worldInfo.duocylinderModel], 0,0,0, depthMap);
@@ -3155,6 +3167,7 @@ function setupScene() {
 }
 
 var texture,diffuseTexture,hudTexture,hudTextureSmallCircles,hudTexturePlus,hudTextureX,hudTextureBox,sshipTexture,sshipTexture2,cannonTexture,nmapTexture;
+var terrain2Texture, terrain2TextureB, terrain2TextureNormals;
 
 function loadTmpFFTexture(id,directory){
 	directory = directory || 'img/';
@@ -3217,6 +3230,12 @@ function initTexture(){
 	duocylinderObjects.voxTerrain.usesTriplanarMapping=true;
 
 	//texture = makeTexture("img/ash_uvgrid01-grey.tiny.png");	//numbered grid
+
+	//for l3dt/cdlod terrain
+	terrain2Texture = makeTexture("img/14206/14206-diffuse.jpg",gl.RGB,gl.UNSIGNED_SHORT_5_6_5);
+	terrain2TextureB = makeTexture("img/3.png",gl.RGB,gl.UNSIGNED_SHORT_5_6_5);
+	terrain2TextureNormals = makeTexture("img/normals1024.png",gl.RGB,gl.UNSIGNED_SHORT_5_6_5);	//TODO format better suited for normal maps
+		//TODO auto generate normal map from heightmap data
 }
 
 function makeTexture(src, imgformat=gl.RGBA, imgtype=gl.UNSIGNED_BYTE, yFlip = true) {	//to do OO
@@ -3458,10 +3477,10 @@ function init(){
 	});
 	var drawShapesFolder = gui.addFolder('drawShapes');
 	var world0Folder = drawShapesFolder.addFolder('world0');
-	world0Folder.add(guiParams.world0, "duocylinderModel", ["grid","terrain","procTerrain",'voxTerrain','none'] );
+	world0Folder.add(guiParams.world0, "duocylinderModel", ["grid","terrain","procTerrain",'voxTerrain','l3dt-brute','none'] );
 	world0Folder.add(guiParams.world0, "seaActive" );
 	var world1Folder = drawShapesFolder.addFolder('world1');
-	world1Folder.add(guiParams.world1, "duocylinderModel", ["grid","terrain","procTerrain",'voxTerrain','none'] );
+	world1Folder.add(guiParams.world1, "duocylinderModel", ["grid","terrain","procTerrain",'voxTerrain','l3dt-brute','none'] );
 	world1Folder.add(guiParams.world1, "seaActive" );
 	drawShapesFolder.add(guiParams, "seaLevel", -0.05,0.05,0.005);
 	drawShapesFolder.add(guiParams, "seaPeakiness", 0.0,0.5,0.01);
@@ -3661,6 +3680,8 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 			requestAnimationFrame(drawScene);	//in callback because need to wait until shaders loaded
 		}
 	);
+	loadHeightmapTerrain(terrainSize, doUponTerrainInitialised);
+
 	setFog(0,guiParams.fogColor0);
 	setFog(1,guiParams.fogColor1);
 	setAtmosThicknessMultiplier(guiParams.display.atmosThicknessMultiplier);
