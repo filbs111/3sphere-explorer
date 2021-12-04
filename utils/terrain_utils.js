@@ -56,6 +56,106 @@ var loadHeightmapTerrain = function(terrainSize, cb){
 
 //below located in main.js in terrainTest project
 
+//quadtree stuff
+var terrainScene = (
+    function(){
+        var viewpointPos = {x:-100, y:0, z:0};
+        var quadtree;
+		var blockStrips;
+
+		function setPos(xx,yy,zz){
+
+			viewpointPos.x = xx;
+			viewpointPos.y = yy;
+			viewpointPos.z = zz;
+			centrePos = [viewpointPos.x/terrainSize, viewpointPos.y/terrainSize, viewpointPos.z/terrainSize];
+            quadtree = calculateQuadtree(viewpointPos, {xpos:0, ypos:0, size:terrainSize});
+
+			//generate list of strips for drawing (combined blocks)
+			blocksforscales = {};
+			renderQuadtree(quadtree, generateBlockInfo);
+			//console.log(blocksforscales);
+
+			blockStrips = blockStripsFromBlockInfo(blocksforscales);
+			// console.log(blockStrips);
+
+			return quadtree;
+		}
+
+		//generate a list of strips covering consectutive quadtree blocks
+		//note this code is inefficient, and is intended to test performance improvement of 
+		//rendering consecutive blocks using single draw calls. optimise if works.
+		//note that with square morph ranges, easy to calculate strips without use of quadtree data.
+		//also, can extend strips up to morph ranges- no need to stick to quadtree...
+
+		var blocksforscales;
+		function generateBlockInfo(xpos,ypos,size){
+			// console.log("in generateBlockInfo. blocksforscales = " + blockstrips)
+			var combocoords = 1024*ypos + xpos;
+			if (!blocksforscales[size]){
+				blocksforscales[size]=[];
+			}
+			blocksforscales[size].push(combocoords);
+		}
+		function blockStripsFromBlockInfo(blocksforscales){
+			var scales = Object.keys(blocksforscales);
+			var blockStripsForScales={};
+			for (var ss of scales){
+				ss = Number.parseInt(ss);	//??
+				// console.log(ss);
+				var blockStripForThisScale=[];
+
+				//show that not in convenient order
+				// for (var cc of blocksforscales[ss]){
+				// 	var xx = cc & 1023;
+				// 	var yy = cc >> 10;
+				// 	console.log("xx/ss: " + xx/ss + " , yy/ss: " + yy/ss);
+				// }
+
+				var arrayofcombocoords = blocksforscales[ss];
+				for (var xx=0;xx<1024;xx+=ss){
+					var currentline = false;
+					for (var yy=0;yy<1024;yy+=ss){
+						var combocoordidx = (yy<<10) + xx;
+						if (arrayofcombocoords.indexOf(combocoordidx)!=-1){
+							if (currentline){
+								currentline.count++;
+							}else{
+								currentline = {combocoordstart:combocoordidx, count:1};
+							}
+						}else{
+							if (currentline){
+								blockStripForThisScale.push(currentline);
+							}
+							currentline = false;
+						}
+					}
+					if (currentline){
+						blockStripForThisScale.push(currentline);
+					}
+				}
+
+				blockStripsForScales[ss] = blockStripForThisScale;
+			}
+			return blockStripsForScales;
+		}
+
+        return {
+            getPos: function(){
+                return viewpointPos;
+            },
+            getQuadtree: function(){
+                return quadtree;
+            },
+			getBlockStrips: function(){
+                return blockStrips;
+            },
+			setPos
+        }
+    }
+)();
+
+
 var doUponTerrainInitialised = function(terrainHeightData){
 
 	timeLog("terrain initialisation callback");
@@ -177,6 +277,7 @@ var doUponTerrainInitialised = function(terrainHeightData){
 
 		timeLog("generated grid data strips");
 
+        terrainScene.setPos(0,0,0); //TODO remove from here, do each frame
 
 		return {vertices, grads, morphverts, morphgrads, indices};
 	})(terrainSize);
@@ -257,6 +358,83 @@ function drawTerrain2(){
         gl.vertexAttribPointer(shaderProg.attributes.aVertexGradient, bufferObj.vertexGradientBuffer.itemSize, gl.FLOAT, false, 0, ii*8*VERTS_PER_DIVISION);
         
         gl.drawElements(gl.TRIANGLE_STRIP, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+    }
+
+}
+
+function drawTerrain2BlockStrips(){
+    
+    var debugDarkeningMultiplier = 0.5; //just for testing. TODO get rid
+
+    var shaderProg = shaderPrograms.terrain_l3dt_morph_4d_eff;
+    var bufferObj = terrain2Buffer;
+
+    gl.useProgram(shaderProg);
+    enableDisableAttributes(shaderProg);
+    prepBuffersForDrawing(terrain2Buffer, shaderProg);
+
+    bind2dTextureIfRequired(terrain2Texture);
+    bind2dTextureIfRequired(terrain2TextureB, gl.TEXTURE1);
+    bind2dTextureIfRequired(terrain2TextureNormals, gl.TEXTURE2);
+
+    gl.uniform1i(shaderProg.uniforms.uSampler, 0);
+	gl.uniform1i(shaderProg.uniforms.uSamplerB, 1);
+	gl.uniform1i(shaderProg.uniforms.uSamplerNormals, 2);
+
+    gl.uniformMatrix4fv(shaderProg.uniforms.uPMatrix, false, pMatrix);
+	gl.uniformMatrix4fv(shaderProg.uniforms.uMVMatrix, false, mvMatrix);
+
+
+    var posxyz = terrainScene.getPos();
+    var centrePos = [posxyz.x, posxyz.y, posxyz.z];
+
+    // if (shaderProg.uniforms.uCentrePos){
+		gl.uniform3fv(shaderProg.uniforms.uCentrePos, centrePos);
+	// }
+    
+    // drawDebugResults = [];
+
+    //TODO populate blockStrips before calling this.
+
+    var blockStrips = terrainScene.getBlockStrips();
+    var scales = Object.keys(blockStrips);
+    for (var ss of scales){
+        // if (ss!=32){continue;}
+        var blocksForThisScale = blockStrips[ss];
+        for (var strip of blocksForThisScale){
+            var combocoordidx = strip.combocoordstart;
+            var xx = combocoordidx & 1023;
+            var yy = combocoordidx >> 10;
+            glDrawBlock(xx, yy, Number.parseInt(ss), strip.count);
+
+            // drawDebugResults.push({xx,yy,ss:Number.parseInt(ss),count:strip.count});
+        }
+    }
+
+    
+    function glDrawBlock(xpos,ypos,size, numblocks){
+        drawBlock(size*32/terrainSize, xpos/size, ypos/size, numblocks);
+    }
+
+    function drawBlock(downsizeAmount, xx, yy, numblocks){
+        if (!numblocks){numblocks=1;}
+
+        gl.uniform1f(shaderProg.uniforms.uMorphScale, downsizeAmount/1024 );	//TODO draw blocks at each scale consecutively, so don't call this every block
+        gl.uniform1f(shaderProg.uniforms.uDebugDarkeningMultiplier, debugDarkeningMultiplier);	//""
+
+        var shiftAmount = downsizeAmount*(xx*VERTS_PER_DIVISION + yy*32);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexPositionBuffer);
+        gl.vertexAttribPointer(shaderProg.attributes.aVertexPosition, bufferObj.vertexPositionBuffer.itemSize , gl.FLOAT, false, 12*downsizeAmount, 12*shiftAmount);
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexMorphBuffer);
+        gl.vertexAttribPointer(shaderProg.attributes.aVertexMorph, bufferObj.vertexMorphBuffer.itemSize , gl.FLOAT, false, 12*downsizeAmount, 12*shiftAmount);
+        
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexGradientBuffer);
+        gl.vertexAttribPointer(shaderProg.attributes.aVertexGradient, bufferObj.vertexGradientBuffer.itemSize, gl.FLOAT, false, 8*downsizeAmount, 8*shiftAmount);
+        gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexGradientMorphBuffer);
+        gl.vertexAttribPointer(shaderProg.attributes.aVertexGradientMorph, bufferObj.vertexGradientMorphBuffer.itemSize, gl.FLOAT, false, 8*downsizeAmount, 8*shiftAmount);
+
+        gl.drawElements(gl.TRIANGLE_STRIP, numblocks*bufferObj.vertexIndexBuffer.numItems/32, gl.UNSIGNED_SHORT, 0);
     }
 
 }

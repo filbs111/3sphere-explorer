@@ -92,17 +92,17 @@ function calculateQuadtree(viewpointPos, thisPart){
     return thisPart;
 }
 
-// function renderQuadtree(quadTree, drawBlock){
-//     if (!quadTree){
-//         return; //inefficient. TODO ensure always defined
-//     }
+function renderQuadtree(quadTree, drawBlock){
+    if (!quadTree){
+        return; //inefficient. TODO ensure always defined
+    }
 
-//     if (quadTree.totalLeafs == 1){
-//         drawBlock(quadTree.xpos, quadTree.ypos, quadTree.size);
-//     }else{
-//         quadTree.children.forEach(function(item){renderQuadtree(item, drawBlock);});
-//     }
-// }
+    if (quadTree.totalLeafs == 1){
+        drawBlock(quadTree.xpos, quadTree.ypos, quadTree.size);
+    }else{
+        quadTree.children.forEach(function(item){renderQuadtree(item, drawBlock);});
+    }
+}
 
 // function getCanvasDrawBlockFunc(ctx){
 //     return function(xpos,ypos,size){

@@ -18,6 +18,8 @@ varying vec2 vTexBlend;
 
 varying vec4 vDebugColor;
 
+varying vec2 vZW;	//for custom depth
+
 void main(void) {
 
 
@@ -109,7 +111,15 @@ void main(void) {
     vec3 vertexBlended = blendAmount*aVertexMorph + (1.0-blendAmount)*aVertexPosition;
     vec2 gradBlended = blendAmount*aVertexGradientMorph + (1.0-blendAmount)*aVertexGradient;
     
-    vec4 transformedCoord = uMVMatrix * vec4(vertexBlended,1.0);	//todo use 4x3 mat?
+
+    // vec4 transformedCoord = uMVMatrix * vec4(vertexBlended,1.0);	//todo use 4x3 mat?
+    vec3 scaledPosition = 2.0*3.141593*vertexBlended;
+	float cylRad =  3.141593/4.0 + scaledPosition.z;
+	float cosR = cos(cylRad);
+	float sinR = sin(cylRad);
+	vec4 aVertexPositionNormalized = normalize(vec4(cosR*sin(scaledPosition.x), cosR*cos(scaledPosition.x), sinR*sin(scaledPosition.y), sinR*cos(scaledPosition.y)));
+    vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
+
 
     gl_Position = uPMatrix * transformedCoord;	
     
@@ -121,4 +131,9 @@ void main(void) {
 
     float debugDarkening = uDebugDarkeningMultiplier*blendAmount;    //TODO remove from final version for efficiency
     vDebugColor = vec4(vec3(1.0-0.5*debugDarkening), 1.0);
+
+    // vDebugColor = vec4(1.0,0.0,1.0,1.0);    //override to test
+    // vDebugColor = vec4(1.0,0.0,uDebugDarkeningMultiplier,1.0);
+
+   	vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
 }

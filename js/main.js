@@ -2072,7 +2072,7 @@ function drawWorldScene(frameTime, isCubemapView) {
 	gl.useProgram(activeShaderProgram);
 	performCommon4vecShaderSetup(activeShaderProgram, wSettings, "log3");
 	*/
-	if (worldInfo.duocylinderModel!='none' && worldInfo.duocylinderModel!='l3dt-brute'){
+	if (worldInfo.duocylinderModel!='none' && worldInfo.duocylinderModel!='l3dt-brute' && worldInfo.duocylinderModel!='l3dt-blockstrips'){
 		drawDuocylinderObject(wSettings, duocylinderObjects[worldInfo.duocylinderModel]);
 	}
 
@@ -2080,6 +2080,13 @@ function drawWorldScene(frameTime, isCubemapView) {
 	if (worldInfo.duocylinderModel=='l3dt-brute'){
 		if (terrain2Buffer.isInitialised){
 			drawTerrain2();
+		}else{
+			console.log("terrain2 not yet initialised");
+		}
+	}
+	if (worldInfo.duocylinderModel=='l3dt-blockstrips'){
+		if(terrain2Buffer.isInitialised){
+			drawTerrain2BlockStrips();
 		}else{
 			console.log("terrain2 not yet initialised");
 		}
@@ -2600,7 +2607,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 	rotate4mat(mMatrix, 0, 1, duocylinderSpin);
 	
 
-	if (worldInfo.duocylinderModel!='none' && worldInfo.duocylinderModel!='l3dt-brute' && guiParams.display.zPrepass){
+	if (worldInfo.duocylinderModel!='none' && worldInfo.duocylinderModel!='l3dt-brute' && worldInfo.duocylinderModel!='l3dt-blockstrips' && guiParams.display.zPrepass){
 		//TODO stop special case handling for l3dt-brute
 
 		gl.depthFunc(gl.ALWAYS);	//TODO try no z check - since discarding with using depth texture, this check is redundant
@@ -3477,10 +3484,10 @@ function init(){
 	});
 	var drawShapesFolder = gui.addFolder('drawShapes');
 	var world0Folder = drawShapesFolder.addFolder('world0');
-	world0Folder.add(guiParams.world0, "duocylinderModel", ["grid","terrain","procTerrain",'voxTerrain','l3dt-brute','none'] );
+	world0Folder.add(guiParams.world0, "duocylinderModel", ["grid","terrain","procTerrain",'voxTerrain','l3dt-brute','l3dt-blockstrips','none'] );
 	world0Folder.add(guiParams.world0, "seaActive" );
 	var world1Folder = drawShapesFolder.addFolder('world1');
-	world1Folder.add(guiParams.world1, "duocylinderModel", ["grid","terrain","procTerrain",'voxTerrain','l3dt-brute','none'] );
+	world1Folder.add(guiParams.world1, "duocylinderModel", ["grid","terrain","procTerrain",'voxTerrain','l3dt-brute','l3dt-blockstrips','none'] );
 	world1Folder.add(guiParams.world1, "seaActive" );
 	drawShapesFolder.add(guiParams, "seaLevel", -0.05,0.05,0.005);
 	drawShapesFolder.add(guiParams, "seaPeakiness", 0.0,0.5,0.01);
