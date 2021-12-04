@@ -277,8 +277,6 @@ var doUponTerrainInitialised = function(terrainHeightData){
 
 		timeLog("generated grid data strips");
 
-        terrainScene.setPos(0,0,0); //TODO remove from here, do each frame
-
 		return {vertices, grads, morphverts, morphgrads, indices};
 	})(terrainSize);
 
@@ -386,7 +384,7 @@ function drawTerrain2BlockStrips(){
 
 
     var posxyz = terrainScene.getPos();
-    var centrePos = [posxyz.x, posxyz.y, posxyz.z];
+    var centrePos = [posxyz.x/terrainSize, posxyz.y/terrainSize, posxyz.z/terrainSize];
 
     // if (shaderProg.uniforms.uCentrePos){
 		gl.uniform3fv(shaderProg.uniforms.uCentrePos, centrePos);

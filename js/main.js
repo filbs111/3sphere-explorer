@@ -1458,6 +1458,24 @@ function drawWorldScene(frameTime, isCubemapView) {
 		mat4.multiply(lightMat, dropLightReflectionInfo.shaderMatrix2);
 		dropLightPos = lightMat.slice(12);	//todo make light dimmer/directional when "coming out of" portal
 	}
+
+	//calculate quadtree for terrain2
+	//TODO only do this if that terrain type selected for this world?
+	//extract position in unmapped terrain co-ordinates (z=height above terrain (or something like that, x,y are map coords))
+	//TODO just use 4vec directly? see if makes maths easier. 
+	var positionForTerrainMapping = [
+		invertedWorldCameraDuocylinderFrame[3],
+		invertedWorldCameraDuocylinderFrame[7],
+		invertedWorldCameraDuocylinderFrame[11],
+		invertedWorldCameraDuocylinderFrame[15]];	//??
+	var mapx = Math.atan2(positionForTerrainMapping[0],positionForTerrainMapping[1])*terrainSize/(2*Math.PI);
+	var mapy = Math.atan2(positionForTerrainMapping[2],positionForTerrainMapping[3])*terrainSize/(2*Math.PI);
+	var mapz = (Math.atan2(
+		Math.sqrt(positionForTerrainMapping[0]*positionForTerrainMapping[0]+positionForTerrainMapping[1]*positionForTerrainMapping[1]),
+		Math.sqrt(positionForTerrainMapping[2]*positionForTerrainMapping[2]+positionForTerrainMapping[3]*positionForTerrainMapping[3])
+	)/(2*Math.PI) - 0.25) * (-Math.PI*500); //note arbitrary 500 in quadtree_util
+	terrainScene.setPos(mapx,mapy,mapz);
+
 	
 	var boxSize;
 	var boxRad;
@@ -3284,7 +3302,7 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	world0:{duocylinderModel:"none",seaActive:false},
+	world0:{duocylinderModel:"l3dt-blockstrips",seaActive:false},
 	world1:{duocylinderModel:"none",seaActive:false},
 	duocylinderRotateSpeed:0,
 	seaLevel:-0.012,
