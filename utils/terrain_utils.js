@@ -34,7 +34,7 @@ var loadHeightmapTerrain = function(terrainSize, cb){
         if (arrayBuffer) {
             var sixteenBitArray = new Uint16Array(arrayBuffer);
             for (var ii = 0; ii < sixteenBitArray.byteLength; ii++) {
-                terrain2HeightData[ii] = 0.000005*sixteenBitArray[ii] - 0.2;
+                terrain2HeightData[ii] = 0.0000015*sixteenBitArray[ii] - 0.05;
             }
 
             console.log("loaded terrain data into array. t= " + (Date.now()-startTime));
@@ -189,7 +189,6 @@ var doUponTerrainInitialised = function(terrainHeightData){
 				var height = terrainHeightData[( ii & terrainSizeMinusOne) + terrainSize*(jj & terrainSizeMinusOne)];
 				//height = Math.max(height,-0.1);	//raise deep parts to "sea" level. 
 					//disable sea level because using normal map generated before this
-				height = 0.15*height;
 				thisLine[lineidx++]=height;
 				
 				vertices[vertidx++]=height;	
@@ -484,11 +483,7 @@ function getHeightAboveTerrain2For4VecPos(vec){
 	//var bb=multiplier*decentMod(b + duocylinderSpin,2*Math.PI);
 	var aa=decentMod(multiplier*a, terrainSize);
 	var bb=decentMod(multiplier*(b + duocylinderSpin),terrainSize);
-	var h = (Math.PI/4)*terrain2GetInterpHeightForAB(aa,bb);
-	
-	h*=1.2; //fudge factor. TODO figure out if this is true height (think "true" height is before multiply)
-            //could be 4/PI?
-            //might be that trig is wrong, and for greater heights this will fall over.
+	var h = 2*Math.PI*terrain2GetInterpHeightForAB(aa,bb);
 	
 	return c-h;
 }
