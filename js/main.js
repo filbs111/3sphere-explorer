@@ -739,6 +739,12 @@ function drawScene(frameTime){
 			gl.cullFace(gl.BACK);	//because might have set to front for mirror reversing/landing camera.
 			var numFacesToUpdate = guiParams.reflector.cmFacesUpdated;
 			mat4.set(cmapPMatrix, pMatrix);
+
+			//todo this transformation once, not repeat in following loop
+			mat4.set(otherPortalMat, worldCamera);
+			xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);
+			updateTerrain2QuadtreeForCampos(worldCamera.slice(12));
+
 			for (var ii=0;ii<numFacesToUpdate;ii++){	//only using currently to check perf impact. could use more "properly" and cycle/alternate.
 				var framebuffer = guiParams.display.drawTransparentStuff ? cubemapView.intermediateFramebuffers[ii] : cubemapView.framebuffers[ii];
 				//var framebuffer = cubemapView.framebuffers[ii];
@@ -1400,6 +1406,10 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 
 function drawWorldScene(frameTime, isCubemapView) {
 
+	if (!isCubemapView){
+		updateTerrain2QuadtreeForCampos(worldCamera.slice(12));
+	}
+
 	if (!guiParams["drop spaceship"]){
 		mat4.set(playerCameraInterp,sshipMatrix);	//copy current player 4-rotation matrix to the spaceship object
 	}else{
@@ -1458,24 +1468,6 @@ function drawWorldScene(frameTime, isCubemapView) {
 		mat4.multiply(lightMat, dropLightReflectionInfo.shaderMatrix2);
 		dropLightPos = lightMat.slice(12);	//todo make light dimmer/directional when "coming out of" portal
 	}
-
-	//calculate quadtree for terrain2
-	//TODO only do this if that terrain type selected for this world?
-	//extract position in unmapped terrain co-ordinates (z=height above terrain (or something like that, x,y are map coords))
-	//TODO just use 4vec directly? see if makes maths easier. 
-	var positionForTerrainMapping = [
-		invertedWorldCameraDuocylinderFrame[3],
-		invertedWorldCameraDuocylinderFrame[7],
-		invertedWorldCameraDuocylinderFrame[11],
-		invertedWorldCameraDuocylinderFrame[15]];	//??
-	var mapx = Math.atan2(positionForTerrainMapping[0],positionForTerrainMapping[1])*terrainSize/(2*Math.PI);
-	var mapy = Math.atan2(positionForTerrainMapping[2],positionForTerrainMapping[3])*terrainSize/(2*Math.PI);
-	var mapz = (Math.atan2(
-		Math.sqrt(positionForTerrainMapping[0]*positionForTerrainMapping[0]+positionForTerrainMapping[1]*positionForTerrainMapping[1]),
-		Math.sqrt(positionForTerrainMapping[2]*positionForTerrainMapping[2]+positionForTerrainMapping[3]*positionForTerrainMapping[3])
-	)/(2*Math.PI) - 0.25) * (-Math.PI*500); //note arbitrary 500 in quadtree_util
-	terrainScene.setPos(mapx,mapy,mapz);
-
 	
 	var boxSize;
 	var boxRad;

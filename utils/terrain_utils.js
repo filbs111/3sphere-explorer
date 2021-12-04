@@ -437,6 +437,22 @@ function drawTerrain2BlockStrips(){
 
 }
 
+function updateTerrain2QuadtreeForCampos(positionForTerrainMapping){
+    //calculate quadtree for terrain2
+    //TODO only do this if that terrain type selected for this world?
+    //extract position in unmapped terrain co-ordinates (z=height above terrain (or something like that, x,y are map coords))
+    //TODO just use 4vec directly? see if makes maths easier.
+    //TODO avoid repeating this for every cubemap face!
+
+    var mapx = (Math.atan2(positionForTerrainMapping[0],positionForTerrainMapping[1])+duocylinderSpin)*terrainSize/(2*Math.PI);
+    var mapy = Math.atan2(positionForTerrainMapping[2],positionForTerrainMapping[3])*terrainSize/(2*Math.PI);
+    var mapz = (Math.atan2(
+        Math.sqrt(positionForTerrainMapping[0]*positionForTerrainMapping[0]+positionForTerrainMapping[1]*positionForTerrainMapping[1]),
+        Math.sqrt(positionForTerrainMapping[2]*positionForTerrainMapping[2]+positionForTerrainMapping[3]*positionForTerrainMapping[3])
+    )/(2*Math.PI) - 0.25) * (-Math.PI*500); //note arbitrary 500 in quadtree_util
+    terrainScene.setPos(mapx,mapy,mapz);
+}
+
 
 var timeLog = (function(){
 
