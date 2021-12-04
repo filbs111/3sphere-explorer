@@ -4660,6 +4660,9 @@ var iterateMechanics = (function iterateMechanics(){
 				//collision with duocylinder procedural terrain	
 				if (getHeightAboveTerrainFor4VecPos(bulletPos)<0){detonateBullet(bullet, true, [0.3,0.3,0.3,1]);}
 			}
+			if (worldInfo.duocylinderModel == "l3dt-brute" || worldInfo.duocylinderModel == "l3dt-blockstrips"){
+				if (getHeightAboveTerrain2For4VecPos(bulletPos)<0){detonateBullet(bullet, true, [0.3,0.3,0.3,1]);}
+			}
 			if (worldInfo.duocylinderModel == "voxTerrain"){	//TODO generalise collision by specifying a function for terrain. (voxTerrain, procTerrain)
 				if (voxCollisionFunction(bulletPos)>0){detonateBullet(bullet, true, [0.5,0.5,0.5,1]);}
 			}

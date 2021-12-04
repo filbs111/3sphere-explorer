@@ -12,13 +12,13 @@ console.log("terrain divisions: " + DIVISIONS);
 
 var VERTS_PER_DIVISION = (terrainSize+1)*(terrainSize/DIVISIONS);
 
-
+var terrain2HeightData;
 var loadHeightmapTerrain = function(terrainSize, cb){
 
-    var terrainHeightData = new Array(terrainSize*terrainSize);
+    terrain2HeightData = new Array(terrainSize*terrainSize);
 
     //add a method onto array object. TODO terrain "class"?
-    terrainHeightData.getxy = terrainHeightXY;
+    terrain2HeightData.getxy = terrainHeightXY;
 
     var oReq = new XMLHttpRequest();
     oReq.open("GET", './data/terrain2/try1024.r16', true); //16 bit heightmap.
@@ -34,18 +34,18 @@ var loadHeightmapTerrain = function(terrainSize, cb){
         if (arrayBuffer) {
             var sixteenBitArray = new Uint16Array(arrayBuffer);
             for (var ii = 0; ii < sixteenBitArray.byteLength; ii++) {
-                terrainHeightData[ii] = 0.000005*sixteenBitArray[ii] - 0.2;
+                terrain2HeightData[ii] = 0.000005*sixteenBitArray[ii] - 0.2;
             }
 
             console.log("loaded terrain data into array. t= " + (Date.now()-startTime));
-            cb(terrainHeightData);
+            cb(terrain2HeightData);
             console.log("completed terrain callback func. t= " + (Date.now()-startTime));
         }
     };
     oReq.send(null);
 
     function terrainHeightXY(xx,yy){
-        return terrainHeightData[xyindex(xx,yy)];
+        return terrain2HeightData[xyindex(xx,yy)];
     }
 
     function xyindex(xx,yy){
@@ -363,7 +363,7 @@ function drawTerrain2(){
 
 function drawTerrain2BlockStrips(){
     
-    var debugDarkeningMultiplier = 0.5; //just for testing. TODO get rid
+    var debugDarkeningMultiplier = 0.0; //just for testing. TODO get rid
 
     var shaderProg = shaderPrograms.terrain_l3dt_morph_4d_eff;
     var bufferObj = terrain2Buffer;
@@ -464,3 +464,76 @@ var timeLog = (function(){
 		time = timeNow;
 	}
 })();
+
+
+//functions mostly copy-pasted, renamed from procTerrain.js
+//TODO reuse/generalise
+
+function getHeightAboveTerrain2For4VecPos(vec){
+	var multiplier = terrainSize/(2*Math.PI);	//TODO don't require enter same number here and elsewhere (gridSize)
+	var a = Math.atan2(vec[2],vec[3]);
+	var b = Math.atan2(vec[0],vec[1]);
+	
+	var sineVal = (vec[0]*vec[0] + vec[1]*vec[1]) - (vec[2]*vec[2] + vec[3]*vec[3]);
+	sineVal = Math.max(Math.min(sineVal,1),-1);	//will be screwed if this is >1 / <-1 .
+	
+	var c = -0.5*Math.asin( sineVal );	//this height of 4vec that can be compared to landscape height
+	
+	//TODO interpolation across polygon. initially just reuse equation used to generate terrain grid data.
+	//var aa=multiplier*decentMod(a,2*Math.PI);
+	//var bb=multiplier*decentMod(b + duocylinderSpin,2*Math.PI);
+	var aa=decentMod(multiplier*a, terrainSize);
+	var bb=decentMod(multiplier*(b + duocylinderSpin),terrainSize);
+	var h = (Math.PI/4)*terrain2GetInterpHeightForAB(aa,bb);
+	
+	h*=1.2; //fudge factor. TODO figure out if this is true height (think "true" height is before multiply)
+            //could be 4/PI?
+            //might be that trig is wrong, and for greater heights this will fall over.
+	
+	return c-h;
+}
+
+function terrain2GetInterpHeightForAB(aa,bb){
+	
+	if (aa!=aa || bb!=bb){
+	//	console.log("NaN input to terrain2GetInterpHeightForAB");
+		console.log(aa, bb);
+		return -1;	//todo what should return here? (really should never get here, best to look at where this is called)
+	}
+	
+	//interpolate height. currently this func used for realtime height detection and mesh creation, and this should make latter slower, but unimportant.
+	var aaFloor = Math.floor(aa)%terrainSize;
+	var bbFloor = Math.floor(bb)%terrainSize;
+	
+	var heights = terrain2GetFourHeights(aaFloor, bbFloor);
+	
+	var aaRemainder = aa-aaFloor;
+	var bbRemainder = bb-bbFloor;
+	
+	return (1-aaRemainder)*((1-bbRemainder)*heights[0] + bbRemainder*heights[1]) +
+									aaRemainder*((1-bbRemainder)*heights[2] + bbRemainder*heights[3]);
+							//interpolation that assumes doubly ruled squares. TODO two triangles to match mesh
+}
+
+function terrain2GetFourHeights(aaFloor,bbFloor){
+	var aaCeil = (aaFloor + 1)%terrainSize;
+	var bbCeil = (bbFloor + 1)%terrainSize;
+	
+	//check for bad input
+	//seems that NaN gets in here (aa,bb)
+	if ( aaFloor<0 || bbFloor<0 || aaCeil<0 || bbCeil<0 || aaFloor>=terrainSize || bbFloor>=terrainSize || aaCeil>=terrainSize || bbCeil>=terrainSize){
+	//	console.log("bad input!");
+		console.log({aaFloor, bbFloor, aaCeil, bbCeil, terrainSize});
+		return -1;	//returning this will cause problems.
+	}
+	
+	return [terrain2GetHeight(aaFloor,bbFloor),terrain2GetHeight(aaFloor,bbCeil),terrain2GetHeight(aaCeil,bbFloor),terrain2GetHeight(aaCeil,bbCeil)];
+}
+
+function terrain2GetHeight(ii,jj){
+	//detect out of bounds. ( have seen "terrainHeightData[ii] is undefined" error )
+	if (ii<0 || jj<0 || ii>=terrainSize || jj>=terrainSize){
+		console.log("out of bounds! " + ii + ", " + jj);
+	}
+	return terrain2HeightData[ii*terrainSize + jj];
+}
