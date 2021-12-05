@@ -323,7 +323,7 @@ function initTerrain2Buffers(sourceData){   //this is named initBuffers in terra
 
 }
 
-function drawTerrain2(){
+function drawTerrain2(wSettings){
     //draw brute force (todo add cdlod option)
     //TODO put into standard duocylinder rendering functions
 
@@ -344,7 +344,9 @@ function drawTerrain2(){
 
     gl.uniformMatrix4fv(shaderProg.uniforms.uPMatrix, false, pMatrix);
 	gl.uniformMatrix4fv(shaderProg.uniforms.uMVMatrix, false, mvMatrix);
+	gl.uniformMatrix4fv(shaderProg.uniforms.uMMatrix, false, mMatrix);
 
+    gl.uniform4fv(shaderProg.uniforms.uFogColor, wSettings.localVecFogColor);
 
     //this is "bruteforenomorph" from terrainTest project
     for (var ii=0;ii<DIVISIONS;ii++){
@@ -360,8 +362,7 @@ function drawTerrain2(){
 
 }
 
-function drawTerrain2BlockStrips(){
-    
+function drawTerrain2BlockStrips(wSettings){
     var debugDarkeningMultiplier = 0.0; //just for testing. TODO get rid
 
     var shaderProg = shaderPrograms.terrain_l3dt_morph_4d_eff;
@@ -381,7 +382,9 @@ function drawTerrain2BlockStrips(){
 
     gl.uniformMatrix4fv(shaderProg.uniforms.uPMatrix, false, pMatrix);
 	gl.uniformMatrix4fv(shaderProg.uniforms.uMVMatrix, false, mvMatrix);
+	gl.uniformMatrix4fv(shaderProg.uniforms.uMMatrix, false, mMatrix);
 
+    gl.uniform4fv(shaderProg.uniforms.uFogColor, wSettings.localVecFogColor);
 
     var centrePos = terrainScene.getPos();
 

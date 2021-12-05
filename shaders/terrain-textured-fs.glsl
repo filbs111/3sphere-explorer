@@ -6,12 +6,15 @@ precision mediump float;
 uniform sampler2D uSampler;
 uniform sampler2D uSamplerB;
 uniform sampler2D uSamplerNormals;
+uniform vec4 uFogColor;
+
 varying vec2 vPos;
 varying vec2 vGrad;
 varying vec2 vTexBlend;
 
 varying vec4 vDebugColor;
 
+varying float fog;
 varying vec2 vZW;	//for custom depth
 
 
@@ -37,9 +40,24 @@ void main(void){
 
     float lighting = max( dot(norm, directionToSun), 0.0 );
 
-    float postGammaLighting = pow(lighting, 0.455);
+    // float postGammaLighting = pow(lighting, 0.455);
+    // gl_FragColor= texColorBlend * vDebugColor * vec4(vec3(postGammaLighting), 1.0);
 
-    gl_FragColor= texColorBlend * vDebugColor * vec4(vec3(postGammaLighting), 1.0);
+    vec4 baseColor = pow(texColorBlend * vDebugColor, vec4(2.2)) * lighting;  //attempt calculate light value from texture?
+    // vec4 baseColor = texColorBlend * vDebugColor * lighting; 
+
+    // vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz )*adjustedColor.xyz*texture2DProj(uSampler, vTextureCoord).xyz + (1.0-fog)*uFogColor.xyz , 1.);
+    //TODO add in proper lights
+
+    vec4 preGammaFragColor = vec4( fog*baseColor.xyz + (1.0-fog)*uFogColor.xyz , 1.);
+
+    //tone mapping
+    preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
+
+    gl_FragColor = pow(preGammaFragColor, vec4(0.455));
+
+
+
 
     float depthVal = .5*(vZW.x/vZW.y) + .5;
     gl_FragDepthEXT = depthVal;

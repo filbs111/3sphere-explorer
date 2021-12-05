@@ -2089,14 +2089,14 @@ function drawWorldScene(frameTime, isCubemapView) {
 	// special case for drawing terrain2. TODO fit into standard draw (above)
 	if (worldInfo.duocylinderModel=='l3dt-brute'){
 		if (terrain2Buffer.isInitialised){
-			drawTerrain2();
+			drawTerrain2(wSettings);
 		}else{
 			console.log("terrain2 not yet initialised");
 		}
 	}
 	if (worldInfo.duocylinderModel=='l3dt-blockstrips'){
 		if(terrain2Buffer.isInitialised){
-			drawTerrain2BlockStrips();
+			drawTerrain2BlockStrips(wSettings);
 		}else{
 			console.log("terrain2 not yet initialised");
 		}
