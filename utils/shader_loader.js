@@ -151,6 +151,7 @@ function initShaders(shaderProgs){
 		fullscreenTexturedShowAlphaChan:["fullscreen-vs", "fullscreen-fs-showalpha"],
 		fullscreenTexturedWithDepthmap:["fullscreen-vs", "fullscreen-with-depthmap-fs"],
 		fullscreenTexturedFisheye:["fullscreen-vs", "fullscreen-fs-fisheye"],
+		fullscreenTexturedFisheyeWithFxaa:['fullscreen-vs','fullscreen-fs-fisheye-with-fxaa'],
 		fullscreenBennyBoxLite:["fullscreen-vs", "fullscreen-fs-bennybox-lite"],
 		fullscreenBennyBox:["fullscreen-vs", "fullscreen-fs-bennybox"],		//https://www.youtube.com/watch?v=Z9bYzpwVINA
 		fullscreenBlur:["fullscreen-vs", "fullscreen-fs-blur"],

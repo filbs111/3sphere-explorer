@@ -839,7 +839,7 @@ function drawScene(frameTime){
 		
 		var sceneDrawingOutputView = rttStageOneView;
 
-		if (guiParams.display.renderViaTexture == "fisheye"){
+		if (isFisheyeShader(guiParams.display.renderViaTexture)){
 			//draw scene to a offscreen
 			gl.bindFramebuffer(gl.FRAMEBUFFER, rttStageOneView.framebuffer);
 			
@@ -862,14 +862,15 @@ function drawScene(frameTime){
 			//cap oversize so doesn't kill computer!!
 			//note this is good for a proof of concept/ testing fisheye cam for gameplay, but 4x oversize (basically rendering 8k for 2k result) makes computer quite noisy! should use 2/4 panel/cubemap method if want a large FOV.
 			oversize = Math.min(oversize,4.0);
-			
+			var oversizedViewport = [ 2*Math.floor(oversize*gl.viewportWidth/2),  2*Math.floor(oversize*gl.viewportHeight/2)];
+
 			fisheyeParams.uInvF = uF.map(elem=>1/elem);
 			fisheyeParams.uVarOne = uVarOne;
 			fisheyeParams.uOversize = oversize;
-			
+			//fisheyeParams.uInvSizeSourceTex = oversizedViewport.map(x=>1/x);
+
 			myfisheyedebug = fisheyeParams;	//TODO remove
-			
-			var oversizedViewport = [ 2*Math.floor(oversize*gl.viewportWidth/2),  2*Math.floor(oversize*gl.viewportHeight/2)];
+
 			gl.viewport( 0,0, oversizedViewport[0], oversizedViewport[1] );
 			setRttSize( rttStageOneView, oversizedViewport[0], oversizedViewport[1] );	//todo stop setting this repeatedly
 			
@@ -924,14 +925,14 @@ function drawScene(frameTime){
 		
 		var activeProg;
 		
-		if (guiParams.display.renderViaTexture == "fisheye"){
+		if ( isFisheyeShader(guiParams.display.renderViaTexture) ){
 			//draw scene to penultimate screen (before FXAA)
 			gl.bindFramebuffer(gl.FRAMEBUFFER, rttView.framebuffer);
 			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
 			setRttSize( rttView, gl.viewportWidth, gl.viewportHeight );
 
 			bind2dTextureIfRequired(sceneDrawingOutputView.texture);	
-			activeProg = shaderPrograms.fullscreenTexturedFisheye;
+			activeProg = (guiParams.display.renderViaTexture == 'fisheye-with-integrated-fxaa') ? shaderPrograms.fullscreenTexturedFisheyeWithFxaa : shaderPrograms.fullscreenTexturedFisheye;
 			gl.useProgram(activeProg);
 			enableDisableAttributes(activeProg);
 			gl.cullFace(gl.BACK);
@@ -939,11 +940,14 @@ function drawScene(frameTime){
 			//if (activeProg.uniforms.uInvF){	//used for fisheye TODO lose IF?
 			gl.uniform2fv(activeProg.uniforms.uInvF, fisheyeParams.uInvF);
 			//}
+
 			gl.uniform1f(activeProg.uniforms.uVarOne, fisheyeParams.uVarOne);
 			gl.uniform1f(activeProg.uniforms.uOversize, fisheyeParams.uOversize);
 			
-			gl.uniform1i(activeProg.uniforms.uSampler, 0);		
+			gl.uniform1i(activeProg.uniforms.uSampler, 0);	
 			gl.uniform2f(activeProg.uniforms.uInvSize, 1/gl.viewportWidth , 1/gl.viewportHeight);		
+			// if (activeProg.uniforms.uInvSizeSourceTex){gl.uniform2fv(activeProg.uniforms.uInvSizeSourceTex, fisheyeParams.uInvSizeSourceTex);}
+
 			gl.depthFunc(gl.ALWAYS);
 			drawObjectFromBuffers(fsBuffers, activeProg);
 			//gl.depthFunc(gl.LESS);
@@ -998,7 +1002,9 @@ function drawScene(frameTime){
 		
 		//draw the simple quad object to the screen
 		switch (guiParams.display.renderViaTexture){
-			case "basic": 
+			case "basic":
+			case "fisheye-without-fxaa":
+			case "fisheye-with-integrated-fxaa":
 				activeProg = shaderPrograms.fullscreenTextured;break;
 			case "showAlpha":
 				activeProg = shaderPrograms.fullscreenTexturedShowAlphaChan;break;
@@ -3559,7 +3565,7 @@ function init(){
 	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.005);
 	displayFolder.add(guiParams.display, "flipReverseCamera");
 	displayFolder.add(guiParams.display, "showHud");
-	displayFolder.add(guiParams.display, "renderViaTexture", ['no','basic','showAlpha','bennyBoxLite','bennyBox','fisheye','blur','blur-b','blur-b-use-alpha']);
+	displayFolder.add(guiParams.display, "renderViaTexture", ['no','basic','showAlpha','bennyBoxLite','bennyBox','fisheye','fisheye-without-fxaa','fisheye-with-integrated-fxaa','blur','blur-b','blur-b-use-alpha']);
 	displayFolder.add(guiParams.display, "drawTransparentStuff");
 	displayFolder.add(guiParams.display, "voxNmapTest");
 	displayFolder.add(guiParams.display, "terrainMapProject");
@@ -5596,3 +5602,8 @@ var randomNormalised3vec = (function generate3vecRandomiser(){
 		return vec;
 	}
 })();
+
+
+function isFisheyeShader(shaderName){
+	return ['fisheye','fisheye-without-fxaa','fisheye-with-integrated-fxaa'].includes(shaderName);
+}
