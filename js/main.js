@@ -654,54 +654,58 @@ function drawScene(frameTime){
 	
 	offsetCam.setType(guiParams.display.cameraType);
 
-	var offsetSteps = 500;	//todo proper move thru portal taking into account path. or can make more efficient by binary search (~log(n) tests)
-	var tmp4mat = mat4.create();
-	var offsetVec = offsetCam.getVec();
-	var tmpOffsetArr = new Array(3);
-	var wentThrough = false;
+	moveCamInSteps(500, offsetCam.getVec());
 
-	for (var ii=0;ii<offsetSteps;ii++){	//TODO more efficient. if insufficient subdivision, transition stepped.
-		mat4.set(offsetPlayerCamera, tmp4mat);	//TODO check order
-		for (var cc=0;cc<3;cc++){
-			tmpOffsetArr[cc] = offsetVec[cc]*ii/offsetSteps;
-		}
-		xyzmove4mat(tmp4mat,tmpOffsetArr);
-		if (checkWithinReflectorRange({matrix:tmp4mat,world:sshipWorld}, reflectorInfo.rad)){
-				//TODO check/clean this. is world correct?
+	function moveCamInSteps(offsetSteps, offsetVec){
+		//todo proper move thru portal taking into account path. or can make more efficient by binary search (~log(n) tests)
+		
+		var tmp4mat = mat4.create();
+		var tmpOffsetArr = new Array(3);
+		var wentThrough = false;
 
-			//portalTest will pass, so repeat with original matrix
-			xyzmove4mat(offsetPlayerCamera,tmpOffsetArr);
-			portalTest(offsetCameraContainer,0);
-			wentThrough = true;
-			//assume wont cross twice, move remainder of way
+		for (var ii=0;ii<offsetSteps;ii++){	//TODO more efficient. if insufficient subdivision, transition stepped.
+			mat4.set(offsetPlayerCamera, tmp4mat);	//TODO check order
 			for (var cc=0;cc<3;cc++){
-				tmpOffsetArr[cc] = offsetVec[cc]-tmpOffsetArr[cc];
+				tmpOffsetArr[cc] = offsetVec[cc]*ii/offsetSteps;
 			}
-			xyzmove4mat(offsetPlayerCamera,tmpOffsetArr);
+			xyzmove4mat(tmp4mat,tmpOffsetArr);
+			if (checkWithinReflectorRange({matrix:tmp4mat,world:sshipWorld}, reflectorInfo.rad)){
+					//TODO check/clean this. is world correct?
+
+				//portalTest will pass, so repeat with original matrix
+				xyzmove4mat(offsetPlayerCamera,tmpOffsetArr);
+				portalTest(offsetCameraContainer,0);
+				wentThrough = true;
+				//assume wont cross twice, move remainder of way
+				for (var cc=0;cc<3;cc++){
+					tmpOffsetArr[cc] = offsetVec[cc]-tmpOffsetArr[cc];
+				}
+				xyzmove4mat(offsetPlayerCamera,tmpOffsetArr);
+			}
+		}
+		if (!wentThrough){
+			xyzmove4mat(offsetPlayerCamera,offsetVec);
 		}
 	}
-	if (!wentThrough){
-		xyzmove4mat(offsetPlayerCamera,offsetVec);
-	}
-	
 	
 	if (guiParams.display.stereo3d == "off"){
 		drawSceneToScreen(offsetPlayerCamera, 0,0,gl.viewportWidth,gl.viewportHeight);
 	}else{
 		//basic left/right shifted cameras
-		//no portaling, but should work when not crossing portal.
 		//no centre of perspective shift (rotate cameras inward by eyeTurnIn is not ideal)
 		//TODO shift x-hairs when using turn in or persp shift (eye x-hairs appear to be at screen depth)
-		var shiftedCam = mat4.create();
-		mat4.set(offsetPlayerCamera, shiftedCam);
-		xyzmove4mat(shiftedCam, [-guiParams.display.eyeSepWorld,0,0]);
-		xyzrotate4mat(shiftedCam, [0,guiParams.display.eyeTurnIn,0]);
-		drawSceneToScreen(shiftedCam, 0,0,gl.viewportWidth,gl.viewportHeight/2);
+		var savedCam = mat4.create();
+		mat4.set(offsetPlayerCamera, savedCam);
+		var savedWorld = offsetCameraContainer.world;
+		moveCamInSteps(100, [-guiParams.display.eyeSepWorld,0,0]);
+		xyzrotate4mat(offsetPlayerCamera, [0,guiParams.display.eyeTurnIn,0]);
+		drawSceneToScreen(offsetPlayerCamera, 0,0,gl.viewportWidth,gl.viewportHeight/2);
 
-		mat4.set(offsetPlayerCamera, shiftedCam);
-		xyzmove4mat(shiftedCam, [guiParams.display.eyeSepWorld,0,0]);
-		xyzrotate4mat(shiftedCam, [0,-guiParams.display.eyeTurnIn,0]);
-		drawSceneToScreen(shiftedCam, 0,gl.viewportHeight/2,gl.viewportWidth,gl.viewportHeight/2);
+		mat4.set(savedCam, offsetPlayerCamera);
+		offsetCameraContainer.world = savedWorld;
+		moveCamInSteps(100, [guiParams.display.eyeSepWorld,0,0]);
+		xyzrotate4mat(offsetPlayerCamera, [0,-guiParams.display.eyeTurnIn,0]);
+		drawSceneToScreen(offsetPlayerCamera, 0,gl.viewportHeight/2,gl.viewportWidth,gl.viewportHeight/2);
 		//note inefficient currently, since does full screen full render for each eye view.
 		// for top/down split, intermediate render targets could be half screen size
 		// some rendering could be shared between eyes - eg portal cubemaps.
