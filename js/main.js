@@ -2983,14 +2983,30 @@ function drawObjectFromPreppedBuffersVsMatmult(bufferObj, shaderProg){
 	gl.drawElements(gl.TRIANGLES, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 }
 
+var tmpCurrentlyBoundTextures = {};	//for inspection. seems that gl.TEXTURE3 needs to be rebound.
+var wipeTex = false;				//perhaps binding doesn't work until texture loaded.
 
 var bind2dTextureIfRequired = (function createBind2dTextureIfRequiredFunction(){
-	var currentlyBoundTextures=[];
-	var currentBoundTex;
+	var currentlyBoundTextures={};
+
+	tmpCurrentlyBoundTextures=currentlyBoundTextures;
+
 	return function(texToBind, texId = gl.TEXTURE0){	//TODO use different texture indices to keep textures loaded?
-								//curently just assuming using tex 0, already set as active texture (is set active texture a fast gl call?)
-		currentBoundTex = currentlyBoundTextures[texId];	//note that ids typically high numbers. gl.TEXTURE0 and so on. seem to be consecutive numbers but don't know if guaranteed.
-		if (texToBind != currentBoundTex){
+		//curently just assuming using tex 0, already set as active texture (is set active texture a fast gl call?)
+		//note that ids typically high numbers. gl.TEXTURE0 and so on. seem to be consecutive numbers but don't know if guaranteed.
+
+		// if(wipeTex){
+		// 	currentlyBoundTextures={};
+		// 	//currentlyBoundTextures[wipeTex]=null;
+		// 	wipeTex=false;
+		// }
+
+		//workaround wierd bug
+		if (texId == gl.TEXTURE3){
+			currentlyBoundTextures[texId] = null;
+		}
+
+		if (texToBind != currentlyBoundTextures[texId]){
 			gl.activeTexture(texId);
 			gl.bindTexture(gl.TEXTURE_2D, texToBind);
 			currentlyBoundTextures[texId] = texToBind;
@@ -3273,6 +3289,10 @@ function makeTexture(src, imgformat=gl.RGBA, imgtype=gl.UNSIGNED_BYTE, yFlip = t
 	
 	texture.image = new Image();
 	texture.image.onload = function(){
+
+		wipeTex=true;	//hack to ensure textures bound once loaded
+
+		console.log("texture onload. src = " + src);
 		bind2dTextureIfRequired(texture);
 		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, yFlip);
 
@@ -3698,11 +3718,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	initTexture();
 	cubemapViews = initCubemapFramebuffers();
 	initBuffers();
-	getLocationsForShadersUsingPromises(
-		()=>{
-			requestAnimationFrame(drawScene);	//in callback because need to wait until shaders loaded
-		}
-	);
+
 	loadHeightmapTerrain(terrainSize, doUponTerrainInitialised);
 
 	setFog(0,guiParams.fogColor0);
@@ -3712,6 +3728,12 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
     gl.enable(gl.DEPTH_TEST);
 	gl.enable(gl.CULL_FACE);
 	setupScene();
+
+	getLocationsForShadersUsingPromises(
+		()=>{
+			requestAnimationFrame(drawScene);	//in callback because need to wait until shaders loaded
+		}
+	);
 	
 	function setFog(world,color){
 		worldColorsPlain[world]=colorArrFromUiString(color).concat(1);
