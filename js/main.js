@@ -911,17 +911,17 @@ function drawScene(frameTime){
 			var wSettings = drawWorldScene(frameTime, false);
 			
 			if (guiParams.display.drawTransparentStuff){
-				drawTransparentStuff(rttStageOneView, rttFisheyeView2, wSettings);
+				drawTransparentStuff(rttStageOneView, rttFisheyeView2, gl.viewportWidth, gl.viewportHeight, wSettings);
 				sceneDrawingOutputView = rttFisheyeView2;
 			}
 		}
 		
-		function drawTransparentStuff(fromView, toView, wSettings){
+		function drawTransparentStuff(fromView, toView, sizeX, sizeY, wSettings){
 			//switch to another view of same size, asign textures for existing rgb(a) and depth map, and draw these to new rgb(a), depth map (fullscreen quad)
 			// note that drawing depthmap maybe redundant because will be looking up depth map from texture to determine colours anyway, but might help with discarding pixels etc.
 			gl.bindFramebuffer(gl.FRAMEBUFFER, toView.framebuffer);
-			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight);
-			setRttSize( toView, gl.viewportWidth, gl.viewportHeight);	//todo stop setting this repeatedly
+			gl.viewport( 0,0, sizeX, sizeY);
+			setRttSize( toView, sizeX, sizeY);	//todo stop setting this repeatedly
 			activeProg = shaderPrograms.fullscreenTexturedWithDepthmap;
 			gl.useProgram(activeProg);
 			enableDisableAttributes(activeProg);
