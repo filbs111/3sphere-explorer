@@ -688,8 +688,18 @@ function drawScene(frameTime){
 	if (guiParams.display.stereo3d == "off"){
 		drawSceneToScreen(offsetPlayerCamera, 0,0,gl.viewportWidth,gl.viewportHeight);
 	}else{
-		drawSceneToScreen(offsetPlayerCamera, 0,0,gl.viewportWidth,gl.viewportHeight/2);
-		drawSceneToScreen(offsetPlayerCamera, 0,gl.viewportHeight/2,gl.viewportWidth,gl.viewportHeight/2);
+		//basic left/right shifted cameras
+		//no portaling, but should work when not crossing portal.
+		//no centre of perspective shift (TODO, or just rotate cameras inward)
+		var shiftedCam = mat4.create();
+		mat4.set(offsetPlayerCamera, shiftedCam);
+		xyzmove4mat(shiftedCam, [-guiParams.display.eyeSepWorld,0,0]);
+
+		drawSceneToScreen(shiftedCam, 0,0,gl.viewportWidth,gl.viewportHeight/2);
+
+		mat4.set(offsetPlayerCamera, shiftedCam);
+		xyzmove4mat(shiftedCam, [guiParams.display.eyeSepWorld,0,0]);
+		drawSceneToScreen(shiftedCam, 0,gl.viewportHeight/2,gl.viewportWidth,gl.viewportHeight/2);
 		//note inefficient currently, since does full screen full render for each eye view.
 		// for top/down split, intermediate render targets could be half screen size
 		// some rendering could be shared between eyes - eg portal cubemaps.
@@ -3379,6 +3389,7 @@ var guiParams={
 		uVarOne:-0.01,
 		flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
 		stereo3d:"off",
+		eyeSepWorld:0.001,	//half distance between eyes in game world
 		showHud:true,
 		renderViaTexture:'blur-b-use-alpha',
 		drawTransparentStuff:true,
@@ -3576,6 +3587,7 @@ function init(){
 	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.005);
 	displayFolder.add(guiParams.display, "flipReverseCamera");
 	displayFolder.add(guiParams.display, "stereo3d", ["off","top-bottom"]);
+	displayFolder.add(guiParams.display, "eyeSepWorld", -0.004,0.004,0.0002);
 	displayFolder.add(guiParams.display, "showHud");
 	displayFolder.add(guiParams.display, "renderViaTexture", ['basic','showAlpha','bennyBoxLite','bennyBox','fisheye','fisheye-without-fxaa','fisheye-with-integrated-fxaa','blur','blur-b','blur-b-use-alpha']);
 	displayFolder.add(guiParams.display, "drawTransparentStuff");
