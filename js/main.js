@@ -690,15 +690,17 @@ function drawScene(frameTime){
 	}else{
 		//basic left/right shifted cameras
 		//no portaling, but should work when not crossing portal.
-		//no centre of perspective shift (TODO, or just rotate cameras inward)
+		//no centre of perspective shift (rotate cameras inward by eyeTurnIn is not ideal)
+		//TODO shift x-hairs when using turn in or persp shift (eye x-hairs appear to be at screen depth)
 		var shiftedCam = mat4.create();
 		mat4.set(offsetPlayerCamera, shiftedCam);
 		xyzmove4mat(shiftedCam, [-guiParams.display.eyeSepWorld,0,0]);
-
+		xyzrotate4mat(shiftedCam, [0,guiParams.display.eyeTurnIn,0]);
 		drawSceneToScreen(shiftedCam, 0,0,gl.viewportWidth,gl.viewportHeight/2);
 
 		mat4.set(offsetPlayerCamera, shiftedCam);
 		xyzmove4mat(shiftedCam, [guiParams.display.eyeSepWorld,0,0]);
+		xyzrotate4mat(shiftedCam, [0,-guiParams.display.eyeTurnIn,0]);
 		drawSceneToScreen(shiftedCam, 0,gl.viewportHeight/2,gl.viewportWidth,gl.viewportHeight/2);
 		//note inefficient currently, since does full screen full render for each eye view.
 		// for top/down split, intermediate render targets could be half screen size
@@ -3391,7 +3393,8 @@ var guiParams={
 		uVarOne:-0.01,
 		flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
 		stereo3d:"off",
-		eyeSepWorld:0.001,	//half distance between eyes in game world
+		eyeSepWorld:0.0004,	//half distance between eyes in game world
+		eyeTurnIn:0.002,
 		showHud:true,
 		renderViaTexture:'blur-b-use-alpha',
 		drawTransparentStuff:true,
@@ -3589,7 +3592,8 @@ function init(){
 	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.005);
 	displayFolder.add(guiParams.display, "flipReverseCamera");
 	displayFolder.add(guiParams.display, "stereo3d", ["off","top-bottom"]);
-	displayFolder.add(guiParams.display, "eyeSepWorld", -0.004,0.004,0.0002);
+	displayFolder.add(guiParams.display, "eyeSepWorld", -0.001,0.001,0.0001);
+	displayFolder.add(guiParams.display, "eyeTurnIn", -0.01,0.01,0.0005);
 	displayFolder.add(guiParams.display, "showHud");
 	displayFolder.add(guiParams.display, "renderViaTexture", ['basic','showAlpha','bennyBoxLite','bennyBox','fisheye','fisheye-without-fxaa','fisheye-with-integrated-fxaa','blur','blur-b','blur-b-use-alpha']);
 	displayFolder.add(guiParams.display, "drawTransparentStuff");
