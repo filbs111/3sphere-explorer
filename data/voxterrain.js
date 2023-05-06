@@ -81,29 +81,24 @@ function get4vecForABCDCCoords(a,b,c){	//simple version first!
 
 var voxTerrainData = (function generateVoxTerrainData(){
 	
-	var voxdata = [];
 	var blocksize = 64;
 	
-	for (var ii=0;ii<blocksize;ii++){
-		var slicedata=[];
-		voxdata.push(slicedata);
-		for (var jj=0;jj<blocksize;jj++){
-			slicedata.push([]);	//could push new Array(blocksize). use empty array if fill with sparse data. unimportant for small blocksize 
-		}
-	}
-
-	//var voxFunction = sinesfunctionthree;
-	//var voxFunction = perlinfunctionTwoSided;
-	//var voxFunction = perlinfunctionTwoLevel;
-	//var voxFunction = perlinfunctionSpiral;
-	//var voxFunction = balls;
+	var safeThreshold;	//should be root(3)/2, but find smallest number for which 
+		//  makeVoxdataForFunc output matches makeVoxdataForFuncFaster by trial and error.
+	//var voxFunction = sinesfunctionthree;safeThreshold=0.49;	//"fast" is slower on chrome
+	//var voxFunction = perlinfunctionTwoSided;safeThreshold=0.13;	//fast is faster
+	//var voxFunction = perlinfunctionTwoLevel;safeThreshold=0.49;	//"fast" is slower on chrome
+	//var voxFunction = perlinfunctionSpiral;safeThreshold=1;	//"fast" is slower on chrome
+	//var voxFunction = balls;safeThreshold=1.63;	//"fast" is slower on chrome
 	//var voxFunction = oddBalls;	//this is not continuous so does not play nicely with collision. useful for testing
-	//var voxFunction = wierdBeans;
-	//var voxFunction = brejao;
-	var voxFunction = shiftedbrejao;
-	//var voxFunction = longHolesTwo;
-	makeVoxdataForFunc(voxFunction);
+	//var voxFunction = wierdBeans; safeThreshold=0.83;	//"fast" is slower on chrome
+	//var voxFunction = brejao;safeThreshold=1.27;	//fast is slightly faster
+	var voxFunction = shiftedbrejao;safeThreshold=1.19;	//fast is slightly faster
+	// var voxFunction = longHolesTwo;safeThreshold=0.79;
 	
+	var voxdata=makeVoxdataForFuncFaster(voxFunction, safeThreshold);
+	console.log({tag:"voxdata",matches:comparevoxdata(voxdata,makeVoxdataForFunc(voxFunction))});	//confirm fast version matches regular result
+
 	voxCollisionFunction = function(vec){
 		//convert into duocylinder "space", and lookup voxFunction
 		//initial implementation - just change some test value, use to set spaceship colour to test can check whether inside voxTerrain
@@ -839,6 +834,16 @@ var voxTerrainData = (function generateVoxTerrainData(){
 	}
 	
 	function makeVoxdataForFunc(thefunction){
+		var voxdata=[];
+		for (var ii=0;ii<blocksize;ii++){
+			var slicedata=[];
+			voxdata.push(slicedata);
+			for (var jj=0;jj<blocksize;jj++){
+				slicedata.push([]);	//could push new Array(blocksize). use empty array if fill with sparse data. unimportant for small blocksize 
+			}
+		}
+
+		var starttime=Date.now();
 		for (var ii=0;ii<blocksize;ii++){
 			var slicedata = voxdata[ii];
 			for (var jj=0;jj<blocksize;jj++){
@@ -848,6 +853,84 @@ var voxTerrainData = (function generateVoxTerrainData(){
 				}											//note some functions may benefit from currying eg functionForXY= thefunction(ii,jj), 
 			}
 		}
+		console.log({tag:"voxdata",time:Date.now()-starttime});
+		return voxdata;
+	}
+	//faster makeVoxdataForFunc . assume that returns lower bound distance to nearest surface.
+	// this is likely generally untrue...
+	//TODO should this be storing values instead of true/false?
+	function makeVoxdataForFuncFaster(thefunction, safeLevel){
+		// expect safeLevel sqrt(3)/2 = 0.86, assuming SDF is lower bound on distance to nearest surface, but
+		// seems funcs dont obey this. find safeLevel by trial and error.
+
+		//in practice this is actually slower than func it replaces, unless thefunction is complex.
+		// TODO the surface extraction stage (that looks at result of this, should be combined with this, so can create sparse tree data.)
+
+		var voxdata=[];
+		for (var ii=0;ii<blocksize;ii++){
+			var slicedata=[];
+			voxdata.push(slicedata);
+			for (var jj=0;jj<blocksize;jj++){
+				slicedata.push([]);	//could push new Array(blocksize). use empty array if fill with sparse data. unimportant for small blocksize 
+			}
+		}
+
+		//could do this recursively, but first just check that concept basically works
+		var blockcount=0;
+		var starttime=Date.now();
+		for (var ii=0;ii<blocksize;ii+=2){
+			var voxdataa=voxdata[ii];
+			var voxdatab=voxdata[ii+1];
+			for (var jj=0;jj<blocksize;jj+=2){
+				var voxdata0=voxdataa[jj];
+				var voxdata1=voxdataa[jj+1];
+				var voxdata2=voxdatab[jj];
+				var voxdata3=voxdatab[jj+1];
+
+				for (var kk=0;kk<blocksize;kk+=2){
+					var centreVal = thefunction(ii+0.5,jj+0.5,kk+0.5);
+					if (Math.abs(centreVal)>safeLevel){
+						var centreValPos = (centreVal>0);
+						voxdata0[kk] = centreValPos;
+						voxdata0[kk+1] = centreValPos;
+						voxdata1[kk] = centreValPos;
+						voxdata1[kk+1] = centreValPos;
+						voxdata2[kk] = centreValPos;
+						voxdata2[kk+1] = centreValPos;
+						voxdata3[kk] = centreValPos;
+						voxdata3[kk+1] = centreValPos;
+					}else{
+						voxdata0[kk] = (thefunction(ii,jj,kk) > 0 );
+						voxdata0[kk+1] = (thefunction(ii,jj,kk+1) > 0 );
+						voxdata1[kk] = (thefunction(ii,jj+1,kk) > 0 );
+						voxdata1[kk+1] = (thefunction(ii,jj+1,kk+1) > 0 );
+						voxdata2[kk] = (thefunction(ii+1,jj,kk) > 0 );
+						voxdata2[kk+1] = (thefunction(ii+1,jj,kk+1) > 0 );
+						voxdata3[kk] = (thefunction(ii+1,jj+1,kk) > 0 );
+						voxdata3[kk+1] = (thefunction(ii+1,jj+1,kk+1) > 0 );
+						blockcount++;
+					}
+				}
+			}
+		}
+		console.log({tag:"voxdata",blockcount, ratio:blockcount/(Math.pow(32,3)),time:Date.now()-starttime});
+		return voxdata;
+	}
+
+	function comparevoxdata(dataone,datatwo){
+		var matches = true;
+		for (var ii=0;ii<blocksize;ii++){
+			var slicedata1 = dataone[ii];
+			var slicedata2 = datatwo[ii];
+			for (var jj=0;jj<blocksize;jj++){
+				var stripdata1 = slicedata1[jj];
+				var stripdata2 = slicedata2[jj];
+				for (var kk=0;kk<blocksize;kk++){
+					matches = matches && (stripdata1[kk] == stripdata2[kk]);
+				}
+			}
+		}
+		return matches;
 	}
 	
 	//copied from webgl-voxels project
