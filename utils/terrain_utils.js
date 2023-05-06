@@ -54,6 +54,7 @@ var loadHeightmapTerrain = function(terrainSize, cb){
 }
 
 
+var globalblockforscales;
 //below located in main.js in terrainTest project
 
 //quadtree stuff
@@ -72,8 +73,15 @@ var terrainScene = (
 			centrePos = [xx, yy, zz];
             quadtree = calculateQuadtree(viewpointPos, {xpos:0, ypos:0, size:terrainSize});
 
-			//generate list of strips for drawing (combined blocks)
-			blocksforscales = {};
+            // clear blocksforscales with less garbage
+            // note might be faster if array index was log2 of scale
+            for (var ss=0;ss<blocksforscales.length; ss++){
+                if (blocksforscales[ss]){blocksforscales[ss].length=0;}
+            }
+            // blocksforscales = [];
+
+            globalblockforscales = blocksforscales;
+
 			renderQuadtree(quadtree, generateBlockInfo);
 			//console.log(blocksforscales);
 
@@ -83,13 +91,14 @@ var terrainScene = (
 			return quadtree;
 		}
 
-		//generate a list of strips covering consectutive quadtree blocks
+		//generate a list of strips covering consecutive quadtree blocks
 		//note this code is inefficient, and is intended to test performance improvement of 
 		//rendering consecutive blocks using single draw calls. optimise if works.
 		//note that with square morph ranges, easy to calculate strips without use of quadtree data.
 		//also, can extend strips up to morph ranges- no need to stick to quadtree...
 
-		var blocksforscales;
+		var blocksforscales=[]; 	//list of strips for drawing (combined blocks)
+
 		function generateBlockInfo(xpos,ypos,size){
 			// console.log("in generateBlockInfo. blocksforscales = " + blockstrips)
 			var combocoords = 1024*ypos + xpos;
@@ -99,11 +108,12 @@ var terrainScene = (
 			blocksforscales[size].push(combocoords);
 		}
 		function blockStripsFromBlockInfo(blocksforscales){
-			var scales = Object.keys(blocksforscales);
 			var blockStripsForScales={};
-			for (var ss of scales){
-				ss = Number.parseInt(ss);	//??
-				// console.log(ss);
+			for (var ss=0;ss<blocksforscales.length;ss++){
+
+                if (!blocksforscales[ss]){continue;}    //TODO not this - array very sparse. typically, only 32, 64
+
+                // console.log(ss);
 				var blockStripForThisScale=[];
 
 				//show that not in convenient order
