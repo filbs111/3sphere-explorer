@@ -586,8 +586,8 @@ var offsetCam = (function(){
 	var targetForType = {
 		"near 3rd person":[0,-37.5,-25],	//TODO reduce code duplication. do scalar vector product targetForType time?
 		"mid 3rd person":[0,-50,-75],
-		//"far 3rd person":[0,-100,-125],	
-		"far 3rd person":[0,-75,-100],	
+		"far 3rd person":[0,-75,-100],
+		"really far 3rd person":[0,-75,-125],
 		"cockpit":[0,0,15],
 		"side":[30,0,12.5]
 	}
@@ -595,7 +595,7 @@ var offsetCam = (function(){
 		"near 3rd person":[0,-37.5,25],
 		"mid 3rd person":[0,-37.5,37.5],
 		"far 3rd person":[0,-100,150],
-		//"far 3rd person":[0,0,100],
+		"really far 3rd person":[0,-75,125],
 		"cockpit":[0,0,-50],
 		"side":[30,0,12.5]
 	}
@@ -3560,7 +3560,7 @@ function init(){
 	controlFolder.add(guiParams.control, 'smoothMouse', 0, 1000,50);
 	
 	var displayFolder = gui.addFolder('display');	//control and movement
-	displayFolder.add(guiParams.display, "cameraType", ["cockpit", "near 3rd person", "mid 3rd person", "far 3rd person", "side"]);
+	displayFolder.add(guiParams.display, "cameraType", ["cockpit", "near 3rd person", "mid 3rd person", "far 3rd person", "really far 3rd person", "side"]);
 	displayFolder.add(guiParams.display, "cameraFov", 60,165,5);
 	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.005);
 	displayFolder.add(guiParams.display, "flipReverseCamera");
