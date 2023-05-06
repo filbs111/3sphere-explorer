@@ -35,8 +35,40 @@ var MySound = (function(){
 		request.onload = function() {
 			console.log("request loaded..." + that.soundAddress);
 			audiocontext.decodeAudioData(request.response, function(buffer){
-				console.log("set sound buffer");
+				console.log("set sound buffer. soundAddress:" + soundAddress);
+				console.log(buffer);
+				
+				
 				that.buffer = buffer;
+			/*	
+				//bad looping in firefox. try chopping off end of buffer so multiple of 4096 samples?
+				//THIS DOESN'T HELP CRAP LOOPING
+			//	var shortenedLength = 4096*Math.floor(buffer.length/4096);
+				var shortenedLength = 8192;
+				
+				var myArrayBuffer = audiocontext.createBuffer(buffer.numberOfChannels, shortenedLength, buffer.sampleRate);	//TODO is it possible to just lose the last parts of existing buffer without copying?
+
+				// Fill the buffer with white noise;
+				// just random values between -1.0 and 1.0
+				for (var channel = 0; channel < myArrayBuffer.numberOfChannels; channel++) {
+				  // This gives us the actual array that contains the data
+				  var nowBuffering = myArrayBuffer.getChannelData(channel);
+				  var sourceData = buffer.getChannelData(channel);
+				  for (var i = 0; i < myArrayBuffer.length; i++) {
+					// Math.random() is in [0; 1.0]
+					// audio needs to be in [-1.0; 1.0]
+					//nowBuffering[i] = Math.random() * 2 - 1;
+					nowBuffering[i] = sourceData[i];
+				  }
+				}
+				that.buffer = myArrayBuffer;
+				
+				*/
+			//	var scriptNode = audioCtx.createScriptProcessor(4096, 1, 1);	//this might be something that gets called a lot
+				
+				
+				
+				
 				cb && cb();
 			}, function(err){
 				console.log("oops! problem loading sound from : " + this.soundAddress);
@@ -60,6 +92,19 @@ var MySound = (function(){
 		if (loop){
 			source.loop = true;
 			var soundDuration = this.buffer.duration;
+			
+			/*
+			//attempt to work around broken audio looping in firefox. try putting loopEnd before end of sound?
+			var estDuration = this.buffer.length/this.buffer.sampleRate;
+			var guessDifferentLength = 4096*Math.floor(this.buffer.length/4096);
+			var guessDifferentDuration = guessDifferentLength/this.buffer.sampleRate;
+			
+			console.log(soundDuration);
+			console.log(estDuration);
+			console.log(guessDifferentLength);
+			console.log(guessDifferentDuration);
+			*/
+			
 			source.loopEnd=soundDuration;
 			source.loopStart=0.1;	//this fixes glitchy looping heard in firefox. seems that this sound is silent/quiet at start, so firefox has expected behaviour. maybe other browsers are using some metadata - expect this sound is designed to loop some time in.
 		}
