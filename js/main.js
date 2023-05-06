@@ -831,9 +831,6 @@ function drawScene(frameTime){
 		gl.cullFace(gl.BACK);
 	}
 	
-	if (guiParams.display.renderViaTexture == "no"){
-		drawWorldScene(frameTime, false);
-	}else{
 		
 		var fisheyeParams={};
 		
@@ -1028,7 +1025,7 @@ function drawScene(frameTime){
 		gl.depthFunc(gl.ALWAYS);		
 		drawObjectFromBuffers(fsBuffers, activeProg);
 		gl.depthFunc(gl.LESS);
-	}
+	
 	
 	if (!guiParams["drop spaceship"] && guiParams.display.showHud){	//only draw hud if haven't dropped spaceship
 		
@@ -3565,7 +3562,7 @@ function init(){
 	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.005);
 	displayFolder.add(guiParams.display, "flipReverseCamera");
 	displayFolder.add(guiParams.display, "showHud");
-	displayFolder.add(guiParams.display, "renderViaTexture", ['no','basic','showAlpha','bennyBoxLite','bennyBox','fisheye','fisheye-without-fxaa','fisheye-with-integrated-fxaa','blur','blur-b','blur-b-use-alpha']);
+	displayFolder.add(guiParams.display, "renderViaTexture", ['basic','showAlpha','bennyBoxLite','bennyBox','fisheye','fisheye-without-fxaa','fisheye-with-integrated-fxaa','blur','blur-b','blur-b-use-alpha']);
 	displayFolder.add(guiParams.display, "drawTransparentStuff");
 	displayFolder.add(guiParams.display, "voxNmapTest");
 	displayFolder.add(guiParams.display, "terrainMapProject");
