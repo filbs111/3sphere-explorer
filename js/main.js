@@ -1110,7 +1110,9 @@ function drawScene(frameTime){
 			xyzmove4mat(mvMatrix,[0.01*pos[0]/pos[2],0.01*pos[1]/pos[2],0.01]);
 			drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
 	}
-	
+
+	}
+
 
 	heapPerfMon.sample();
 	heapPerfMon.delaySample(0);
