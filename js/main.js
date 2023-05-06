@@ -685,10 +685,23 @@ function drawScene(frameTime){
 	}
 	
 	
-	mat4.set(offsetPlayerCamera, worldCamera);
+	if (guiParams.display.stereo3d == "off"){
+		drawSceneToScreen(offsetPlayerCamera, 0,0,gl.viewportWidth,gl.viewportHeight);
+	}else{
+		drawSceneToScreen(offsetPlayerCamera, 0,0,gl.viewportWidth,gl.viewportHeight/2);
+		drawSceneToScreen(offsetPlayerCamera, 0,gl.viewportHeight/2,gl.viewportWidth,gl.viewportHeight/2);
+		//note inefficient currently, since does full screen full render for each eye view.
+		// for top/down split, intermediate render targets could be half screen size
+		// some rendering could be shared between eyes - eg portal cubemaps.
+	}
 
-	mainCamFov = guiParams.display.cameraFov;
-	setProjectionMatrix(nonCmapPMatrix, mainCamFov, gl.viewportHeight/gl.viewportWidth);	//note mouse code assumes 90 deg fov used. TODO fix.
+	function drawSceneToScreen(cameraForScene, viewleft, viewtop, viewwidth, viewheight){
+		
+	mat4.set(cameraForScene, worldCamera);
+
+	mainCamFov = guiParams.display.cameraFov;	//vertical FOV
+	var aspectRatio = gl.viewportWidth/gl.viewportHeight;
+	setProjectionMatrix(nonCmapPMatrix, mainCamFov, 1/aspectRatio);	//note mouse code assumes 90 deg fov used. TODO fix.
 	if (reverseCamera){
 		nonCmapPMatrix[0]=-nonCmapPMatrix[0];
 		xyzrotate4mat(worldCamera, (guiParams.display.flipReverseCamera? [Math.PI,0,0]:[0,Math.PI,0] ));	//flip 180  - note repeated later. TODO do once and store copy of camera
@@ -711,7 +724,7 @@ function drawScene(frameTime){
 	if (true){
 		testPortalDraw=true;
 		
-		mat4.set(offsetPlayerCamera, worldCamera);
+		mat4.set(cameraForScene, worldCamera);
 		calcReflectionInfo(portalInCameraCopy,reflectorInfo);
 		
 		//draw cubemap views
@@ -815,12 +828,12 @@ function drawScene(frameTime){
 	
 	//setup for drawing to screen
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+	gl.viewport(viewleft, viewtop, viewwidth, viewheight);
 	mat4.set(nonCmapPMatrix, pMatrix);
 														
 	frustumCull = nonCmapCullFunc;
 	
-	mat4.set(offsetPlayerCamera, worldCamera);	//set worldCamera to playerCamera
+	mat4.set(cameraForScene, worldCamera);	//set worldCamera to playerCamera
 	//xyzmove4mat(worldCamera,[0,-0.01,-0.015]);	//3rd person camera
 	//xyzmove4mat(worldCamera,[0,0,0.005]);	//forward camera
 
@@ -888,17 +901,17 @@ function drawScene(frameTime){
 			var wSettings = drawWorldScene(frameTime, false);
 			
 			if (guiParams.display.drawTransparentStuff){
-				drawTransparentStuff(rttStageOneView, rttFisheyeView2, gl.viewportWidth, gl.viewportHeight, wSettings);
+				drawTransparentStuff(rttStageOneView, rttFisheyeView2, wSettings);
 				sceneDrawingOutputView = rttFisheyeView2;
 			}
 		}
 		
-		function drawTransparentStuff(fromView, toView, sizeX, sizeY, wSettings){
+		function drawTransparentStuff(fromView, toView, wSettings){
 			//switch to another view of same size, asign textures for existing rgb(a) and depth map, and draw these to new rgb(a), depth map (fullscreen quad)
 			// note that drawing depthmap maybe redundant because will be looking up depth map from texture to determine colours anyway, but might help with discarding pixels etc.
 			gl.bindFramebuffer(gl.FRAMEBUFFER, toView.framebuffer);
-			gl.viewport( 0,0, sizeX, sizeY);
-			setRttSize( toView, sizeX, sizeY );	//todo stop setting this repeatedly
+			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight);
+			setRttSize( toView, gl.viewportWidth, gl.viewportHeight);	//todo stop setting this repeatedly
 			activeProg = shaderPrograms.fullscreenTexturedWithDepthmap;
 			gl.useProgram(activeProg);
 			enableDisableAttributes(activeProg);
@@ -994,7 +1007,7 @@ function drawScene(frameTime){
 		
 		//draw quad to screen using drawn texture
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);	//draw to screen.
-		gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);	//TODO check whether necessary to keep setting this
+		gl.viewport(viewleft, viewtop, viewwidth, viewheight);	//TODO check whether necessary to keep setting this
 		bind2dTextureIfRequired(sceneDrawingOutputView.texture);	
 		
 		//draw the simple quad object to the screen
@@ -3365,6 +3378,7 @@ var guiParams={
 		cameraFov:125,
 		uVarOne:-0.01,
 		flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
+		stereo3d:"off",
 		showHud:true,
 		renderViaTexture:'blur-b-use-alpha',
 		drawTransparentStuff:true,
@@ -3561,6 +3575,7 @@ function init(){
 	displayFolder.add(guiParams.display, "cameraFov", 60,165,5);
 	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.005);
 	displayFolder.add(guiParams.display, "flipReverseCamera");
+	displayFolder.add(guiParams.display, "stereo3d", ["off","top-bottom"]);
 	displayFolder.add(guiParams.display, "showHud");
 	displayFolder.add(guiParams.display, "renderViaTexture", ['basic','showAlpha','bennyBoxLite','bennyBox','fisheye','fisheye-without-fxaa','fisheye-with-integrated-fxaa','blur','blur-b','blur-b-use-alpha']);
 	displayFolder.add(guiParams.display, "drawTransparentStuff");
