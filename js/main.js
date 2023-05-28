@@ -594,7 +594,8 @@ var offsetCam = (function(){
 		"far 3rd person":[0,-75,-100],
 		"really far 3rd person":[0,-75,-125],
 		"cockpit":[0,0,15],
-		"side":[30,0,12.5]
+		"side":[30,0,12.5],
+		"none":[0,0,0]
 	}
 	var targetForTypeReverse = {
 		"near 3rd person":[0,-37.5,25],
@@ -602,7 +603,8 @@ var offsetCam = (function(){
 		"far 3rd person":[0,-100,150],
 		"really far 3rd person":[0,-75,125],
 		"cockpit":[0,0,-50],
-		"side":[30,0,12.5]
+		"side":[30,0,12.5],
+		"none":[0,0,0]
 	}
 	var offsetVecTarget = targetForType["far 3rd person"].map(x=>sshipModelScale*x);
 	var offsetVecTargetReverse = targetForTypeReverse["far 3rd person"].map(x=>sshipModelScale*x);
@@ -3610,7 +3612,7 @@ function init(){
 	controlFolder.add(guiParams.control, 'smoothMouse', 0, 1000,50);
 	
 	var displayFolder = gui.addFolder('display');	//control and movement
-	displayFolder.add(guiParams.display, "cameraType", ["cockpit", "near 3rd person", "mid 3rd person", "far 3rd person", "really far 3rd person", "side"]);
+	displayFolder.add(guiParams.display, "cameraType", ["cockpit", "near 3rd person", "mid 3rd person", "far 3rd person", "really far 3rd person", "side","none"]);
 	displayFolder.add(guiParams.display, "cameraFov", 60,165,5);
 	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.005);
 	displayFolder.add(guiParams.display, "flipReverseCamera");
