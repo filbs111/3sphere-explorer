@@ -63,6 +63,7 @@ var sshipBuffers={};
 var gunBuffers={};
 var icoballBuffers={};
 var hyperboloidBuffers={};
+var meshSphereBuffers={};
 
 //var sshipModelScale=0.0001;
 var sshipModelScale=0.00005;
@@ -370,6 +371,7 @@ function initBuffers(){
 	loadBuffersFromObjFile(pillarBuffers, "./data/pillar/pillar.obj", loadBufferData);
 	loadBuffersFromObjFile(sshipBuffers, "./data/spaceship/sship-pointyc-tidy1-uv3-2020b-cockpit1b-yz-2020-10-04.obj", loadBufferData);
 	loadBuffersFromObjFile(gunBuffers, "./data/cannon/cannon-pointz-yz.obj", loadBufferData);
+	loadBuffersFromObjFile(meshSphereBuffers, "./data/miscobjs/mesh-sphere.obj", loadBufferData);
 
 	var thisMatT;
 	for (var ii=0;ii<maxRandBoxes;ii++){
@@ -648,7 +650,7 @@ function drawScene(frameTime){
 	
 	smoothGuiParams.update();
 	
-	reflectorInfo.rad = guiParams.reflector.draw? guiParams.reflector.scale : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
+	reflectorInfo.rad = guiParams.reflector.draw!="none" ? guiParams.reflector.scale : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
 	
 	offsetCameraContainer.world = playerContainer.world;
 	
@@ -2556,8 +2558,22 @@ function drawWorldScene(frameTime, isCubemapView) {
 		if(['vertex projection','screen space','depth to alpha copy','vertproj mix'].includes(guiParams.reflector.mappingType) ){
 			gl.uniform3fv(activeShaderProgram.uniforms.uCentrePosScaled, reflectorInfo.centreTanAngleVectorScaled);
 		}
-		drawObjectFromBuffers(sphereBuffersHiRes, activeShaderProgram, true);
+
+		var meshToDraw = sphereBuffers;
+
+		switch (guiParams.reflector.draw){
+			case "high":
+				meshToDraw = sphereBuffersHiRes;
+				break;
+			case "mesh":
+				meshToDraw = meshSphereBuffers;
+				break;
+			default:
+				break;
+		}
 		
+		drawObjectFromBuffers(meshToDraw, activeShaderProgram, true, false);
+
 		activeShaderProgram = savedActiveProg;
 		gl.useProgram(activeShaderProgram);
 	}
@@ -3420,7 +3436,7 @@ var guiParams={
 		specularPower:20.0
 	},
 	reflector:{
-		draw:true,
+		draw:'high',
 		cmFacesUpdated:6,
 		cubemapDownsize:'auto',
 		mappingType:'vertex projection',
@@ -3640,7 +3656,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	MySound.setGlobalVolume(guiParams.audio.volume);	//if set above 1, fallback html media element will throw exception!!!
 	
 	var reflectorFolder = gui.addFolder('reflector');
-	reflectorFolder.add(guiParams.reflector, "draw");
+	reflectorFolder.add(guiParams.reflector, "draw",["none","low","high","mesh"]);
 	reflectorFolder.add(guiParams.reflector, "cmFacesUpdated", 0,6,1);
 	reflectorFolder.add(guiParams.reflector, "cubemapDownsize", [0,1,2,3,'auto']);
 	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection','screen space','vertproj mix','depth to alpha copy']);
