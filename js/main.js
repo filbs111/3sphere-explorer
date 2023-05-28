@@ -345,9 +345,12 @@ function initBuffers(){
 	var teapotObject = loadBlenderExport(teapotData);	//isn't actually a blender export - just a obj json
 	var icoballObj = loadBlenderExport(icoballdata);
 
-	//loadBufferData(sphereBuffers, makeSphereData(99,200,1)); //todo use normalized box/icosohedron,subdivided octohedron etc, triangle strips
-	loadBufferData(sphereBuffers, makeSphereData(16,32,1));
-	loadBufferData(sphereBuffersHiRes, makeSphereData(127,255,1)); //near index limit 65536.
+	//loadBufferData(sphereBuffers, makeSphereData(16,32,1));
+	loadBufferData(sphereBuffers, makeOctoSphereData(4));
+
+	//loadBufferData(sphereBuffersHiRes, makeSphereData(127,255,1)); //near index limit 65536.
+	loadBufferData(sphereBuffersHiRes, makeOctoSphereData(64));
+
 	loadBufferData(quadBuffers, quadData);
 	loadBufferData(quadBuffers2D, quadData2D);
 	loadBufferData(cubeBuffers, levelCubeData);
