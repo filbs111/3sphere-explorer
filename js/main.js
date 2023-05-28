@@ -733,122 +733,9 @@ function drawScene(frameTime){
 	mat4.set(worldCamera, invertedWorldCamera);
 	mat4.transpose(invertedWorldCamera);
 	nonCmapCullFunc = generateCullFunc(nonCmapPMatrix);										//todo only update pmatrix, nonCmapCullFunc if input variables have changed
-	
-	testPortalDraw=false;
-
-	var portalInCameraCopy = mat4.create(invertedWorldCamera);	//portalInCamera is calculated in different scope
-		//TODO reorganise/tidy code, reduce duplication
-	mat4.multiply(portalInCameraCopy, portalMats[offsetCameraContainer.world]); //TODO is offsetCameraContainer.world updated yet?
-																				//if not may see 1 frame glitch on crossing
-	mat4.transpose(portalInCameraCopy);
-
-	//if (nonCmapCullFunc(portalInCameraCopy,reflectorInfo.rad)){		//TODO fix this. seems like culling done later
-																		//doesn't acheive same result
-	if (true){
-		testPortalDraw=true;
 		
-		mat4.set(cameraForScene, worldCamera);
-		calcReflectionInfo(portalInCameraCopy,reflectorInfo);
-		
-		//draw cubemap views
-		mat4.identity(worldCamera);	//TODO use correct matrices
-		
-		//TODO move pMatrix etc to only recalc on screen resize
-		//make a pmatrix for hemiphere perspective projection method.
-		
-		var otherPortalMat = guiParams.reflector.isPortal ? portalMats[1-offsetCameraContainer.world] : 
-				portalMats[offsetCameraContainer.world];
+	drawPortalCubemap(cameraForScene, frameTime);
 
-		frustumCull = squareFrustumCull;
-		if (guiParams.reflector.cmFacesUpdated>0){
-			var cubemapLevel = guiParams.reflector.cubemapDownsize == "auto" ? 
-				(portalInCameraCopy[15]>0.8 ? 0:(portalInCameraCopy[15]>0.5? 1:2))	:	//todo calculate angular resolution of cubemap in final camera,  
-						//dependent on distance, FOV, blur, screen resolution etc, and choose appropriate detail level
-						//currently just manually, roughly tuned for 1080p, current settings.
-				guiParams.reflector.cubemapDownsize ;
-
-			setCubemapTexLevel(cubemapLevel);	//set texture#1
-			var cubemapView = cubemapViews[cubemapLevel];
-			
-			var wSettingsArr = [];	//TODO is this always same?
-			
-			gl.cullFace(gl.BACK);	//because might have set to front for mirror reversing/landing camera.
-			var numFacesToUpdate = guiParams.reflector.cmFacesUpdated;
-			mat4.set(cmapPMatrix, pMatrix);
-
-			//todo this transformation once, not repeat in following loop
-			mat4.set(otherPortalMat, worldCamera);
-			xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);
-			updateTerrain2QuadtreeForCampos(worldCamera.slice(12));
-
-			for (var ii=0;ii<numFacesToUpdate;ii++){	//only using currently to check perf impact. could use more "properly" and cycle/alternate.
-				var framebuffer = guiParams.display.drawTransparentStuff ? cubemapView.intermediateFramebuffers[ii] : cubemapView.framebuffers[ii];
-				//var framebuffer = cubemapView.framebuffers[ii];
-				gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-				gl.viewport(0, 0, framebuffer.width, framebuffer.height);
-				mat4.set(otherPortalMat, worldCamera);
-				xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);
-				rotateCameraForFace(ii);
-				
-				wSettingsArr.push( drawWorldScene(frameTime, true) );
-			}
-			
-			if (guiParams.display.drawTransparentStuff){
-				for (var ii=0;ii<numFacesToUpdate;ii++){
-					var framebuffer = cubemapView.framebuffers[ii];
-					gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-					gl.viewport(0, 0, framebuffer.width, framebuffer.height);
-					mat4.set(otherPortalMat, worldCamera);
-					xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);	
-					rotateCameraForFace(ii);
-					
-					var activeProg = shaderPrograms.fullscreenTexturedWithDepthmap;
-					gl.useProgram(activeProg);
-					enableDisableAttributes(activeProg);
-
-					bind2dTextureIfRequired(cubemapView.intermediateTextures[ii]);
-					bind2dTextureIfRequired(cubemapView.intermediateDepthTextures[ii],gl.TEXTURE2);
-					
-					gl.uniform1i(activeProg.uniforms.uSampler, 0);
-					gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);	
-					
-					gl.depthFunc(gl.ALWAYS);
-					drawObjectFromBuffers(fsBuffers, activeProg);
-					gl.depthFunc(gl.LESS);
-					gl.cullFace(gl.BACK);
-					drawWorldScene2(frameTime, wSettingsArr[ii], cubemapView.intermediateDepthTextures[ii]);	//depth aware drawing stuff like sea
-						//note currently depth is not correct, probably responsible for inconsistent rendering across cubemap edges.
-					
-				}
-			}
-			
-			function rotateCameraForFace(ii){
-				switch(ii){
-					case 0:
-						xyzrotate4mat(worldCamera, [0,-Math.PI/2,0]);	//right from default view
-						break;
-					case 1:
-						xyzrotate4mat(worldCamera, [0,Math.PI/2,0]);	//left from default view
-						break;
-					case 2:
-						xyzrotate4mat(worldCamera, [Math.PI/2,0,0]);	//top from default
-						xyzrotate4mat(worldCamera, [0,0,Math.PI]);
-						break;
-					case 3:
-						xyzrotate4mat(worldCamera, [-Math.PI/2,0,0]);
-						xyzrotate4mat(worldCamera, [0,0,Math.PI]);
-						break;
-					case 4:
-						xyzrotate4mat(worldCamera, [0,Math.PI,0]);
-						break;
-					case 5:
-						break;
-				}
-			}
-			
-		}
-	}
-	
 	//setup for drawing to screen
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	gl.viewport(viewleft, viewtop, viewwidth, viewheight);
@@ -2472,65 +2359,91 @@ function drawWorldScene(frameTime, isCubemapView) {
 		drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
 	}
 
-	//DRAW PORTAL/REFLECTOR
+	//DRAW PORTALS/REFLECTORS
 
+	var activeReflectorShader;
+	switch(guiParams.reflector.mappingType){
+		case 'projection':
+			activeReflectorShader = shaderPrograms.cubemap[ guiParams.display.atmosShader ];
+			break;
+		case 'vertex projection':
+			activeReflectorShader = shaderPrograms.vertprojCubemap[ guiParams.display.atmosShader ];
+			break;
+		case 'screen space':
+			activeReflectorShader = shaderPrograms.specialCubemap[ guiParams.display.atmosShader ];
+			break;
+		case 'vertproj mix':
+			activeReflectorShader = shaderPrograms.vertprojMix[ guiParams.display.atmosShader ];
+			break;
+		case 'depth to alpha copy':	//test
+			activeReflectorShader = shaderPrograms.vertprojCubemapTestDepthAlpha[ guiParams.display.atmosShader ];
+			break;
+	}
+
+	var meshToDraw = sphereBuffers;
+	switch (guiParams.reflector.draw){
+		case "high":
+			meshToDraw = sphereBuffersHiRes;
+			break;
+		case "mesh":
+			meshToDraw = meshSphereBuffers;
+			break;
+		default:
+			break;
+	}
+
+	//TODO draw multiple portals...
 	if (guiParams.reflector.draw && !isCubemapView && frustumCull(portalInCamera,reflectorInfo.rad)){
-		var savedActiveProg = activeShaderProgram;
+		drawPortal(activeReflectorShader, meshToDraw, reflectorInfo);
+	}
+	gl.useProgram(activeShaderProgram);
+
+	function drawPortal(shaderProgram, meshToDraw, reflectorInfo){
+		//TODO move elsewhere, pass in everything needed.
+		//TODO do cubemap rendering here, so can use reuse cubemap texture when drawing multiple portals.
+		//TODO later, draw cubemap for portal 1, then render both eyes when in stereo mode using depth buffer ray tracing - means switching between drawing each eye view.
+
+		gl.useProgram(shaderProgram);
+		gl.uniformMatrix4fv(shaderProgram.uniforms.uPosShiftMat, false, reflectorInfo.shaderMatrix);
 		
-		//TODO have some variable for activeReflectorShader, avoid switch.
-		switch(guiParams.reflector.mappingType){
-			case 'projection':
-			activeShaderProgram = shaderPrograms.cubemap[ guiParams.display.atmosShader ];
-			break;
-			case 'vertex projection':
-			activeShaderProgram = shaderPrograms.vertprojCubemap[ guiParams.display.atmosShader ];
-			break;
-			case 'screen space':
-			activeShaderProgram = shaderPrograms.specialCubemap[ guiParams.display.atmosShader ];
-			break;
-			case 'vertproj mix':
-			activeShaderProgram = shaderPrograms.vertprojMix[ guiParams.display.atmosShader ];
-			break;
-			case 'depth to alpha copy':	//test
-			activeShaderProgram = shaderPrograms.vertprojCubemapTestDepthAlpha[ guiParams.display.atmosShader ];
-			break;
+		gl.uniform4fv(shaderProgram.uniforms.uColor, colorArrs.white);
+		gl.uniform4fv(shaderProgram.uniforms.uFogColor, localVecFogColor);
+		if (shaderProgram.uniforms.uReflectorDiffColor){
+			gl.uniform3fv(shaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
 		}
-		gl.useProgram(activeShaderProgram);
-		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uPosShiftMat, false, reflectorInfo.shaderMatrix);
-		
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
-		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
-		if (activeShaderProgram.uniforms.uReflectorDiffColor){
-			gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
+		if (shaderProgram.uniforms.uPlayerLightColor){
+			gl.uniform3fv(shaderProgram.uniforms.uPlayerLightColor, playerLight);
 		}
-		if (activeShaderProgram.uniforms.uPlayerLightColor){
-			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
+		if (shaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
+			gl.uniform4f(shaderProgram.uniforms.uPortalCameraPos, portalInCamera[3], portalInCamera[7],portalInCamera[11],portalInCamera[15]);
 		}
-		if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
-			gl.uniform4f(activeShaderProgram.uniforms.uPortalCameraPos, portalInCamera[3], portalInCamera[7],portalInCamera[11],portalInCamera[15]);
-		}
-		if (activeShaderProgram.uniforms.uPortalCameraPos){
-			gl.uniform4f(activeShaderProgram.uniforms.uPortalCameraPos, portalInCamera.slice(12));
+		if (shaderProgram.uniforms.uPortalCameraPos){
+			gl.uniform4f(shaderProgram.uniforms.uPortalCameraPos, portalInCamera.slice(12));
 		}
 		
 		mat4.set(portalInCamera, mvMatrix);
 		mat4.set(portalMat,mMatrix);
 		
 
-		if (activeShaderProgram.uniforms.uFNumber){
+		if (shaderProgram.uniforms.uFNumber){
 			//todo keep this around. also used in fisheye shader.
 			var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
 			var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
-			gl.uniform2f(activeShaderProgram.uniforms.uFNumber, fx, fy);
-			gl.uniform3fv(activeShaderProgram.uniforms.uCentrePosScaledFSCopy, reflectorInfo.centreTanAngleVectorScaled	);
+			gl.uniform2f(shaderProgram.uniforms.uFNumber, fx, fy);
+			gl.uniform3fv(shaderProgram.uniforms.uCentrePosScaledFSCopy, reflectorInfo.centreTanAngleVectorScaled	);
 			
-			if (activeShaderProgram.uniforms.uPortalRad){	//specific stuff to special
-				gl.uniformMatrix4fv(activeShaderProgram.uniforms.uMVMatrixFSCopy, false, mvMatrix);
-				gl.uniform1f(activeShaderProgram.uniforms.uPortalRad, reflectorInfo.rad);
+			if (shaderProgram.uniforms.uPortalRad){	//specific stuff to special
+				gl.uniformMatrix4fv(shaderProgram.uniforms.uMVMatrixFSCopy, false, mvMatrix);
+				gl.uniform1f(shaderProgram.uniforms.uPortalRad, reflectorInfo.rad);
 			}
 			
 			//move matrix through portal for close rendering. 
 			var matrixToPortal = mat4.create(mvMatrix);	//should be inverted matrix or regular?
+
+			//does adding a qpair help??
+			matrixToPortal.qPair = mvMatrix.qPair.map(x=>x.map(y=>y));
+				//TODO make a general function to copy mats!
+
 			moveMatrixThruPortal(matrixToPortal, reflectorInfo.rad, 1, colorsSwitch, true);
 				//skips start/end rotations. appears to fix rendering. TODO check for side effects
 
@@ -2549,35 +2462,19 @@ function drawWorldScene(frameTime, isCubemapView) {
 		//for debugging
 			//mytestMat111 = matrixToPortal;
 			
-			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uPortaledMatrix, false, matrixToPortal);
+			gl.uniformMatrix4fv(shaderProgram.uniforms.uPortaledMatrix, false, matrixToPortal);
 		}
 
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, reflectorInfo.rad,reflectorInfo.rad, reflectorInfo.rad);
+		gl.uniform3f(shaderProgram.uniforms.uModelScale, reflectorInfo.rad,reflectorInfo.rad, reflectorInfo.rad);
 	
-		gl.uniform1f(activeShaderProgram.uniforms.uPolarity, reflectorInfo.polarity);
+		gl.uniform1f(shaderProgram.uniforms.uPolarity, reflectorInfo.polarity);
 		
 			
 		if(['vertex projection','screen space','depth to alpha copy','vertproj mix'].includes(guiParams.reflector.mappingType) ){
-			gl.uniform3fv(activeShaderProgram.uniforms.uCentrePosScaled, reflectorInfo.centreTanAngleVectorScaled);
+			gl.uniform3fv(shaderProgram.uniforms.uCentrePosScaled, reflectorInfo.centreTanAngleVectorScaled);
 		}
 
-		var meshToDraw = sphereBuffers;
-
-		switch (guiParams.reflector.draw){
-			case "high":
-				meshToDraw = sphereBuffersHiRes;
-				break;
-			case "mesh":
-				meshToDraw = meshSphereBuffers;
-				break;
-			default:
-				break;
-		}
-		
-		drawObjectFromBuffers(meshToDraw, activeShaderProgram, true, false);
-
-		activeShaderProgram = savedActiveProg;
-		gl.useProgram(activeShaderProgram);
+		drawObjectFromBuffers(meshToDraw, shaderProgram, true, false);
 	}
 	
 	
@@ -4165,7 +4062,6 @@ var iterateMechanics = (function iterateMechanics(){
 
 				infoToShow+=", airspd: " + spd.toFixed(2);
 			//	infoToShow+=", sshipMat:" + Array.from(sshipMatrix).map(elem=>elem.toFixed(3)).join(",");	//toFixed doesn't work right on float32 array so use Array.from first
-				infoToShow+=", portalDraw: "+testPortalDraw;
 				infoToShow+=", debugRoll: " + debugRoll;
 
 				document.querySelector("#info2").innerHTML = infoToShow;
@@ -5658,7 +5554,120 @@ var randomNormalised3vec = (function generate3vecRandomiser(){
 	}
 })();
 
-
 function isFisheyeShader(shaderName){
 	return ['fisheye','fisheye-without-fxaa','fisheye-with-integrated-fxaa'].includes(shaderName);
+}
+
+
+
+//TODO pass in relevant args (or move to inside of some IIFE with relevant globals...)
+
+function drawPortalCubemap(cameraForScene, frameTime){
+
+	var portalInCameraCopy = mat4.create(invertedWorldCamera);	//portalInCamera is calculated in different scope
+		//TODO reorganise/tidy code, reduce duplication
+	mat4.multiply(portalInCameraCopy, portalMats[offsetCameraContainer.world]); //TODO is offsetCameraContainer.world updated yet?
+																				//if not may see 1 frame glitch on crossing
+	mat4.transpose(portalInCameraCopy);
+	
+	mat4.set(cameraForScene, worldCamera);
+	calcReflectionInfo(portalInCameraCopy,reflectorInfo);
+	
+	//draw cubemap views
+	mat4.identity(worldCamera);	//TODO use correct matrices
+	
+	//TODO move pMatrix etc to only recalc on screen resize
+	//make a pmatrix for hemiphere perspective projection method.
+	
+	var otherPortalMat = guiParams.reflector.isPortal ? portalMats[1-offsetCameraContainer.world] : 
+			portalMats[offsetCameraContainer.world];
+
+	frustumCull = squareFrustumCull;
+	if (guiParams.reflector.cmFacesUpdated>0){
+		var cubemapLevel = guiParams.reflector.cubemapDownsize == "auto" ? 
+			(portalInCameraCopy[15]>0.8 ? 0:(portalInCameraCopy[15]>0.5? 1:2))	:	//todo calculate angular resolution of cubemap in final camera,  
+					//dependent on distance, FOV, blur, screen resolution etc, and choose appropriate detail level
+					//currently just manually, roughly tuned for 1080p, current settings.
+			guiParams.reflector.cubemapDownsize ;
+
+		setCubemapTexLevel(cubemapLevel);	//set texture#1
+		var cubemapView = cubemapViews[cubemapLevel];
+		
+		var wSettingsArr = [];	//TODO is this always same?
+		
+		gl.cullFace(gl.BACK);	//because might have set to front for mirror reversing/landing camera.
+		var numFacesToUpdate = guiParams.reflector.cmFacesUpdated;
+		mat4.set(cmapPMatrix, pMatrix);
+
+		//todo this transformation once, not repeat in following loop
+		mat4.set(otherPortalMat, worldCamera);
+		xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);
+		updateTerrain2QuadtreeForCampos(worldCamera.slice(12));	//TODO only if this terrain type active
+
+		for (var ii=0;ii<numFacesToUpdate;ii++){	//only using currently to check perf impact. could use more "properly" and cycle/alternate.
+			var framebuffer = guiParams.display.drawTransparentStuff ? cubemapView.intermediateFramebuffers[ii] : cubemapView.framebuffers[ii];
+			//var framebuffer = cubemapView.framebuffers[ii];
+			gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+			gl.viewport(0, 0, framebuffer.width, framebuffer.height);
+			mat4.set(otherPortalMat, worldCamera);
+			xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);
+			rotateCameraForFace(ii);
+			
+			wSettingsArr.push( drawWorldScene(frameTime, true) );
+		}
+		if (guiParams.display.drawTransparentStuff){
+			for (var ii=0;ii<numFacesToUpdate;ii++){
+				var framebuffer = cubemapView.framebuffers[ii];
+				gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+				gl.viewport(0, 0, framebuffer.width, framebuffer.height);
+				mat4.set(otherPortalMat, worldCamera);
+				xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);	
+				rotateCameraForFace(ii);
+				
+				var activeProg = shaderPrograms.fullscreenTexturedWithDepthmap;
+				gl.useProgram(activeProg);
+				enableDisableAttributes(activeProg);
+
+				bind2dTextureIfRequired(cubemapView.intermediateTextures[ii]);
+				bind2dTextureIfRequired(cubemapView.intermediateDepthTextures[ii],gl.TEXTURE2);
+				
+				gl.uniform1i(activeProg.uniforms.uSampler, 0);
+				gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);	
+				
+				gl.depthFunc(gl.ALWAYS);
+				drawObjectFromBuffers(fsBuffers, activeProg);
+				gl.depthFunc(gl.LESS);
+				gl.cullFace(gl.BACK);
+				drawWorldScene2(frameTime, wSettingsArr[ii], cubemapView.intermediateDepthTextures[ii]);	//depth aware drawing stuff like sea
+					//note currently depth is not correct, probably responsible for inconsistent rendering across cubemap edges.
+				
+			}
+		}
+		
+		function rotateCameraForFace(ii){
+			switch(ii){
+				case 0:
+					xyzrotate4mat(worldCamera, [0,-Math.PI/2,0]);	//right from default view
+					break;
+				case 1:
+					xyzrotate4mat(worldCamera, [0,Math.PI/2,0]);	//left from default view
+					break;
+				case 2:
+					xyzrotate4mat(worldCamera, [Math.PI/2,0,0]);	//top from default
+					xyzrotate4mat(worldCamera, [0,0,Math.PI]);
+					break;
+				case 3:
+					xyzrotate4mat(worldCamera, [-Math.PI/2,0,0]);
+					xyzrotate4mat(worldCamera, [0,0,Math.PI]);
+					break;
+				case 4:
+					xyzrotate4mat(worldCamera, [0,Math.PI,0]);
+					break;
+				case 5:
+					break;
+			}
+		}
+		
+	}
+
 }
