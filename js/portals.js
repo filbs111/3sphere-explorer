@@ -17,9 +17,9 @@ var portalsForWorld = (()=>{
     addPortalPair(2, 0);
 
     //move one portal in each world away from default.
-    xyzmove4mat( portalsForWorld[0][0].matrix, [0,0,0.6]);
-    xyzmove4mat( portalsForWorld[1][0].matrix, [0,0,0.2]);
-    xyzmove4mat( portalsForWorld[2][0].matrix, [0,0,0.2]);
+    xyzmove4mat( portalsForWorld[0][0].matrix, [0,0,1]);
+    xyzmove4mat( portalsForWorld[1][0].matrix, [0,0,1]);
+    xyzmove4mat( portalsForWorld[2][0].matrix, [0,0,1]);
 
     return portalsForWorld;
 })();

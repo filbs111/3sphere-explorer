@@ -2365,39 +2365,50 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings) {
 	}
 
 
-	var portalMat = portalMats[worldA];
+	var portalMat = portalsForWorld[worldA][0].matrix;
 	var portalInCamera = mat4.create(invertedWorldCamera);	//might reuse invertedWorldCamera for efficiency,			
 	mat4.multiply(portalInCamera, portalMat);			//but use new matrix for safety/code clarity.
 
+	//2nd portal for world (todo array arbitrary number of portals)
+	var portalMat2 = portalsForWorld[worldA][1].matrix;
+	var portalInCamera2 = mat4.create(invertedWorldCamera);			
+	mat4.multiply(portalInCamera2, portalMat2);
+
 	//draw frame around portal/reflector
 	if (guiParams.reflector.drawFrame){
-		var frameScale = guiParams.reflector.scale;
+		//draw all frames for the current world (2 portal entrances per world)
+		
 		activeShaderProgram = shaderProgramTexmap;
 		shaderSetup(activeShaderProgram, texture);
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, frameScale,frameScale,frameScale);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, localVecFogColor);	//same colour as world this frame is in
+
+		drawPortalFrame(guiParams.reflector.scale, activeShaderProgram, portalMat, portalInCamera);
+		drawPortalFrame(guiParams.reflector.scale, activeShaderProgram, portalMat2, portalInCamera2);
+	}
+
+	function drawPortalFrame(frameScale, shaderProg, portalMat, portalInCamera){
+		gl.uniform3f(shaderProg.uniforms.uModelScale, frameScale,frameScale,frameScale);
+		gl.uniform4fv(shaderProg.uniforms.uColor, localVecFogColor);	//same colour as world this frame is in
 
 		mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
-
-		drawObjectFromBuffers(cubeFrameSubdivBuffers, activeShaderProgram);
+		drawObjectFromBuffers(cubeFrameSubdivBuffers, shaderProg);
 
 		//draw coloured axis objects
 		var smallScale = frameScale*0.1;
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, smallScale,smallScale,smallScale);
+		gl.uniform3f(shaderProg.uniforms.uModelScale, smallScale,smallScale,smallScale);
 		var moveAmount = Math.atan(guiParams.reflector.scale) + smallScale;	//to portal surface then by small frame size
 
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.red);
+		gl.uniform4fv(shaderProg.uniforms.uColor, colorArrs.red);
 		mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
 		xyzmove4mat(mvMatrix, [moveAmount,0,0]);	//TODO correct mMatrix, but IIRC only impacts lighting 
-		drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.green);
+		drawObjectFromBuffers(cubeBuffers, shaderProg);
+		gl.uniform4fv(shaderProg.uniforms.uColor, colorArrs.green);
 		mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
 		xyzmove4mat(mvMatrix, [0,moveAmount,0]);	//TODO correct mMatrix, but IIRC only impacts lighting 
-		drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.blue);
+		drawObjectFromBuffers(cubeBuffers, shaderProg);
+		gl.uniform4fv(shaderProg.uniforms.uColor, colorArrs.blue);
 		mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
 		xyzmove4mat(mvMatrix, [0,0,moveAmount]);	//TODO correct mMatrix, but IIRC only impacts lighting 
-		drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
+		drawObjectFromBuffers(cubeBuffers, shaderProg);
 	}
 
 	//DRAW PORTALS/REFLECTORS
