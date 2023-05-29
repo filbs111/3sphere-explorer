@@ -807,9 +807,11 @@ function drawScene(frameTime){
 			setRttSize( rttStageOneView, oversizedViewport[0], oversizedViewport[1] );	//todo stop setting this repeatedly
 			
 			var viewSettings = {buf: rttStageOneView.framebuffer, width: oversizedViewport[0], height: oversizedViewport[1]}
+			var savedCamera = mat4.create(worldCamera);	//TODO don't instantiate!
 
 			var wSettings = drawWorldScene(frameTime, false, viewSettings);
-			
+			mat4.set(savedCamera, worldCamera);	//set worldCamera back to savedCamera (might have been changed due to rendering portal cubemaps within drawWorldScene)
+
 			if (guiParams.display.drawTransparentStuff){
 				drawTransparentStuff(rttStageOneView, rttFisheyeView2, oversizedViewport[0], oversizedViewport[1], wSettings);
 				sceneDrawingOutputView = rttFisheyeView2;
@@ -823,9 +825,11 @@ function drawScene(frameTime){
 			setRttSize( rttStageOneView, gl.viewportWidth, gl.viewportHeight );	//todo stop setting this repeatedly
 
 			var viewSettings = {buf: rttStageOneView.framebuffer, width: gl.viewportWidth, height: gl.viewportHeight}
+			var savedCamera = mat4.create(worldCamera);	//TODO don't instantiate!
 
 			var wSettings = drawWorldScene(frameTime, false, viewSettings);
-			
+			mat4.set(savedCamera, worldCamera);	//set worldCamera back to savedCamera (might have been changed due to rendering portal cubemaps within drawWorldScene)
+
 			if (guiParams.display.drawTransparentStuff){
 				drawTransparentStuff(rttStageOneView, rttFisheyeView2, gl.viewportWidth, gl.viewportHeight, wSettings);
 				sceneDrawingOutputView = rttFisheyeView2;
@@ -925,8 +929,10 @@ function drawScene(frameTime){
 			setRttSize( rttStageOneView, gl.viewportWidth, gl.viewportHeight );
 
 			var viewSettings = {buf: rttStageOneView.framebuffer, width: gl.viewportWidth, height: gl.viewportHeight}
+			var savedCamera = mat4.create(worldCamera);	//TODO don't instantiate!
 
 			var wSettings = drawWorldScene(frameTime, false, viewSettings);
+			mat4.set(savedCamera, worldCamera);	//set worldCamera back to savedCamera (might have been changed due to rendering portal cubemaps within drawWorldScene)
 
 			if (guiParams.display.drawTransparentStuff){
 				drawTransparentStuff(rttStageOneView, rttView, gl.viewportWidth, gl.viewportHeight, wSettings);
@@ -1314,6 +1320,11 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 		returnObj.worldInfo = (colorsSwitch==0) ? guiParams.world0 : guiParams.world1;	//todo use array
 		returnObj.localVecFogColor = localVecFogColor = worldColors[colorsSwitch];
 		returnObj.localVecReflectorColor = guiParams.reflector.isPortal? worldColors[1-colorsSwitch]: worldColors[colorsSwitch];
+
+		//undo reuse of vectors. (caused bug when moved portal cubemap to just before drawing portal, within main world drawing)
+		//TODO instantiate a separate wSettings objects and reuse for different parts of rendering... (otherwise creates garbage)
+		returnObj.localVecReflectorDiffColor=new Array(3);
+		returnObj.reflectorPosTransformed=new Array(4);
 
 		for (var cc=0;cc<3;cc++){
 			returnObj.localVecReflectorDiffColor[cc] = returnObj.localVecReflectorColor[cc]-returnObj.localVecFogColor[cc];
@@ -2416,8 +2427,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings) {
 		drawPortalCubemap(pMatrix, portalInCameraCopy, frameTime);
 
 		//set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
-		mat4.set(nonCmapPMatrix, pMatrix);						
-		//frustumCull = nonCmapCullFunc;
+		mat4.set(nonCmapPMatrix, pMatrix);	
+		frustumCull = nonCmapCullFunc;
 		gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
 		gl.viewport( 0,0, viewSettings.width, viewSettings.height );
 
@@ -2581,7 +2592,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings) {
 function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using rgba, depth buffer images from previous rendering
 	//({colorsSwitch,worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, dropLightPos} = wSettings);
 	
-	({worldInfo, sshipDrawMatrix} = wSettings);
+	({worldInfo, sshipDrawMatrix, colorsSwitch} = wSettings);
 	
 	mat4.set(worldCamera, invertedWorldCamera);
 	mat4.transpose(invertedWorldCamera);
