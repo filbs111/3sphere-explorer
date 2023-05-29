@@ -1310,7 +1310,7 @@ var lgMat = mat4.create();
 var getWorldSceneSettings = (function generateGetWorldSettings(){
 	var portaledMatrix = mat4.create();
 	var returnObj = {
-		colorsSwitch:0,
+		worldA:0,
 		worldInfo:0,
 		localVecFogColor:0,
 		localVecReflectorDiffColor:new Array(3),
@@ -1318,15 +1318,19 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 		cosReflector:0,
 		sshipDrawMatrix:0,
 	}
-	var colorsSwitch;
+	var worldA;
 
 	return function getWorldSceneSettings(isCubemapView){
 		returnObj.reflectorPosTransformed=new Array(4);	//workaround bug (see comments near return statement)
 
-		returnObj.colorsSwitch = colorsSwitch = ((isCubemapView && guiParams.reflector.isPortal)?1:0)^offsetCameraContainer.world;
-		returnObj.worldInfo = (colorsSwitch==0) ? guiParams.world0 : guiParams.world1;	//todo use array
-		returnObj.localVecFogColor = localVecFogColor = worldColors[colorsSwitch];
-		returnObj.localVecReflectorColor = guiParams.reflector.isPortal? worldColors[1-colorsSwitch]: worldColors[colorsSwitch];
+		returnObj.worldA = worldA = ((isCubemapView && guiParams.reflector.isPortal)?1:0)^offsetCameraContainer.world;
+
+		var worldB = 1-worldA;
+
+		returnObj.worldInfo = guiSettingsForWorld[worldA];
+
+		returnObj.localVecFogColor = localVecFogColor = worldColors[worldA];
+		returnObj.localVecReflectorColor = guiParams.reflector.isPortal? worldColors[worldB]: worldColors[worldA];
 
 		//undo reuse of vectors. (caused bug when moved portal cubemap to just before drawing portal, within main world drawing)
 		//TODO instantiate a separate wSettings objects and reuse for different parts of rendering... (otherwise creates garbage)
@@ -1341,7 +1345,7 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 		//moved portal - likely duplicated from elsewhere
 		var portalRelativeMat = mat4.create(worldCamera);
 		mat4.transpose(portalRelativeMat);
-		mat4.multiply(portalRelativeMat, portalMats[colorsSwitch]);
+		mat4.multiply(portalRelativeMat, portalMats[worldA]);
 		mat4.transpose(portalRelativeMat);
 
 		for (var cc=0;cc<4;cc++){
@@ -1349,7 +1353,7 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 		}
 		returnObj.cosReflector = 1.0/Math.sqrt(1+reflectorInfo.rad*reflectorInfo.rad);
 		
-		if (sshipWorld == returnObj.colorsSwitch){ //only draw spaceship if it's in the world that currently drawing. (TODO this for other objects eg shots)
+		if (sshipWorld == worldA){ //only draw spaceship if it's in the world that currently drawing. (TODO this for other objects eg shots)
 			returnObj.sshipDrawMatrix = sshipMatrix;
 		}else{
 			if (checkWithinReflectorRange({matrix:sshipMatrix,world:sshipWorld}, Math.tan(Math.atan(reflectorInfo.rad) +0.1))){	//TODO correct this
@@ -1382,10 +1386,10 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings) {
 	}
 
 	var wSettings = getWorldSceneSettings(isCubemapView);
-	({colorsSwitch,worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, sshipDrawMatrix} = wSettings);
+	({worldA,worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, sshipDrawMatrix} = wSettings);
 		//above could just paste getWorldSceneSettings function stuff here instead.
 	
-	gl.clearColor.apply(gl,worldColorsPlain[colorsSwitch]);
+	gl.clearColor.apply(gl,worldColorsPlain[worldA]);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 			
 	mat4.set(worldCamera, invertedWorldCamera);
@@ -1427,7 +1431,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings) {
 	//only use 1 drop light. should be standard pos'n if drawing same world as light, and reflected pos'n if different
 	//if dropLight in the space that are currently drawing, move it through portal.
 	//TODO /note that 2nd light is relevant if sphere is reflector instead of portal.
-	if (colorsSwitch^sshipWorld){
+	if (worldA^sshipWorld){
 		var dropLightReflectionInfo={};
 		calcReflectionInfo(sshipMatrixShifted,dropLightReflectionInfo);
 		mat4.multiply(lightMat, dropLightReflectionInfo.shaderMatrix2);
@@ -1686,7 +1690,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings) {
 		//normally in drawObjectFromPreppedBuffers
 		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uMVMatrix, false, mvMatrix);
 		
-		var explosionParticles = explosionParticleArrs[colorsSwitch];
+		var explosionParticles = explosionParticleArrs[worldA];
 		var expParticleBuffers = explosionParticles.getBuffers();
 		explosionParticles.getRangesToDraw(frameTime).forEach(elem=>{
 			//	console.log(elem);
@@ -2361,7 +2365,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings) {
 	}
 
 
-	var portalMat = portalMats[colorsSwitch];
+	var portalMat = portalMats[worldA];
 	var portalInCamera = mat4.create(invertedWorldCamera);	//might reuse invertedWorldCamera for efficiency,			
 	mat4.multiply(portalInCamera, portalMat);			//but use new matrix for safety/code clarity.
 
@@ -2489,7 +2493,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings) {
 			matrixToPortal.qPair = mvMatrix.qPair.map(x=>x.map(y=>y));
 				//TODO make a general function to copy mats!
 
-			moveMatrixThruPortal(matrixToPortal, reflectorInfo.rad, 1, colorsSwitch, true);
+			moveMatrixThruPortal(matrixToPortal, reflectorInfo.rad, 1, worldA, true);
 				//skips start/end rotations. appears to fix rendering. TODO check for side effects
 
 		if (guiParams.reflector.test1){	//appears to do ~nothing
@@ -2597,9 +2601,9 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings) {
 }
 
 function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using rgba, depth buffer images from previous rendering
-	//({colorsSwitch,worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, dropLightPos} = wSettings);
+	//({worldA,worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, dropLightPos} = wSettings);
 	
-	({worldInfo, sshipDrawMatrix, colorsSwitch} = wSettings);
+	({worldInfo, sshipDrawMatrix, worldA} = wSettings);
 	
 	mat4.set(worldCamera, invertedWorldCamera);
 	mat4.transpose(invertedWorldCamera);
@@ -2653,7 +2657,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 	
 	
 	for (var b of bullets){
-		if (b.active && b.world == colorsSwitch){
+		if (b.active && b.world == worldA){
 			var bulletMatrix=b.matrix;
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix,bulletMatrix);
@@ -2669,7 +2673,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 	
 	for (var ee in explosions){
 		var singleExplosion = explosions[ee];
-		if (singleExplosion.world == colorsSwitch){
+		if (singleExplosion.world == worldA){
 			if (singleExplosion.rotateWithDuocylinder){
 				mat4.set(invertedWorldCameraDuocylinderFrame, mvMatrix);
 			}else{
@@ -3292,8 +3296,9 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	world0:{duocylinderModel:"l3dt-blockstrips",seaActive:false},
+	world0:{duocylinderModel:"l3dt-blockstrips",seaActive:true},
 	world1:{duocylinderModel:"none",seaActive:false},
+	world2:{duocylinderModel:"none",seaActive:false},
 	duocylinderRotateSpeed:0,
 	seaLevel:-0.012,
 	seaPeakiness:0.0,
@@ -3347,6 +3352,8 @@ var guiParams={
 	//fogColor0:'#b451c5',
 	fogColor0:'#dca985',
 	fogColor1:'#5cd5e6',
+	fogColor2:'#55ee66',
+	//fogColor0:'#bbbbbb',
 	playerLight:'#808080',
 	control:{
 		onRails:false,
@@ -3404,6 +3411,12 @@ var guiParams={
 	},
 	normalMove:0
 };
+
+var guiSettingsForWorld = [
+	guiParams.world0,
+	guiParams.world1,
+	guiParams.world2
+];
 
 smoothGuiParams.add("8-cell scale", guiParams, "8-cell scale");
 
@@ -3490,16 +3503,21 @@ function init(){
 	gui.addColor(guiParams, 'fogColor1').onChange(function(color){
 		setFog(1,color);
 	});
+	gui.addColor(guiParams, 'fogColor2').onChange(function(color){
+		setFog(2,color);
+	});
 	gui.addColor(guiParams, 'playerLight').onChange(function(color){
 		setPlayerLight(color);
 	});
 	var drawShapesFolder = gui.addFolder('drawShapes');
-	var world0Folder = drawShapesFolder.addFolder('world0');
-	world0Folder.add(guiParams.world0, "duocylinderModel", ["grid","terrain","procTerrain",'voxTerrain','l3dt-brute','l3dt-blockstrips','none'] );
-	world0Folder.add(guiParams.world0, "seaActive" );
-	var world1Folder = drawShapesFolder.addFolder('world1');
-	world1Folder.add(guiParams.world1, "duocylinderModel", ["grid","terrain","procTerrain",'voxTerrain','l3dt-brute','l3dt-blockstrips','none'] );
-	world1Folder.add(guiParams.world1, "seaActive" );
+
+	[0,1,2].forEach(nn=>{
+		var worldName = 'world'+nn;
+		var worldFolder = drawShapesFolder.addFolder(worldName);
+		worldFolder.add(guiParams[worldName], "duocylinderModel", ["grid","terrain","procTerrain",'voxTerrain','l3dt-brute','l3dt-blockstrips','none'] );
+		worldFolder.add(guiParams[worldName], "seaActive" );
+	});
+
 	drawShapesFolder.add(guiParams, "seaLevel", -0.05,0.05,0.005);
 	drawShapesFolder.add(guiParams, "seaPeakiness", 0.0,0.5,0.01);
 	drawShapesFolder.add(guiParams, "duocylinderRotateSpeed", -2.5,2.5,0.25);
@@ -3705,6 +3723,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 
 	setFog(0,guiParams.fogColor0);
 	setFog(1,guiParams.fogColor1);
+	setFog(2,guiParams.fogColor2);
 	setAtmosThicknessMultiplier(guiParams.display.atmosThicknessMultiplier);
 	setPlayerLight(guiParams.playerLight);
     gl.enable(gl.DEPTH_TEST);
@@ -4988,11 +5007,11 @@ var iterateMechanics = (function iterateMechanics(){
 		//bounce off portal if reflector
 		if (!guiParams.reflector.isPortal){
 			var effectiveRange = Math.tan(Math.atan(reflectorInfo.rad)+Math.atan(0.003)); //TODO reformulate more efficiently
-			if (checkWithinReflectorRange({matrix:playerCamera,world:colorsSwitch}, effectiveRange)){				
+			if (checkWithinReflectorRange({matrix:playerCamera,world:worldA}, effectiveRange)){				
 				
 				//calculate in frame of portal
 				//logic is repeated from checkWithinReflectorRange
-				var portalRelativeMat = mat4.create(portalMats[colorsSwitch]);
+				var portalRelativeMat = mat4.create(portalMats[worldA]);
 				mat4.transpose(portalRelativeMat);
 				mat4.multiply(portalRelativeMat,playerCamera);
 
@@ -5471,7 +5490,7 @@ function performShaderSetup(shader, wSettings, tex){	//TODO use this more widely
 	}
 }
 function performCommon4vecShaderSetup(activeShaderProgram, wSettings, logtag){	//todo move to top level? are inner functions inefficient?
-	({colorsSwitch,worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, dropLightPos} = wSettings);
+	({worldA,worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, dropLightPos} = wSettings);
 
 	if (logtag){
 		document[logtag] = {about:"performCommon4vecShaderSetup", localVecFogColor:localVecFogColor, localVecReflectorDiffColor:localVecReflectorDiffColor, playerLight:playerLight, reflectorPosTransformed:reflectorPosTransformed, cosReflector:cosReflector, dropLightPos:dropLightPos};
