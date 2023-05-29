@@ -670,6 +670,7 @@ function drawScene(frameTime){
 		var tmpOffsetArr = new Array(3);
 		var wentThrough = false;
 
+		var numMoves = 0;
 		for (var ii=0;ii<offsetSteps;ii++){	//TODO more efficient. if insufficient subdivision, transition stepped.
 			mat4.set(offsetPlayerCamera, tmp4mat);	//TODO check order
 			for (var cc=0;cc<3;cc++){
@@ -677,22 +678,28 @@ function drawScene(frameTime){
 			}
 			xyzmove4mat(tmp4mat,tmpOffsetArr);
 			if (checkWithinReflectorRange({matrix:tmp4mat,world:sshipWorld}, reflectorInfo.rad)){
-					//TODO check/clean this. is world correct?
 
-				//portalTest will pass, so repeat with original matrix
-				xyzmove4mat(offsetPlayerCamera,tmpOffsetArr);
-				portalTest(offsetCameraContainer,0);
-				wentThrough = true;
-				//assume wont cross twice, move remainder of way
-				for (var cc=0;cc<3;cc++){
-					tmpOffsetArr[cc] = offsetVec[cc]-tmpOffsetArr[cc];
+				if (numMoves > 0){
+					console.log("error! detecting portal transition for stepped camera, but has already occurred!");
+				}else{
+					numMoves++;
+
+					//portalTest will pass, so repeat with original matrix
+					xyzmove4mat(offsetPlayerCamera,tmpOffsetArr);
+					portalTest(offsetCameraContainer,0);
+					wentThrough = true;
+					//assume wont cross twice, move remainder of way
+					for (var cc=0;cc<3;cc++){
+						tmpOffsetArr[cc] = offsetVec[cc]-tmpOffsetArr[cc];
+					}
+					xyzmove4mat(offsetPlayerCamera,tmpOffsetArr);
 				}
-				xyzmove4mat(offsetPlayerCamera,tmpOffsetArr);
-			}
+			}	
 		}
 		if (!wentThrough){
 			xyzmove4mat(offsetPlayerCamera,offsetVec);
 		}
+		console.log(JSON.stringify({sshipWorld,numMoves,offsetCameraWorld:offsetCameraContainer.world}));
 	}
 	
 	if (guiParams.display.stereo3d == "off"){
