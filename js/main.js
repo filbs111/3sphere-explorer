@@ -2469,7 +2469,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings) {
 	
 		//draw 1st portal for this world
 		if (frustumCull(portalInCamera,reflectorInfo.rad)){
-			drawPortalCubemap(pMatrix, portalInCameraCopy, frameTime);
+			drawPortalCubemap(pMatrix, portalInCameraCopy, frameTime, reflectorInfo,0);
 
 			//set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
 			gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
@@ -2486,7 +2486,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings) {
 		//need to create earlier: reflectorInfo2, portalInCameraCopy2
 		
 		if (frustumCull(portalInCamera2,reflectorInfo.rad)){
-			drawPortalCubemap(pMatrix, portalInCameraCopy2, frameTime);
+			drawPortalCubemap(pMatrix, portalInCameraCopy2, frameTime, reflectorInfo2,1);
 
 			//set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
 			gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
@@ -5686,7 +5686,7 @@ function isFisheyeShader(shaderName){
 
 //TODO pass in relevant args (or move to inside of some IIFE with relevant globals...)
 
-function drawPortalCubemap(pMatrix, portalInCameraCopy, frameTime){
+function drawPortalCubemap(pMatrix, portalInCameraCopy, frameTime, reflectorInfo, portalNum){
 
 	//draw cubemap views
 	mat4.identity(worldCamera);	//TODO use correct matrices
@@ -5694,8 +5694,8 @@ function drawPortalCubemap(pMatrix, portalInCameraCopy, frameTime){
 	//TODO move pMatrix etc to only recalc on screen resize
 	//make a pmatrix for hemiphere perspective projection method.
 	
-	var otherPortalMat = guiParams.reflector.isPortal ? portalMats[1-offsetCameraContainer.world] : 
-			portalMats[offsetCameraContainer.world];
+	var otherPortalMat = guiParams.reflector.isPortal ? portalsForWorld[offsetCameraContainer.world][portalNum].otherps.matrix : 
+		portalsForWorld[offsetCameraContainer.world][portalNum].matrix;
 
 	frustumCull = squareFrustumCull;
 	if (guiParams.reflector.cmFacesUpdated>0){
