@@ -3006,7 +3006,14 @@ var mvMatrixB = mat4.create();
 var pMatrix = mat4.create();
 var nonCmapPMatrix = mat4.create();
 var playerCamera = newIdMatWithQuats();
-var portalMats = ([0,0]).map(newIdMatWithQuats);	//dummy variables 0,0
+	
+
+//pull portal mats from new thing
+var firstPortalSide = portalsForWorld[0][0];
+console.log({firstPortalSide, otherPortalSide: firstPortalSide.otherps});
+var portalMats = [firstPortalSide.matrix, firstPortalSide.otherps.matrix];	//does not yet use other portals
+
+
 var playerCameraInterp = mat4.create();
 var offsetPlayerCamera = mat4.create();
 var playerContainer = {matrix:playerCamera, world:0}
