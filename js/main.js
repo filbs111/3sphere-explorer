@@ -543,6 +543,12 @@ var reflectorInfo={
 	otherThing:[0,0,0],
 	rad:1
 };
+//for 2nd portal. TODO organise this sensibly for arbitray portal num!
+var reflectorInfo2={
+	centreTanAngleVectorScaled:[0,0,0],
+	otherThing:[0,0,0],
+	rad:1
+};
 
 function calcReflectionInfo(toReflect,resultsObj){
 	//use player position directly. expect to behave like transparent
@@ -554,6 +560,8 @@ function calcReflectionInfo(toReflect,resultsObj){
 	var angle = Math.acos(toReflect[15]);	//from centre of portal to player
 	var reflectionCentreTanAngle = 	reflectorInfo.rad/ ( 2 - ( reflectorInfo.rad/Math.tan(angle) ) );
 		//note could do tan(angle) directly from playerCamera[15] bypassing calculating angle		
+		
+		//note using reflectorInfo.rad, but also typically passing in reflectorInfo and storing stuff on it! TODO tidy- maybe buggy
 	
 	var mag = Math.sqrt(magsq);
 	//var correctionFactor = -angle/mag;
@@ -562,7 +570,8 @@ function calcReflectionInfo(toReflect,resultsObj){
 	var correctionFactor = -polarity * Math.atan(reflectionCentreTanAngle)/mag;
 	var cubeViewShiftAdjusted = cubeViewShift.map(function(val){return val*correctionFactor});
 	var cubeViewShiftAdjustedMinus = cubeViewShiftAdjusted.map(function(val){return -polarity*val});
-	reflectorInfo.polarity=polarity;	
+	//reflectorInfo.polarity=polarity;	
+	resultsObj.polarity=polarity;	//??
 	
 	//position within spherical reflector BEFORE projection
 	var correctionFactorB = reflectionCentreTanAngle/mag;
@@ -653,7 +662,8 @@ function drawScene(frameTime){
 	smoothGuiParams.update();
 	
 	reflectorInfo.rad = guiParams.reflector.draw!="none" ? guiParams.reflector.scale : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
-	
+	reflectorInfo2.rad = reflectorInfo.rad;
+
 	offsetCameraContainer.world = playerContainer.world;
 	
 	mat4.set(playerCameraInterp, offsetPlayerCamera);	
@@ -747,11 +757,21 @@ function drawScene(frameTime){
 		//TODO reorganise/tidy code, reduce duplication
 		//TODO user mat4.set (or write some abstraction to make it obvious (and know) which argument is to, from!)
 
-	mat4.multiply(portalInCameraCopy, portalMats[offsetCameraContainer.world]); //TODO is offsetCameraContainer.world updated yet?
+	mat4.multiply(portalInCameraCopy, portalsForWorld[offsetCameraContainer.world][0].matrix); //TODO is offsetCameraContainer.world updated yet?
 																				//if not may see 1 frame glitch on crossing
 	mat4.transpose(portalInCameraCopy);
-	mat4.set(cameraForScene, worldCamera);
+
+	//mat4.set(cameraForScene, worldCamera);
+
 	calcReflectionInfo(portalInCameraCopy,reflectorInfo);
+
+	//for 2nd portal in this world. TODO generalise
+	portalInCameraCopy2 = mat4.create(invertedWorldCamera);
+	mat4.multiply(portalInCameraCopy2, portalsForWorld[offsetCameraContainer.world][1].matrix);
+	mat4.transpose(portalInCameraCopy2);
+	calcReflectionInfo(portalInCameraCopy2,reflectorInfo2);
+
+	mat4.set(cameraForScene, worldCamera);
 
 
 
@@ -2444,21 +2464,42 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings) {
 			break;
 	}
 
-	//TODO draw multiple portals...
-	if (guiParams.reflector.draw && !isCubemapView && frustumCull(portalInCamera,reflectorInfo.rad)){
-		drawPortalCubemap(pMatrix, portalInCameraCopy, frameTime);
+	//draw multiple portals...
+	if (guiParams.reflector.draw && !isCubemapView){
+	
+		//draw 1st portal for this world
+		if (frustumCull(portalInCamera,reflectorInfo.rad)){
+			drawPortalCubemap(pMatrix, portalInCameraCopy, frameTime);
 
-		//set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
-		mat4.set(nonCmapPMatrix, pMatrix);	
-		frustumCull = nonCmapCullFunc;
-		gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
-		gl.viewport( 0,0, viewSettings.width, viewSettings.height );
+			//set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
+			gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
+			gl.viewport( 0,0, viewSettings.width, viewSettings.height );
+			mat4.set(nonCmapPMatrix, pMatrix);	
+			frustumCull = nonCmapCullFunc;
+			drawPortal(activeReflectorShader, meshToDraw, reflectorInfo, portalInCamera);
+		}
 
-		drawPortal(activeReflectorShader, meshToDraw, reflectorInfo);
+		// switch back shader? is this needed?
+		//gl.useProgram(activeShaderProgram);
+
+		//draw the other portal for this world
+		//need to create earlier: reflectorInfo2, portalInCameraCopy2
+		
+		if (frustumCull(portalInCamera2,reflectorInfo.rad)){
+			drawPortalCubemap(pMatrix, portalInCameraCopy2, frameTime);
+
+			//set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
+			gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
+			gl.viewport( 0,0, viewSettings.width, viewSettings.height );
+			mat4.set(nonCmapPMatrix, pMatrix);	
+			frustumCull = nonCmapCullFunc;
+			drawPortal(activeReflectorShader, meshToDraw, reflectorInfo2, portalInCamera2);
+		}
+
 	}
 	gl.useProgram(activeShaderProgram);
 
-	function drawPortal(shaderProgram, meshToDraw, reflectorInfo){
+	function drawPortal(shaderProgram, meshToDraw, reflectorInfo, portalInCamera){
 		//TODO move elsewhere, pass in everything needed.
 		//TODO do cubemap rendering here, so can use reuse cubemap texture when drawing multiple portals.
 		//TODO later, draw cubemap for portal 1, then render both eyes when in stereo mode using depth buffer ray tracing - means switching between drawing each eye view.
