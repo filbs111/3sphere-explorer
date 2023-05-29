@@ -696,7 +696,7 @@ function drawScene(frameTime){
 	}
 	
 	if (guiParams.display.stereo3d == "off"){
-		drawSceneToScreen(offsetPlayerCamera, 0,0,gl.viewportWidth,gl.viewportHeight);
+		drawSceneToScreen(offsetPlayerCamera, {left:0,top:0,width:gl.viewportWidth,height:gl.viewportHeight});
 	}else{
 		//basic left/right shifted cameras
 		//no centre of perspective shift (rotate cameras inward by eyeTurnIn is not ideal)
@@ -706,19 +706,19 @@ function drawScene(frameTime){
 		var savedWorld = offsetCameraContainer.world;
 		moveCamInSteps(100, [-guiParams.display.eyeSepWorld,0,0]);
 		xyzrotate4mat(offsetPlayerCamera, [0,guiParams.display.eyeTurnIn,0]);
-		drawSceneToScreen(offsetPlayerCamera, 0,0,gl.viewportWidth,gl.viewportHeight/2);
+		drawSceneToScreen(offsetPlayerCamera, {left:0,top:0,width:gl.viewportWidth,height:gl.viewportHeight/2});
 
 		mat4.set(savedCam, offsetPlayerCamera);
 		offsetCameraContainer.world = savedWorld;
 		moveCamInSteps(100, [guiParams.display.eyeSepWorld,0,0]);
 		xyzrotate4mat(offsetPlayerCamera, [0,-guiParams.display.eyeTurnIn,0]);
-		drawSceneToScreen(offsetPlayerCamera, 0,gl.viewportHeight/2,gl.viewportWidth,gl.viewportHeight/2);
+		drawSceneToScreen(offsetPlayerCamera, {left:0,top:gl.viewportHeight/2,width:gl.viewportWidth,height:gl.viewportHeight/2});
 		//note inefficient currently, since does full screen full render for each eye view.
 		// for top/down split, intermediate render targets could be half screen size
 		// some rendering could be shared between eyes - eg portal cubemaps.
 	}
 
-	function drawSceneToScreen(cameraForScene, viewleft, viewtop, viewwidth, viewheight){
+	function drawSceneToScreen(cameraForScene, viewP){
 		
 	mat4.set(cameraForScene, worldCamera);
 
@@ -734,11 +734,23 @@ function drawScene(frameTime){
 	mat4.transpose(invertedWorldCamera);
 	nonCmapCullFunc = generateCullFunc(nonCmapPMatrix);										//todo only update pmatrix, nonCmapCullFunc if input variables have changed
 		
-	drawPortalCubemap(cameraForScene, frameTime);
+
+
+	portalInCameraCopy = mat4.create(invertedWorldCamera);	//portalInCamera is calculated in different scope
+		//TODO reorganise/tidy code, reduce duplication
+		//TODO user mat4.set (or write some abstraction to make it obvious (and know) which argument is to, from!)
+
+	mat4.multiply(portalInCameraCopy, portalMats[offsetCameraContainer.world]); //TODO is offsetCameraContainer.world updated yet?
+																				//if not may see 1 frame glitch on crossing
+	mat4.transpose(portalInCameraCopy);
+	mat4.set(cameraForScene, worldCamera);
+	calcReflectionInfo(portalInCameraCopy,reflectorInfo);
+
+
 
 	//setup for drawing to screen
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-	gl.viewport(viewleft, viewtop, viewwidth, viewheight);
+	gl.viewport(viewP.left, viewP.top, viewP.width, viewP.height);
 	mat4.set(nonCmapPMatrix, pMatrix);
 														
 	frustumCull = nonCmapCullFunc;
@@ -794,7 +806,9 @@ function drawScene(frameTime){
 			gl.viewport( 0,0, oversizedViewport[0], oversizedViewport[1] );
 			setRttSize( rttStageOneView, oversizedViewport[0], oversizedViewport[1] );	//todo stop setting this repeatedly
 			
-			var wSettings = drawWorldScene(frameTime, false);
+			var viewSettings = {buf: rttStageOneView.framebuffer, width: oversizedViewport[0], height: oversizedViewport[1]}
+
+			var wSettings = drawWorldScene(frameTime, false, viewSettings);
 			
 			if (guiParams.display.drawTransparentStuff){
 				drawTransparentStuff(rttStageOneView, rttFisheyeView2, oversizedViewport[0], oversizedViewport[1], wSettings);
@@ -807,8 +821,10 @@ function drawScene(frameTime){
 			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );			//already set? maybe should add some buffer zone around image, 
 																				//but with clamp sampling, result should be OK.
 			setRttSize( rttStageOneView, gl.viewportWidth, gl.viewportHeight );	//todo stop setting this repeatedly
-			
-			var wSettings = drawWorldScene(frameTime, false);
+
+			var viewSettings = {buf: rttStageOneView.framebuffer, width: gl.viewportWidth, height: gl.viewportHeight}
+
+			var wSettings = drawWorldScene(frameTime, false, viewSettings);
 			
 			if (guiParams.display.drawTransparentStuff){
 				drawTransparentStuff(rttStageOneView, rttFisheyeView2, gl.viewportWidth, gl.viewportHeight, wSettings);
@@ -907,7 +923,10 @@ function drawScene(frameTime){
 			gl.bindFramebuffer(gl.FRAMEBUFFER, rttStageOneView.framebuffer);
 			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
 			setRttSize( rttStageOneView, gl.viewportWidth, gl.viewportHeight );
-			var wSettings = drawWorldScene(frameTime, false);
+
+			var viewSettings = {buf: rttStageOneView.framebuffer, width: gl.viewportWidth, height: gl.viewportHeight}
+
+			var wSettings = drawWorldScene(frameTime, false, viewSettings);
 
 			if (guiParams.display.drawTransparentStuff){
 				drawTransparentStuff(rttStageOneView, rttView, gl.viewportWidth, gl.viewportHeight, wSettings);
@@ -917,7 +936,7 @@ function drawScene(frameTime){
 		
 		//draw quad to screen using drawn texture
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);	//draw to screen.
-		gl.viewport(viewleft, viewtop, viewwidth, viewheight);	//TODO check whether necessary to keep setting this
+		gl.viewport(viewP.left, viewP.top, viewP.width, viewP.height);	//TODO check whether necessary to keep setting this
 		bind2dTextureIfRequired(sceneDrawingOutputView.texture);	
 		
 		//draw the simple quad object to the screen
@@ -1332,7 +1351,7 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 
 
 
-function drawWorldScene(frameTime, isCubemapView) {
+function drawWorldScene(frameTime, isCubemapView, viewSettings) {
 
 	if (!isCubemapView){
 		updateTerrain2QuadtreeForCampos(worldCamera.slice(12));
@@ -2394,6 +2413,14 @@ function drawWorldScene(frameTime, isCubemapView) {
 
 	//TODO draw multiple portals...
 	if (guiParams.reflector.draw && !isCubemapView && frustumCull(portalInCamera,reflectorInfo.rad)){
+		drawPortalCubemap(pMatrix, portalInCameraCopy, frameTime);
+
+		//set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
+		mat4.set(nonCmapPMatrix, pMatrix);						
+		//frustumCull = nonCmapCullFunc;
+		gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
+		gl.viewport( 0,0, viewSettings.width, viewSettings.height );
+
 		drawPortal(activeReflectorShader, meshToDraw, reflectorInfo);
 	}
 	gl.useProgram(activeShaderProgram);
@@ -2964,6 +2991,7 @@ var playerContainer = {matrix:playerCamera, world:0}
 var offsetCameraContainer = {matrix:offsetPlayerCamera, world:0}
 
 var worldCamera = mat4.create();
+var portalInCameraCopy = mat4.create();
 
 var cmapPMatrix = mat4.create();
 setProjectionMatrix(cmapPMatrix, -90.0, 1.0);	//-90 gets reflection to look right. (different for portal?)
@@ -5562,17 +5590,8 @@ function isFisheyeShader(shaderName){
 
 //TODO pass in relevant args (or move to inside of some IIFE with relevant globals...)
 
-function drawPortalCubemap(cameraForScene, frameTime){
+function drawPortalCubemap(pMatrix, portalInCameraCopy, frameTime){
 
-	var portalInCameraCopy = mat4.create(invertedWorldCamera);	//portalInCamera is calculated in different scope
-		//TODO reorganise/tidy code, reduce duplication
-	mat4.multiply(portalInCameraCopy, portalMats[offsetCameraContainer.world]); //TODO is offsetCameraContainer.world updated yet?
-																				//if not may see 1 frame glitch on crossing
-	mat4.transpose(portalInCameraCopy);
-	
-	mat4.set(cameraForScene, worldCamera);
-	calcReflectionInfo(portalInCameraCopy,reflectorInfo);
-	
 	//draw cubemap views
 	mat4.identity(worldCamera);	//TODO use correct matrices
 	
