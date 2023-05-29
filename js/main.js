@@ -2402,12 +2402,17 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings) {
 		shaderSetup(activeShaderProgram, texture);
 
 		drawPortalFrame(guiParams.reflector.scale, activeShaderProgram, portalMat, portalInCamera);
-		drawPortalFrame(guiParams.reflector.scale, activeShaderProgram, portalMat2, portalInCamera2);
+		drawPortalFrame(guiParams.reflector.scale, activeShaderProgram, portalMat2, portalInCamera2,true);
 	}
 
-	function drawPortalFrame(frameScale, shaderProg, portalMat, portalInCamera){
+	function drawPortalFrame(frameScale, shaderProg, portalMat, portalInCamera, overrideColor){
 		gl.uniform3f(shaderProg.uniforms.uModelScale, frameScale,frameScale,frameScale);
-		gl.uniform4fv(shaderProg.uniforms.uColor, localVecFogColor);	//same colour as world this frame is in
+
+		if (overrideColor){
+			gl.uniform4fv(shaderProg.uniforms.uColor, [1.0,1.0,1.0,1.0]);
+		}else{
+			gl.uniform4fv(shaderProg.uniforms.uColor, localVecFogColor);	//same colour as world this frame is in
+		}
 
 		mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
 		drawObjectFromBuffers(cubeFrameSubdivBuffers, shaderProg);
