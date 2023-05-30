@@ -2556,7 +2556,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			var matrixToPortal = mat4.create(mvMatrix);	//should be inverted matrix or regular?
 
 			//does adding a qpair help??
-			matrixToPortal.qPair = mvMatrix.qPair.map(x=>x.map(y=>y));
+			//matrixToPortal.qPair = mvMatrix.qPair.map(x=>x.map(y=>y));
 				//TODO make a general function to copy mats!
 
 			moveMatrixThruPortal(matrixToPortal, reflectorInfo.rad, 1, worldA, true);
