@@ -103,5 +103,5 @@ var explosionParticleArrs = (function(){
         }
     }
 
-    return [new ExplosionParticleArr(),new ExplosionParticleArr()];
+    return [new ExplosionParticleArr(),new ExplosionParticleArr(),new ExplosionParticleArr()];
 })();

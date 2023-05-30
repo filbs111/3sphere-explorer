@@ -536,6 +536,7 @@ function initBuffers(){
 	
 	explosionParticleArrs[0].init();
 	explosionParticleArrs[1].init();
+	explosionParticleArrs[2].init();
 }
 
 var reflectorInfo={
@@ -1340,12 +1341,20 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 	}
 	var worldA;
 
-	return function getWorldSceneSettings(isCubemapView){
+	return function getWorldSceneSettings(isCubemapView, portalNum){
+		
 		returnObj.reflectorPosTransformed=new Array(4);	//workaround bug (see comments near return statement)
 
-		returnObj.worldA = worldA = ((isCubemapView && guiParams.reflector.isPortal)?1:0)^offsetCameraContainer.world;
+		returnObj.worldA = worldA = (isCubemapView && guiParams.reflector.isPortal)? 
+			portalsForWorld[offsetCameraContainer.world][portalNum].otherps.world:
+			offsetCameraContainer.world;
 
-		var worldB = 1-worldA;
+		var pmatA = (isCubemapView && guiParams.reflector.isPortal)? 
+			portalsForWorld[offsetCameraContainer.world][portalNum].otherps.matrix: 
+			portalMats[0];	//??? probably wrong!!!
+
+		var worldB = offsetCameraContainer.world;
+		//??^^ is this correct? check recent commits - may have broken. check works for reflection mode also...
 
 		returnObj.worldInfo = guiSettingsForWorld[worldA];
 
@@ -1365,7 +1374,7 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 		//moved portal - likely duplicated from elsewhere
 		var portalRelativeMat = mat4.create(worldCamera);
 		mat4.transpose(portalRelativeMat);
-		mat4.multiply(portalRelativeMat, portalMats[worldA]);
+		mat4.multiply(portalRelativeMat, pmatA);
 		mat4.transpose(portalRelativeMat);
 
 		for (var cc=0;cc<4;cc++){
@@ -1393,7 +1402,7 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 
 
 
-function drawWorldScene(frameTime, isCubemapView, viewSettings) {
+function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 
 	if (!isCubemapView){
 		updateTerrain2QuadtreeForCampos(worldCamera.slice(12));
@@ -1405,7 +1414,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings) {
 		mat4.set(sshipMatrixNoInterp, sshipMatrix);		
 	}
 
-	var wSettings = getWorldSceneSettings(isCubemapView);
+	var wSettings = getWorldSceneSettings(isCubemapView, portalNum);
 	({worldA,worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, sshipDrawMatrix} = wSettings);
 		//above could just paste getWorldSceneSettings function stuff here instead.
 	
@@ -3361,7 +3370,7 @@ var stats;
 var pointerLocked=false;
 var guiParams={
 	world0:{duocylinderModel:"l3dt-blockstrips",seaActive:true},
-	world1:{duocylinderModel:"none",seaActive:false},
+	world1:{duocylinderModel:"procTerrain",seaActive:false},
 	world2:{duocylinderModel:"none",seaActive:false},
 	duocylinderRotateSpeed:0,
 	seaLevel:-0.012,
@@ -5733,7 +5742,7 @@ function drawPortalCubemap(pMatrix, portalInCameraCopy, frameTime, reflectorInfo
 			xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);
 			rotateCameraForFace(ii);
 			
-			wSettingsArr.push( drawWorldScene(frameTime, true) );
+			wSettingsArr.push( drawWorldScene(frameTime, true, null, portalNum) );
 		}
 		if (guiParams.display.drawTransparentStuff){
 			for (var ii=0;ii<numFacesToUpdate;ii++){
