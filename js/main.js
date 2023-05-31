@@ -1387,7 +1387,7 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 		}else{
 			if (checkWithinReflectorRange({matrix:sshipMatrix,world:sshipWorld}, Math.tan(Math.atan(reflectorInfo.rad) +0.1))){	//TODO correct this
 				mat4.set(sshipMatrix, portaledMatrix);
-				moveMatrixThruPortal(portaledMatrix, reflectorInfo.rad, 1, sshipWorld);
+				moveMatrixThruPortal(portaledMatrix, reflectorInfo.rad, 1, portalsForWorld[sshipWorld][0]);
 				returnObj.sshipDrawMatrix = portaledMatrix;
 			}	
 		}
@@ -2559,7 +2559,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			//matrixToPortal.qPair = mvMatrix.qPair.map(x=>x.map(y=>y));
 				//TODO make a general function to copy mats!
 
-			moveMatrixThruPortal(matrixToPortal, reflectorInfo.rad, 1, worldA, true);
+			moveMatrixThruPortal(matrixToPortal, reflectorInfo.rad, 1, portalsForWorld[worldA][0], true);
 				//skips start/end rotations. appears to fix rendering. TODO check for side effects
 
 		if (guiParams.reflector.test1){	//appears to do ~nothing
@@ -3087,6 +3087,7 @@ var offsetCameraContainer = {matrix:offsetPlayerCamera, world:0}
 
 var worldCamera = mat4.create();
 var portalInCameraCopy = mat4.create();
+var portalInCameraCopy2 = mat4.create();
 
 var cmapPMatrix = mat4.create();
 setProjectionMatrix(cmapPMatrix, -90.0, 1.0);	//-90 gets reflection to look right. (different for portal?)
@@ -4748,8 +4749,8 @@ var iterateMechanics = (function iterateMechanics(){
 				detonateBullet(bullet);
 			}
 			
-			var worldInfo = (bullet.world==0) ? guiParams.world0 : guiParams.world1;
-					//todo keep bullets in 2 lists/arrays so can check this once per world
+			var worldInfo = guiSettingsForWorld[bullet.world];
+					//todo keep bullets in lists/arrays per world so can check this once per world
 			
 			if (worldInfo.duocylinderModel == "procTerrain"){
 				//collision with duocylinder procedural terrain	
@@ -5056,7 +5057,7 @@ var iterateMechanics = (function iterateMechanics(){
 				for (var b of bullets){
 					if (b.active){	//TODO just delete/unlink removed objects
 						checkBulletCollision(b, singleStepMove);
-						portalTest(b, 0);
+						portalTestMultiPortal(b, 0);
 					}
 				}
 			}
@@ -5148,10 +5149,39 @@ function portalTest(obj, amount){
 	//then move through portal, and apply other portal matrix...
 
 	if (checkWithinReflectorRange(obj, adjustedRad)){	
-		moveMatrixThruPortal(obj.matrix, adjustedRad, 1.00000001, obj.world);
+		moveMatrixThruPortal(obj.matrix, adjustedRad, 1.00000001, portalsForWorld[obj.world][0]);
 		obj.world=1-obj.world;
 	//	console.log("currentWorld now = " + obj.world);
 	}
+}
+function portalTestMultiPortal(obj, amount){
+	var adjustedRad = reflectorInfo.rad + amount;	//avoid issues with rendering very close to surface
+
+	//get obj matrix in frame of portal matrix. 
+	//for distance check, only required for moved portal, not rotated.
+
+	//then move through portal, and apply other portal matrix...
+
+	//assume that won't traverse multiple portals in one frame.
+	var portalsForThisWorld = portalsForWorld[obj.world];
+	for (var ii=0;ii<portalsForThisWorld.length;ii++){
+		portalTestForGivenPortal(obj, adjustedRad, portalsForThisWorld[ii]);
+	}
+}
+function portalTestForGivenPortal(obj, adjustedRad, portal){
+	if (checkWithinRangeOfGivenPortal(obj, adjustedRad, portal)){
+		moveMatrixThruPortal(obj.matrix, adjustedRad, 1.00000001, portal);
+		obj.world=portal.otherps.world;
+	}
+}
+function checkWithinRangeOfGivenPortal(obj, rad, portal){
+	//calculate in frame of portal
+	var portalRelativeMat = mat4.create(portal.matrix);
+	mat4.transpose(portalRelativeMat);
+	mat4.multiply(portalRelativeMat,obj.matrix);
+
+	//return obj.matrix[15]>1/Math.sqrt(1+rad*rad);
+	return portalRelativeMat[15]>1/Math.sqrt(1+rad*rad);
 }
 
 function checkWithinReflectorRange(obj, rad){
@@ -5165,18 +5195,18 @@ function checkWithinReflectorRange(obj, rad){
 	return portalRelativeMat[15]>1/Math.sqrt(1+rad*rad);
 }
 
-function moveMatrixThruPortal(matrix, rad, hackMultiplier, currentWorld, skipStartEndRotations){
+function moveMatrixThruPortal(matrix, rad, hackMultiplier, portal, skipStartEndRotations){
 	//TODO just work with qpairs (and save on updating matrix)
 
 	if (!skipStartEndRotations){
 		//apply entrance portal matrix
 		if (matrix.qPair){
 			transpose_mat_with_qpair(matrix);
-			multiply_mat_with_qpair(matrix, portalMats[currentWorld]);
+			multiply_mat_with_qpair(matrix, portal.matrix);
 			transpose_mat_with_qpair(matrix);
 		}else{
 			mat4.transpose(matrix);
-			mat4.multiply(matrix, portalMats[currentWorld]);
+			mat4.multiply(matrix, portal.matrix);
 			mat4.transpose(matrix);
 		}
 	}
@@ -5202,14 +5232,14 @@ function moveMatrixThruPortal(matrix, rad, hackMultiplier, currentWorld, skipSta
 	//apply exit portal matrix
 	if (matrix.qPair){
 		transpose_mat_with_qpair(matrix);
-		multiply_mat_with_qpair_transp(matrix, portalMats[1-currentWorld]);
+		multiply_mat_with_qpair_transp(matrix, portal.otherps.matrix);
 		transpose_mat_with_qpair(matrix);
 
 		cleanupMat(matrix);	//unsure if here is best place for this, but cures issue with portal transitions getting wacky after a while.
 							//probably only need to normalise quaternions. recalculating matrices now maybe inefficient.
 
 	}else{
-		var invOtherPMat = mat4.create(portalMats[1-currentWorld]);
+		var invOtherPMat = mat4.create(portal.otherps.matrix);
 		mat4.transpose(invOtherPMat);
 
 		mat4.transpose(matrix);
