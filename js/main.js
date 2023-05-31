@@ -5076,7 +5076,7 @@ var iterateMechanics = (function iterateMechanics(){
 		}
 		playerLight = playerLightUnscaled.map(function(val){return val*flashAmount});
 		
-		portalTest(playerContainer, 0);	//TODO switch off portal in reflector mode. requires camera changes too.
+		portalTestMultiPortal(playerContainer, 0);	//TODO switch off portal in reflector mode. requires camera changes too.
 		
 		//bounce off portal if reflector
 		if (!guiParams.reflector.isPortal){
