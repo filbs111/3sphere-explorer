@@ -4278,7 +4278,7 @@ var iterateMechanics = (function iterateMechanics(){
 			var panForTerrainNoise = 0;
 						
 			//some logic shared with drawing code
-			var worldInfo = (playerContainer.world==0) ? guiParams.world0 : guiParams.world1;	//todo use array
+			var worldInfo = guiSettingsForWorld[playerContainer.world];
 
 			if (worldInfo.duocylinderModel == 'procTerrain'){
 				
