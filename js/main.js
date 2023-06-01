@@ -1830,8 +1830,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	var seaTime = 0.00005*(frameTime % 20000 ); //20s loop
 	lastSeaTime=seaTime;	//for use in mechanics. TODO switch to using mechanics time for rendering instead
 	if (worldInfo.seaActive){
-		seaHeight.setZeroLevel(guiParams.seaLevel);
-		seaHeight.setPeakiness(guiParams.seaPeakiness);	//TODO only call on ui change
+		seaHeight.setZeroLevel(worldInfo.seaLevel);
+		seaHeight.setPeakiness(worldInfo.seaPeakiness);	//TODO only call on ui change
 
 		//var seaHeight = getSeaHeight([0,0], [0.00005*(frameTime % 20000 )]);	//actually this is a position not a height . todo time conversion in one place 
 		var currentSeaHeight = getSeaHeight([0,0], seaTime);	//actually this is a position not a height . todo time conversion in one place 
@@ -2709,7 +2709,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 
 	var seaTime = 0.00005*(frameTime % 20000 ); //20s loop	//note this is duplicated from drawWorldScene
 	if (worldInfo.seaActive){
-		drawDuocylinderObject(wSettings, duocylinderObjects['sea'], guiParams.seaLevel, guiParams.seaPeakiness, seaTime, depthMap);
+		drawDuocylinderObject(wSettings, duocylinderObjects['sea'], worldInfo.seaLevel, worldInfo.seaPeakiness, seaTime, depthMap);
 	}
 
 
@@ -3380,12 +3380,10 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	world0:{duocylinderModel:"l3dt-blockstrips",seaActive:true},
-	world1:{duocylinderModel:"procTerrain",seaActive:false},
-	world2:{duocylinderModel:"none",seaActive:false},
+	world0:{duocylinderModel:"l3dt-blockstrips",seaActive:true,seaLevel:0,seaPeakiness:0.0},
+	world1:{duocylinderModel:"procTerrain",seaActive:false,seaLevel:0,seaPeakiness:0.0},
+	world2:{duocylinderModel:"none",seaActive:false,seaLevel:0,seaPeakiness:0.0},
 	duocylinderRotateSpeed:0,
-	seaLevel:-0.012,
-	seaPeakiness:0.0,
 	drawShapes:{
 		boxes:{
 		'y=z=0':false,	//x*x+w*w=1
@@ -3600,10 +3598,10 @@ function init(){
 		var worldFolder = drawShapesFolder.addFolder(worldName);
 		worldFolder.add(guiParams[worldName], "duocylinderModel", ["grid","terrain","procTerrain",'voxTerrain','l3dt-brute','l3dt-blockstrips','none'] );
 		worldFolder.add(guiParams[worldName], "seaActive" );
+		worldFolder.add(guiParams[worldName], "seaLevel", -0.05,0.05,0.005);
+		worldFolder.add(guiParams[worldName], "seaPeakiness", 0.0,0.5,0.01);
 	});
 
-	drawShapesFolder.add(guiParams, "seaLevel", -0.05,0.05,0.005);
-	drawShapesFolder.add(guiParams, "seaPeakiness", 0.0,0.5,0.01);
 	drawShapesFolder.add(guiParams, "duocylinderRotateSpeed", -2.5,2.5,0.25);
 	var boxesFolder = drawShapesFolder.addFolder('boxes');
 	for (shape in guiParams.drawShapes.boxes){
