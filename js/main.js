@@ -682,14 +682,24 @@ function drawScene(frameTime){
 		var wentThrough = false;
 
 		var numMoves = 0;
+		var portalsForThisWorld = portalsForWorld[sshipWorld];
+
 		for (var ii=0;ii<offsetSteps;ii++){	//TODO more efficient. if insufficient subdivision, transition stepped.
 			mat4.set(offsetPlayerCamera, tmp4mat);	//TODO check order
 			for (var cc=0;cc<3;cc++){
 				tmpOffsetArr[cc] = offsetVec[cc]*ii/offsetSteps;
 			}
-			xyzmove4mat(tmp4mat,tmpOffsetArr);
-			if (checkWithinReflectorRange({matrix:tmp4mat,world:sshipWorld}, reflectorInfo.rad)){
 
+
+			xyzmove4mat(tmp4mat,tmpOffsetArr);
+			//TODO rewrite less stupidly (don't check within range then redo calculation right away!!)
+			var isWithinAPortal = false;
+			for (var pp=0;pp<portalsForThisWorld.length;pp++){
+				isWithinAPortal ||= checkWithinRangeOfGivenPortal({matrix:tmp4mat,world:sshipWorld}, reflectorInfo.rad, portalsForThisWorld[pp]);
+				//TODO separate reflectorInfo per portal
+			}
+
+			if (isWithinAPortal){
 				if (numMoves > 0){
 					console.log("error! detecting portal transition for stepped camera, but has already occurred!");
 				}else{
@@ -697,7 +707,7 @@ function drawScene(frameTime){
 
 					//portalTest will pass, so repeat with original matrix
 					xyzmove4mat(offsetPlayerCamera,tmpOffsetArr);
-					portalTest(offsetCameraContainer,0);
+					portalTestMultiPortal(offsetCameraContainer,0);
 					wentThrough = true;
 					//assume wont cross twice, move remainder of way
 					for (var cc=0;cc<3;cc++){
