@@ -5779,7 +5779,7 @@ function drawPortalCubemap(pMatrix, portalInCameraCopy, frameTime, reflectorInfo
 		//todo this transformation once, not repeat in following loop
 		mat4.set(otherPortalMat, worldCamera);
 		xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);
-		updateTerrain2QuadtreeForCampos(worldCamera.slice(12));	//TODO only if this terrain type active
+		updateTerrain2QuadtreeForCampos(worldCamera.slice(12), guiSettingsForWorld[offsetCameraContainer.world].spin);	//TODO only if this terrain type active
 
 		for (var ii=0;ii<numFacesToUpdate;ii++){	//only using currently to check perf impact. could use more "properly" and cycle/alternate.
 			var framebuffer = guiParams.display.drawTransparentStuff ? cubemapView.intermediateFramebuffers[ii] : cubemapView.framebuffers[ii];
