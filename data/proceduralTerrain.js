@@ -63,7 +63,7 @@ function getInterpHeightAndGradForAB(aa,bb){
 	
 }
 
-function terrainGetHeightFor4VecPos(vec){	//returns point in procTerrain space directly below the input 4vector
+function terrainGetHeightFor4VecPos(vec, duocylinderSpin){	//returns point in procTerrain space directly below the input 4vector
 	var multiplier = procTerrainSize/(2*Math.PI);	//TODO don't require enter same number here and elsewhere (gridSize)
 	var a = Math.atan2(vec[2],vec[3]);
 	var b = Math.atan2(vec[0],vec[1]);
@@ -95,7 +95,7 @@ function terrainGetHeightFor4VecPos(vec){	//returns point in procTerrain space d
 	//return {a:-a, b:Math.PI*1.5 -b , h: -0.5*Math.asin( (vec[0]*vec[0] + vec[1]*vec[1]) - (vec[2]*vec[2] + vec[3]*vec[3]))};	//position such that will draw at input 4vec position
 }
 
-function terrainGetNearPointFor4VecPos(vec){	//returns estimated point in procTerrain space nearest the input 4vector
+function terrainGetNearPointFor4VecPos(vec, duocylinderSpin){	//returns estimated point in procTerrain space nearest the input 4vector
 	var multiplier = procTerrainSize/(2*Math.PI);	//TODO don't require enter same number here and elsewhere (gridSize)
 	var a = Math.atan2(vec[2],vec[3]);
 	var b = Math.atan2(vec[0],vec[1]);
@@ -146,7 +146,7 @@ function terrainGetNearPointFor4VecPos(vec){	//returns estimated point in procTe
 
 var testTnormal;
 
-function getHeightAboveTerrainFor4VecPos(vec){
+function getHeightAboveTerrainFor4VecPos(vec, duocylinderSpin){
 	var multiplier = procTerrainSize/(2*Math.PI);	//TODO don't require enter same number here and elsewhere (gridSize)
 	var a = Math.atan2(vec[2],vec[3]);
 	var b = Math.atan2(vec[0],vec[1]);
@@ -169,13 +169,13 @@ function getHeightAboveTerrainFor4VecPos(vec){
 }
 
 //function getNearestTerrain4VecPosFor4VecPos(posVec){
-function getNearestTerrainPosMatFor4VecPos(posVec){
+function getNearestTerrainPosMatFor4VecPos(posVec, duocylinderSpin){
 	//find height above terrain, gradient here. estimate nearest surface point assuming constant gradient
 	//this should give decent results for slowly varying gradient. but where there are sharp changes in gradient (which is the case assuming linear interpolation between grid points), may notice problems.
 
 	//for sanity check, get point directly below player. should be able to calc distance to this repro existing behaviour
 	//var abhPos = terrainGetHeightFor4VecPos(posVec);
-	var abhPos = terrainGetNearPointFor4VecPos(posVec);
+	var abhPos = terrainGetNearPointFor4VecPos(posVec, duocylinderSpin);
 		//convert this to 4vec space, using function in voxterrain.js (todo generalise). 
 		//todo account for duocylinder spin
 
@@ -501,7 +501,7 @@ var procTerrainSurfaceParticleMats = (function(){
 	var nummats = 8192;
 	for (nn=0;nn<nummats;nn++){
 		var this4vec = random_quaternion();
-		var thinfo = terrainGetHeightFor4VecPos(this4vec);	//note this returns coords and height. to do this for 4vec is quite inefficient. TODO create random xy coords and get height.
+		var thinfo = terrainGetHeightFor4VecPos(this4vec,0);	//note this returns coords and height. to do this for 4vec is quite inefficient. TODO create random xy coords and get height.
 		
 		//get a matrix for this position. TODO align to surface
 		//use something very similar to main.js:moveToDuocylinderAB, and to generate voxSurfaceParticleMats, but signs, offsets differ. TODO sort out mess!!

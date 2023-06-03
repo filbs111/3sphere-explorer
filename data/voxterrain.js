@@ -28,10 +28,10 @@ function testVoxABC(){	//WORKS!!
 	var matresult = getMatForABCDCCoords(abc.a,abc.b,abc.c);
 	voxlog(matresult.slice(12));
 }
-function test2VoxABC(){
+function test2VoxABC(dcSpin){
 	var inputVec = playerCamera.slice(12);
 	voxlog(inputVec);
-	var voxResult = voxClosestPoint(inputVec);
+	var voxResult = voxClosestPoint(inputVec, dcSpin);
 	var abcResult = voxResult.abc;
 	voxlog("abcResult:");
 	voxlog(abcResult);
@@ -104,7 +104,7 @@ var voxTerrainData = (function generateVoxTerrainData(){
 	//var voxFunction = longHolesTwo;
 	makeVoxdataForFunc(voxFunction);
 	
-	voxCollisionFunction = function(vec){
+	voxCollisionFunction = function(vec, duocylinderSpin){
 		//convert into duocylinder "space", and lookup voxFunction
 		//initial implementation - just change some test value, use to set spaceship colour to test can check whether inside voxTerrain
 		//function tennisBallLoader.js:get4vecfrom3vec  - want a reverse translation. already have example of this for 2d duocylinder "procTerrain" - proceduralTerrain.js:getHeightAboveTerrainFor4VecPos.  TODO generalise? this function very similar to that.
@@ -133,7 +133,7 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		var c = -0.5*Math.asin(sineVal);	//this height of 4vec that can be compared to landscape height
 		return {a:a,b:b,c:c}
 	}
-	voxClosestPoint = function(vec){	//return a 4vec position of (approximate) closest point on surface to the input point.
+	voxClosestPoint = function(vec, duocylinderSpin){	//return a 4vec position of (approximate) closest point on surface to the input point.
 		//do this by finding the downhill slope, assuming is constant.
 		//to get best result, should do in 4vec space, but for simplicity, do in aa,bb,cc space - result should be same close to duocylinder 0-level, since aa,bb,cc axes are equal scale here. away from this. imagine an ellipsoid about input point, scaled in proportion to these axes.
 		//this code assumes are close to duocylinder 0-level, and therefore voxel boxes are approximately cubic
@@ -1127,7 +1127,7 @@ var voxSurfaceParticleMats = (function(){
 		var this4vec = random_quaternion();
 		var thisABC;
 		for (var step=0;step<10;step++){	//only 1 step leads to nice accidental randomness effect
-			estSurfPoint = voxClosestPoint(this4vec);
+			estSurfPoint = voxClosestPoint(this4vec,0);
 			thisABC = estSurfPoint.abc;
 			this4vec = get4vecForABCDCCoords(thisABC.a,thisABC.b,thisABC.c)
 		}

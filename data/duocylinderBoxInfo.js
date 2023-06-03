@@ -99,7 +99,7 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 		currentboxInfo.list.push(thisItem);
 		
 		//do in reliable way - use same logic as bullet pos lookup. (could do this direct from aa, bb here, but code more complex)
-		var tmpXYPos = duocylXYfor4Pos([boxMatrix[12],boxMatrix[13],boxMatrix[14],boxMatrix[15]]);
+		var tmpXYPos = duocylXYfor4Pos([boxMatrix[12],boxMatrix[13],boxMatrix[14],boxMatrix[15]],0);
 		var gridSquareX = (Math.floor(tmpXYPos.x + 0.5))%8;
 		var gridSquareY = (Math.floor(tmpXYPos.y + 0.5))%8;
 		var gridSq = gridSquareX + 8*gridSquareY;
@@ -115,11 +115,8 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 	};
 })();
 
-function duocylXYfor4Pos(inputPos){
-	if (typeof duocylinderSpin!="number"){	//initially undefined. TODO pull out to top
-		duocylinderSpin=0;
-	}
-	
+function duocylXYfor4Pos(inputPos, duocylinderSpin){
+		
 	//this is similar to terrainGetHeightFor4VecPos func in proceduralTerrain.js
 	//at time of writing, only want x,y from this, but could extend to give z too
 	var multiplier = 4/Math.PI;
@@ -135,11 +132,11 @@ function duocylXYfor4Pos(inputPos){
 
 function testDuocylXYfor4Pos(){
 	var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];
-	console.log(duocylXYfor4Pos(playerPos));
+	console.log(duocylXYfor4Pos(playerPos,0));
 }
 
-function getGridSqFor4Pos(pos){
-	var tmpXYPos = duocylXYfor4Pos(pos);
+function getGridSqFor4Pos(pos, duocylinderSpin){
+	var tmpXYPos = duocylXYfor4Pos(pos, duocylinderSpin);
 	var gridSquareX = (Math.floor(tmpXYPos.x))%8;
 	var gridSquareY = (Math.floor(tmpXYPos.y))%8;
 	var gridSqs = [

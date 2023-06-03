@@ -1414,8 +1414,13 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 
 function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 
+	var wSettings = getWorldSceneSettings(isCubemapView, portalNum);
+	({worldA,worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, sshipDrawMatrix} = wSettings);
+		//above could just paste getWorldSceneSettings function stuff here instead.
+	
+
 	if (!isCubemapView){
-		updateTerrain2QuadtreeForCampos(worldCamera.slice(12));
+		updateTerrain2QuadtreeForCampos(worldCamera.slice(12), worldInfo.spin);
 	}
 
 	if (!guiParams["drop spaceship"]){
@@ -1424,9 +1429,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		mat4.set(sshipMatrixNoInterp, sshipMatrix);		
 	}
 
-	var wSettings = getWorldSceneSettings(isCubemapView, portalNum);
-	({worldA,worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, sshipDrawMatrix} = wSettings);
-		//above could just paste getWorldSceneSettings function stuff here instead.
 	
 	gl.clearColor.apply(gl,worldColorsPlain[worldA]);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -1436,6 +1438,9 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	
 	//equivalent for frame of duocylinder, to reduce complexity of drawing, collision checks etc
 	mat4.set(invertedWorldCamera, invertedWorldCameraDuocylinderFrame);
+
+	var duocylinderSpin = worldInfo.spin;
+
 	rotate4mat(invertedWorldCameraDuocylinderFrame, 0, 1, duocylinderSpin);
 	
 		
@@ -1804,13 +1809,15 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	
 	var playerPos = playerCamera.slice(12);			//copied from elsewhere
 		
-	if (worldInfo.duocylinderModel == 'procTerrain'){
-		terrainCollisionTestBoxPos = terrainGetHeightFor4VecPos(playerPos);		//TODO in position update (not rendering)
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, 0.001,0.001,0.001);
-		drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h *Math.sqrt(2), [1.0, 0.4, 1.0, 1.0], cubeBuffers);
-	}
-	
 	if (guiParams.debug.closestPoint){
+
+		//not really closest point - just the point below player on terrain
+		if (worldInfo.duocylinderModel == 'procTerrain'){
+			terrainCollisionTestBoxPos = terrainGetHeightFor4VecPos(playerPos, worldInfo.spin);		//TODO in position update (not rendering)
+			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, 0.001,0.001,0.001);
+			drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h *Math.sqrt(2), [1.0, 0.4, 1.0, 1.0], cubeBuffers);
+		}
+	
 		if (worldInfo.duocylinderModel == 'voxTerrain'){
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix, closestPointTestMat);
@@ -1855,7 +1862,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		}
 		if (guiParams.debug.closestPoint){
 			//red box on sea under player
-			var testBuoyPos = seaHeightFor4VecPos(playerPos, seaTime);
+			var testBuoyPos = seaHeightFor4VecPos(playerPos, seaTime, duocylinderSpin);
 			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, 0.001,0.01,0.01);
 			drawPreppedBufferOnDuocylinder(testBuoyPos.b,testBuoyPos.a,testBuoyPos.h, [1, 0, 0, 1], cubeBuffers);
 		}
@@ -2681,6 +2688,8 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 	
 	({worldInfo, sshipDrawMatrix, worldA} = wSettings);
 	
+	var duocylinderSpin = worldInfo.spin;
+
 	mat4.set(worldCamera, invertedWorldCamera);
 	mat4.transpose(invertedWorldCamera);
 	//equivalent for frame of duocylinder, to reduce complexity of drawing, collision checks etc
@@ -3380,10 +3389,9 @@ var stats;
 
 var pointerLocked=false;
 var guiParams={
-	world0:{duocylinderModel:"l3dt-blockstrips",seaActive:true,seaLevel:0,seaPeakiness:0.0},
-	world1:{duocylinderModel:"procTerrain",seaActive:false,seaLevel:0,seaPeakiness:0.0},
-	world2:{duocylinderModel:"none",seaActive:false,seaLevel:0,seaPeakiness:0.0},
-	duocylinderRotateSpeed:0,
+	world0:{duocylinderModel:"l3dt-blockstrips",spinRate:0,spin:0,seaActive:true,seaLevel:0,seaPeakiness:0.0},
+	world1:{duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
+	world2:{duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
 	drawShapes:{
 		boxes:{
 		'y=z=0':false,	//x*x+w*w=1
@@ -3597,12 +3605,12 @@ function init(){
 		var worldName = 'world'+nn;
 		var worldFolder = drawShapesFolder.addFolder(worldName);
 		worldFolder.add(guiParams[worldName], "duocylinderModel", ["grid","terrain","procTerrain",'voxTerrain','l3dt-brute','l3dt-blockstrips','none'] );
+		worldFolder.add(guiParams[worldName], "spinRate", -2.5,2.5,0.25);
 		worldFolder.add(guiParams[worldName], "seaActive" );
 		worldFolder.add(guiParams[worldName], "seaLevel", -0.05,0.05,0.005);
 		worldFolder.add(guiParams[worldName], "seaPeakiness", 0.0,0.5,0.01);
 	});
 
-	drawShapesFolder.add(guiParams, "duocylinderRotateSpeed", -2.5,2.5,0.25);
 	var boxesFolder = drawShapesFolder.addFolder('boxes');
 	for (shape in guiParams.drawShapes.boxes){
 		console.log(shape);
@@ -3917,7 +3925,6 @@ var iterateMechanics = (function iterateMechanics(){
 	//var autoFireCountdownStartVal=6;
 	var autoFireCountdownStartVal=Math.ceil(5 / (timeStep/10));	//note due to rounding, fire rate somewhat dependent on timestep 
 	var lastPlayerAngMove = [0,0,0];	//for interpolation
-	var duoCylinderAngVelConst=0;
 	
 	var currentPen=0;	//for bodgy box collision (todo use collision points array)
 		
@@ -3997,7 +4004,7 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		
 		
-		duoCylinderAngVelConst = guiParams.duocylinderRotateSpeed;
+		var duoCylinderAngVelConst = guiSettingsForWorld[playerContainer.world].spinRate;
 		
 		timeTracker+=timeElapsed;
 		var numSteps = Math.floor(timeTracker/timeStep);
@@ -4014,8 +4021,10 @@ var iterateMechanics = (function iterateMechanics(){
 		mat4.transpose(invertedWorldCamera);
 	
 		//equivalent for frame of duocylinder, to reduce complexity of drawing, collision checks etc
+		//here, seems just used for audio, take this to be current player world spin (or player camera? ), but this 
+		// isn't really correct - sounds should travel through portals. 
 		mat4.set(invertedWorldCamera, invertedWorldCameraDuocylinderFrame);
-		rotate4mat(invertedWorldCameraDuocylinderFrame, 0, 1, duocylinderSpin);
+		rotate4mat(invertedWorldCameraDuocylinderFrame, 0, 1, guiSettingsForWorld[playerContainer.world].spin);
 		
 		var soundspd = 2;	//TODO change delaynode creation param (faster sound means less possible delay)
 		
@@ -4054,7 +4063,7 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		
 //		var duocylinderRotate = duoCylinderAngVelConst * timeElapsed*moveSpeed;
-		var duocylinderRotate = duoCylinderAngVelConst * (numSteps*timeStep)*moveSpeed;
+		var duocylinderRotate = duoCylinderAngVelConst* (numSteps*timeStep)*moveSpeed;
 //		duocylinderSpin+=duocylinderRotate; 	//TODO match spin speed with sea wave speed
 		
 		if (guiParams.control.spinCorrection){
@@ -4077,7 +4086,9 @@ var iterateMechanics = (function iterateMechanics(){
 
 			applyPortalMovement();
 
-			duocylinderSpin+=duoCylinderAngVelConst*timeStep*moveSpeed;
+			for (ww=0;ww<guiSettingsForWorld.length;ww++){
+				guiSettingsForWorld[ww].spin += guiSettingsForWorld[ww].spinRate*timeStep*moveSpeed;
+			}
 		
 			//auto-roll upright. with view to using for character controller
 			//could put this outside stepspeed if didn't decay towards 0 roll (could do immediately like do with spinCorrection
@@ -4277,6 +4288,7 @@ var iterateMechanics = (function iterateMechanics(){
 						
 			//some logic shared with drawing code
 			var worldInfo = guiSettingsForWorld[playerContainer.world];
+			var dcSpin = worldInfo.spin;
 
 			if (worldInfo.duocylinderModel == 'procTerrain'){
 				
@@ -4299,11 +4311,11 @@ var iterateMechanics = (function iterateMechanics(){
 					
 					//simple spring force terrain collision - 
 					//lookup height above terrain, subtract some value (height above terrain where restoring force goes to zero - basically maximum extension of landing legs. apply spring force upward to player proportional to this amount.
-					var suspensionHeightNow = getHeightAboveTerrainFor4VecPos(legPos);
+					var suspensionHeightNow = getHeightAboveTerrainFor4VecPos(legPos, dcSpin);
 					
 					//get nearest point on terrain. could do this in terrain space, but to be reliable, testable, find nearest 4vec position, find this position in player frame.
 					//note this matrix "jiggles" when duocylinder rotating due to interpolation (other test mats that don't jiggle probably are in duocylinder rotating frame space)
-					var nearestTerrainPosInfo = getNearestTerrainPosMatFor4VecPos(legPos)
+					var nearestTerrainPosInfo = getNearestTerrainPosMatFor4VecPos(legPos, dcSpin);
 					var nearestPosMat = nearestTerrainPosInfo.mat;
 					var nearestPos = nearestPosMat.slice(12);
 					
@@ -4372,10 +4384,10 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			}
 			if (worldInfo.seaActive){
-				distanceForTerrainNoise = getHeightAboveSeaFor4VecPos(playerPos, lastSeaTime);	//height. todo use distance (unimportant because sea gradient low
+				distanceForTerrainNoise = getHeightAboveSeaFor4VecPos(playerPos, lastSeaTime, dcSpin);	//height. todo use distance (unimportant because sea gradient low
 			}
 			if (worldInfo.duocylinderModel == 'voxTerrain'){
-				test2VoxABC();	//updates closestPointTestMat
+				test2VoxABC(dcSpin);	//updates closestPointTestMat
 				
 				distanceForVox = distBetween4mats(playerCamera, closestPointTestMat);
 
@@ -4445,17 +4457,14 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			//apply same forces for other items. 
 			//start with just player centre. 
-			var gridSqs = getGridSqFor4Pos(playerPos);
+			var gridSqs = getGridSqFor4Pos(playerPos, dcSpin);
 			//get transposed playerpos in frame of duocylinder. this is generally useful, maybe should have some func to convert? code copied from bullet collision stuff...
 			var playerMatrixTransposed = mat4.create(playerCamera);	//instead of transposing matrices describing possible colliding objects orientation.
 																//alternatively might store transposed other objects orientation permanently
 			mat4.transpose(playerMatrixTransposed);
 			var playerMatrixTransposedDCRefFrame=playerMatrixTransposed;	//in frame of duocylinder
 					//not using create, because playerMatrixTransposed is not subsequently used
-			rotate4mat(playerMatrixTransposedDCRefFrame, 0, 1, duocylinderSpin);
-			
-			
-			
+			rotate4mat(playerMatrixTransposedDCRefFrame, 0, 1, dcSpin);
 			
 			
 			
@@ -4733,13 +4742,17 @@ var iterateMechanics = (function iterateMechanics(){
 		function checkBulletCollision(bullet, bulletMoveAmount){
 			currentBullet=bullet;
 
+			var worldInfo = guiSettingsForWorld[bullet.world];
+			var dcSpin = worldInfo.spin;
+					//todo keep bullets in lists/arrays per world so can check this once per world
+
 			var bulletMatrix=bullet.matrix;
 			tmpVec4[0]=tmpVec4[1]=tmpVec4[2]=tmpVec4[3]=0;
 			mat4.set(bulletMatrix,bulletMatrixTransposed);
 			mat4.transpose(bulletMatrixTransposed);
 			
 			mat4.set(bulletMatrixTransposed,bulletMatrixTransposedDCRefFrame);	//in frame of duocylinder
-			rotate4mat(bulletMatrixTransposedDCRefFrame, 0, 1, duocylinderSpin);
+			rotate4mat(bulletMatrixTransposedDCRefFrame, 0, 1, dcSpin);
 			
 			for (var cc=0;cc<4;cc++){
 				bulletPos[cc] = bulletMatrix[12+cc];
@@ -4757,21 +4770,18 @@ var iterateMechanics = (function iterateMechanics(){
 				detonateBullet(bullet);
 			}
 			
-			var worldInfo = guiSettingsForWorld[bullet.world];
-					//todo keep bullets in lists/arrays per world so can check this once per world
-			
 			if (worldInfo.duocylinderModel == "procTerrain"){
 				//collision with duocylinder procedural terrain	
-				if (getHeightAboveTerrainFor4VecPos(bulletPos)<0){detonateBullet(bullet, true, [0.3,0.3,0.3,1]);}
+				if (getHeightAboveTerrainFor4VecPos(bulletPos, dcSpin)<0){detonateBullet(bullet, true, [0.3,0.3,0.3,1]);}
 			}
 			if (worldInfo.duocylinderModel == "l3dt-brute" || worldInfo.duocylinderModel == "l3dt-blockstrips"){
-				if (getHeightAboveTerrain2For4VecPos(bulletPos)<0){detonateBullet(bullet, true, [0.3,0.3,0.3,1]);}
+				if (getHeightAboveTerrain2For4VecPos(bulletPos, dcSpin)<0){detonateBullet(bullet, true, [0.3,0.3,0.3,1]);}
 			}
 			if (worldInfo.duocylinderModel == "voxTerrain"){	//TODO generalise collision by specifying a function for terrain. (voxTerrain, procTerrain)
-				if (voxCollisionFunction(bulletPos)>0){detonateBullet(bullet, true, [0.5,0.5,0.5,1]);}
+				if (voxCollisionFunction(bulletPos, dcSpin)>0){detonateBullet(bullet, true, [0.5,0.5,0.5,1]);}
 			}
 			if (worldInfo.seaActive){
-				if (getHeightAboveSeaFor4VecPos(bulletPos, lastSeaTime)<0){detonateBullet(bullet, true, [0.6,0.75,1,1]);}
+				if (getHeightAboveSeaFor4VecPos(bulletPos, lastSeaTime, dcSpin)<0){detonateBullet(bullet, true, [0.6,0.75,1,1]);}
 				//if (getHeightAboveSeaFor4VecPos(bulletPos, 0)<0){detonateBullet(bullet, true);}
 			}
 			
@@ -4796,7 +4806,7 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 			
 			//var bulletPosAdjusted = [ bulletMatrixTransposedDCRefFrame[3],bulletMatrixTransposedDCRefFrame[7], bulletMatrixTransposedDCRefFrame[11], bulletMatrixTransposedDCRefFrame[15]];
-			var gridSqs = getGridSqFor4Pos(bulletPos);
+			var gridSqs = getGridSqFor4Pos(bulletPos, worldInfo.spin);
 			
 			if (guiParams.drawShapes.towers || guiParams.drawShapes.singleBufferTowers){	
 				boxCollideBulletForBoxArray(duocylinderBoxInfo.towerblocks.gridContents);
@@ -5048,7 +5058,7 @@ var iterateMechanics = (function iterateMechanics(){
 				new Explosion(bullet, 0.0003, [1,0.5,0.25], false, true);
 				explosionParticles.makeExplosion(matrix.slice(12), frameTime, color,0);
 			}else{
-				rotate4matCols(matrix, 0, 1, duocylinderSpin);	//get bullet matrix in frame of duocylinder. might be duplicating work from elsewhere.
+				rotate4matCols(matrix, 0, 1, guiSettingsForWorld[bullet.world].spin);	//get bullet matrix in frame of duocylinder. might be duplicating work from elsewhere.
 				new Explosion(bullet, 0.0003, [0.2,0.4,0.6],true, true);	//different colour for debugging
 				explosionParticles.makeExplosion(matrix.slice(12), frameTime, color,0);
 			}
@@ -5118,10 +5128,10 @@ var iterateMechanics = (function iterateMechanics(){
 			sshipWorld = playerContainer.world;
 			
 			mat4.set(sshipMatrixNoInterp, sshipMatDCFrame);
-			rotate4matCols(sshipMatDCFrame, 0, 1, duocylinderSpin);	//get matrix in frame of duocylinder.
+			rotate4matCols(sshipMatDCFrame, 0, 1, guiSettingsForWorld[sshipWorld].spin);	//get matrix in frame of duocylinder.
 		}else{
 			mat4.set(sshipMatDCFrame,sshipMatrixNoInterp);
-			rotate4matCols(sshipMatrixNoInterp, 0, 1, -duocylinderSpin);	//get matrix in frame of duocylinder.
+			rotate4matCols(sshipMatrixNoInterp, 0, 1, -guiSettingsForWorld[playerContainer.world].spin);	//get matrix in frame of duocylinder.
 		}
 		updateGunTargeting(sshipMatrixNoInterp);
 

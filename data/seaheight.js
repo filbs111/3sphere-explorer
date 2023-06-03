@@ -79,7 +79,7 @@ var seaHeight = (function(){
 var getSeaHeight=seaHeight.get;
 var testSeaData;
 
-function seaHeightFor4VecPos(vec, tt){		//equivalent to procTerrain.js:terrainGetHeightFor4VecPos . not really height- returns object containing map coords abd height
+function seaHeightFor4VecPos(vec, tt, duocylinderSpin){		//equivalent to procTerrain.js:terrainGetHeightFor4VecPos . not really height- returns object containing map coords abd height
 	var tau = 2*Math.PI;
 	var multiplier = 1/tau;
 	var a = Math.atan2(vec[2],vec[3]);
@@ -106,7 +106,7 @@ function seaHeightFor4VecPos(vec, tt){		//equivalent to procTerrain.js:terrainGe
 }
 
 
-function getHeightAboveSeaFor4VecPos(vec, tt){	//very similar function in procTerrain., and to above. TODO generalise?
+function getHeightAboveSeaFor4VecPos(vec, tt, duocylinderSpin){	//very similar function in procTerrain., and to above. TODO generalise?
 			//note this ignores horizontal shift of surface points.
 	var tau = 2*Math.PI;
 	var multiplier = 1/tau;

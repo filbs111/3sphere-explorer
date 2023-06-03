@@ -439,7 +439,7 @@ function drawTerrain2BlockStrips(wSettings){
 
 }
 
-function updateTerrain2QuadtreeForCampos(positionForTerrainMapping){
+function updateTerrain2QuadtreeForCampos(positionForTerrainMapping, duocylinderSpin){
     //calculate quadtree for terrain2
     //TODO only do this if that terrain type selected for this world?
     //extract position in unmapped terrain co-ordinates (z=height above terrain (or something like that, x,y are map coords))
@@ -471,7 +471,7 @@ var timeLog = (function(){
 //functions mostly copy-pasted, renamed from procTerrain.js
 //TODO reuse/generalise
 
-function getHeightAboveTerrain2For4VecPos(vec){
+function getHeightAboveTerrain2For4VecPos(vec, duocylinderSpin){
 	var multiplier = terrainSize/(2*Math.PI);	//TODO don't require enter same number here and elsewhere (gridSize)
 	var a = Math.atan2(vec[2],vec[3]);
 	var b = Math.atan2(vec[0],vec[1]);
