@@ -1395,11 +1395,24 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 		if (sshipWorld == worldA){ //only draw spaceship if it's in the world that currently drawing. (TODO this for other objects eg shots)
 			returnObj.sshipDrawMatrix = sshipMatrix;
 		}else{
-			if (checkWithinReflectorRange({matrix:sshipMatrix,world:sshipWorld}, Math.tan(Math.atan(reflectorInfo.rad) +0.1))){	//TODO correct this
-				mat4.set(sshipMatrix, portaledMatrix);
-				moveMatrixThruPortal(portaledMatrix, reflectorInfo.rad, 1, portalsForWorld[sshipWorld][0]);
-				returnObj.sshipDrawMatrix = portaledMatrix;
-			}	
+			//find which portal it might be in. should just be one now, but in future could be many - TODO return array?
+			var relevantPortalSide; 
+			var portals = portalsForWorld[worldA];
+			for (var pp=0;pp<portals.length;pp++){
+				var thisPortalSide = portals[pp];
+				if (thisPortalSide.otherps.world == sshipWorld){
+					relevantPortalSide = thisPortalSide.otherps;
+				}
+			}
+			if (relevantPortalSide){
+				if (checkWithinReflectorRange(sshipMatrix, Math.tan(Math.atan(reflectorInfo.rad) +0.1), relevantPortalSide)){	//TODO correct this
+					mat4.set(sshipMatrix, portaledMatrix);
+					moveMatrixThruPortal(portaledMatrix, reflectorInfo.rad, 1, relevantPortalSide);
+					returnObj.sshipDrawMatrix = portaledMatrix;
+				}
+			}else{
+				returnObj.sshipDrawMatrix = null;
+			}
 		}
 		
 		//return returnObj;		//causes bug currently because other properties are added to this object after it is returned and assigned to 
@@ -5099,27 +5112,32 @@ var iterateMechanics = (function iterateMechanics(){
 		//bounce off portal if reflector
 		if (!guiParams.reflector.isPortal){
 			var effectiveRange = Math.tan(Math.atan(reflectorInfo.rad)+Math.atan(0.003)); //TODO reformulate more efficiently
-			if (checkWithinReflectorRange({matrix:playerCamera,world:worldA}, effectiveRange)){				
-				
-				//calculate in frame of portal
-				//logic is repeated from checkWithinReflectorRange
-				var portalRelativeMat = mat4.create(portalMats[worldA]);
-				mat4.transpose(portalRelativeMat);
-				mat4.multiply(portalRelativeMat,playerCamera);
 
-				var towardsPortal = [portalRelativeMat[3],portalRelativeMat[7],portalRelativeMat[11],portalRelativeMat[15]]; //in player frame
-				var normalisingFactor=1/Math.sqrt(1-towardsPortal[3]*towardsPortal[3])
-				towardsPortal = towardsPortal.map(function(elem){return elem*normalisingFactor;});
-				//vel toward portal 
-				var velTowardsPortal = ( towardsPortal[0]*playerVelVec[0] + towardsPortal[1]*playerVelVec[1] + towardsPortal[2]*playerVelVec[2]);
-				velTowardsPortal*=1.2;					//multiply by 1+coefficient of restitution
-				if (velTowardsPortal<0){
-					//playerVelVec = playerVelVec.map(function(elem){return -elem;}); //simple reverse velocity
-					for (var cc=0;cc<3;cc++){
-						playerVelVec[cc] -= velTowardsPortal*towardsPortal[cc];
+			var portals = portalsForWorld[worldA];
+			for (var pp=0;pp<portals.length;pp++){
+				var thisPortal = portals[pp];
+				if (checkWithinReflectorRange(playerCamera, effectiveRange, thisPortal)){				
+					
+					//calculate in frame of portal
+					//logic is repeated from checkWithinReflectorRange
+					var portalRelativeMat = mat4.create(thisPortal.matrix);
+					mat4.transpose(portalRelativeMat);
+					mat4.multiply(portalRelativeMat,playerCamera);
+
+					var towardsPortal = [portalRelativeMat[3],portalRelativeMat[7],portalRelativeMat[11],portalRelativeMat[15]]; //in player frame
+					var normalisingFactor=1/Math.sqrt(1-towardsPortal[3]*towardsPortal[3])
+					towardsPortal = towardsPortal.map(function(elem){return elem*normalisingFactor;});
+					//vel toward portal 
+					var velTowardsPortal = ( towardsPortal[0]*playerVelVec[0] + towardsPortal[1]*playerVelVec[1] + towardsPortal[2]*playerVelVec[2]);
+					velTowardsPortal*=1.2;					//multiply by 1+coefficient of restitution
+					if (velTowardsPortal<0){
+						//playerVelVec = playerVelVec.map(function(elem){return -elem;}); //simple reverse velocity
+						for (var cc=0;cc<3;cc++){
+							playerVelVec[cc] -= velTowardsPortal*towardsPortal[cc];
+						}
 					}
+					//currently can get closer to sphere if push continuously. TODO move back out to effectiveRange
 				}
-				//currently can closer to sphere if push continuously. TODO move back out to effectiveRange
 			}
 		}
 		
@@ -5158,20 +5176,6 @@ function rotateVelVec(velVec,rotateVec){
 	//maybe best is keep a vel quat, and multiply by a thrust quat.
 }
 
-function portalTest(obj, amount){
-	var adjustedRad = reflectorInfo.rad + amount;	//avoid issues with rendering very close to surface
-
-	//get obj matrix in frame of portal matrix. 
-	//for distance check, only required for moved portal, not rotated.
-
-	//then move through portal, and apply other portal matrix...
-
-	if (checkWithinReflectorRange(obj, adjustedRad)){	
-		moveMatrixThruPortal(obj.matrix, adjustedRad, 1.00000001, portalsForWorld[obj.world][0]);
-		obj.world=1-obj.world;
-	//	console.log("currentWorld now = " + obj.world);
-	}
-}
 function portalTestMultiPortal(obj, amount){
 	var adjustedRad = reflectorInfo.rad + amount;	//avoid issues with rendering very close to surface
 
@@ -5202,16 +5206,23 @@ function checkWithinRangeOfGivenPortal(obj, rad, portal){
 	return portalRelativeMat[15]>1/Math.sqrt(1+rad*rad);
 }
 
-function checkWithinReflectorRange(obj, rad){
+var checkWithinReflectorRange = (function(){
 
-	//calculate in frame of portal
-	var portalRelativeMat = mat4.create(portalMats[obj.world]);
-	mat4.transpose(portalRelativeMat);
-	mat4.multiply(portalRelativeMat,obj.matrix);
+	var portalRelativeMat = mat4.create();
 
-	//return obj.matrix[15]>1/Math.sqrt(1+rad*rad);
-	return portalRelativeMat[15]>1/Math.sqrt(1+rad*rad);
-}
+	return function (objMat, rad, portalSide){
+
+		//calculate in frame of portal
+		mat4.set(portalSide.matrix, portalRelativeMat);
+		mat4.transpose(portalRelativeMat);
+		mat4.multiply(portalRelativeMat,objMat);
+	
+		//return objMat[15]>1/Math.sqrt(1+rad*rad);
+		return portalRelativeMat[15]>1/Math.sqrt(1+rad*rad);
+	}
+
+})();
+
 
 function moveMatrixThruPortal(matrix, rad, hackMultiplier, portal, skipStartEndRotations){
 	//TODO just work with qpairs (and save on updating matrix)
