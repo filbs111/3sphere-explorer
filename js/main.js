@@ -1355,17 +1355,33 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 		
 		returnObj.reflectorPosTransformed=new Array(4);	//workaround bug (see comments near return statement)
 
-		var pmatA, worldB;
+		var pmatA, worldB, worldC;
 
 		if (isCubemapView && guiParams.reflector.isPortal){
 			var relevantPs = portalsForWorld[offsetCameraContainer.world][portalNum].otherps;
 			returnObj.worldA = worldA = relevantPs.world;
 			pmatA = relevantPs.matrix;
-			worldB = offsetCameraContainer.world;
+
+			//worldB = offsetCameraContainer.world;	//the world looking from, so relevant to the cast by the portal that are looking through, onto the world that
+					//can be seen beyond the portal. this is likely the most visible portal light
+
+			//one of the below is previous worldB. the other is for the second portal in the world beyond the current portal.
+			worldB = portalsForWorld[worldA][0].otherps.world;
+			worldC = portalsForWorld[worldA][1].otherps.world;
+
+			if (Math.random()>0.5){worldB=worldC;}	//flicker to acheive rough desired lighting effect.
+
 		}else{
-			var relevantPs = portalsForWorld[offsetCameraContainer.world][0];	//0/1 arbitray choice. TODO do both
-			returnObj.worldA = worldA = relevantPs.world;	// = relevantPs.world
+			var relevantPs = portalsForWorld[offsetCameraContainer.world][0];
+			var relevantPs2 = portalsForWorld[offsetCameraContainer.world][1];
+
+			returnObj.worldA = worldA = offsetCameraContainer.world;	// = relevantPs.world
+
+			if (Math.random()>0.5){relevantPs=relevantPs2;}	//flicker to acheive rough desired lighting effect.
+
 			worldB = relevantPs.otherps.world;
+			worldC = relevantPs2.otherps.world;
+
 			pmatA = relevantPs.matrix;	//??
 		}
 
