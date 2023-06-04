@@ -1409,6 +1409,8 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 					mat4.set(sshipMatrix, portaledMatrix);
 					moveMatrixThruPortal(portaledMatrix, reflectorInfo.rad, 1, relevantPortalSide);
 					returnObj.sshipDrawMatrix = portaledMatrix;
+				}else{
+					returnObj.sshipDrawMatrix = null;
 				}
 			}else{
 				returnObj.sshipDrawMatrix = null;
