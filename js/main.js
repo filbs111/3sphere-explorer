@@ -1427,21 +1427,19 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 
 function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 
-	var wSettings = getWorldSceneSettings(isCubemapView, portalNum);
-	({worldA,worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, sshipDrawMatrix} = wSettings);
-		//above could just paste getWorldSceneSettings function stuff here instead.
-	
-
-	if (!isCubemapView){
-		updateTerrain2QuadtreeForCampos(worldCamera.slice(12), worldInfo.spin);
-	}
-
 	if (!guiParams["drop spaceship"]){
 		mat4.set(playerCameraInterp,sshipMatrix);	//copy current player 4-rotation matrix to the spaceship object
 	}else{
 		mat4.set(sshipMatrixNoInterp, sshipMatrix);		
 	}
 
+	var wSettings = getWorldSceneSettings(isCubemapView, portalNum);
+	({worldA,worldInfo, localVecFogColor, localVecReflectorColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, sshipDrawMatrix} = wSettings);
+		//above could just paste getWorldSceneSettings function stuff here instead.
+	
+	if (!isCubemapView){
+		updateTerrain2QuadtreeForCampos(worldCamera.slice(12), worldInfo.spin);
+	}
 	
 	gl.clearColor.apply(gl,worldColorsPlain[worldA]);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
