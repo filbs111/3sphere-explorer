@@ -1344,32 +1344,43 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 		worldA:0,
 		worldInfo:0,
 		localVecFogColor:0,
-		localVecReflectorDiffColor:new Array(3),
-		reflectorPosTransformed:new Array(4),
-		cosReflector:0,
+		infoForPortals:[
+			{
+			},{
+			}
+		],
+		cosReflector:0,		//dependent on portal size (currently same size)
 		sshipDrawMatrix:0,
 	}
 	var worldA;
 
 	return function getWorldSceneSettings(isCubemapView, portalNum){
-		
-		returnObj.reflectorPosTransformed=new Array(4);	//workaround bug (see comments near return statement)
 
-		var pmatA, worldB, worldC;
+		var pmats=[];
+		var otherWorlds=[];
 
 		if (isCubemapView && guiParams.reflector.isPortal){
 			var relevantPs = portalsForWorld[offsetCameraContainer.world][portalNum].otherps;
-			returnObj.worldA = worldA = relevantPs.world;
-			pmatA = relevantPs.matrix;
 
+			returnObj.worldA = worldA = relevantPs.world;
+			
 			//worldB = offsetCameraContainer.world;	//the world looking from, so relevant to the cast by the portal that are looking through, onto the world that
 					//can be seen beyond the portal. this is likely the most visible portal light
 
 			//one of the below is previous worldB. the other is for the second portal in the world beyond the current portal.
-			worldB = portalsForWorld[worldA][0].otherps.world;
-			worldC = portalsForWorld[worldA][1].otherps.world;
+			otherWorlds.push(portalsForWorld[worldA][0].otherps.world);
+			otherWorlds.push(portalsForWorld[worldA][1].otherps.world);
 
-			if (Math.random()>0.5){worldB=worldC;}	//flicker to acheive rough desired lighting effect.
+			pmats.push(portalsForWorld[worldA][0].matrix);
+			pmats.push(portalsForWorld[worldA][1].matrix);
+
+			//make sure the 0th is what was worldB (until pass both into shaders, necessary to ensure correct discarding
+				//or spaceship pix when crossing portal)
+			var oldWorldB = offsetCameraContainer.world;
+			if (otherWorlds[0]!=oldWorldB){
+				otherWorlds=[otherWorlds[1],otherWorlds[0]];
+				pmats=[pmats[1],pmats[0]];
+			}
 
 		}else{
 			var relevantPs = portalsForWorld[offsetCameraContainer.world][0];
@@ -1377,37 +1388,54 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 
 			returnObj.worldA = worldA = offsetCameraContainer.world;	// = relevantPs.world
 
-			if (Math.random()>0.5){relevantPs=relevantPs2;}	//flicker to acheive rough desired lighting effect.
+			otherWorlds.push(relevantPs.otherps.world);
+			otherWorlds.push(relevantPs2.otherps.world);
 
-			worldB = relevantPs.otherps.world;
-			worldC = relevantPs2.otherps.world;
-
-			pmatA = relevantPs.matrix;	//??
+			pmats.push(relevantPs.matrix);
+			pmats.push(relevantPs2.matrix);
 		}
 
 		returnObj.worldInfo = guiSettingsForWorld[worldA];
 
-		returnObj.localVecFogColor = localVecFogColor = worldColors[worldA];
-		returnObj.localVecReflectorColor = guiParams.reflector.isPortal? worldColors[worldB]: worldColors[worldA];
+		//returnObj.localVecFogColor = localVecFogColor = worldColors[worldA];
+		returnObj.localVecFogColor = worldColors[worldA];
 
-		//undo reuse of vectors. (caused bug when moved portal cubemap to just before drawing portal, within main world drawing)
-		//TODO instantiate a separate wSettings objects and reuse for different parts of rendering... (otherwise creates garbage)
-		returnObj.localVecReflectorDiffColor=new Array(3);
+		returnObj.infoForPortals=[];	//don't resuse, or shallow copy later will be mutated before reusing wSetting result
+						//for drawing transparency in drawScene2()
+						//TODO acheive correct rendering with less garbage!
 
-		for (var cc=0;cc<3;cc++){
-			returnObj.localVecReflectorDiffColor[cc] = returnObj.localVecReflectorColor[cc]-returnObj.localVecFogColor[cc];
+		for (var pp=0;pp<2;pp++){	//2 portals
+
+			var infoForPortal={};
+
+			var localVecReflectorColor = guiParams.reflector.isPortal? worldColors[otherWorlds[pp]]: worldColors[worldA];
+
+			//undo reuse of vectors. (caused bug when moved portal cubemap to just before drawing portal, within main world drawing)
+			//TODO instantiate a separate wSettings objects and reuse for different parts of rendering... (otherwise creates garbage)
+			infoForPortal.localVecReflectorDiffColor=new Array(3);
+
+			for (var cc=0;cc<3;cc++){
+				infoForPortal.localVecReflectorDiffColor[cc] = localVecReflectorColor[cc]-returnObj.localVecFogColor[cc];
+				//infoForPortal.localVecReflectorDiffColor[cc] = 1;	//override, see if this is cause of problem	
+					//this alone does not fix problem - rendering is different dependent on whether portals are culled.
+			}
+			//calculate stuff for discard shaders
+
+			//moved portal - likely duplicated from elsewhere
+			var portalRelativeMat = mat4.create(worldCamera);
+			mat4.transpose(portalRelativeMat);
+			mat4.multiply(portalRelativeMat, pmats[pp]);
+			mat4.transpose(portalRelativeMat);
+
+			infoForPortal.reflectorPosTransformed=new Array(4);	//work around bug (see comments near return statement)
+			for (var cc=0;cc<4;cc++){
+				infoForPortal.reflectorPosTransformed[cc] = portalRelativeMat[4*cc+3];	//position of reflector in frame of camera (after MVMatrix transformation)
+			}
+
+			returnObj.infoForPortals.push(infoForPortal);
 		}
-		//calculate stuff for discard shaders
 
-		//moved portal - likely duplicated from elsewhere
-		var portalRelativeMat = mat4.create(worldCamera);
-		mat4.transpose(portalRelativeMat);
-		mat4.multiply(portalRelativeMat, pmatA);
-		mat4.transpose(portalRelativeMat);
 
-		for (var cc=0;cc<4;cc++){
-			returnObj.reflectorPosTransformed[cc] = portalRelativeMat[4*cc+3];	//position of reflector in frame of camera (after MVMatrix transformation)
-		}
 		returnObj.cosReflector = 1.0/Math.sqrt(1+reflectorInfo.rad*reflectorInfo.rad);
 		
 		if (sshipWorld == worldA){ //only draw spaceship if it's in the world that currently drawing. (TODO this for other objects eg shots)
@@ -1427,6 +1455,8 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 					mat4.set(sshipMatrix, portaledMatrix);
 					moveMatrixThruPortal(portaledMatrix, reflectorInfo.rad, 1, relevantPortalSide);
 					returnObj.sshipDrawMatrix = portaledMatrix;
+
+					//returnObj.sshipDrawMatrix = mat4.create(portaledMatrix);
 				}else{
 					returnObj.sshipDrawMatrix = null;
 				}
@@ -1435,6 +1465,11 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 			}
 		}
 		
+		//return zeroth entries of infoForPortal on root object.
+		//TODO calling code should extract from infoForPortals
+		returnObj.reflectorPosTransformed = returnObj.infoForPortals[0].reflectorPosTransformed;
+		returnObj.localVecReflectorDiffColor = returnObj.infoForPortals[0].localVecReflectorDiffColor;
+
 		//return returnObj;		//causes bug currently because other properties are added to this object after it is returned and assigned to 
 								//wSettings, which are particular to the (cubemap) view, eg light position in camera frame.
 								//TODO handle those specific variables separately, to avoid allocation of new objects.
