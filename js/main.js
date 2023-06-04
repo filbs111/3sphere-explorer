@@ -1355,16 +1355,19 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 		
 		returnObj.reflectorPosTransformed=new Array(4);	//workaround bug (see comments near return statement)
 
-		returnObj.worldA = worldA = (isCubemapView && guiParams.reflector.isPortal)? 
-			portalsForWorld[offsetCameraContainer.world][portalNum].otherps.world:
-			offsetCameraContainer.world;
+		var pmatA, worldB;
 
-		var pmatA = (isCubemapView && guiParams.reflector.isPortal)? 
-			portalsForWorld[offsetCameraContainer.world][portalNum].otherps.matrix: 
-			portalMats[0];	//??? probably wrong!!!
-
-		var worldB = offsetCameraContainer.world;
-		//??^^ is this correct? check recent commits - may have broken. check works for reflection mode also...
+		if (isCubemapView && guiParams.reflector.isPortal){
+			var relevantPs = portalsForWorld[offsetCameraContainer.world][portalNum].otherps;
+			returnObj.worldA = worldA = relevantPs.world;
+			pmatA = relevantPs.matrix;
+			worldB = offsetCameraContainer.world;
+		}else{
+			var relevantPs = portalsForWorld[offsetCameraContainer.world][0];	//0/1 arbitray choice. TODO do both
+			returnObj.worldA = worldA = relevantPs.world;	// = relevantPs.world
+			worldB = relevantPs.otherps.world;
+			pmatA = relevantPs.matrix;	//??
+		}
 
 		returnObj.worldInfo = guiSettingsForWorld[worldA];
 
@@ -1374,7 +1377,6 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 		//undo reuse of vectors. (caused bug when moved portal cubemap to just before drawing portal, within main world drawing)
 		//TODO instantiate a separate wSettings objects and reuse for different parts of rendering... (otherwise creates garbage)
 		returnObj.localVecReflectorDiffColor=new Array(3);
-		returnObj.reflectorPosTransformed=new Array(4);
 
 		for (var cc=0;cc<3;cc++){
 			returnObj.localVecReflectorDiffColor[cc] = returnObj.localVecReflectorColor[cc]-returnObj.localVecFogColor[cc];
