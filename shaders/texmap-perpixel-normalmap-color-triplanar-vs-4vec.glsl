@@ -19,10 +19,12 @@
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 	uniform vec4 uCameraWorldPos;
 	uniform vec4 uReflectorPosVShaderCopy;
-	
-	
+	uniform vec4 uReflectorPosVShaderCopy2;
+
 	varying vec4 vPlayerLightPosTangentSpace;
 	varying vec4 vPortalLightPosTangentSpace;
+	varying vec4 vPortalLightPosTangentSpace2;
+
 	varying vec4 vEyePosTangentSpace;
 	varying vec4 transformedCoord;
 	varying vec3 vPos;		//3vector position (before mapping onto duocyinder)
@@ -58,7 +60,8 @@
 #endif		
 		vPlayerLightPosTangentSpace = uDropLightPos* vertexMatrix;
 		vPortalLightPosTangentSpace = uReflectorPosVShaderCopy*vertexMatrix;
-		
+		vPortalLightPosTangentSpace2 = uReflectorPosVShaderCopy2*vertexMatrix;
+
 #ifdef SPECULAR_ACTIVE
 		vEyePosTangentSpace = vec4(vec3(0.),1.)*vertexMatrix;	//eye pos
 #endif

@@ -32,9 +32,11 @@
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 	uniform vec3 uModelScale;
 	uniform vec4 uReflectorPosVShaderCopy;	//TODO not this! shouldn't need in both. unsure why need different name. limitation of webgl, or bad assumption in shader loading func?
-	
+	uniform vec4 uReflectorPosVShaderCopy2;
+
 	varying vec4 vPlayerLightPosTangentSpace;
 	varying vec4 vPortalLightPosTangentSpace;
+	varying vec4 vPortalLightPosTangentSpace2;
 	varying vec4 vEyePosTangentSpace;			//does this get skipped automatically if not used?
 	
 	varying vec4 transformedCoord;
@@ -74,7 +76,8 @@
 		
 		vPlayerLightPosTangentSpace = uDropLightPos*vertexMatrix;
 		vPortalLightPosTangentSpace = uReflectorPosVShaderCopy*vertexMatrix;
-		
+		vPortalLightPosTangentSpace2 = uReflectorPosVShaderCopy2*vertexMatrix;
+
 #ifdef SPECULAR_ACTIVE		
 		vEyePosTangentSpace = vec4(vec3(0.),1.)*vertexMatrix;
 		

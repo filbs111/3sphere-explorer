@@ -7,7 +7,9 @@
 	uniform vec3 uPlayerLightColor;
 	uniform vec4 uFogColor;
 	uniform vec3 uReflectorDiffColor;
+	uniform vec3 uReflectorDiffColor2;
 	uniform vec4 uReflectorPos;
+	uniform vec4 uReflectorPos2;
 	uniform float uReflectorCos;
 #ifdef VEC_ATMOS_THICK
 	varying vec3 fog;
@@ -22,9 +24,13 @@
 #endif	
 	void main(void) {
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
-	
 		if (posCosDiff>0.0){
 			discard;
+		}
+
+		float posCosDiff2 = dot(normalize(transformedCoord),uReflectorPos2) - uReflectorCos;
+		if (posCosDiff2>0.0){
+			discard;	//unnecessary if, when viewing thru portal, ensure is other one.
 		}
 	
 		float light = -dot( normalize(adjustedPos), transformedNormal);
@@ -35,10 +41,13 @@
 		//light from portal. TODO pass in a colour for this, more complex lighting (at surface of portal, should be hemispherical light etc)
 		float portalLight = dot( uReflectorPos, transformedNormal);
 		portalLight = max(0.5*portalLight +0.5+ posCosDiff,0.0);	//unnecessary if camera pos = light pos
-		
 		//falloff
 		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
-		
+
+		//second portal
+		float portalLight2 = dot( uReflectorPos2, transformedNormal);
+		portalLight2 = max(0.5*portalLight2 +0.5+ posCosDiff2,0.0);	//unnecessary if camera pos = light pos
+		portalLight2/=1.0 + 3.0*dot(posCosDiff2,posCosDiff2);
 		
 		//ensure isn't something wierd! should be between -1, 1
 		//if (portalLight>0.95){portalLight=-0.9;}
@@ -48,7 +57,7 @@
 		//guess maybe similar to some gaussian light source
 		
 		//vec4 preGammaFragColor = vec4( fog*(( uPlayerLightColor*light+ uReflectorDiffColor*portalLight + uFogColor.xyz )*uColor.xyz + uEmitColor), 1.0) + (1.0-fog)*uFogColor;
-		vec4 preGammaFragColor = vec4( fog*(( uPlayerLightColor*light+ uReflectorDiffColor*portalLight + uFogColor.xyz )*uColor.xyz + uEmitColor) + (1.0-fog)*uFogColor.xyz , 1.0);
+		vec4 preGammaFragColor = vec4( fog*(( uPlayerLightColor*light+ uReflectorDiffColor*portalLight + uReflectorDiffColor2*portalLight2+ uFogColor.xyz )*uColor.xyz + uEmitColor) + (1.0-fog)*uFogColor.xyz , 1.0);
 		
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	

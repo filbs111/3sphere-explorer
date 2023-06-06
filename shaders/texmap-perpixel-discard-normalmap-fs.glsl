@@ -6,7 +6,9 @@
 	varying float fog;
 	uniform vec4 uFogColor;
 	uniform vec3 uReflectorDiffColor;
+	uniform vec3 uReflectorDiffColor2;
 	uniform vec4 uReflectorPos;
+	uniform vec4 uReflectorPos2;
 	uniform float uReflectorCos;
 	varying vec4 adjustedPos;
 	varying vec4 transformedNormal;	
@@ -19,6 +21,11 @@
 	
 		if (posCosDiff>0.0){
 			discard;
+		}
+		float posCosDiff2 = dot(normalize(transformedCoord),uReflectorPos2) - uReflectorCos;
+	
+		if (posCosDiff2>0.0){
+			discard;	//unneeded if ensure, when looking thru portal, that it's the other one.
 		}
 		
 		vec3 texSample = texture2DProj(uSampler, vTextureCoord).xyz;
@@ -44,13 +51,20 @@
 		//this is just bodged/guessed to achieve correct behaviour at/across portal. TODO check/correct!
 		float portalLight = dot( uReflectorPos, nmapNormal);
 	
-		
 		portalLight = max(0.5*portalLight +0.5+ posCosDiff,0.0);	//unnecessary if camera pos = light pos
 		//falloff
 		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
-				
+
+
+		float portalLight2 = dot( uReflectorPos2, nmapNormal);
+		
+		portalLight2 = max(0.5*portalLight2 +0.5+ posCosDiff2,0.0);	//unnecessary if camera pos = light pos
+		//falloff
+		portalLight2/=1.0 + 3.0*dot(posCosDiff2,posCosDiff2);	//just something that's 1 at edge of portal
+		
+
 		//guess maybe similar to some gaussian light source
-		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*adjustedColor + (1.0-fog)*uFogColor;
+		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight+ uReflectorDiffColor2*portalLight2 + uFogColor.xyz ), 1.0)*adjustedColor + (1.0-fog)*uFogColor;
 
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);		

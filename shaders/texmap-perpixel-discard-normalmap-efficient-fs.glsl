@@ -21,7 +21,9 @@
 #endif
 	uniform vec4 uFogColor;
 	uniform vec3 uReflectorDiffColor;
+	uniform vec3 uReflectorDiffColor2;
 	uniform vec4 uReflectorPos;
+	uniform vec4 uReflectorPos2;
 	uniform float uReflectorCos;
 	uniform float uSpecularStrength;
 	uniform float uSpecularPower;
@@ -29,6 +31,7 @@
 
 	varying vec4 vPlayerLightPosTangentSpace;
 	varying vec4 vPortalLightPosTangentSpace;
+	varying vec4 vPortalLightPosTangentSpace2;
 	varying vec4 vEyePosTangentSpace;
 
 	varying vec4 transformedCoord;
@@ -55,9 +58,14 @@
 #endif
 
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;	//TODO is transformedcoord still needed if have vPortalLightPosTangentSpace ? 
-	
+		float posCosDiff2 = dot(normalize(transformedCoord),uReflectorPos2) - uReflectorCos;	//TODO is transformedcoord still needed if have vPortalLightPosTangentSpace ? 
+
 		if (posCosDiff>0.0){
 			discard;
+		}
+		if (posCosDiff2>0.0){
+			discard;
+			//note maybe unnecessary, inefficient - only really need to ensure discard pix inside portal that camera is in
 		}
 		
 #ifdef MAPPROJECT_ACTIVE
@@ -131,7 +139,8 @@
 		//	guess if surface not that shiny will work OK with assumption
 		//TODO something more efficient. can the halfVec be a varying? what should it be (tried normalising it in vert shader and doesnt interpolate well)
 		
-		vec4 normalizedEyePosAdj = normalize(vec4( vEyePosTangentSpace.xyz , 0.));	
+		vec4 normalizedEyePosAdj = normalize(vec4( vEyePosTangentSpace.xyz , 0.));
+
 		light*=(1.-uSpecularStrength);
 		//float phongAmount = pow(max(dot(normalizedEyePosAdj, nmapNormal),0.),10.);	//simple glossy camera light
 		vec4 halfVec = normalize(normalizedEyePosAdj + normalizedLightPosAdj);
@@ -146,26 +155,36 @@
 	
 		//light from portal. TODO pass in a colour for this, more complex lighting (at surface of portal, should be hemispherical light etc)
 		//this is just bodged/guessed to achieve correct behaviour at/across portal. TODO check/correct!
-		float portalLight = dot( vPortalLightPosTangentSpace, nmapNormal);
-						
+		float portalLight = dot( vPortalLightPosTangentSpace, nmapNormal);						
 		portalLight = max(0.5*portalLight +0.5+ posCosDiff,0.0);	//unnecessary if camera pos = light pos
+
+		float portalLight2 = dot( vPortalLightPosTangentSpace2, nmapNormal);
+		portalLight2 = max(0.5*portalLight2 +0.5+ posCosDiff2,0.0);	//unnecessary if camera pos = light pos
+
 
 #ifdef SPECULAR_ACTIVE
 		vec4 vPortalLightPosTangentSpaceAdj = normalize(vec4( vPortalLightPosTangentSpace.xyz , 0.0));
+		vec4 vPortalLightPosTangentSpaceAdj2 = normalize(vec4( vPortalLightPosTangentSpace2.xyz , 0.0));
 
 		//TODO take into account "size" of portal light
 		halfVec = normalize( normalizedEyePosAdj + vPortalLightPosTangentSpaceAdj );
 		phongAmount = uSpecularStrength*pow( max(dot(halfVec, nmapNormal), 0.),uSpecularPower);
 		portalLight*=(1.-uSpecularStrength);
 		portalLight+=phongAmount;
+
+		halfVec = normalize( normalizedEyePosAdj + vPortalLightPosTangentSpaceAdj2 );
+		phongAmount = uSpecularStrength*pow( max(dot(halfVec, nmapNormal), 0.),uSpecularPower);
+		portalLight2*=(1.-uSpecularStrength);
+		portalLight2+=phongAmount;
 #endif
 
 		//falloff
 		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
+		portalLight2/=1.0 + 3.0*dot(posCosDiff2,posCosDiff2);	//just something that's 1 at edge of portal
 				
 		//guess maybe similar to some gaussian light source
 		//vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*adjustedColor + (1.0-fog)*uFogColor;
-		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz )*adjustedColor.xyz + (1.0-fog)*uFogColor.xyz , 1.);
+		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uReflectorDiffColor2*portalLight2 + uFogColor.xyz )*adjustedColor.xyz + (1.0-fog)*uFogColor.xyz , 1.);
 
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);		

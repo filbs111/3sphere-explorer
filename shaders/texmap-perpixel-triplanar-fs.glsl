@@ -10,7 +10,9 @@
 	varying float fog;
 	uniform vec4 uFogColor;
 	uniform vec3 uReflectorDiffColor;
+	uniform vec3 uReflectorDiffColor2;
 	uniform vec4 uReflectorPos;
+	uniform vec4 uReflectorPos2;
 	uniform float uReflectorCos;
 	uniform float uSpecularStrength;
 	uniform float uSpecularPower;
@@ -25,9 +27,13 @@
 #endif		
 	void main(void) {
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
-		
+		float posCosDiff2 = dot(normalize(transformedCoord),uReflectorPos2) - uReflectorCos;
+
 		if (posCosDiff>0.0){
 			discard;
+		}
+		if (posCosDiff2>0.0){
+			discard;	//unnecessary if ensure portal that are looking through is other.
 		}
 	
 		float texOffset = 0.5;
@@ -57,6 +63,9 @@
 		float portalLight = dot( uReflectorPos, transformedNormal);
 		portalLight = max(0.5*portalLight +0.5+ posCosDiff,0.0);	//unnecessary if camera pos = light pos
 
+		float portalLight2 = dot( uReflectorPos2, transformedNormal);
+		portalLight2 = max(0.5*portalLight2 +0.5+ posCosDiff2,0.0);	//unnecessary if camera pos = light pos
+
 #ifdef SPECULAR_ACTIVE
 		//TODO take into account "size" of portal light. TODO suspect this is not right - speculat much stronger in shader-texmap-perpixel-discard-normalmap-efficient-fs . suspect due to zeroing w component there
 		halfVec = normalize( vecToEye + normalize(transformedCoord-uReflectorPos));
@@ -67,6 +76,7 @@
 
 		//falloff
 		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
+		portalLight2/=1.0 + 3.0*dot(posCosDiff2,posCosDiff2);
 
 #ifdef VCOLOR
 		//vec4 adjustedColor = uColor*vColor;	//TODO this logid in vert shader
@@ -76,7 +86,7 @@
 #endif
 		
 		//guess maybe similar to some gaussian light source
-		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*adjustedColor*vec4(texColor,1.) + (1.0-fog)*uFogColor;
+		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uReflectorDiffColor2*portalLight2 + uFogColor.xyz ), 1.0)*adjustedColor*vec4(texColor,1.) + (1.0-fog)*uFogColor;
 				
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	

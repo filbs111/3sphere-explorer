@@ -19,7 +19,9 @@
 #endif
 	uniform vec4 uFogColor;
 	uniform vec3 uReflectorDiffColor;
+	uniform vec3 uReflectorDiffColor2;
 	uniform vec4 uReflectorPos;
+	uniform vec4 uReflectorPos2;
 	uniform float uReflectorCos;
 	uniform float uSpecularStrength;
 	uniform float uSpecularPower;
@@ -49,9 +51,13 @@
 //#endif
 
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
-	
 		if (posCosDiff>0.0){
 			discard;
+		}
+
+		float posCosDiff2 = dot(normalize(transformedCoord),uReflectorPos2) - uReflectorCos;
+		if (posCosDiff2>0.0){
+			discard;	//unnecessary if ensure that when viewing through a portal, that portal is 1st.
 		}
 	
 		vec4 adjustedPosNormalised = normalize(adjustedPos);
@@ -84,6 +90,9 @@
 		float portalLight = dot( uReflectorPos, transformedNormal);
 		portalLight = max(0.5*portalLight +0.5+ posCosDiff,0.0);	//unnecessary if camera pos = light pos
 
+		float portalLight2 = dot( uReflectorPos2, transformedNormal);
+		portalLight2 = max(0.5*portalLight2 +0.5+ posCosDiff2,0.0);	//unnecessary if camera pos = light pos
+
 #ifdef SPECULAR_ACTIVE		
 		//note maybe faster if calculate half vector in vert shader. (expect interpolates ok).  		
 		vec4 directionToLight2 = normalize( normalize(transformedCoord+SMALL_AMOUNT*uReflectorPos ) -  normalize(transformedCoord));
@@ -92,10 +101,19 @@
 		phongAmount = uSpecularStrength*pow( max(dot(halfVec, normalize(transformedNormal)), 0.),uSpecularPower);
 		portalLight*=(1.-uSpecularStrength);
 		portalLight+=phongAmount;
+
+		//second portal light
+		directionToLight2 = normalize( normalize(transformedCoord+SMALL_AMOUNT*uReflectorPos2 ) -  normalize(transformedCoord));
+		halfVec = normalize( directionToEye + directionToLight2);
+		
+		phongAmount = uSpecularStrength*pow( max(dot(halfVec, normalize(transformedNormal)), 0.),uSpecularPower);
+		portalLight2*=(1.-uSpecularStrength);
+		portalLight2+=phongAmount;
 #endif
 
 		//falloff
 		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
+		portalLight2/=1.0 + 3.0*dot(posCosDiff2,posCosDiff2);
 
 #ifdef VCOLOR
 		vec4 adjustedColor = uColor*vColor;	//TODO this logid in vert shader
@@ -106,7 +124,7 @@
 		//guess maybe similar to some gaussian light source
 		//vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*adjustedColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 
-		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz )*adjustedColor.xyz*texture2DProj(uSampler, vTextureCoord).xyz + (1.0-fog)*uFogColor.xyz , 1.);
+		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uReflectorDiffColor2*portalLight2 + uFogColor.xyz )*adjustedColor.xyz*texture2DProj(uSampler, vTextureCoord).xyz + (1.0-fog)*uFogColor.xyz , 1.);
 		
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
