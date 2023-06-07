@@ -2603,7 +2603,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			gl.viewport( 0,0, viewSettings.width, viewSettings.height );
 			mat4.set(nonCmapPMatrix, pMatrix);	
 			frustumCull = nonCmapCullFunc;
-			drawPortal(activeReflectorShader, meshToDraw, reflectorInfo, portalInCamera);
+			drawPortal(activeReflectorShader, portalMat, meshToDraw, reflectorInfo, portalInCamera);
 		}
 
 		// switch back shader? is this needed?
@@ -2620,13 +2620,13 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			gl.viewport( 0,0, viewSettings.width, viewSettings.height );
 			mat4.set(nonCmapPMatrix, pMatrix);	
 			frustumCull = nonCmapCullFunc;
-			drawPortal(activeReflectorShader, meshToDraw, reflectorInfo2, portalInCamera2);
+			drawPortal(activeReflectorShader, portalMat2, meshToDraw, reflectorInfo2, portalInCamera2);
 		}
 
 	}
 	gl.useProgram(activeShaderProgram);
 
-	function drawPortal(shaderProgram, meshToDraw, reflectorInfo, portalInCamera){
+	function drawPortal(shaderProgram, portalMat, meshToDraw, reflectorInfo, portalInCamera){
 		//TODO move elsewhere, pass in everything needed.
 		//TODO do cubemap rendering here, so can use reuse cubemap texture when drawing multiple portals.
 		//TODO later, draw cubemap for portal 1, then render both eyes when in stereo mode using depth buffer ray tracing - means switching between drawing each eye view.
