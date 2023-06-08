@@ -2554,7 +2554,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 
 	//draw multiple portals...
 	if (guiParams.reflector.draw){
-		if (isCubemapView || overridePortalDraw){
+		if (isCubemapView){
 			//draw simple fog coloured spheres, so pop-in less jarring.
 			//TODO draw properly, maybe can make more efficient since view of one portal through another doesn't change much
 
