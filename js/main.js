@@ -2592,38 +2592,73 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	}
 
 	//draw multiple portals...
-	if (guiParams.reflector.draw && !isCubemapView){
-	
-		//draw 1st portal for this world
-		if (frustumCull(portalInCamera,reflectorInfo.rad)){
-			drawPortalCubemap(pMatrix, portalInCameraCopy, frameTime, reflectorInfo,0);
+	if (guiParams.reflector.draw){
+		if (isCubemapView || overridePortalDraw){
+			//draw simple fog coloured spheres, so pop-in less jarring.
+			//TODO draw properly, maybe can make more efficient since view of one portal through another doesn't change much
 
-			//set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
-			gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
-			gl.viewport( 0,0, viewSettings.width, viewSettings.height );
-			mat4.set(nonCmapPMatrix, pMatrix);	
-			frustumCull = nonCmapCullFunc;
-			drawPortal(activeReflectorShader, portalMat, meshToDraw, reflectorInfo, portalInCamera);
-		}
+			activeShaderProgram = shaderProgramColored;
+			gl.useProgram(activeShaderProgram);
+			performShaderSetup(activeShaderProgram, wSettings);	//?? appears to not help
 
-		// switch back shader? is this needed?
-		//gl.useProgram(activeShaderProgram);
+			var placeholderPortalMesh = sphereBuffersHiRes;
+			var portalRad = 1.02*reflectorInfo.rad;
+			//if don't scale up a bit, invisible because within discard radius!
+			//TODO a shader without discard - should also be emmissive, not lit by world...
 
-		//draw the other portal for this world
-		//need to create earlier: reflectorInfo2, portalInCameraCopy2
-		
-		if (frustumCull(portalInCamera2,reflectorInfo.rad)){
-			drawPortalCubemap(pMatrix, portalInCameraCopy2, frameTime, reflectorInfo2,1);
+			var pColor = infoForPortals[1].localVecReflectorColor;
+			//because have ensured that the portal are looking through is portal 0, other portal is visible.
+			//at most one of the following portals will actually be seen (one are looking through.) 
+			// TODO don't draw the portal that are looking through.
 
-			//set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
-			gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
-			gl.viewport( 0,0, viewSettings.width, viewSettings.height );
-			mat4.set(nonCmapPMatrix, pMatrix);	
-			frustumCull = nonCmapCullFunc;
-			drawPortal(activeReflectorShader, portalMat2, meshToDraw, reflectorInfo2, portalInCamera2);
+			if (frustumCull(portalInCamera,reflectorInfo.rad)){
+				gl.uniform3f(activeShaderProgram.uniforms.uModelScale, portalRad,portalRad,portalRad);		
+				gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.black);
+				gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, pColor);
+				mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
+				drawObjectFromBuffers(placeholderPortalMesh, activeShaderProgram);
+			}
+			if (frustumCull(portalInCamera2,reflectorInfo.rad)){
+				gl.uniform3f(activeShaderProgram.uniforms.uModelScale, portalRad,portalRad,portalRad);		
+				gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.black);
+				gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, pColor);
+				mat4.set(portalInCamera2, mvMatrix);mat4.set(portalMat2, mMatrix);
+				drawObjectFromBuffers(placeholderPortalMesh, activeShaderProgram);
+			}
+
+		}else{
+			//draw 1st portal for this world
+			if (frustumCull(portalInCamera,reflectorInfo.rad)){
+
+				drawPortalCubemap(pMatrix, portalInCameraCopy, frameTime, reflectorInfo,0);
+
+				//set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
+				gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
+				gl.viewport( 0,0, viewSettings.width, viewSettings.height );
+				mat4.set(nonCmapPMatrix, pMatrix);	
+				frustumCull = nonCmapCullFunc;
+				drawPortal(activeReflectorShader, portalMat, meshToDraw, reflectorInfo, portalInCamera);
+			}
+
+			
+			//draw the other portal for this world
+			//need to create earlier: reflectorInfo2, portalInCameraCopy2
+			
+			if (frustumCull(portalInCamera2,reflectorInfo.rad)){
+				drawPortalCubemap(pMatrix, portalInCameraCopy2, frameTime, reflectorInfo2,1);
+
+				//set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
+				gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
+				gl.viewport( 0,0, viewSettings.width, viewSettings.height );
+				mat4.set(nonCmapPMatrix, pMatrix);	
+				frustumCull = nonCmapCullFunc;
+				drawPortal(activeReflectorShader, portalMat2, meshToDraw, reflectorInfo2, portalInCamera2);
+			}
 		}
 
 	}
+
+
 	gl.useProgram(activeShaderProgram);
 
 	function drawPortal(shaderProgram, portalMat, meshToDraw, reflectorInfo, portalInCamera){
