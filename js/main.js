@@ -1559,18 +1559,11 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			//setup code largely shared with setting regular texmap code. todo generalise setup
 		gl.useProgram(activeShaderProgram);
 		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
-		if (activeShaderProgram.uniforms.uReflectorDiffColor){
-				gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, infoForPortals[0].localVecReflectorDiffColor);
-		}
-		if (activeShaderProgram.uniforms.uReflectorDiffColor2){
-			gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor2, infoForPortals[1].localVecReflectorDiffColor);
-		}
+
+		setPortalInfoForShader(activeShaderProgram, infoForPortals);
+
 		if (activeShaderProgram.uniforms.uPlayerLightColor){
 			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
-		}
-		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, infoForPortals[0].reflectorPosTransformed);
-		if (activeShaderProgram.uniforms.uReflectorPos2){
-			gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos2, infoForPortals[1].reflectorPosTransformed);
 		}
 		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 		
@@ -2202,12 +2195,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	
 	gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);	//no emmision
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
-	if (activeShaderProgram.uniforms.uReflectorDiffColor){
-		gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, infoForPortals[0].localVecReflectorDiffColor);
-	}
-	if (activeShaderProgram.uniforms.uReflectorDiffColor2){
-		gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor2, infoForPortals[1].localVecReflectorDiffColor);
-	}
+
+	setPortalInfoForShader(activeShaderProgram, infoForPortals);
 
 	if (activeShaderProgram.uniforms.uPlayerLightColor){
 		gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
@@ -2216,15 +2205,9 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 
 	//TODO this only 
 	//if (activeShaderProgram.uniforms.uReflectorPos){
-		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, infoForPortals[0].reflectorPosTransformed);
-		if (activeShaderProgram.uniforms.uReflectorPosVShaderCopy){gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPosVShaderCopy, infoForPortals[0].reflectorPosTransformed);}
 		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 	//}
 
-	if (activeShaderProgram.uniforms.uReflectorPos2){
-		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos2, infoForPortals[1].reflectorPosTransformed);
-		if (activeShaderProgram.uniforms.uReflectorPosVShaderCopy2){gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPosVShaderCopy2, infoForPortals[1].reflectorPosTransformed);}
-	}
 
 	if (guiParams.drawShapes.teapot){
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.teapot);	//BLUE
@@ -2285,27 +2268,13 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		gl.useProgram(activeShaderProgram);
 		
 		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
-		if (activeShaderProgram.uniforms.uReflectorDiffColor){
-				gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, infoForPortals[0].localVecReflectorDiffColor);
-		}
-		if (activeShaderProgram.uniforms.uReflectorDiffColor2){
-			gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor2, infoForPortals[1].localVecReflectorDiffColor);
-		}
+
+		setPortalInfoForShader(activeShaderProgram, infoForPortals);
+
 		if (activeShaderProgram.uniforms.uPlayerLightColor){
 			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 		}
 		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
-
-		//TODO this only 
-		//if (activeShaderProgram.uniforms.uReflectorPos){
-		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, infoForPortals[0].reflectorPosTransformed);
-
-		if (activeShaderProgram.uniforms.uReflectorPos2){
-		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos2, infoForPortals[1].reflectorPosTransformed);
-		}
-		if (activeShaderProgram.uniforms.uReflectorPosVShaderCopy){gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPosVShaderCopy, infoForPortals[0].reflectorPosTransformed);}
-		if (activeShaderProgram.uniforms.uReflectorPosVShaderCopy2){gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPosVShaderCopy, infoForPortals[1].reflectorPosTransformed);}
-
 		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.veryDarkGray);
@@ -2349,21 +2318,12 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		
 		//set uniforms - todo generalise this code (using for many shaders)
 		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
-		if (activeShaderProgram.uniforms.uReflectorDiffColor){
-			gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, infoForPortals[0].localVecReflectorDiffColor);
-		}
-		if (activeShaderProgram.uniforms.uReflectorDiffColor2){
-			gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor2, infoForPortals[1].localVecReflectorDiffColor);
-		}
+
+		setPortalInfoForShader(activeShaderProgram, infoForPortals);
+
 		if (activeShaderProgram.uniforms.uPlayerLightColor){
 			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 		}
-		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, infoForPortals[0].reflectorPosTransformed);
-		if (activeShaderProgram.uniforms.uReflectorPosVShaderCopy){gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPosVShaderCopy, infoForPortals[0].reflectorPosTransformed);}
-		if (activeShaderProgram.uniforms.uReflectorPos2){gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos2, infoForPortals[1].reflectorPosTransformed);}
-		if (activeShaderProgram.uniforms.uReflectorPosVShaderCopy2){gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPosVShaderCopy2, infoForPortals[1].reflectorPosTransformed);}
-
-
 		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 		
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
@@ -2557,6 +2517,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		xyzmove4mat(mvMatrix, [0,0,moveAmount]);	//TODO correct mMatrix, but IIRC only impacts lighting 
 		drawObjectFromBuffers(cubeBuffers, shaderProg);
 	}
+
 
 	//DRAW PORTALS/REFLECTORS
 
@@ -5701,6 +5662,25 @@ function matForPos(posn){	//this is wasteful - makes a new matrix each time
 	xyzmove4mat(mat, moveVec);
 	return mat;
 }
+function setPortalInfoForShader(shader, infoForPortals){
+	if (shader.uniforms.uReflectorDiffColor){
+		gl.uniform3fv(shader.uniforms.uReflectorDiffColor, infoForPortals[0].localVecReflectorDiffColor);
+	}
+	if (shader.uniforms.uReflectorDiffColor2){
+		gl.uniform3fv(shader.uniforms.uReflectorDiffColor2, infoForPortals[1].localVecReflectorDiffColor);
+	}
+	
+	gl.uniform4fv(shader.uniforms.uReflectorPos, infoForPortals[0].reflectorPosTransformed);
+	if (shader.uniforms.uReflectorPos2){
+		gl.uniform4fv(shader.uniforms.uReflectorPos2, infoForPortals[1].reflectorPosTransformed);
+	}
+	if (shader.uniforms.uReflectorPosVShaderCopy){
+		gl.uniform4fv(shader.uniforms.uReflectorPosVShaderCopy, infoForPortals[0].reflectorPosTransformed);
+	}
+	if (shader.uniforms.uReflectorPosVShaderCopy2){
+		gl.uniform4fv(shader.uniforms.uReflectorPosVShaderCopy2, infoForPortals[1].reflectorPosTransformed);
+	}
+}
 function performGeneralShaderSetup(shader){
 	if (shader.uniforms.uSpecularStrength){
 		gl.uniform1f(shader.uniforms.uSpecularStrength, guiParams.display.specularStrength);	
@@ -5723,25 +5703,10 @@ function performShaderSetup(shader, wSettings, tex){	//TODO use this more widely
 	if (shader.uniforms.uFogColor){
 		gl.uniform4fv(shader.uniforms.uFogColor, localVecFogColor);
 	}
-	if (shader.uniforms.uReflectorDiffColor){
-		gl.uniform3fv(shader.uniforms.uReflectorDiffColor, infoForPortals[0].localVecReflectorDiffColor);
-	}
-	if (shader.uniforms.uReflectorDiffColor2){
-		gl.uniform3fv(shader.uniforms.uReflectorDiffColor2, infoForPortals[1].localVecReflectorDiffColor);
-	}
+	setPortalInfoForShader(shader, infoForPortals);
+
 	if (shader.uniforms.uPlayerLightColor){
 		gl.uniform3fv(shader.uniforms.uPlayerLightColor, playerLight);
-	}
-	gl.uniform4fv(shader.uniforms.uReflectorPos, infoForPortals[0].reflectorPosTransformed);
-	if (shader.uniforms.uReflectorPos2){
-		gl.uniform4fv(shader.uniforms.uReflectorPos2, infoForPortals[1].reflectorPosTransformed);
-	}
-
-	if (shader.uniforms.uReflectorPosVShaderCopy){
-		gl.uniform4fv(shader.uniforms.uReflectorPosVShaderCopy, infoForPortals[0].reflectorPosTransformed);
-	}
-	if (shader.uniforms.uReflectorPosVShaderCopy2){
-		gl.uniform4fv(shader.uniforms.uReflectorPosVShaderCopy2, infoForPortals[1].reflectorPosTransformed);
 	}
 	gl.uniform1f(shader.uniforms.uReflectorCos, cosReflector);	
 	
@@ -5762,28 +5727,12 @@ function performCommon4vecShaderSetup(activeShaderProgram, wSettings, logtag){	/
 		gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, worldCamera.slice(12));
 	}
 	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
-	if (activeShaderProgram.uniforms.uReflectorDiffColor){
-		gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor, infoForPortals[0].localVecReflectorDiffColor);
-	}
-	if (activeShaderProgram.uniforms.uReflectorDiffColor2){
-		gl.uniform3fv(activeShaderProgram.uniforms.uReflectorDiffColor2, infoForPortals[1].localVecReflectorDiffColor);
-	}
+
+	setPortalInfoForShader(activeShaderProgram, infoForPortals);
+
 	if (activeShaderProgram.uniforms.uPlayerLightColor){
 		gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 	}
-	gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos, infoForPortals[0].reflectorPosTransformed);
-	if (activeShaderProgram.uniforms.uReflectorPos2){
-		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPos2, infoForPortals[1].reflectorPosTransformed);
-	}
-
-	if (activeShaderProgram.uniforms.uReflectorPosVShaderCopy){
-		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPosVShaderCopy, infoForPortals[0].reflectorPosTransformed);
-	}
-	if (activeShaderProgram.uniforms.uReflectorPosVShaderCopy2){
-		gl.uniform4fv(activeShaderProgram.uniforms.uReflectorPosVShaderCopy2, infoForPortals[1].reflectorPosTransformed);
-	}
-	
-	
 	gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 	performGeneralShaderSetup(activeShaderProgram);
