@@ -2593,6 +2593,10 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 
 				drawPortalCubemap(pMatrix, portalInCameraCopy, frameTime, reflectorInfo,0);
 
+				if (reverseCamera){
+					gl.cullFace(gl.FRONT);
+				}
+
 				//set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
 				gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
 				gl.viewport( 0,0, viewSettings.width, viewSettings.height );
@@ -2606,7 +2610,12 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			//need to create earlier: reflectorInfo2, portalInCameraCopy2
 			
 			if (frustumCull(portalInCamera2,reflectorInfo.rad)){
+
 				drawPortalCubemap(pMatrix, portalInCameraCopy2, frameTime, reflectorInfo2,1);
+
+				if (reverseCamera){
+					gl.cullFace(gl.FRONT);
+				}
 
 				//set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
 				gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
