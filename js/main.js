@@ -2341,9 +2341,18 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
 		
-		//special uniform for this shader
-		//gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame, -rotatedMatrix[3],-rotatedMatrix[7],-rotatedMatrix[11]);
-		gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame, rotatedMatrix[3],rotatedMatrix[7],rotatedMatrix[11]);
+		//set special uniform for this shader (currently 1st portal only)
+		//TODO make below more efficient (do with fewer matrix mults, less garbage - committing because it works!
+		// also can likely use rotatedMatrix
+		var ssmCopy = mat4.create(matrix);	//likely matrix = sshipDrawMatrix
+		xyzrotate4mat(ssmCopy, [-Math.PI/2,0,0]); 
+		mat4.transpose(ssmCopy);
+		var firstPortalMatInv = mat4.create(portalsForWorld[worldA][0].matrix);
+		xyzrotate4mat(firstPortalMatInv, [-Math.PI/2,0,0]); 
+		mat4.multiply(ssmCopy, firstPortalMatInv);
+		mat4.transpose(ssmCopy);
+		gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame, ssmCopy[3],ssmCopy[7],ssmCopy[11]);
+
 		
 		mat4.set(invertedWorldCamera, mvMatrix);
 		
