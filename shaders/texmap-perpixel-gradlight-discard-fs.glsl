@@ -53,7 +53,9 @@
 		//bodge - treat as if gradient light, where centre colour = uFogColor + 0.5*(uReflectorDiffColor*portalLight), gradient = uReflectorDiffColor*portalLight
 		//TODO maybe better to approximate light as some percentage standard directional light, some amount gradient (all gradient at portal surface)
 		//maybe quadratic gradient light will be significant improvement (but may require many textures)
-		float gradRange = 1.0 / (1.0 + 3.0*dot(posCosDiff,posCosDiff));
+		//float gradRange = 1.0 / (1.0 + 3.0*dot(posCosDiff,posCosDiff));
+		float gradRange = (1.-uReflectorCos)/(1.-uReflectorCos - posCosDiff);	//~ r^2/x^2 falloff (since 1-cos(x)~x^2)
+
 		vec3 averageLight = uFogColor.xyz + uReflectorDiffColor * 0.5*gradRange;
 			//calculation contribution of gradient lights and sum. this is portalLight vector basically.
 		
