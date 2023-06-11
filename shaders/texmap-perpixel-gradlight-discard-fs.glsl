@@ -15,13 +15,16 @@
 #endif
 	uniform vec4 uFogColor;
 	uniform vec3 uReflectorDiffColor;
+	uniform vec3 uReflectorDiffColor2;
 	uniform vec4 uReflectorPos;
+	uniform vec4 uReflectorPos2;
 	uniform float uReflectorCos;
 	varying vec4 adjustedPos;
 	varying vec4 transformedNormal;	
 	varying vec4 transformedCoord;	
 	
 	uniform vec3 uLightPosPlayerFrame;	//tmp. TODO do this stuff in v shader
+	uniform vec3 uLightPosPlayerFrame2;
 #ifdef CUSTOM_DEPTH
 	varying vec2 vZW;
 #endif
@@ -30,6 +33,11 @@
 	
 		if (posCosDiff>0.0){
 			discard;
+		}
+
+		float posCosDiff2 = dot(normalize(transformedCoord),uReflectorPos2) - uReflectorCos;
+		if (posCosDiff2>0.0){
+			discard;	//unnecessary if, when viewing thru portal, ensure is other one.
 		}
 	
 	/*
@@ -55,20 +63,24 @@
 		//maybe quadratic gradient light will be significant improvement (but may require many textures)
 		//float gradRange = 1.0 / (1.0 + 3.0*dot(posCosDiff,posCosDiff));
 		float gradRange = (1.-uReflectorCos)/(1.-uReflectorCos - posCosDiff);	//~ r^2/x^2 falloff (since 1-cos(x)~x^2)
+		float gradRange2 = (1.-uReflectorCos)/(1.-uReflectorCos - posCosDiff2);
 
-		vec3 averageLight = uFogColor.xyz + uReflectorDiffColor * 0.5*gradRange;
+		vec3 averageLight = uFogColor.xyz + uReflectorDiffColor * 0.5*gradRange + uReflectorDiffColor2 * 0.5*gradRange2;
+
 			//calculation contribution of gradient lights and sum. this is portalLight vector basically.
 		
-		//vec3 modifiedLightDirection = vec3(0.5,-0.5,0.0);	//TODO use correct
 		vec3 modifiedLightDirection = gradRange*normalize(uLightPosPlayerFrame.xyz);	//TODO scale less when far from portal surf (by difference betwee "average" colour and fog) 
-		vec3 modifiedLightDirectionR = modifiedLightDirection*uReflectorDiffColor.r;	//todo matrix notation, do in vert shader
-		vec3 modifiedLightDirectionG = modifiedLightDirection*uReflectorDiffColor.g;
-		vec3 modifiedLightDirectionB = modifiedLightDirection*uReflectorDiffColor.b;
+		vec3 modifiedLightDirection2 = gradRange2*normalize(uLightPosPlayerFrame2.xyz);
 		
+		vec3 modifiedLightDirectionR = modifiedLightDirection*uReflectorDiffColor.r + modifiedLightDirection2*uReflectorDiffColor2.r;	//todo matrix notation, do in vert shader
+		vec3 modifiedLightDirectionG = modifiedLightDirection*uReflectorDiffColor.g + modifiedLightDirection2*uReflectorDiffColor2.g;
+		vec3 modifiedLightDirectionB = modifiedLightDirection*uReflectorDiffColor.b + modifiedLightDirection2*uReflectorDiffColor2.b;
+
 		vec4 vChanWeightsR = vec4(modifiedLightDirectionR, averageLight.r-dot(modifiedLightDirectionR,vec3(0.5)));
 		vec4 vChanWeightsG = vec4(modifiedLightDirectionG, averageLight.g-dot(modifiedLightDirectionG,vec3(0.5)));
 		vec4 vChanWeightsB = vec4(modifiedLightDirectionB, averageLight.b-dot(modifiedLightDirectionB,vec3(0.5)));
 		
+
 		float uMaxAlbedo = 0.4;	//todo use uColor? (baked maps assume some albedo though)
 		vChanWeightsR*=uMaxAlbedo;
 		vChanWeightsG*=uMaxAlbedo;

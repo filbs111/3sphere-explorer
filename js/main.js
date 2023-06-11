@@ -2344,14 +2344,27 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		//set special uniform for this shader (currently 1st portal only)
 		//TODO make below more efficient (do with fewer matrix mults, less garbage - committing because it works!
 		// also can likely use rotatedMatrix
-		var ssmCopy = mat4.create(matrix);	//likely matrix = sshipDrawMatrix
+		var ssmCopy = mat4.create();	
+		var tmpPortalMat = mat4.create();
+
+		mat4.set(matrix, ssmCopy);  //likely matrix = sshipDrawMatrix
 		xyzrotate4mat(ssmCopy, [-Math.PI/2,0,0]); 
 		mat4.transpose(ssmCopy);
-		var firstPortalMatInv = mat4.create(portalsForWorld[worldA][0].matrix);
-		xyzrotate4mat(firstPortalMatInv, [-Math.PI/2,0,0]); 
-		mat4.multiply(ssmCopy, firstPortalMatInv);
+		mat4.set(portalsForWorld[worldA][0].matrix, tmpPortalMat);	//set 2nd matrix equal to 1st.
+		xyzrotate4mat(tmpPortalMat, [-Math.PI/2,0,0]); 
+		mat4.multiply(ssmCopy, tmpPortalMat);
 		mat4.transpose(ssmCopy);
 		gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame, ssmCopy[3],ssmCopy[7],ssmCopy[11]);
+
+		mat4.set(matrix, ssmCopy);
+		xyzrotate4mat(ssmCopy, [-Math.PI/2,0,0]); 
+		mat4.transpose(ssmCopy);
+		mat4.set(portalsForWorld[worldA][1].matrix, tmpPortalMat);	//set 2nd matrix equal to 1st.
+		xyzrotate4mat(tmpPortalMat, [-Math.PI/2,0,0]); 
+		mat4.multiply(ssmCopy, tmpPortalMat);
+		mat4.transpose(ssmCopy);
+		gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame2, ssmCopy[3],ssmCopy[7],ssmCopy[11]);
+
 
 		
 		mat4.set(invertedWorldCamera, mvMatrix);
