@@ -542,13 +542,13 @@ function initBuffers(){
 var reflectorInfo={
 	centreTanAngleVectorScaled:[0,0,0],
 	otherThing:[0,0,0],
-	rad:1
+	rad:0.5
 };
 //for 2nd portal. TODO organise this sensibly for arbitray portal num!
 var reflectorInfo2={
 	centreTanAngleVectorScaled:[0,0,0],
 	otherThing:[0,0,0],
-	rad:1
+	rad:0.5
 };
 
 function calcReflectionInfo(toReflect,resultsObj){
@@ -3605,7 +3605,7 @@ var guiParams={
 		cmFacesUpdated:6,
 		cubemapDownsize:'auto',
 		mappingType:'vertex projection',
-		scale:0.2,
+		scale:0.1,
 		isPortal:true,
 		drawFrame:true,
 		test1:false
@@ -3836,7 +3836,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	reflectorFolder.add(guiParams.reflector, "cmFacesUpdated", 0,6,1);
 	reflectorFolder.add(guiParams.reflector, "cubemapDownsize", [0,1,2,3,'auto']);
 	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection','screen space','vertproj mix','depth to alpha copy']);
-	reflectorFolder.add(guiParams.reflector, "scale", 0.05,2,0.01);
+	reflectorFolder.add(guiParams.reflector, "scale", 0.02,0.5,0.01);
 	reflectorFolder.add(guiParams.reflector, "isPortal");
 	reflectorFolder.add(guiParams.reflector, "drawFrame");
 	reflectorFolder.add(guiParams.reflector, "test1");
