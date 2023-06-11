@@ -1413,6 +1413,7 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 			//undo reuse of vectors. (caused bug when moved portal cubemap to just before drawing portal, within main world drawing)
 			//TODO instantiate a separate wSettings objects and reuse for different parts of rendering... (otherwise creates garbage)
 			infoForPortal.localVecReflectorDiffColor=new Array(3);
+			infoForPortal.localVecReflectorColor=localVecReflectorColor;
 
 			for (var cc=0;cc<3;cc++){
 				infoForPortal.localVecReflectorDiffColor[cc] = localVecReflectorColor[cc]-returnObj.localVecFogColor[cc];
