@@ -1427,6 +1427,8 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 			mat4.multiply(portalRelativeMat, pmats[pp]);
 			mat4.transpose(portalRelativeMat);
 
+			infoForPortal.mat = pmats[pp];
+
 			infoForPortal.reflectorPosTransformed=new Array(4);	//work around bug (see comments near return statement)
 			for (var cc=0;cc<4;cc++){
 				infoForPortal.reflectorPosTransformed[cc] = portalRelativeMat[4*cc+3];	//position of reflector in frame of camera (after MVMatrix transformation)
@@ -2350,7 +2352,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		mat4.set(matrix, ssmCopy);  //likely matrix = sshipDrawMatrix
 		xyzrotate4mat(ssmCopy, [-Math.PI/2,0,0]); 
 		mat4.transpose(ssmCopy);
-		mat4.set(portalsForWorld[worldA][0].matrix, tmpPortalMat);	//set 2nd matrix equal to 1st.
+		mat4.set(infoForPortals[0].mat, tmpPortalMat);	//set 2nd matrix equal to 1st.
 		xyzrotate4mat(tmpPortalMat, [-Math.PI/2,0,0]); 
 		mat4.multiply(ssmCopy, tmpPortalMat);
 		mat4.transpose(ssmCopy);
@@ -2359,7 +2361,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		mat4.set(matrix, ssmCopy);
 		xyzrotate4mat(ssmCopy, [-Math.PI/2,0,0]); 
 		mat4.transpose(ssmCopy);
-		mat4.set(portalsForWorld[worldA][1].matrix, tmpPortalMat);	//set 2nd matrix equal to 1st.
+		mat4.set(infoForPortals[1].mat, tmpPortalMat);	//set 2nd matrix equal to 1st.
 		xyzrotate4mat(tmpPortalMat, [-Math.PI/2,0,0]); 
 		mat4.multiply(ssmCopy, tmpPortalMat);
 		mat4.transpose(ssmCopy);
@@ -2419,7 +2421,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 
 			mat4.set(mMatrix, ssmCopy);
 			mat4.transpose(ssmCopy);
-			mat4.set(portalsForWorld[worldA][0].matrix, tmpPortalMat);	//set 2nd matrix equal to 1st.
+			mat4.set(infoForPortals[0].mat, tmpPortalMat);	//set 2nd matrix equal to 1st.
 			xyzrotate4mat(tmpPortalMat, [Math.PI,0,0]); 
 			mat4.multiply(ssmCopy, tmpPortalMat);
 			mat4.transpose(ssmCopy);
@@ -2427,7 +2429,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 
 			mat4.set(mMatrix, ssmCopy);
 			mat4.transpose(ssmCopy);
-			mat4.set(portalsForWorld[worldA][1].matrix, tmpPortalMat);	//set 2nd matrix equal to 1st.
+			mat4.set(infoForPortals[1].mat, tmpPortalMat);	//set 2nd matrix equal to 1st.
 			xyzrotate4mat(tmpPortalMat, [Math.PI,0,0]); 
 			mat4.multiply(ssmCopy, tmpPortalMat);
 			mat4.transpose(ssmCopy);
