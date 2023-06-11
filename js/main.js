@@ -2412,9 +2412,27 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			mat4.multiply(mvMatrix, invertedWorldCamera);
 			mat4.multiply(mvMatrix, mMatrix);
 
-		//	gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame, mMatrix[3],-mMatrix[7],-mMatrix[11]);
-			gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame, mMatrix[3],mMatrix[7],mMatrix[11]);
-						//note sign swapped vs spaceship. guess some sign swap on object export?
+
+			//TODO make more efficient (expect can cancel out terms), create less garbage.
+			var ssmCopy = mat4.create();	
+			var tmpPortalMat = mat4.create();
+
+			mat4.set(mMatrix, ssmCopy);
+			mat4.transpose(ssmCopy);
+			mat4.set(portalsForWorld[worldA][0].matrix, tmpPortalMat);	//set 2nd matrix equal to 1st.
+			xyzrotate4mat(tmpPortalMat, [Math.PI,0,0]); 
+			mat4.multiply(ssmCopy, tmpPortalMat);
+			mat4.transpose(ssmCopy);
+			gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame, ssmCopy[3],ssmCopy[7],ssmCopy[11]);
+
+			mat4.set(mMatrix, ssmCopy);
+			mat4.transpose(ssmCopy);
+			mat4.set(portalsForWorld[worldA][1].matrix, tmpPortalMat);	//set 2nd matrix equal to 1st.
+			xyzrotate4mat(tmpPortalMat, [Math.PI,0,0]); 
+			mat4.multiply(ssmCopy, tmpPortalMat);
+			mat4.transpose(ssmCopy);
+			gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame2, ssmCopy[3],ssmCopy[7],ssmCopy[11]);
+
 
 			gl.uniform4f(activeShaderProgram.uniforms.uOtherLightAmounts, 0,0,0,0);	//no thruster/gun light used here currently
 
