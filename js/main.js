@@ -2618,14 +2618,14 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			if (frustumCull(portalInCamera,reflectorInfo.rad)){
 				gl.uniform3f(activeShaderProgram.uniforms.uModelScale, portalRad,portalRad,portalRad);		
 				gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.black);
-				gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, pColor);
+				gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, pColor[0], pColor[1], pColor[2]);
 				mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
 				drawObjectFromBuffers(placeholderPortalMesh, activeShaderProgram);
 			}
 			if (frustumCull(portalInCamera2,reflectorInfo.rad)){
 				gl.uniform3f(activeShaderProgram.uniforms.uModelScale, portalRad,portalRad,portalRad);		
 				gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.black);
-				gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, pColor);
+				gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, pColor[0], pColor[1], pColor[2]);
 				mat4.set(portalInCamera2, mvMatrix);mat4.set(portalMat2, mMatrix);
 				drawObjectFromBuffers(placeholderPortalMesh, activeShaderProgram);
 			}
