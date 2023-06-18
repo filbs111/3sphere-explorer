@@ -5,52 +5,14 @@
 //var voxlog = console.log;	//if enable logging, be sure to stop calling test2VoxABC in the main game loop!
 var voxlog = function(log){};
 
-var voxCollisionFunction; //something that can be used for collision detection. 
-						  //for consistency with basic 2d terrain stuff, for input 4vector, provide: penetration depth, normal vector.
-						  //maybe want simple version that just returns whether collided. ( eg for bullet collisions)
-						  
-						  //suppose with normal vector in two duocylinder "surface" directions and radial. should be careful to get conversion right - basic assumptions might get correct close to halfway duocylinder ( dividing 3sphere in two exactly), but may go wrong away from this.
-						  //maybe better to have normal direction returned as 4vec.
-var voxClosestPoint;						  
-var voxABCFor4vec;
+var tmpRelativeMatForVox = mat4.create();	//does same job as tmpRelativeMat but use new variable to avoid trouble with changing file order etc
 
-function testVoxABC(){	//WORKS!!
-	var inputVec = playerCamera.slice(12);
-	voxlog(inputVec);
-	
-	var abc = voxABCFor4vec(inputVec);
-	voxlog("abc");
-	voxlog(abc);
-	
-	var result = get4vecForABCDCCoords(abc.a,abc.b,abc.c);
-	voxlog(result);
-	
-	var matresult = getMatForABCDCCoords(abc.a,abc.b,abc.c);
-	voxlog(matresult.slice(12));
-}
-function test2VoxABC(dcSpin){
-	var inputVec = playerCamera.slice(12);
-	voxlog(inputVec);
-	var voxResult = voxClosestPoint(inputVec, dcSpin);
-	var abcResult = voxResult.abc;
-	voxlog("abcResult:");
-	voxlog(abcResult);
-	
-	voxCollisionCentralLevel = voxResult.centralLevel;
-	
-	var matResult = getMatForABCDCCoords(abcResult.a,abcResult.b,abcResult.c);
-	
-	voxlog(matResult.slice(12));
-	
-	mat4.set(matResult, closestPointTestMat);
-}
-
-
+//this function also used by procterrain, so don't encapsulate within voxTerrainData
 function getMatForABCDCCoords(a,b,c){
 	voxlog("getMatForABCDCCoords input:");
-	voxlog({a:a,b:b,c:c});
+	voxlog({a,b,c});
 	
-	//don't neg a because though voxCollisionFunction, (terrainGetHeightFor4VecPos, getHeightAboveTerrainFor4VecPos) use different sign, latter return negates it again!
+	//don't neg a because though collisionFunction, (terrainGetHeightFor4VecPos, getHeightAboveTerrainFor4VecPos) use different sign, latter return negates it again!
 	a = a;
 	//see terrainGetHeightFor4VecPos , absent in  getHeightAboveTerrainFor4VecPos ?!
 	b = Math.PI*1.5 -b;
@@ -73,11 +35,7 @@ function getMatForABCDCCoords(a,b,c){
 			
 	return tmpRelativeMatForVox;
 }
-function get4vecForABCDCCoords(a,b,c){	//simple version first!
-	voxlog("get4vecForABCDCCoords");
-	voxlog({a:a,b:b,c:c});
-	return getMatForABCDCCoords(a,b,c).slice(12);
-}
+
 
 var voxTerrainData = (function generateVoxTerrainData(){
 	
@@ -104,7 +62,14 @@ var voxTerrainData = (function generateVoxTerrainData(){
 	//var voxFunction = longHolesTwo;
 	makeVoxdataForFunc(voxFunction);
 	
-	voxCollisionFunction = function(vec, duocylinderSpin){
+
+	//something that can be used for collision detection. 
+	//for consistency with basic 2d terrain stuff, for input 4vector, provide: penetration depth, normal vector.
+	//maybe want simple version that just returns whether collided. ( eg for bullet collisions)
+
+	//suppose with normal vector in two duocylinder "surface" directions and radial. should be careful to get conversion right - basic assumptions might get correct close to halfway duocylinder ( dividing 3sphere in two exactly), but may go wrong away from this.
+	//maybe better to have normal direction returned as 4vec.
+	var collisionFunction = function(vec, duocylinderSpin){
 		//convert into duocylinder "space", and lookup voxFunction
 		//initial implementation - just change some test value, use to set spaceship colour to test can check whether inside voxTerrain
 		//function tennisBallLoader.js:get4vecfrom3vec  - want a reverse translation. already have example of this for 2d duocylinder "procTerrain" - proceduralTerrain.js:getHeightAboveTerrainFor4VecPos.  TODO generalise? this function very similar to that.
@@ -125,7 +90,7 @@ var voxTerrainData = (function generateVoxTerrainData(){
 	
 		return voxFunction(aa,bb,cc);
 	}
-	voxABCFor4vec = function(vec){	//just testing
+	function voxABCFor4vec(vec){	//just testing
 		var a = -Math.atan2(vec[2],vec[3]);	//note the - here, not used in procTerrain
 		var b = Math.atan2(vec[0],vec[1]);
 		var sineVal = (vec[0]*vec[0] + vec[1]*vec[1]) - (vec[2]*vec[2] + vec[3]*vec[3]);
@@ -133,13 +98,13 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		var c = -0.5*Math.asin(sineVal);	//this height of 4vec that can be compared to landscape height
 		return {a:a,b:b,c:c}
 	}
-	voxClosestPoint = function(vec, duocylinderSpin){	//return a 4vec position of (approximate) closest point on surface to the input point.
+	var closestPoint = function(vec, duocylinderSpin){	//return a 4vec position of (approximate) closest point on surface to the input point.
 		//do this by finding the downhill slope, assuming is constant.
 		//to get best result, should do in 4vec space, but for simplicity, do in aa,bb,cc space - result should be same close to duocylinder 0-level, since aa,bb,cc axes are equal scale here. away from this. imagine an ellipsoid about input point, scaled in proportion to these axes.
 		//this code assumes are close to duocylinder 0-level, and therefore voxel boxes are approximately cubic
 		//if use voxels away from 0-level, should correct for this, possibly by using 4vector space formulation. expect can just put corrective multipliers in this somewhere
 		
-		//note duplicates code from voxCollisionFunction
+		//note duplicates code from collisionFunction
 		
 		var multiplier = 64/(Math.PI);
 		
@@ -826,7 +791,35 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		mynorms[ii+1] = -mynorms[ii+2];
 		mynorms[ii+2] = -tmp;
 	}
-	
+
+
+	//put a load of particles on voxel surface
+	//gradient descent. maybe quite slow, uneven distribution 
+	//faster method might : look at created mesh (triangles). can do equal are probability
+	var surfaceParticleMats = (function(){
+		var mats=[];
+		var nummats = 8192;
+		for (nn=0;nn<nummats;nn++){
+			var this4vec = random_quaternion();
+			var estSurfPoint;
+			for (var step=0;step<10;step++){	//only 1 step leads to nice accidental randomness effect
+				estSurfPoint = closestPoint(this4vec,0);
+				var thisABC = estSurfPoint.abc;
+				console.log("xxx - " + JSON.stringify(thisABC));
+				this4vec = get4vecForABCDCCoords(thisABC.a,thisABC.b,thisABC.c)
+				console.log("yyy")
+			}
+			
+			//get a matrix for this position. TODO align to surface
+			//use something very similar to main.js:moveToDuocylinderAB, but signs, offsets differ
+			var thisMat = mat4.identity();
+			xyzrotate4mat(thisMat, [0,0, Math.PI/2-thisABC.b]);
+			zmove4mat(thisMat, thisABC.a);
+			xmove4mat(thisMat, Math.PI/4 - thisABC.c);	//or ymove - should check what way up want models to be. PI/4 is onto surface of duocylinder
+			mats.push(thisMat);
+		}
+		return mats;
+	})();
 	return {
 		vertices:myverts,
 		tricoords:myverts,	//retained when loadGridData() maps 3vec vertices to 4vec verts (mapping onto duocylinder)
@@ -836,8 +829,48 @@ var voxTerrainData = (function generateVoxTerrainData(){
 		colors:sparseVoxData.dcColors,
 		//colors:sparseVoxData.colors
 		//directionalIndices:sparseVoxData.directionalIndices
+		collisionFunction,
+		//testVoxABC,	//only used for debugging
+		test2VoxABC,
+		surfaceParticleMats,
 	}
 	
+	function testVoxABC(){	//WORKS!!
+		var inputVec = playerCamera.slice(12);
+		voxlog(inputVec);
+		
+		var abc = voxABCFor4vec(inputVec);
+		voxlog("abc");
+		voxlog(abc);
+		
+		var result = get4vecForABCDCCoords(abc.a,abc.b,abc.c);
+		voxlog(result);
+		
+		var matresult = getMatForABCDCCoords(abc.a,abc.b,abc.c);
+		voxlog(matresult.slice(12));
+	}
+	function test2VoxABC(dcSpin){
+		var inputVec = playerCamera.slice(12);
+		voxlog(inputVec);
+		var voxResult = closestPoint(inputVec, dcSpin);
+		var abcResult = voxResult.abc;
+		voxlog("abcResult:");
+		voxlog(abcResult);
+		
+		voxCollisionCentralLevel = voxResult.centralLevel;
+		
+		var matResult = getMatForABCDCCoords(abcResult.a,abcResult.b,abcResult.c);
+		
+		voxlog(matResult.slice(12));
+		
+		mat4.set(matResult, closestPointTestMat);
+	}
+	function get4vecForABCDCCoords(a,b,c){	//simple version first!
+		voxlog("get4vecForABCDCCoords");
+		voxlog({a:a,b:b,c:c});
+		return getMatForABCDCCoords(a,b,c).slice(12);
+	}
+
 	function makeVoxdataForFunc(thefunction){
 		for (var ii=0;ii<blocksize;ii++){
 			var slicedata = voxdata[ii];
@@ -1113,32 +1146,3 @@ function smoothMin(x,y){	//introduces black spot normals. unknown why
 	
 	*/
 }
-
-
-var tmpRelativeMatForVox = mat4.create();	//does same job as tmpRelativeMat but use new variable to avoid trouble with changing file order etc
-
-//put a load of particles on voxel surface
-//gradient descent. maybe quite slow, uneven distribution 
-//faster method might : look at created mesh (triangles). can do equal are probability
-var voxSurfaceParticleMats = (function(){
-	var mats=[];
-	var nummats = 8192;
-	for (nn=0;nn<nummats;nn++){
-		var this4vec = random_quaternion();
-		var thisABC;
-		for (var step=0;step<10;step++){	//only 1 step leads to nice accidental randomness effect
-			estSurfPoint = voxClosestPoint(this4vec,0);
-			thisABC = estSurfPoint.abc;
-			this4vec = get4vecForABCDCCoords(thisABC.a,thisABC.b,thisABC.c)
-		}
-		
-		//get a matrix for this position. TODO align to surface
-		//use something very similar to main.js:moveToDuocylinderAB, but signs, offsets differ
-		var thisMat = mat4.identity();
-		xyzrotate4mat(thisMat, [0,0, Math.PI/2-thisABC.b]);
-		zmove4mat(thisMat, thisABC.a);
-		xmove4mat(thisMat, Math.PI/4 - thisABC.c);	//or ymove - should check what way up want models to be. PI/4 is onto surface of duocylinder
-		mats.push(thisMat);
-	}
-	return mats;
-})();

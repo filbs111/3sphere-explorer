@@ -448,7 +448,7 @@ function initBuffers(){
 	
 	randBoxBuffers.randMatrixBuffers = glBufferMatrixUniformDataForInstancedDrawing(randomMats);
 	randBoxBuffers.procTerrainMatrixBuffers = glBufferMatrixUniformDataForInstancedDrawing(procTerrainSurfaceParticleMats);
-	randBoxBuffers.voxTerrainMatrixBuffers = glBufferMatrixUniformDataForInstancedDrawing(voxSurfaceParticleMats);
+	randBoxBuffers.voxTerrainMatrixBuffers = glBufferMatrixUniformDataForInstancedDrawing(voxTerrainData.surfaceParticleMats);
 	
 	function glBufferMatrixUniformDataForInstancedDrawing(sourceMatArr){
 		//make a matrix buffer for instanced drawing of random boxes
@@ -4544,7 +4544,7 @@ var iterateMechanics = (function iterateMechanics(){
 				distanceForTerrainNoise = getHeightAboveSeaFor4VecPos(playerPos, lastSeaTime, dcSpin);	//height. todo use distance (unimportant because sea gradient low
 			}
 			if (worldInfo.duocylinderModel == 'voxTerrain'){
-				test2VoxABC(dcSpin);	//updates closestPointTestMat
+				voxTerrainData.test2VoxABC(dcSpin);	//updates closestPointTestMat
 				
 				distanceForVox = distBetween4mats(playerCamera, closestPointTestMat);
 
@@ -4935,7 +4935,7 @@ var iterateMechanics = (function iterateMechanics(){
 				if (getHeightAboveTerrain2For4VecPos(bulletPos, dcSpin)<0){detonateBullet(bullet, true, [0.3,0.3,0.3,1]);}
 			}
 			if (worldInfo.duocylinderModel == "voxTerrain"){	//TODO generalise collision by specifying a function for terrain. (voxTerrain, procTerrain)
-				if (voxCollisionFunction(bulletPos, dcSpin)>0){detonateBullet(bullet, true, [0.5,0.5,0.5,1]);}
+				if (voxTerrainData.collisionFunction(bulletPos, dcSpin)>0){detonateBullet(bullet, true, [0.5,0.5,0.5,1]);}
 			}
 			if (worldInfo.seaActive){
 				if (getHeightAboveSeaFor4VecPos(bulletPos, lastSeaTime, dcSpin)<0){detonateBullet(bullet, true, [0.6,0.75,1,1]);}
