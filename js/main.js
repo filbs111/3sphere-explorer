@@ -2595,6 +2595,16 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			break;
 	}
 
+	//work around drawing portal cubemaps messing up subsequent drawing of portals.
+	//this is a problem likely introduced when moving the portal cubemap drawing code from before main scene, to here at the
+	//end, before using those cubemaps to draw portals. 
+	//without this, fog/atmos on portal (not drawn to the cube maps, but drawn when rendering the portal sphere to the main view
+	//is wrong. unclear whether this is the full story - fogging still appears too thick when very close to portal (should go to nothing
+	//as approach surface, transition thru portal when portal deep in atmos seems wrong too.
+	//TODO fix more properly - 
+	var savedWorldCamera = mat4.create(worldCamera);
+	var savedFogColor = localVecFogColor;
+
 	//draw multiple portals...
 	if (guiParams.reflector.draw){
 		if (isCubemapView){
@@ -2645,6 +2655,9 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 				gl.viewport( 0,0, viewSettings.width, viewSettings.height );
 				mat4.set(nonCmapPMatrix, pMatrix);	
 				frustumCull = nonCmapCullFunc;
+
+				mat4.set(savedWorldCamera, worldCamera);
+				localVecFogColor=savedFogColor;
 				drawPortal(activeReflectorShader, portalMat, meshToDraw, reflectorInfo, portalInCamera);
 			}
 
@@ -2665,6 +2678,9 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 				gl.viewport( 0,0, viewSettings.width, viewSettings.height );
 				mat4.set(nonCmapPMatrix, pMatrix);	
 				frustumCull = nonCmapCullFunc;
+
+				mat4.set(savedWorldCamera, worldCamera);
+				localVecFogColor=savedFogColor;
 				drawPortal(activeReflectorShader, portalMat2, meshToDraw, reflectorInfo2, portalInCamera2);
 			}
 		}
@@ -2684,17 +2700,14 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		
 		gl.uniform4fv(shaderProgram.uniforms.uColor, colorArrs.white);
 		gl.uniform4fv(shaderProgram.uniforms.uFogColor, localVecFogColor);
-		if (shaderProgram.uniforms.uReflectorDiffColor){
-			gl.uniform3fv(shaderProgram.uniforms.uReflectorDiffColor, localVecReflectorDiffColor);
-		}
+
 		if (shaderProgram.uniforms.uPlayerLightColor){
 			gl.uniform3fv(shaderProgram.uniforms.uPlayerLightColor, playerLight);
 		}
-		if (shaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
-			gl.uniform4f(shaderProgram.uniforms.uPortalCameraPos, portalInCamera[3], portalInCamera[7],portalInCamera[11],portalInCamera[15]);
-		}
+		
+		//TODO check that mvmatrix stacks up with worldCamera OK...
 		if (shaderProgram.uniforms.uPortalCameraPos){
-			gl.uniform4f(shaderProgram.uniforms.uPortalCameraPos, portalInCamera.slice(12));
+			gl.uniform4fv(shaderProgram.uniforms.uPortalCameraPos, portalInCamera.slice(12));
 		}
 		
 		mat4.set(portalInCamera, mvMatrix);
@@ -5842,10 +5855,7 @@ function drawDuocylinderObject(wSettings, duocylinderObj, zeroLevel, seaPeakines
 		gl.uniform1f(activeShaderProgram.uniforms.uZeroLevel, zeroLevel);
 		gl.uniform1f(activeShaderProgram.uniforms.uPeakiness, seaPeakiness);
 	}
-		
-	if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
-		gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, worldCamera.slice(12));
-	}
+	
 	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
 	performCommon4vecShaderSetup(activeShaderProgram, wSettings);
 	
