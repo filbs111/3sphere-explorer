@@ -35,7 +35,8 @@ var duocylinderObjects={
 	terrain:{divs:2,step:Math.PI},
 	procTerrain:{divs:1,step:2*Math.PI,isStrips:true},
 	sea:{divs:1,step:2*Math.PI,isStrips:true},
-	voxTerrain:{divs:2,step:Math.PI}
+	voxTerrain:{divs:2,step:Math.PI},
+	voxTerrain2:{divs:2,step:Math.PI}
 	//voxTerrain:{divs:1,step:2*Math.PI}
 	};
 
@@ -271,8 +272,10 @@ function initBuffers(){
 	loadDuocylinderBufferData(duocylinderObjects.procTerrain, proceduralTerrainData);
 	loadDuocylinderSeaBufferData(duocylinderObjects.sea, gridData);	//for use in a different shader. no precalculation of mapping to 4-verts
 	
-	loadGridData(voxTerrainData);	//TODO don't do this... - different shader like sea - either don't precalc 4-vec mapping, or store 3vec co-ords 
-	loadDuocylinderBufferData(duocylinderObjects.voxTerrain, voxTerrainData);
+	['voxTerrain','voxTerrain2'].forEach(x=>{
+		loadGridData(voxTerrainData[x]);	//TODO don't do this... - different shader like sea - either don't precalc 4-vec mapping, or store 3vec co-ords 
+		loadDuocylinderBufferData(duocylinderObjects[x], voxTerrainData[x]);
+	});
 	
 	function loadDuocylinderBufferData(bufferObj, sourceData){
 		bufferObj.vertexPositionBuffer = gl.createBuffer();
@@ -447,8 +450,12 @@ function initBuffers(){
 	
 	
 	randBoxBuffers.randMatrixBuffers = glBufferMatrixUniformDataForInstancedDrawing(randomMats);
-	randBoxBuffers.procTerrainMatrixBuffers = glBufferMatrixUniformDataForInstancedDrawing(procTerrainSurfaceParticleMats);
-	randBoxBuffers.voxTerrainMatrixBuffers = glBufferMatrixUniformDataForInstancedDrawing(voxTerrainData.surfaceParticleMats);
+
+	randBoxBuffers.forTerrain={};
+	randBoxBuffers.forTerrain['procTerrain']=glBufferMatrixUniformDataForInstancedDrawing(procTerrainSurfaceParticleMats);
+	['voxTerrain','voxTerrain2'].forEach(x=>{
+		randBoxBuffers.forTerrain[x] = glBufferMatrixUniformDataForInstancedDrawing(voxTerrainData[x].surfaceParticleMats);
+	});
 	
 	function glBufferMatrixUniformDataForInstancedDrawing(sourceMatArr){
 		//make a matrix buffer for instanced drawing of random boxes
@@ -1696,8 +1703,9 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
 			
 			var matrixBuffers = randBoxBuffers.randMatrixBuffers;	//todo neater selection code (array of terrain types?) TODO select mats array for other drawing types (eg indivVsMatmult)
-			if (worldInfo.duocylinderModel == 'procTerrain') {matrixBuffers = randBoxBuffers.procTerrainMatrixBuffers;}
-			if (worldInfo.duocylinderModel == 'voxTerrain') {matrixBuffers = randBoxBuffers.voxTerrainMatrixBuffers;}
+			if (['procTerrain','voxTerrain','voxTerrain2'].includes(worldInfo.duocylinderModel)) {
+				matrixBuffers = randBoxBuffers.forTerrain[worldInfo.duocylinderModel];
+			}
 			
 			/*
 			var attrIdx = activeShaderProgram.attributes.uMMatrix;
@@ -1885,7 +1893,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h *Math.sqrt(2), [1.0, 0.4, 1.0, 1.0], cubeBuffers);
 		}
 	
-		if (worldInfo.duocylinderModel == 'voxTerrain'){
+		if (['voxTerrain','voxTerrain2'].includes(worldInfo.duocylinderModel)){
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix, closestPointTestMat);
 			mat4.set(closestPointTestMat, mMatrix);
@@ -3498,6 +3506,10 @@ function initTexture(){
 	duocylinderObjects.voxTerrain.tex = nmapTexture;
 	duocylinderObjects.voxTerrain.usesTriplanarMapping=true;
 
+	duocylinderObjects.voxTerrain2.texB = diffuseTexture;
+	duocylinderObjects.voxTerrain2.tex = nmapTexture;
+	duocylinderObjects.voxTerrain2.usesTriplanarMapping=true;
+
 	//texture = makeTexture("img/ash_uvgrid01-grey.tiny.png");	//numbered grid
 
 	//for l3dt/cdlod terrain
@@ -3761,7 +3773,8 @@ function init(){
 	[0,1,2].forEach(nn=>{
 		var worldName = 'world'+nn;
 		var worldFolder = drawShapesFolder.addFolder(worldName);
-		worldFolder.add(guiParams[worldName], "duocylinderModel", ["grid","terrain","procTerrain",'voxTerrain','l3dt-brute','l3dt-blockstrips','none'] );
+		worldFolder.add(guiParams[worldName], "duocylinderModel", [
+			"grid","terrain","procTerrain",'voxTerrain','voxTerrain2','l3dt-brute','l3dt-blockstrips','none'] );
 		worldFolder.add(guiParams[worldName], "spinRate", -2.5,2.5,0.25);
 		worldFolder.add(guiParams[worldName], "seaActive" );
 		worldFolder.add(guiParams[worldName], "seaLevel", -0.05,0.05,0.005);
@@ -4543,8 +4556,8 @@ var iterateMechanics = (function iterateMechanics(){
 			if (worldInfo.seaActive){
 				distanceForTerrainNoise = getHeightAboveSeaFor4VecPos(playerPos, lastSeaTime, dcSpin);	//height. todo use distance (unimportant because sea gradient low
 			}
-			if (worldInfo.duocylinderModel == 'voxTerrain'){
-				voxTerrainData.test2VoxABC(dcSpin);	//updates closestPointTestMat
+			if (['voxTerrain','voxTerrain2'].includes(worldInfo.duocylinderModel)){
+				voxTerrainData[worldInfo.duocylinderModel].test2VoxABC(dcSpin);	//updates closestPointTestMat
 				
 				distanceForVox = distBetween4mats(playerCamera, closestPointTestMat);
 
@@ -4934,8 +4947,8 @@ var iterateMechanics = (function iterateMechanics(){
 			if (worldInfo.duocylinderModel == "l3dt-brute" || worldInfo.duocylinderModel == "l3dt-blockstrips"){
 				if (getHeightAboveTerrain2For4VecPos(bulletPos, dcSpin)<0){detonateBullet(bullet, true, [0.3,0.3,0.3,1]);}
 			}
-			if (worldInfo.duocylinderModel == "voxTerrain"){	//TODO generalise collision by specifying a function for terrain. (voxTerrain, procTerrain)
-				if (voxTerrainData.collisionFunction(bulletPos, dcSpin)>0){detonateBullet(bullet, true, [0.5,0.5,0.5,1]);}
+			if (['voxTerrain','voxTerrain2'].includes(worldInfo.duocylinderModel)){	//TODO generalise collision by specifying a function for terrain. (voxTerrain, procTerrain)
+				if (voxTerrainData[worldInfo.duocylinderModel].collisionFunction(bulletPos, dcSpin)>0){detonateBullet(bullet, true, [0.5,0.5,0.5,1]);}
 			}
 			if (worldInfo.seaActive){
 				if (getHeightAboveSeaFor4VecPos(bulletPos, lastSeaTime, dcSpin)<0){detonateBullet(bullet, true, [0.6,0.75,1,1]);}
