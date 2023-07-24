@@ -3557,10 +3557,13 @@ var mouseInfo = {
 var stats;
 
 var pointerLocked=false;
+
 var guiParams={
-	world0:{duocylinderModel:"l3dt-blockstrips",spinRate:0,spin:0,seaActive:true,seaLevel:0,seaPeakiness:0.0},
-	world1:{duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
-	world2:{duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
+	worlds:[
+		{duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:true,seaLevel:0,seaPeakiness:0.0},
+		{duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
+		{duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}
+	],
 	drawShapes:{
 		boxes:{
 		'y=z=0':false,	//x*x+w*w=1
@@ -3671,11 +3674,7 @@ var guiParams={
 	normalMove:0
 };
 
-var guiSettingsForWorld = [
-	guiParams.world0,
-	guiParams.world1,
-	guiParams.world2
-];
+var guiSettingsForWorld = guiParams.worlds;
 
 smoothGuiParams.add("8-cell scale", guiParams, "8-cell scale");
 
@@ -3770,15 +3769,15 @@ function init(){
 	});
 	var drawShapesFolder = gui.addFolder('drawShapes');
 
-	[0,1,2].forEach(nn=>{
+	guiParams.worlds.forEach((world,nn)=>{
 		var worldName = 'world'+nn;
 		var worldFolder = drawShapesFolder.addFolder(worldName);
-		worldFolder.add(guiParams[worldName], "duocylinderModel", [
+		worldFolder.add(world, "duocylinderModel", [
 			"grid","terrain","procTerrain",'voxTerrain','voxTerrain2','l3dt-brute','l3dt-blockstrips','none'] );
-		worldFolder.add(guiParams[worldName], "spinRate", -2.5,2.5,0.25);
-		worldFolder.add(guiParams[worldName], "seaActive" );
-		worldFolder.add(guiParams[worldName], "seaLevel", -0.05,0.05,0.005);
-		worldFolder.add(guiParams[worldName], "seaPeakiness", 0.0,0.5,0.01);
+		worldFolder.add(world, "spinRate", -2.5,2.5,0.25);
+		worldFolder.add(world, "seaActive" );
+		worldFolder.add(world, "seaLevel", -0.05,0.05,0.005);
+		worldFolder.add(world, "seaPeakiness", 0.0,0.5,0.01);
 	});
 
 	var boxesFolder = drawShapesFolder.addFolder('boxes');
