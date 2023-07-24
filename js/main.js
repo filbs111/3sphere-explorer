@@ -3560,9 +3560,9 @@ var pointerLocked=false;
 
 var guiParams={
 	worlds:[
-		{duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:true,seaLevel:0,seaPeakiness:0.0},
-		{duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
-		{duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}
+		{fogColor:'#dca985',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:true,seaLevel:0,seaPeakiness:0.0},
+		{fogColor:'#5cd5e6',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
+		{fogColor:'#55ee66',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}
 	],
 	drawShapes:{
 		boxes:{
@@ -3755,15 +3755,6 @@ function init(){
 	}
 	
 	var gui = new dat.GUI();
-	gui.addColor(guiParams, 'fogColor0').onChange(function(color){
-		setFog(0,color);
-	});
-	gui.addColor(guiParams, 'fogColor1').onChange(function(color){
-		setFog(1,color);
-	});
-	gui.addColor(guiParams, 'fogColor2').onChange(function(color){
-		setFog(2,color);
-	});
 	gui.addColor(guiParams, 'playerLight').onChange(function(color){
 		setPlayerLight(color);
 	});
@@ -3772,6 +3763,9 @@ function init(){
 	guiParams.worlds.forEach((world,nn)=>{
 		var worldName = 'world'+nn;
 		var worldFolder = drawShapesFolder.addFolder(worldName);
+		worldFolder.addColor(world, 'fogColor').onChange(function(color){
+			setFog(nn,color);
+		});
 		worldFolder.add(world, "duocylinderModel", [
 			"grid","terrain","procTerrain",'voxTerrain','voxTerrain2','l3dt-brute','l3dt-blockstrips','none'] );
 		worldFolder.add(world, "spinRate", -2.5,2.5,0.25);
@@ -3980,9 +3974,9 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	);
 	loadHeightmapTerrain(terrainSize, doUponTerrainInitialised);
 
-	setFog(0,guiParams.fogColor0);
-	setFog(1,guiParams.fogColor1);
-	setFog(2,guiParams.fogColor2);
+	for (var ii=0;ii<3;ii++){
+		setFog(ii,guiSettingsForWorld[ii].fogColor);
+	}
 	setAtmosThicknessMultiplier(guiParams.display.atmosThicknessMultiplier);
 	setPlayerLight(guiParams.playerLight);
     gl.enable(gl.DEPTH_TEST);
