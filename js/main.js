@@ -9,9 +9,6 @@ var fragDepth_ext;	//maybe pointless to store this, allegedly just need to call 
 var depthTex_ext;
 
 var myDebugStr = "TEST INFO TO GO HERE";
-var myfisheyedebug;
-//var mytestMat111;
-var testPortalDraw;
 
 function bufferArrayData(buffer, arr, size){
 	 bufferArrayDataGeneral(buffer, new Float32Array(arr), size);
@@ -727,7 +724,7 @@ function drawScene(frameTime){
 		if (!wentThrough){
 			xyzmove4mat(offsetPlayerCamera,offsetVec);
 		}
-		console.log(JSON.stringify({sshipWorld,numMoves,offsetCameraWorld:offsetCameraContainer.world}));
+		//console.log(JSON.stringify({sshipWorld,numMoves,offsetCameraWorld:offsetCameraContainer.world}));
 	}
 	
 	if (guiParams.display.stereo3d == "off"){
@@ -842,9 +839,7 @@ function drawScene(frameTime){
 			fisheyeParams.uInvF = uF.map(elem=>1/elem);
 			fisheyeParams.uVarOne = uVarOne;
 			fisheyeParams.uOversize = oversize;
-			
-			myfisheyedebug = fisheyeParams;	//TODO remove
-			
+						
 			initialRectilinearRender(oversizedViewport[0], oversizedViewport[1]);
 		}
 		if (guiParams.display.renderViaTexture == "blur" || guiParams.display.renderViaTexture == "blur-b" 
@@ -2738,8 +2733,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			mat4.multiply(matrixToPortal, reflectorInfo.shaderMatrix);
 				//result is still a bit glitchy. suspect because calculation of matrixToPortal isn't quite right - moves by 2*portal radius , which is fine if close to portal, but really should move by a little less than this (see calculation of portal cubemap camera position.)
 		
-		//for debugging
-			//mytestMat111 = matrixToPortal;
 			
 			gl.uniformMatrix4fv(shaderProgram.uniforms.uPortaledMatrix, false, matrixToPortal);
 		}
