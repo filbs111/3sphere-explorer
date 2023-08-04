@@ -816,10 +816,8 @@ function drawScene(frameTime){
 		
 		var sceneDrawingOutputView = rttStageOneView;
 
+		
 		if (isFisheyeShader(guiParams.display.renderViaTexture)){
-			//draw scene to a offscreen
-			gl.bindFramebuffer(gl.FRAMEBUFFER, rttStageOneView.framebuffer);
-			
 			var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
 			var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
 			
@@ -844,43 +842,33 @@ function drawScene(frameTime){
 			fisheyeParams.uInvF = uF.map(elem=>1/elem);
 			fisheyeParams.uVarOne = uVarOne;
 			fisheyeParams.uOversize = oversize;
-			//fisheyeParams.uInvSizeSourceTex = oversizedViewport.map(x=>1/x);
-
-			myfisheyedebug = fisheyeParams;	//TODO remove
-
-			gl.viewport( 0,0, oversizedViewport[0], oversizedViewport[1] );
-			setRttSize( rttStageOneView, oversizedViewport[0], oversizedViewport[1] );	//todo stop setting this repeatedly
 			
-			var viewSettings = {buf: rttStageOneView.framebuffer, width: oversizedViewport[0], height: oversizedViewport[1]}
-			var savedCamera = mat4.create(worldCamera);	//TODO don't instantiate!
-
-			var wSettings = drawWorldScene(frameTime, false, viewSettings);
-			mat4.set(savedCamera, worldCamera);	//set worldCamera back to savedCamera (might have been changed due to rendering portal cubemaps within drawWorldScene)
-
-			if (guiParams.display.drawTransparentStuff){
-				drawTransparentStuff(rttStageOneView, rttFisheyeView2, oversizedViewport[0], oversizedViewport[1], wSettings);
-				sceneDrawingOutputView = rttFisheyeView2;
-			}
+			myfisheyedebug = fisheyeParams;	//TODO remove
+			
+			initialRectilinearRender(oversizedViewport[0], oversizedViewport[1]);
 		}
 		if (guiParams.display.renderViaTexture == "blur" || guiParams.display.renderViaTexture == "blur-b" 
 			|| guiParams.display.renderViaTexture == "blur-b-use-alpha"){
+
+			initialRectilinearRender( gl.viewportWidth, gl.viewportHeight);
+		}
+		
+		function initialRectilinearRender(width, height){
 			gl.bindFramebuffer(gl.FRAMEBUFFER, rttStageOneView.framebuffer);
-			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );			//already set? maybe should add some buffer zone around image, 
-																				//but with clamp sampling, result should be OK.
-			setRttSize( rttStageOneView, gl.viewportWidth, gl.viewportHeight );	//todo stop setting this repeatedly
+			
+			gl.viewport( 0,0, width, height );
+			setRttSize( rttStageOneView, width, height );	//todo stop setting this repeatedly
 
-			var viewSettings = {buf: rttStageOneView.framebuffer, width: gl.viewportWidth, height: gl.viewportHeight}
+			var viewSettings = {buf: rttStageOneView.framebuffer, width, height};
 			var savedCamera = mat4.create(worldCamera);	//TODO don't instantiate!
-
 			var wSettings = drawWorldScene(frameTime, false, viewSettings);
 			mat4.set(savedCamera, worldCamera);	//set worldCamera back to savedCamera (might have been changed due to rendering portal cubemaps within drawWorldScene)
 
 			if (guiParams.display.drawTransparentStuff){
-				drawTransparentStuff(rttStageOneView, rttFisheyeView2, gl.viewportWidth, gl.viewportHeight, wSettings);
+				drawTransparentStuff(rttStageOneView, rttFisheyeView2, width, height, wSettings);
 				sceneDrawingOutputView = rttFisheyeView2;
 			}
 		}
-		
 		function drawTransparentStuff(fromView, toView, sizeX, sizeY, wSettings){
 			//switch to another view of same size, asign textures for existing rgb(a) and depth map, and draw these to new rgb(a), depth map (fullscreen quad)
 			// note that drawing depthmap maybe redundant because will be looking up depth map from texture to determine colours anyway, but might help with discarding pixels etc.
