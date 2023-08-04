@@ -991,20 +991,14 @@ function drawScene(frameTime){
 		bind2dTextureIfRequired(sceneDrawingOutputView.texture);	
 		
 		//draw the simple quad object to the screen
-		switch (guiParams.display.renderViaTexture){
-			case "basic":
-			case "fisheye-without-fxaa":
-			case "fisheye-with-integrated-fxaa":
+		switch (guiParams.display.renderLastStage){
+			case "simpleCopy":
 				activeProg = shaderPrograms.fullscreenTextured;break;
 			case "showAlpha":
 				activeProg = shaderPrograms.fullscreenTexturedShowAlphaChan;break;
-			case "bennyBox":
-			case "fisheye":
-			case "blur":
-			case "blur-b":
-			case "blur-b-use-alpha":
+			case "fxaa":
 				activeProg = shaderPrograms.fullscreenBennyBox;break;
-			case "bennyBoxLite":
+			case "fxaaSimple":
 				activeProg = shaderPrograms.fullscreenBennyBoxLite;break;
 		}
 		gl.useProgram(activeProg);
@@ -3634,6 +3628,7 @@ var guiParams={
 		eyeTurnIn:0.002,
 		showHud:true,
 		renderViaTexture:'blur-b-use-alpha',
+		renderLastStage:'fxaa',
 		drawTransparentStuff:true,
 		voxNmapTest:false,	//just show normal map. more efficient pix shader than standard. for performance check
 		terrainMapProject:false,
@@ -3834,7 +3829,8 @@ function init(){
 	displayFolder.add(guiParams.display, "eyeSepWorld", -0.001,0.001,0.0001);
 	displayFolder.add(guiParams.display, "eyeTurnIn", -0.01,0.01,0.0005);
 	displayFolder.add(guiParams.display, "showHud");
-	displayFolder.add(guiParams.display, "renderViaTexture", ['basic','showAlpha','bennyBoxLite','bennyBox','fisheye','fisheye-without-fxaa','fisheye-with-integrated-fxaa','blur','blur-b','blur-b-use-alpha']);
+	displayFolder.add(guiParams.display, "renderViaTexture", ['basic','fisheye-without-fxaa','fisheye-with-integrated-fxaa','blur','blur-b','blur-b-use-alpha']);
+	displayFolder.add(guiParams.display, "renderLastStage", ['simpleCopy','fxaa','fxaaSimple','showAlpha']);
 	displayFolder.add(guiParams.display, "drawTransparentStuff");
 	displayFolder.add(guiParams.display, "voxNmapTest");
 	displayFolder.add(guiParams.display, "terrainMapProject");
@@ -5913,7 +5909,7 @@ var randomNormalised3vec = (function generate3vecRandomiser(){
 })();
 
 function isFisheyeShader(shaderName){
-	return ['fisheye','fisheye-without-fxaa','fisheye-with-integrated-fxaa'].includes(shaderName);
+	return ['fisheye-without-fxaa','fisheye-with-integrated-fxaa'].includes(shaderName);
 }
 
 
