@@ -840,15 +840,22 @@ function drawScene(frameTime){
 			fisheyeParams.uVarOne = uVarOne;
 			fisheyeParams.uOversize = oversize;
 						
-			initialRectilinearRender(oversizedViewport[0], oversizedViewport[1]);
-		}
-		if (guiParams.display.renderViaTexture == "blur" || guiParams.display.renderViaTexture == "blur-b" 
+			initialRectilinearRender(oversizedViewport[0], oversizedViewport[1], rttFisheyeView2);
+		} else if (guiParams.display.renderViaTexture == "blur" || guiParams.display.renderViaTexture == "blur-b" 
 			|| guiParams.display.renderViaTexture == "blur-b-use-alpha"){
 
-			initialRectilinearRender( gl.viewportWidth, gl.viewportHeight);
+			initialRectilinearRender( gl.viewportWidth, gl.viewportHeight, rttFisheyeView2);
+		} else{
+			initialRectilinearRender( gl.viewportWidth, gl.viewportHeight, rttView);
 		}
 		
-		function initialRectilinearRender(width, height){
+		/**
+		 * 
+		 * @param {*} width 
+		 * @param {*} height 
+		 * @param {*} traspOutView to set sceneDrawingOutputView if drawing transparent stuff
+		 */
+		function initialRectilinearRender(width, height, traspOutView){
 			gl.bindFramebuffer(gl.FRAMEBUFFER, rttStageOneView.framebuffer);
 			
 			gl.viewport( 0,0, width, height );
@@ -860,10 +867,11 @@ function drawScene(frameTime){
 			mat4.set(savedCamera, worldCamera);	//set worldCamera back to savedCamera (might have been changed due to rendering portal cubemaps within drawWorldScene)
 
 			if (guiParams.display.drawTransparentStuff){
-				drawTransparentStuff(rttStageOneView, rttFisheyeView2, width, height, wSettings);
-				sceneDrawingOutputView = rttFisheyeView2;
+				drawTransparentStuff(rttStageOneView, traspOutView, width, height, wSettings);
+				sceneDrawingOutputView = traspOutView;
 			}
 		}
+
 		function drawTransparentStuff(fromView, toView, sizeX, sizeY, wSettings){
 			//switch to another view of same size, asign textures for existing rgb(a) and depth map, and draw these to new rgb(a), depth map (fullscreen quad)
 			// note that drawing depthmap maybe redundant because will be looking up depth map from texture to determine colours anyway, but might help with discarding pixels etc.
@@ -951,21 +959,6 @@ function drawScene(frameTime){
 			//gl.depthFunc(gl.LESS);
 
 			sceneDrawingOutputView = rttView;
-		} else {
-			gl.bindFramebuffer(gl.FRAMEBUFFER, rttStageOneView.framebuffer);
-			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
-			setRttSize( rttStageOneView, gl.viewportWidth, gl.viewportHeight );
-
-			var viewSettings = {buf: rttStageOneView.framebuffer, width: gl.viewportWidth, height: gl.viewportHeight}
-			var savedCamera = mat4.create(worldCamera);	//TODO don't instantiate!
-
-			var wSettings = drawWorldScene(frameTime, false, viewSettings);
-			mat4.set(savedCamera, worldCamera);	//set worldCamera back to savedCamera (might have been changed due to rendering portal cubemaps within drawWorldScene)
-
-			if (guiParams.display.drawTransparentStuff){
-				drawTransparentStuff(rttStageOneView, rttView, gl.viewportWidth, gl.viewportHeight, wSettings);
-				sceneDrawingOutputView = rttView;
-			}
 		}
 		
 		//draw quad to screen using drawn texture
