@@ -59,5 +59,4 @@ void main(void) {
     vec4 MIDv4 = texture2DProj(uSampler, vec3(1.0,1.0,2.0)*centrePoint );
     
     gl_FragColor = MIDv4;
-    gl_FragColor.a=1.;	//ensure alpha 1 so non-fullscreen looks same as fullscreen (otherwise white)
 }
