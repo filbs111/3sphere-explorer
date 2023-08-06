@@ -814,7 +814,7 @@ function drawScene(frameTime){
 		var sceneDrawingOutputView = rttStageOneView;
 
 		
-		if (isFisheyeShader(guiParams.display.renderViaTexture)){
+		if (guiParams.display.renderViaTexture == "fisheye"){
 			var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
 			var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
 			
@@ -901,14 +901,14 @@ function drawScene(frameTime){
 		
 		var activeProg;
 		
-		if ( isFisheyeShader(guiParams.display.renderViaTexture) ){
+		if ( guiParams.display.renderViaTexture == "fisheye" ){
 			//draw scene to penultimate screen (before FXAA)
 			gl.bindFramebuffer(gl.FRAMEBUFFER, rttView.framebuffer);
 			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
 			setRttSize( rttView, gl.viewportWidth, gl.viewportHeight );
 
 			bind2dTextureIfRequired(sceneDrawingOutputView.texture);	
-			activeProg = (guiParams.display.renderViaTexture == 'fisheye-with-integrated-fxaa') ? shaderPrograms.fullscreenTexturedFisheyeWithFxaa : shaderPrograms.fullscreenTexturedFisheye;
+			activeProg = shaderPrograms.fullscreenTexturedFisheye;
 			gl.useProgram(activeProg);
 			enableDisableAttributes(activeProg);
 			gl.cullFace(gl.BACK);
@@ -3803,7 +3803,7 @@ function init(){
 	displayFolder.add(guiParams.display, "eyeSepWorld", -0.001,0.001,0.0001);
 	displayFolder.add(guiParams.display, "eyeTurnIn", -0.01,0.01,0.0005);
 	displayFolder.add(guiParams.display, "showHud");
-	displayFolder.add(guiParams.display, "renderViaTexture", ['basic','fisheye-without-fxaa','fisheye-with-integrated-fxaa','blur','blur-b','blur-b-use-alpha']);
+	displayFolder.add(guiParams.display, "renderViaTexture", ['basic','fisheye','blur','blur-b','blur-b-use-alpha']);
 	displayFolder.add(guiParams.display, "renderLastStage", ['simpleCopy','fxaa','fxaaSimple','showAlpha']);
 	displayFolder.add(guiParams.display, "drawTransparentStuff");
 	displayFolder.add(guiParams.display, "voxNmapTest");
@@ -5881,11 +5881,6 @@ var randomNormalised3vec = (function generate3vecRandomiser(){
 		return vec;
 	}
 })();
-
-function isFisheyeShader(shaderName){
-	return ['fisheye-without-fxaa','fisheye-with-integrated-fxaa'].includes(shaderName);
-}
-
 
 
 //TODO pass in relevant args (or move to inside of some IIFE with relevant globals...)
