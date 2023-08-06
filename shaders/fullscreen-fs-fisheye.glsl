@@ -1,7 +1,10 @@
+#extension GL_EXT_frag_depth : enable
 precision mediump float;
 
 varying vec2 vTextureCoord;
 uniform sampler2D uSampler;
+uniform sampler2D uSamplerDepthmap;
+
 uniform vec2 uInvSize;
 uniform vec2 uInvF;
 uniform float uOversize;
@@ -59,4 +62,7 @@ void main(void) {
     vec4 MIDv4 = texture2DProj(uSampler, vec3(1.0,1.0,2.0)*centrePoint );
     
     gl_FragColor = MIDv4;
+
+    gl_FragDepthEXT = texture2DProj(uSamplerDepthmap, vec3(1.0,1.0,2.0)*centrePoint ).r;
+    //^unnecessary if decide to use alpha to contain depth info for input to blur
 }

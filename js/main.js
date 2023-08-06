@@ -809,12 +809,9 @@ function drawScene(frameTime){
 	}
 	
 		
-		var fisheyeParams={};
-		
-		var sceneDrawingOutputView = rttStageOneView;
+		var sceneDrawingOutputView;
 
-		
-		if (guiParams.display.renderViaTexture == "fisheye"){
+		if (guiParams.display.fisheyeEnabled){
 			var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
 			var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
 			
@@ -836,17 +833,51 @@ function drawScene(frameTime){
 			oversize = Math.min(oversize,4.0);
 			var oversizedViewport = [ 2*Math.floor(oversize*gl.viewportWidth/2),  2*Math.floor(oversize*gl.viewportHeight/2)];
 
-			fisheyeParams.uInvF = uF.map(elem=>1/elem);
-			fisheyeParams.uVarOne = uVarOne;
-			fisheyeParams.uOversize = oversize;
+			var fisheyeParams={
+				uInvF : uF.map(elem=>1/elem),
+				uVarOne : uVarOne,
+				uOversize : oversize
+			}
 						
-			initialRectilinearRender(oversizedViewport[0], oversizedViewport[1], rttFisheyeView2);
+			initialRectilinearRender(oversizedViewport[0], oversizedViewport[1], rttFisheyeRectRenderOutput, rttFisheyeRectRenderOutput2);
+		
+			//do fisheye mapping (before possible blur, FXAA)
+			var outView = rttStageOneView;		//just bind to next stage. 
+				//TODO bind rttView if will skip blur stage.
+
+			gl.bindFramebuffer(gl.FRAMEBUFFER, outView.framebuffer);
+			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
+			setRttSize( outView, gl.viewportWidth, gl.viewportHeight );
+
+			bind2dTextureIfRequired(sceneDrawingOutputView.texture);	//old output view.
+			bind2dTextureIfRequired(sceneDrawingOutputView.depthTexture,gl.TEXTURE2);
+				//^^ not needed if using alpha for blur
+
+			activeProg = shaderPrograms.fullscreenTexturedFisheye;
+			gl.useProgram(activeProg);
+			enableDisableAttributes(activeProg);
+			gl.cullFace(gl.BACK);
+			
+			//if (activeProg.uniforms.uInvF){	//used for fisheye TODO lose IF?
+			gl.uniform2fv(activeProg.uniforms.uInvF, fisheyeParams.uInvF);
+			//}
+			gl.uniform1f(activeProg.uniforms.uVarOne, fisheyeParams.uVarOne);
+			gl.uniform1f(activeProg.uniforms.uOversize, fisheyeParams.uOversize);
+			
+			gl.uniform1i(activeProg.uniforms.uSampler, 0);	
+			gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);	
+			gl.uniform2f(activeProg.uniforms.uInvSize, 1/gl.viewportWidth , 1/gl.viewportHeight);		
+			gl.depthFunc(gl.ALWAYS);
+			drawObjectFromBuffers(fsBuffers, activeProg);
+			//gl.depthFunc(gl.LESS);
+
+			sceneDrawingOutputView = outView;
+
 		} else if (guiParams.display.renderViaTexture == "blur" || guiParams.display.renderViaTexture == "blur-b" 
 			|| guiParams.display.renderViaTexture == "blur-b-use-alpha"){
-
-			initialRectilinearRender( gl.viewportWidth, gl.viewportHeight, rttFisheyeView2);
+			initialRectilinearRender( gl.viewportWidth, gl.viewportHeight, rttStageOneView, rttFisheyeView2);
 		} else{
-			initialRectilinearRender( gl.viewportWidth, gl.viewportHeight, rttView);
+			initialRectilinearRender( gl.viewportWidth, gl.viewportHeight, rttStageOneView, rttView);
 		}
 		
 		/**
@@ -855,19 +886,20 @@ function drawScene(frameTime){
 		 * @param {*} height 
 		 * @param {*} traspOutView to set sceneDrawingOutputView if drawing transparent stuff
 		 */
-		function initialRectilinearRender(width, height, traspOutView){
-			gl.bindFramebuffer(gl.FRAMEBUFFER, rttStageOneView.framebuffer);
+		function initialRectilinearRender(width, height, initialOutView, traspOutView){
+			sceneDrawingOutputView = initialOutView;
+			gl.bindFramebuffer(gl.FRAMEBUFFER, initialOutView.framebuffer);
 			
 			gl.viewport( 0,0, width, height );
-			setRttSize( rttStageOneView, width, height );	//todo stop setting this repeatedly
+			setRttSize( initialOutView, width, height );	//todo stop setting this repeatedly
 
-			var viewSettings = {buf: rttStageOneView.framebuffer, width, height};
+			var viewSettings = {buf: initialOutView.framebuffer, width, height};
 			var savedCamera = mat4.create(worldCamera);	//TODO don't instantiate!
 			var wSettings = drawWorldScene(frameTime, false, viewSettings);
 			mat4.set(savedCamera, worldCamera);	//set worldCamera back to savedCamera (might have been changed due to rendering portal cubemaps within drawWorldScene)
 
 			if (guiParams.display.drawTransparentStuff){
-				drawTransparentStuff(rttStageOneView, traspOutView, width, height, wSettings);
+				drawTransparentStuff(initialOutView, traspOutView, width, height, wSettings);
 				sceneDrawingOutputView = traspOutView;
 			}
 		}
@@ -901,35 +933,7 @@ function drawScene(frameTime){
 		
 		var activeProg;
 		
-		if ( guiParams.display.renderViaTexture == "fisheye" ){
-			//draw scene to penultimate screen (before FXAA)
-			gl.bindFramebuffer(gl.FRAMEBUFFER, rttView.framebuffer);
-			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
-			setRttSize( rttView, gl.viewportWidth, gl.viewportHeight );
-
-			bind2dTextureIfRequired(sceneDrawingOutputView.texture);	
-			activeProg = shaderPrograms.fullscreenTexturedFisheye;
-			gl.useProgram(activeProg);
-			enableDisableAttributes(activeProg);
-			gl.cullFace(gl.BACK);
-			
-			//if (activeProg.uniforms.uInvF){	//used for fisheye TODO lose IF?
-			gl.uniform2fv(activeProg.uniforms.uInvF, fisheyeParams.uInvF);
-			//}
-
-			gl.uniform1f(activeProg.uniforms.uVarOne, fisheyeParams.uVarOne);
-			gl.uniform1f(activeProg.uniforms.uOversize, fisheyeParams.uOversize);
-			
-			gl.uniform1i(activeProg.uniforms.uSampler, 0);	
-			gl.uniform2f(activeProg.uniforms.uInvSize, 1/gl.viewportWidth , 1/gl.viewportHeight);		
-			// if (activeProg.uniforms.uInvSizeSourceTex){gl.uniform2fv(activeProg.uniforms.uInvSizeSourceTex, fisheyeParams.uInvSizeSourceTex);}
-
-			gl.depthFunc(gl.ALWAYS);
-			drawObjectFromBuffers(fsBuffers, activeProg);
-			//gl.depthFunc(gl.LESS);
-
-			sceneDrawingOutputView = rttView;
-		} else if (guiParams.display.renderViaTexture == "blur" || guiParams.display.renderViaTexture == "blur-b"
+		if (guiParams.display.renderViaTexture == "blur" || guiParams.display.renderViaTexture == "blur-b"
 			|| guiParams.display.renderViaTexture == "blur-b-use-alpha"){
 					//TODO depth aware blur. for now, simple
 			//draw scene to penultimate screen (before FXAA)
@@ -3601,6 +3605,7 @@ var guiParams={
 		eyeSepWorld:0.0004,	//half distance between eyes in game world
 		eyeTurnIn:0.002,
 		showHud:true,
+		fisheyeEnabled:true,
 		renderViaTexture:'blur-b-use-alpha',
 		renderLastStage:'fxaa',
 		drawTransparentStuff:true,
@@ -3803,7 +3808,8 @@ function init(){
 	displayFolder.add(guiParams.display, "eyeSepWorld", -0.001,0.001,0.0001);
 	displayFolder.add(guiParams.display, "eyeTurnIn", -0.01,0.01,0.0005);
 	displayFolder.add(guiParams.display, "showHud");
-	displayFolder.add(guiParams.display, "renderViaTexture", ['basic','fisheye','blur','blur-b','blur-b-use-alpha']);
+	displayFolder.add(guiParams.display, "fisheyeEnabled");
+	displayFolder.add(guiParams.display, "renderViaTexture", ['basic','blur','blur-b','blur-b-use-alpha']);
 	displayFolder.add(guiParams.display, "renderLastStage", ['simpleCopy','fxaa','fxaaSimple','showAlpha']);
 	displayFolder.add(guiParams.display, "drawTransparentStuff");
 	displayFolder.add(guiParams.display, "voxNmapTest");
@@ -3930,6 +3936,9 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	fragDepth_ext = gl.getExtension('EXT_frag_depth');
 	depthTex_ext = gl.getExtension('WEBGL_depth_texture');
 	
+	initTextureFramebuffer(rttFisheyeRectRenderOutput);
+	initTextureFramebuffer(rttFisheyeRectRenderOutput2);
+
 	initTextureFramebuffer(rttView);
 	initTextureFramebuffer(rttStageOneView, true);
 	initTextureFramebuffer(rttFisheyeView2);
@@ -5588,6 +5597,8 @@ function smokeGuns(){
 //rtt code from webgl-wideanglecamera project via webglPostprocess project
 
 //from http://learningwebgl.com/blog/?p=1786
+var rttFisheyeRectRenderOutput={};
+var rttFisheyeRectRenderOutput2={};
 var rttView={};
 var rttStageOneView={};
 var rttFisheyeView2={};
