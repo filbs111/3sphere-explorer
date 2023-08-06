@@ -59,6 +59,7 @@ var teapotBuffers={};
 var pillarBuffers={};
 var sshipBuffers={};
 var gunBuffers={};
+var su57Buffers={};
 var icoballBuffers={};
 var hyperboloidBuffers={};
 var meshSphereBuffers={};
@@ -371,6 +372,8 @@ function initBuffers(){
 	loadBuffersFromObjFile(pillarBuffers, "./data/pillar/pillar.obj", loadBufferData);
 	loadBuffersFromObjFile(sshipBuffers, "./data/spaceship/sship-pointyc-tidy1-uv3-2020b-cockpit1b-yz-2020-10-04.obj", loadBufferData);
 	loadBuffersFromObjFile(gunBuffers, "./data/cannon/cannon-pointz-yz.obj", loadBufferData);
+	loadBuffersFromObjFile(su57Buffers, "./data/miscobjs/t50/su57yz-4a.obj", loadBufferData);
+
 	loadBuffersFromObjFile(meshSphereBuffers, "./data/miscobjs/mesh-sphere.obj", loadBufferData);
 
 	var thisMatT;
@@ -2283,13 +2286,27 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 
 	}
 	
-	var drawFunc = guiParams["draw spaceship"]? drawSpaceship : drawBall;
+	var drawFunc = {
+		"spaceship" : drawSpaceship,
+		"plane": drawPlane,
+		"ball": drawBall
+	}[guiParams["player model"]];
 	
 	if (sshipDrawMatrix){
 		drawFunc(sshipDrawMatrix);
 	}
 	
 	function drawSpaceship(matrix){
+		drawPlayerGradlightObject(matrix, sshipBuffers, sshipTexture, sshipTexture2, sshipModelScale, 1,true);
+			//TODO use object that doesn't require scaling
+	}
+
+	function drawPlane(matrix){
+		drawPlayerGradlightObject(matrix, su57Buffers, su57texture, su57texture2, 0.006, -1,false);
+	}
+
+	function drawPlayerGradlightObject(matrix, buffers, tex, tex2, modelScale, lightBodge, includeGuns){
+
 		var rotatedMatrix = drawSsshipRotatedMat;	//avoid repeatedly looking up global scope variables
 		var inverseSshipMat = drawSsshipInverseSshipMat; //""
 
@@ -2298,8 +2315,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		activeShaderProgram = shaderPrograms.texmapPerPixelDiscardAtmosGradLight[guiParams.display.atmosShader];
 		gl.useProgram(activeShaderProgram);
 		
-		bind2dTextureIfRequired(sshipTexture);	
-		bind2dTextureIfRequired(sshipTexture2, gl.TEXTURE2);
+		bind2dTextureIfRequired(tex);	
+		bind2dTextureIfRequired(tex2, gl.TEXTURE2);
 		
 		//set uniforms - todo generalise this code (using for many shaders)
 		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
@@ -2310,7 +2327,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 		}
 		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
-		
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
 		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 		
@@ -2321,7 +2337,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		mat4.set(matrix, rotatedMatrix);	//because using rotated model data for sship model
 		xyzrotate4mat(rotatedMatrix, [-Math.PI/2,0,0]); 
 		
-		modelScale=sshipModelScale;	//TODO use object that doesn't require scaling
 		//gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.gray);
 		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
@@ -2339,7 +2354,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		xyzrotate4mat(tmpPortalMat, [-Math.PI/2,0,0]); 
 		mat4.multiply(ssmCopy, tmpPortalMat);
 		mat4.transpose(ssmCopy);
-		gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame, ssmCopy[3],ssmCopy[7],ssmCopy[11]);
+		gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame, lightBodge*ssmCopy[3],lightBodge*ssmCopy[7],lightBodge*ssmCopy[11]);
 
 		mat4.set(matrix, ssmCopy);
 		xyzrotate4mat(ssmCopy, [-Math.PI/2,0,0]); 
@@ -2348,7 +2363,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		xyzrotate4mat(tmpPortalMat, [-Math.PI/2,0,0]); 
 		mat4.multiply(ssmCopy, tmpPortalMat);
 		mat4.transpose(ssmCopy);
-		gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame2, ssmCopy[3],ssmCopy[7],ssmCopy[11]);
+		gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame2, lightBodge*ssmCopy[3],lightBodge*ssmCopy[7],lightBodge*ssmCopy[11]);
 
 
 		
@@ -2357,12 +2372,12 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		mat4.multiply(mvMatrix,rotatedMatrix);
 		mat4.set(rotatedMatrix, mMatrix);
 
-		if (sshipBuffers.isLoaded){
-			drawObjectFromBuffers(sshipBuffers, activeShaderProgram);
+		if (buffers.isLoaded){
+			drawObjectFromBuffers(buffers, activeShaderProgram);
 		}
 		
 		//draw guns
-		if (gunBuffers.isLoaded){
+		if (includeGuns && gunBuffers.isLoaded){
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix,matrix);
 			mat4.set(matrix, mMatrix);
@@ -2426,11 +2441,15 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		
 	}
 	
-	
+	//draw "light" object
 	function drawBall(matrix){
-		//draw "light" object
+		drawSimplePlayerObject(matrix, sphereBuffers, 1);
+	}
+
+	function drawSimplePlayerObject(matrix, objectBuffers, scaleFactor){
 		var sphereRad = settings.playerBallRad;
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, sphereRad,sphereRad,sphereRad);
+		var objScale= sphereRad* scaleFactor;
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, objScale,objScale,objScale);
 		var voxColliding = (voxCollisionCentralLevel>0) || (distBetween4mats(playerCamera, closestPointTestMat) < sphereRad); 
 						//sphere centre inside voxel volume OR sphere intersects with voxel zero surface.
 			//note could just have a simple signed distance, of vox field value divided by magnitide of gradient. however, current gradient is in abc space. TODO make work with this clunky version, then try abc-> player space gradient conversion, check results are consistent.
@@ -2440,7 +2459,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,	matrix);
 		if (frustumCull(mvMatrix,sphereRad)){
-			drawObjectFromBuffers(sphereBuffers, shaderProgramColored);
+			drawObjectFromBuffers(objectBuffers, shaderProgramColored);
 		}
 	}
 	
@@ -3468,6 +3487,9 @@ function initTexture(){
 	sshipTexture2 = makeTexture("data/spaceship/spaceship-otherlights-2020-10-04a.png");	//""
 	cannonTexture = makeTexture("data/cannon/cannon-pointz-combo.png");
 	
+	su57texture = makeTexture("data/miscobjs/t50/TexCombo4.png");
+	su57texture2 = makeTexture("data/miscobjs/t50/black.png");	//TODO add thruster texture
+
 	randBoxBuffers.tex=texture;
 	towerBoxBuffers.tex=nmapTexture;towerBoxBuffers.texB=diffuseTexture;
 	stonehengeBoxBuffers.tex=texture;stonehengeBoxBuffers.texB=diffuseTexture;
@@ -3575,7 +3597,7 @@ var guiParams={
 	"24-cell scale":1,
 	"draw 120-cell":false,
 	"draw 600-cell":true,
-	"draw spaceship":true,
+	"player model":"spaceship",
 	"drop spaceship":false,
 	target:{
 		type:"none",
@@ -3783,7 +3805,7 @@ function init(){
 	polytopesFolder.add(guiParams,"24-cell scale",0.05,2.0,0.05);
 	polytopesFolder.add(guiParams,"draw 120-cell");
 	polytopesFolder.add(guiParams,"draw 600-cell");
-	gui.add(guiParams,"draw spaceship",true);
+	gui.add(guiParams,"player model", ["spaceship","plane","ball"]);
 	gui.add(guiParams, "drop spaceship",false);
 	
 	var targetFolder = gui.addFolder('target');
@@ -4255,8 +4277,6 @@ var iterateMechanics = (function iterateMechanics(){
 				playerAngVelVec[2]+=debugRoll*guiParams.control.sriMechStr*multFactor*timeStepMultiplier;
 			}
 		
-		
-			var fractionToMove = 1;
 			if (guiParams.control.smoothMouse == 0 ){
 				fractionToKeep=0;
 			}else{
@@ -4377,6 +4397,52 @@ var iterateMechanics = (function iterateMechanics(){
 			//get the current atmospheric density.
 			var atmosThick = 0.001*guiParams.display.atmosThickness;	//1st constant just pulled out of the air. 
 			atmosThick*=Math.pow(2.71, guiParams.display.atmosContrast*(playerPos[0]*playerPos[0] + playerPos[1]*playerPos[1] -0.5)); //as atmosScale increases, scale height decreases
+
+
+
+
+			
+			if (guiParams["player model"] == "plane"){
+				//TODO resolve issues
+				// take into account air velocity due to duocylinder spin
+				// Too much lift?
+				// odd behaviour when travelling backward
+
+				//lift
+				//function of alpha/ pitch angle of attack and airflow.
+				//is relevant speed total, or in direction of flight?
+				var forwardSpeed = airSpdVec[2];	//sign? what if flying backwards? should take abs?
+				var upspeed = airSpdVec[1];	//sign?
+				var alpha = Math.atan2(upspeed,forwardSpeed);
+				var mappedAlpha = alpha / (1 + 2*alpha*alpha);	//something that's linear around 0, goes to 0 for large values.
+				var lift = forwardSpeed * atmosThick * mappedAlpha;
+
+				if (Math.random()*100 < 1){
+					//console.log({alpha, mappedAlpha});
+				}
+
+				airSpdVec[1] -= 200*lift;
+				
+				//stabilisation
+				//plane tends to point towards direction of flight.
+				playerAngVelVec[0] += 1000*lift;
+
+				//function of beta/ turn angle of attack, airflow
+				var sidespeed = airSpdVec[0];
+				var beta = Math.atan2(sidespeed,forwardSpeed);
+				var mappedBeta = beta / (1 + 2*beta*beta);	//?
+				var sideLift = forwardSpeed * atmosThick * mappedBeta;	//TODO does this make sense?
+				
+				airSpdVec[0] -= 50*sideLift;	
+				playerAngVelVec[1] -= 2000*sideLift;
+
+				//tendency to roll right when turning right (outer wing is faster).
+				//this will affect AOA for each wing (and so will reduce outside central linear part of lift curve)
+				//but for now, just add some simple force
+				var turnSpeed = playerAngVelVec[1];
+				playerAngVelVec[2] -= 0.1*atmosThick*turnSpeed;
+			}
+
 
 			//want to be able to steer in the air. todo properly - guess maybe wants "lift" from wings, but easiest implementation guess is to increase drag for lateral velocity.
 			//would like for both left/right, up/down velocity, but to test, try getting just one - like a aeroplane.
