@@ -16,6 +16,7 @@
 	uniform vec4 uReflectorPos;
 	uniform vec4 uReflectorPos2;
 	uniform float uReflectorCos;
+	uniform float uReflectorCos2;
 	uniform float uSpecularStrength;
 	uniform float uSpecularPower;
 
@@ -53,7 +54,7 @@
 #endif
 
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
-		float posCosDiff2 = dot(normalize(transformedCoord),uReflectorPos2) - uReflectorCos;
+		float posCosDiff2 = dot(normalize(transformedCoord),uReflectorPos2) - uReflectorCos2;
 		
 		if (posCosDiff>0.0){
 			discard;

@@ -11,6 +11,7 @@
 	uniform vec4 uReflectorPos;
 	uniform vec4 uReflectorPos2;
 	uniform float uReflectorCos;
+	uniform float uReflectorCos2;
 #ifdef VEC_ATMOS_THICK
 	varying vec3 fog;
 #else	
@@ -28,7 +29,7 @@
 			discard;
 		}
 
-		float posCosDiff2 = dot(normalize(transformedCoord),uReflectorPos2) - uReflectorCos;
+		float posCosDiff2 = dot(normalize(transformedCoord),uReflectorPos2) - uReflectorCos2;
 		if (posCosDiff2>0.0){
 			discard;	//unnecessary if, when viewing thru portal, ensure is other one.
 		}

@@ -19,6 +19,7 @@
 	uniform vec4 uReflectorPos;
 	uniform vec4 uReflectorPos2;
 	uniform float uReflectorCos;
+	uniform float uReflectorCos2;
 	varying vec4 adjustedPos;
 	varying vec4 transformedNormal;	
 	varying vec4 transformedCoord;	
@@ -35,7 +36,7 @@
 			discard;
 		}
 
-		float posCosDiff2 = dot(normalize(transformedCoord),uReflectorPos2) - uReflectorCos;
+		float posCosDiff2 = dot(normalize(transformedCoord),uReflectorPos2) - uReflectorCos2;
 		if (posCosDiff2>0.0){
 			discard;	//unnecessary if, when viewing thru portal, ensure is other one.
 		}
@@ -63,7 +64,7 @@
 		//maybe quadratic gradient light will be significant improvement (but may require many textures)
 		//float gradRange = 1.0 / (1.0 + 3.0*dot(posCosDiff,posCosDiff));
 		float gradRange = (1.-uReflectorCos)/(1.-uReflectorCos - posCosDiff);	//~ r^2/x^2 falloff (since 1-cos(x)~x^2)
-		float gradRange2 = (1.-uReflectorCos)/(1.-uReflectorCos - posCosDiff2);
+		float gradRange2 = (1.-uReflectorCos2)/(1.-uReflectorCos2 - posCosDiff2);
 
 		vec3 averageLight = uFogColor.xyz + uReflectorDiffColor * 0.5*gradRange + uReflectorDiffColor2 * 0.5*gradRange2;
 

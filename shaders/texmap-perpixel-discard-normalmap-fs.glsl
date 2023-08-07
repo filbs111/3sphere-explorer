@@ -10,6 +10,7 @@
 	uniform vec4 uReflectorPos;
 	uniform vec4 uReflectorPos2;
 	uniform float uReflectorCos;
+	uniform float uReflectorCos2;
 	varying vec4 adjustedPos;
 	varying vec4 transformedNormal;	
 	varying vec4 transformedCoord;
@@ -22,7 +23,7 @@
 		if (posCosDiff>0.0){
 			discard;
 		}
-		float posCosDiff2 = dot(normalize(transformedCoord),uReflectorPos2) - uReflectorCos;
+		float posCosDiff2 = dot(normalize(transformedCoord),uReflectorPos2) - uReflectorCos2;
 	
 		if (posCosDiff2>0.0){
 			discard;	//unneeded if ensure, when looking thru portal, that it's the other one.

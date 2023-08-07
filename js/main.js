@@ -558,7 +558,7 @@ var reflectorInfo2={
 	rad:0.5
 };
 
-function calcReflectionInfo(toReflect,resultsObj){
+function calcReflectionInfo(toReflect,resultsObj, reflectorRad){
 	//use player position directly. expect to behave like transparent
 	var cubeViewShift = [toReflect[12],toReflect[13],toReflect[14]];	
 	var magsq = 1- toReflect[15]*toReflect[15];
@@ -566,11 +566,9 @@ function calcReflectionInfo(toReflect,resultsObj){
 	
 	//console.log("w: " + playerCamera[15]);
 	var angle = Math.acos(toReflect[15]);	//from centre of portal to player
-	var reflectionCentreTanAngle = 	reflectorInfo.rad/ ( 2 - ( reflectorInfo.rad/Math.tan(angle) ) );
+	var reflectionCentreTanAngle = 	reflectorRad/ ( 2 - ( reflectorRad/Math.tan(angle) ) );
 		//note could do tan(angle) directly from playerCamera[15] bypassing calculating angle		
-		
-		//note using reflectorInfo.rad, but also typically passing in reflectorInfo and storing stuff on it! TODO tidy- maybe buggy
-	
+
 	var mag = Math.sqrt(magsq);
 	//var correctionFactor = -angle/mag;
 	
@@ -583,7 +581,7 @@ function calcReflectionInfo(toReflect,resultsObj){
 	
 	//position within spherical reflector BEFORE projection
 	var correctionFactorB = reflectionCentreTanAngle/mag;
-	correctionFactorB/=reflectorInfo.rad;
+	correctionFactorB/=reflectorRad;
 	resultsObj.centreTanAngleVectorScaled = cubeViewShift.map(function(val){return -val*correctionFactorB});
 
 	var reflectShaderMatrix = mat4.identity();
@@ -668,9 +666,6 @@ function drawScene(frameTime){
 	stats.begin();
 	
 	smoothGuiParams.update();
-	
-	reflectorInfo.rad = guiParams.reflector.draw!="none" ? guiParams.reflector.scale : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
-	reflectorInfo2.rad = reflectorInfo.rad;
 
 	offsetCameraContainer.world = playerContainer.world;
 	
@@ -702,7 +697,8 @@ function drawScene(frameTime){
 			//TODO rewrite less stupidly (don't check within range then redo calculation right away!!)
 			var isWithinAPortal = false;
 			for (var pp=0;pp<portalsForThisWorld.length;pp++){
-				isWithinAPortal ||= checkWithinRangeOfGivenPortal({matrix:tmp4mat,world:sshipWorld}, reflectorInfo.rad, portalsForThisWorld[pp]);
+				var portal = portalsForThisWorld[pp];
+				isWithinAPortal ||= checkWithinRangeOfGivenPortal({matrix:tmp4mat,world:sshipWorld}, portal.shared.radius, portal);
 				//TODO separate reflectorInfo per portal
 			}
 
@@ -729,7 +725,10 @@ function drawScene(frameTime){
 		}
 		//console.log(JSON.stringify({sshipWorld,numMoves,offsetCameraWorld:offsetCameraContainer.world}));
 	}
-	
+	var portalsForThisWorldX = portalsForWorld[offsetCameraContainer.world];
+	reflectorInfo.rad = guiParams.reflector.draw!="none" ? portalsForThisWorldX[0].shared.radius : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
+	reflectorInfo2.rad = guiParams.reflector.draw!="none" ? portalsForThisWorldX[1].shared.radius : 0;
+
 	if (guiParams.display.stereo3d == "off"){
 		drawSceneToScreen(offsetPlayerCamera, {left:0,top:0,width:gl.viewportWidth,height:gl.viewportHeight});
 	}else{
@@ -775,19 +774,20 @@ function drawScene(frameTime){
 		//TODO reorganise/tidy code, reduce duplication
 		//TODO user mat4.set (or write some abstraction to make it obvious (and know) which argument is to, from!)
 
-	mat4.multiply(portalInCameraCopy, portalsForWorld[offsetCameraContainer.world][0].matrix); //TODO is offsetCameraContainer.world updated yet?
+	var portals = portalsForWorld[offsetCameraContainer.world];
+	mat4.multiply(portalInCameraCopy, portals[0].matrix); //TODO is offsetCameraContainer.world updated yet?
 																				//if not may see 1 frame glitch on crossing
 	mat4.transpose(portalInCameraCopy);
 
 	//mat4.set(cameraForScene, worldCamera);
 
-	calcReflectionInfo(portalInCameraCopy,reflectorInfo);
+	calcReflectionInfo(portalInCameraCopy,reflectorInfo, portals[0].shared.radius);
 
 	//for 2nd portal in this world. TODO generalise
 	portalInCameraCopy2 = mat4.create(invertedWorldCamera);
-	mat4.multiply(portalInCameraCopy2, portalsForWorld[offsetCameraContainer.world][1].matrix);
+	mat4.multiply(portalInCameraCopy2, portals[1].matrix);
 	mat4.transpose(portalInCameraCopy2);
-	calcReflectionInfo(portalInCameraCopy2,reflectorInfo2);
+	calcReflectionInfo(portalInCameraCopy2,reflectorInfo2, portals[1].shared.radius);
 
 	mat4.set(cameraForScene, worldCamera);
 
@@ -1333,14 +1333,13 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 			},{
 			}
 		],
-		cosReflector:0,		//dependent on portal size (currently same size)
 		sshipDrawMatrix:0,
 	}
 	var worldA;
 
 	return function getWorldSceneSettings(isCubemapView, portalNum){
 
-		var pmats=[];
+		var psides=[];
 		var otherWorlds=[];
 
 		if (isCubemapView && guiParams.reflector.isPortal){
@@ -1355,15 +1354,16 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 			otherWorlds.push(portalsForWorld[worldA][0].otherps.world);
 			otherWorlds.push(portalsForWorld[worldA][1].otherps.world);
 
-			pmats.push(portalsForWorld[worldA][0].matrix);
-			pmats.push(portalsForWorld[worldA][1].matrix);
+			psides.push(portalsForWorld[worldA][0]);
+			psides.push(portalsForWorld[worldA][1]);
+
 
 			//make sure the 0th is what was worldB (until pass both into shaders, necessary to ensure correct discarding
 				//or spaceship pix when crossing portal)
 			var oldWorldB = offsetCameraContainer.world;
 			if (otherWorlds[0]!=oldWorldB){
 				otherWorlds=[otherWorlds[1],otherWorlds[0]];
-				pmats=[pmats[1],pmats[0]];
+				psides=[psides[1],psides[0]];
 			}
 
 		}else{
@@ -1375,9 +1375,12 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 			otherWorlds.push(relevantPs.otherps.world);
 			otherWorlds.push(relevantPs2.otherps.world);
 
-			pmats.push(relevantPs.matrix);
-			pmats.push(relevantPs2.matrix);
+			psides.push(relevantPs);
+			psides.push(relevantPs2);
 		}
+
+		var pmats = psides.map(x=>x.matrix);
+		var pmatrads = psides.map(x=>x.shared.radius);
 
 		returnObj.worldInfo = guiSettingsForWorld[worldA];
 
@@ -1387,6 +1390,8 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 		returnObj.infoForPortals=[];	//don't resuse, or shallow copy later will be mutated before reusing wSetting result
 						//for drawing transparency in drawScene2()
 						//TODO acheive correct rendering with less garbage!
+
+		var portalsForThisWorld = portalsForWorld[worldA];
 
 		for (var pp=0;pp<2;pp++){	//2 portals
 
@@ -1419,12 +1424,13 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 				infoForPortal.reflectorPosTransformed[cc] = portalRelativeMat[4*cc+3];	//position of reflector in frame of camera (after MVMatrix transformation)
 			}
 
+			var rad = pmatrads[pp];
+			infoForPortal.rad = rad;	//just copy this around everywhere!
+			infoForPortal.cosReflector = 1.0/Math.sqrt(1+rad*rad);
+
 			returnObj.infoForPortals.push(infoForPortal);
 		}
 
-
-		returnObj.cosReflector = 1.0/Math.sqrt(1+reflectorInfo.rad*reflectorInfo.rad);
-		
 		if (sshipWorld == worldA){ //only draw spaceship if it's in the world that currently drawing. (TODO this for other objects eg shots)
 			returnObj.sshipDrawMatrix = sshipMatrix;
 		}else{
@@ -1438,9 +1444,10 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 				}
 			}
 			if (relevantPortalSide){
-				if (checkWithinReflectorRange(sshipMatrix, Math.tan(Math.atan(reflectorInfo.rad) +0.1), relevantPortalSide)){	//TODO correct this
+				var portalRad = relevantPortalSide.shared.radius;
+				if (checkWithinReflectorRange(sshipMatrix, Math.tan(portalRad +0.1), relevantPortalSide)){	//TODO correct this
 					mat4.set(sshipMatrix, portaledMatrix);
-					moveMatrixThruPortal(portaledMatrix, reflectorInfo.rad, 1, relevantPortalSide);
+					moveMatrixThruPortal(portaledMatrix, portalRad, 1, relevantPortalSide);
 					returnObj.sshipDrawMatrix = portaledMatrix;
 
 					//returnObj.sshipDrawMatrix = mat4.create(portaledMatrix);
@@ -1476,7 +1483,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	}
 
 	var wSettings = getWorldSceneSettings(isCubemapView, portalNum);
-	({worldA,worldInfo, localVecFogColor, infoForPortals, cosReflector, sshipDrawMatrix} = wSettings);
+	({worldA,worldInfo, localVecFogColor, infoForPortals, sshipDrawMatrix} = wSettings);
 		
 	if (!isCubemapView){
 		updateTerrain2QuadtreeForCampos(worldCamera.slice(12), worldInfo.spin);
@@ -1529,7 +1536,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	//TODO /note that 2nd light is relevant if sphere is reflector instead of portal.
 	if (worldA^sshipWorld){
 		var dropLightReflectionInfo={};
-		calcReflectionInfo(sshipMatrixShifted,dropLightReflectionInfo);
+		calcReflectionInfo(sshipMatrixShifted,dropLightReflectionInfo, 0.123);	//????? pass in what radius??
 		mat4.multiply(lightMat, dropLightReflectionInfo.shaderMatrix2);
 		dropLightPos = lightMat.slice(12);	//todo make light dimmer/directional when "coming out of" portal
 	}
@@ -1552,7 +1559,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		if (activeShaderProgram.uniforms.uPlayerLightColor){
 			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 		}
-		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 		
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
 		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
@@ -1617,9 +1623,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			boxSize = guiParams['random boxes'].size;
 			boxRad = boxSize*Math.sqrt(3);
 			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
-			
-		//	var criticalWPos = Math.cos(Math.atan(guiParams.reflector.scale) + Math.atan(boxRad));
-						
+									
 			prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
 			
 			for (var ii=0;ii<numRandomBoxes;ii++){
@@ -1645,9 +1649,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			boxSize = guiParams['random boxes'].size;
 			boxRad = boxSize*Math.sqrt(3);
 			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
-			
-		//	var criticalWPos = Math.cos(Math.atan(guiParams.reflector.scale) + Math.atan(boxRad));
-			
+						
 			prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
 			
 			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uVMatrix, false, invertedWorldCameraDuocylinderFrame);	//TODO what to pass in??
@@ -2191,12 +2193,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	}
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 
-	//TODO this only 
-	//if (activeShaderProgram.uniforms.uReflectorPos){
-		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
-	//}
-
-
 	if (guiParams.drawShapes.teapot){
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.teapot);	//BLUE
 		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0.1,0.3);	//some emission
@@ -2263,7 +2259,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 		}
 		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
-		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.veryDarkGray);
 		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);	//no emission
@@ -2326,7 +2321,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		if (activeShaderProgram.uniforms.uPlayerLightColor){
 			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 		}
-		gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
 		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 		
@@ -2510,13 +2504,13 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		}
 	}
 
-
-	var portalMat = portalsForWorld[worldA][0].matrix;
+	var portals = portalsForWorld[worldA];
+	var portalMat = portals[0].matrix;
 	var portalInCamera = mat4.create(invertedWorldCamera);	//might reuse invertedWorldCamera for efficiency,			
 	mat4.multiply(portalInCamera, portalMat);			//but use new matrix for safety/code clarity.
 
 	//2nd portal for world (todo array arbitrary number of portals)
-	var portalMat2 = portalsForWorld[worldA][1].matrix;
+	var portalMat2 = portals[1].matrix;
 	var portalInCamera2 = mat4.create(invertedWorldCamera);			
 	mat4.multiply(portalInCamera2, portalMat2);
 
@@ -2527,8 +2521,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		activeShaderProgram = shaderProgramTexmap;
 		shaderSetup(activeShaderProgram, texture);
 
-		drawPortalFrame(guiParams.reflector.scale, activeShaderProgram, portalMat, portalInCamera);
-		drawPortalFrame(guiParams.reflector.scale, activeShaderProgram, portalMat2, portalInCamera2,true);
+		drawPortalFrame(portals[0].shared.radius, activeShaderProgram, portalMat, portalInCamera);
+		drawPortalFrame(portals[1].shared.radius, activeShaderProgram, portalMat2, portalInCamera2,true);
 	}
 
 	function drawPortalFrame(frameScale, shaderProg, portalMat, portalInCamera, overrideColor){
@@ -2546,7 +2540,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		//draw coloured axis objects
 		var smallScale = frameScale*0.1;
 		gl.uniform3f(shaderProg.uniforms.uModelScale, smallScale,smallScale,smallScale);
-		var moveAmount = Math.atan(guiParams.reflector.scale) + smallScale;	//to portal surface then by small frame size
+		var moveAmount = Math.atan(frameScale) + smallScale;	//to portal surface then by small frame size
 
 		gl.uniform4fv(shaderProg.uniforms.uColor, colorArrs.red);
 		mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
@@ -2617,7 +2611,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			performShaderSetup(activeShaderProgram, wSettings);	//?? appears to not help
 
 			var placeholderPortalMesh = sphereBuffersHiRes;
-			var portalRad = 1.02*reflectorInfo.rad;
+			var portalRad = 1.02*infoForPortals[1].rad;
 			//if don't scale up a bit, invisible because within discard radius!
 			//TODO a shader without discard - should also be emmissive, not lit by world...
 
@@ -2626,14 +2620,14 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			//at most one of the following portals will actually be seen (one are looking through.) 
 			// TODO don't draw the portal that are looking through.
 
-			if (frustumCull(portalInCamera,reflectorInfo.rad)){
+			if (frustumCull(portalInCamera,infoForPortals[1].rad)){
 				gl.uniform3f(activeShaderProgram.uniforms.uModelScale, portalRad,portalRad,portalRad);		
 				gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.black);
 				gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, pColor[0], pColor[1], pColor[2]);
 				mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
 				drawObjectFromBuffers(placeholderPortalMesh, activeShaderProgram);
 			}
-			if (frustumCull(portalInCamera2,reflectorInfo.rad)){
+			if (frustumCull(portalInCamera2,infoForPortals[1].rad)){
 				gl.uniform3f(activeShaderProgram.uniforms.uModelScale, portalRad,portalRad,portalRad);		
 				gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.black);
 				gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, pColor[0], pColor[1], pColor[2]);
@@ -2666,7 +2660,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			//draw the other portal for this world
 			//need to create earlier: reflectorInfo2, portalInCameraCopy2
 			
-			if (frustumCull(portalInCamera2,reflectorInfo.rad)){
+			if (frustumCull(portalInCamera2,reflectorInfo2.rad)){
 
 				drawPortalCubemap(pMatrix, portalInCameraCopy2, frameTime, reflectorInfo2,1);
 
@@ -2691,13 +2685,13 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 
 	gl.useProgram(activeShaderProgram);
 
-	function drawPortal(shaderProgram, portalMat, meshToDraw, reflectorInfo, portalInCamera){
+	function drawPortal(shaderProgram, portalMat, meshToDraw, reflInfo, portalInCamera){
 		//TODO move elsewhere, pass in everything needed.
 		//TODO do cubemap rendering here, so can use reuse cubemap texture when drawing multiple portals.
 		//TODO later, draw cubemap for portal 1, then render both eyes when in stereo mode using depth buffer ray tracing - means switching between drawing each eye view.
 
 		gl.useProgram(shaderProgram);
-		gl.uniformMatrix4fv(shaderProgram.uniforms.uPosShiftMat, false, reflectorInfo.shaderMatrix);
+		gl.uniformMatrix4fv(shaderProgram.uniforms.uPosShiftMat, false, reflInfo.shaderMatrix);
 		
 		gl.uniform4fv(shaderProgram.uniforms.uColor, colorArrs.white);
 		gl.uniform4fv(shaderProgram.uniforms.uFogColor, localVecFogColor);
@@ -2720,11 +2714,11 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
 			var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
 			gl.uniform2f(shaderProgram.uniforms.uFNumber, fx, fy);
-			gl.uniform3fv(shaderProgram.uniforms.uCentrePosScaledFSCopy, reflectorInfo.centreTanAngleVectorScaled	);
+			gl.uniform3fv(shaderProgram.uniforms.uCentrePosScaledFSCopy, reflInfo.centreTanAngleVectorScaled	);
 			
 			if (shaderProgram.uniforms.uPortalRad){	//specific stuff to special
 				gl.uniformMatrix4fv(shaderProgram.uniforms.uMVMatrixFSCopy, false, mvMatrix);
-				gl.uniform1f(shaderProgram.uniforms.uPortalRad, reflectorInfo.rad);
+				gl.uniform1f(shaderProgram.uniforms.uPortalRad, reflInfo.rad);
 			}
 			
 			//move matrix through portal for close rendering. 
@@ -2734,11 +2728,11 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			//matrixToPortal.qPair = mvMatrix.qPair.map(x=>x.map(y=>y));
 				//TODO make a general function to copy mats!
 
-			moveMatrixThruPortal(matrixToPortal, reflectorInfo.rad, 1, portalsForWorld[worldA][0], true);
+			moveMatrixThruPortal(matrixToPortal, reflInfo.rad, 1, portalsForWorld[worldA][0], true);
 				//skips start/end rotations. appears to fix rendering. TODO check for side effects
 
 		if (guiParams.reflector.test1){	//appears to do ~nothing
-			var matToCopyFrom = reflectorInfo.shaderMatrix;
+			var matToCopyFrom = reflInfo.shaderMatrix;
 			matrixToPortal[3] = matToCopyFrom[12];
 			matrixToPortal[7] = matToCopyFrom[13];
 			matrixToPortal[11] = matToCopyFrom[14];
@@ -2746,93 +2740,23 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		}
 
 			//think this transformation should be something like the transformation between the portaled matrix (cubemap camera matrix?) and where camera would be if portaled through matrix.
-			mat4.multiply(matrixToPortal, reflectorInfo.shaderMatrix);
+			mat4.multiply(matrixToPortal, reflInfo.shaderMatrix);
 				//result is still a bit glitchy. suspect because calculation of matrixToPortal isn't quite right - moves by 2*portal radius , which is fine if close to portal, but really should move by a little less than this (see calculation of portal cubemap camera position.)
 		
 			
 			gl.uniformMatrix4fv(shaderProgram.uniforms.uPortaledMatrix, false, matrixToPortal);
 		}
 
-		gl.uniform3f(shaderProgram.uniforms.uModelScale, reflectorInfo.rad,reflectorInfo.rad, reflectorInfo.rad);
+		gl.uniform3f(shaderProgram.uniforms.uModelScale, reflInfo.rad,reflInfo.rad, reflInfo.rad);
 	
-		gl.uniform1f(shaderProgram.uniforms.uPolarity, reflectorInfo.polarity);
+		gl.uniform1f(shaderProgram.uniforms.uPolarity, reflInfo.polarity);
 		
 			
 		if(['vertex projection','screen space','depth to alpha copy','vertproj mix'].includes(guiParams.reflector.mappingType) ){
-			gl.uniform3fv(shaderProgram.uniforms.uCentrePosScaled, reflectorInfo.centreTanAngleVectorScaled);
+			gl.uniform3fv(shaderProgram.uniforms.uCentrePosScaled, reflInfo.centreTanAngleVectorScaled);
 		}
 
 		drawObjectFromBuffers(meshToDraw, shaderProgram, true, false);
-	}
-	
-	
-//	testRayBallCollision();
-	function testRayBallCollision(){
-		//will use code like this to find where camera ray intersects portal for "screen space shader" drawing.
-		//may also be useful for fast collisions etc 
-		//if have 2 4vectors, starting position "A" = [ax,ay,az,aw], and pointing direction (quarter way around world) "B" [bx,by,bz,dw], think that:
-		// for portal at position w=1, closest approach will occur at:
-		// ( 1/sqrt(aw*aw + bw*bw) )*(aw*A + bw*B)
-		// and a (normal) vector perpendicular to this is 
-		// ( 1/sqrt(aw*aw + bw*bw) )*(aw*B - bw*A)
-		//hope that latter is in a consistent direction, and can backtrack from closest approach 
-		
-		activeShaderProgram=shaderProgramTexmap;
-		shaderSetup(activeShaderProgram, texture);
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale);
-		prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
-		
-		//draw something at player position
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.magenta);
-		var posA = sshipMatrix.slice(12);
-		//drawTriAxisCrossForMatrix(sshipMatrix);
-	//	drawTriAxisCrossForPosition(posA);
-
-		//move some test object to quarter way around the world from player
-		var mytmpmat = mat4.create(sshipMatrix);
-		xyzmove4mat(mytmpmat, [0,0,Math.PI/2]);
-		var posB = mytmpmat.slice(12);
-		//drawTriAxisCrossForPosition(posB);
-
-		//calculate closest approach vector and represent by an object
-		var closeApproach = [];
-		var equatorVec = [];
-		var intermediateVec = [];
-		var movedFwdAng = -0.1;
-		
-		var maxwsq = posA[3]*posA[3] + posB[3]*posB[3];
-		
-		var maxw = Math.sqrt(maxwsq);	//TODO handle 0 (or avoid if maxwsq< crit value)
-		for (var cc=0;cc<4;cc++){
-			closeApproach[cc]=(1/maxw)*(posA[cc]*posA[3]+posB[cc]*posB[3]);
-			equatorVec[cc]=(1/maxw)*(posB[cc]*posA[3]-posA[cc]*posB[3]);
-			intermediateVec[cc]=closeApproach[cc]*Math.cos(movedFwdAng) + equatorVec[cc]*Math.sin(movedFwdAng);
-		}
-		//drawTriAxisCrossForPosition(closeApproach);
-		//drawTriAxisCrossForPosition(intermediateVec);
-		//drawTriAxisCrossForPosition(equatorVec);
-
-		
-		//determine whether this constitutes a collision
-		var critwsq = 1.0/(1.0+reflectorInfo.rad*reflectorInfo.rad);
-		var critw = Math.sqrt(critwsq);
-		if (maxwsq>critwsq){
-			//project onto w=1
-			//correction is length should move along this projection.
-			var projectedradiussq = (1-maxwsq)/maxwsq;
-			var correction = Math.sqrt( reflectorInfo.rad*reflectorInfo.rad - projectedradiussq );
-			
-			//console.log("colliding");
-			var collisionPoint = [];
-			for (var cc=0;cc<4;cc++){
-				collisionPoint[cc] = closeApproach[cc]*(1/maxw) - equatorVec[cc]*correction;
-					//^^ that's the collision point in projected space. since this is now a projected point from surface of sphere, can project back by multiplying by critw
-				collisionPoint[cc]*=critw;	//(this part should not be necessary in shader version)
-			}
-			
-			drawTriAxisCrossForPosition(collisionPoint);
-		}
-		
 	}
 	
 
@@ -2840,7 +2764,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 }
 
 function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using rgba, depth buffer images from previous rendering
-	//({worldA,worldInfo, localVecFogColor, localVecReflectorDiffColor, reflectorPosTransformed, cosReflector, dropLightPos} = wSettings);
+	//({worldA,worldInfo, localVecFogColor, localVecReflectorDiffColor, reflectorPosTransformed, dropLightPos} = wSettings);
 	
 	({worldInfo, sshipDrawMatrix, worldA} = wSettings);
 	
@@ -3650,7 +3574,6 @@ var guiParams={
 		cmFacesUpdated:6,
 		cubemapDownsize:'auto',
 		mappingType:'vertex projection',
-		scale:0.1,
 		isPortal:true,
 		drawFrame:true,
 		test1:false
@@ -3678,7 +3601,6 @@ var settings = {
 	playerBallRad:0.003,
 	characterBallRad:0.001
 }
-reflectorInfo.rad = guiParams.reflector.scale;		//need to initialise currently because portalTest 1st occurs before calcReflectionInfo
 
 var worldColors=[];
 var worldColorsPlain=[];
@@ -3874,7 +3796,6 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	reflectorFolder.add(guiParams.reflector, "cmFacesUpdated", 0,6,1);
 	reflectorFolder.add(guiParams.reflector, "cubemapDownsize", [0,1,2,3,'auto']);
 	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection','screen space','vertproj mix','depth to alpha copy']);
-	reflectorFolder.add(guiParams.reflector, "scale", 0.02,0.5,0.01);
 	reflectorFolder.add(guiParams.reflector, "isPortal");
 	reflectorFolder.add(guiParams.reflector, "drawFrame");
 	reflectorFolder.add(guiParams.reflector, "test1");
@@ -4904,7 +4825,6 @@ var iterateMechanics = (function iterateMechanics(){
 		var boxSize = guiParams['random boxes'].size;
 		var ringBoxSize = 0.1;
 		var boxRad = boxSize*Math.sqrt(3);
-		//var criticalWPos = Math.cos(Math.atan(guiParams.reflector.scale) + Math.atan(boxRad));
 		
 		var critValueRandBox = 1/Math.sqrt(1+3*boxSize*boxSize);
 		var critValueDCBox = 1/Math.sqrt(1+3*duocylinderSurfaceBoxScale*duocylinderSurfaceBoxScale);
@@ -5306,11 +5226,10 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		//bounce off portal if reflector
 		if (!guiParams.reflector.isPortal){
-			var effectiveRange = Math.tan(Math.atan(reflectorInfo.rad)+Math.atan(0.003)); //TODO reformulate more efficiently
-
 			var portals = portalsForWorld[worldA];
 			for (var pp=0;pp<portals.length;pp++){
 				var thisPortal = portals[pp];
+				var effectiveRange = Math.tan(Math.atan(thisPortal.shared.radius)+Math.atan(0.003));	//TODO reformulate more efficiently
 				if (checkWithinReflectorRange(playerCamera, effectiveRange, thisPortal)){				
 					
 					//calculate in frame of portal
@@ -5372,8 +5291,6 @@ function rotateVelVec(velVec,rotateVec){
 }
 
 function portalTestMultiPortal(obj, amount){
-	var adjustedRad = reflectorInfo.rad + amount;	//avoid issues with rendering very close to surface
-
 	//get obj matrix in frame of portal matrix. 
 	//for distance check, only required for moved portal, not rotated.
 
@@ -5382,14 +5299,21 @@ function portalTestMultiPortal(obj, amount){
 	//assume that won't traverse multiple portals in one frame.
 	var portalsForThisWorld = portalsForWorld[obj.world];
 	for (var ii=0;ii<portalsForThisWorld.length;ii++){
-		portalTestForGivenPortal(obj, adjustedRad, portalsForThisWorld[ii]);
+
+		var portal =  portalsForThisWorld[ii];
+		var adjustedRad = portal.shared.radius + amount;	//avoid issues with rendering very close to surface
+
+		var crossed = portalTestForGivenPortal(obj, adjustedRad, portal);
+		if (crossed){break;}	//avoid crossing portal twice, when 1st portal smaller radius than 2nd
 	}
 }
 function portalTestForGivenPortal(obj, adjustedRad, portal){
 	if (checkWithinRangeOfGivenPortal(obj, adjustedRad, portal)){
 		moveMatrixThruPortal(obj.matrix, adjustedRad, 1.00000001, portal);
 		obj.world=portal.otherps.world;
+		return true;
 	}
+	return false;
 }
 function checkWithinRangeOfGivenPortal(obj, rad, portal){
 	//calculate in frame of portal
@@ -5792,6 +5716,14 @@ function setPortalInfoForShader(shader, infoForPortals){
 	if (shader.uniforms.uReflectorPos2){
 		gl.uniform4fv(shader.uniforms.uReflectorPos2, infoForPortals[1].reflectorPosTransformed);
 	}
+
+	if (shader.uniforms.uReflectorCos){
+		gl.uniform1f(shader.uniforms.uReflectorCos, infoForPortals[0].cosReflector);	
+	}
+	if (shader.uniforms.uReflectorCos2){
+		gl.uniform1f(shader.uniforms.uReflectorCos2, infoForPortals[1].cosReflector);	
+	}
+
 	if (shader.uniforms.uReflectorPosVShaderCopy){
 		gl.uniform4fv(shader.uniforms.uReflectorPosVShaderCopy, infoForPortals[0].reflectorPosTransformed);
 	}
@@ -5811,7 +5743,7 @@ function performGeneralShaderSetup(shader){
 	}
 }
 function performShaderSetup(shader, wSettings, tex){	//TODO use this more widely, possibly by pulling out to higher level. similar to performCommon4vecShaderSetup
-	({localVecFogColor, infoForPortals, cosReflector, dropLightPos} = wSettings);
+	({localVecFogColor, infoForPortals, dropLightPos} = wSettings);
 
 	gl.useProgram(shader);	//todo use function variable
 	
@@ -5826,7 +5758,6 @@ function performShaderSetup(shader, wSettings, tex){	//TODO use this more widely
 	if (shader.uniforms.uPlayerLightColor){
 		gl.uniform3fv(shader.uniforms.uPlayerLightColor, playerLight);
 	}
-	gl.uniform1f(shader.uniforms.uReflectorCos, cosReflector);	
 	
 	performGeneralShaderSetup(shader);
 	
@@ -5835,10 +5766,10 @@ function performShaderSetup(shader, wSettings, tex){	//TODO use this more widely
 	}
 }
 function performCommon4vecShaderSetup(activeShaderProgram, wSettings, logtag){	//todo move to top level? are inner functions inefficient?
-	({worldA,worldInfo, localVecFogColor, infoForPortals, cosReflector, dropLightPos} = wSettings);
+	({worldA,worldInfo, localVecFogColor, infoForPortals, dropLightPos} = wSettings);
 	
 	if (logtag){
-		document[logtag] = {about:"performCommon4vecShaderSetup", localVecFogColor, playerLight:playerLight, cosReflector:cosReflector, dropLightPos:dropLightPos};
+		document[logtag] = {about:"performCommon4vecShaderSetup", localVecFogColor, playerLight, dropLightPos};
 	}
 
 	if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
@@ -5851,7 +5782,6 @@ function performCommon4vecShaderSetup(activeShaderProgram, wSettings, logtag){	/
 	if (activeShaderProgram.uniforms.uPlayerLightColor){
 		gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 	}
-	gl.uniform1f(activeShaderProgram.uniforms.uReflectorCos, cosReflector);	
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 	performGeneralShaderSetup(activeShaderProgram);
 }
@@ -5962,7 +5892,7 @@ var randomNormalised3vec = (function generate3vecRandomiser(){
 
 //TODO pass in relevant args (or move to inside of some IIFE with relevant globals...)
 
-function drawPortalCubemap(pMatrix, portalInCameraCopy, frameTime, reflectorInfo, portalNum){
+function drawPortalCubemap(pMatrix, portalInCameraCopy, frameTime, reflInfo, portalNum){
 
 	//draw cubemap views
 	mat4.identity(worldCamera);	//TODO use correct matrices
@@ -5992,7 +5922,7 @@ function drawPortalCubemap(pMatrix, portalInCameraCopy, frameTime, reflectorInfo
 
 		//todo this transformation once, not repeat in following loop
 		mat4.set(otherPortalMat, worldCamera);
-		xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);
+		xyzmove4mat(worldCamera, reflInfo.cubeViewShiftAdjusted);
 		updateTerrain2QuadtreeForCampos(worldCamera.slice(12), guiSettingsForWorld[offsetCameraContainer.world].spin);	//TODO only if this terrain type active
 
 		for (var ii=0;ii<numFacesToUpdate;ii++){	//only using currently to check perf impact. could use more "properly" and cycle/alternate.
@@ -6001,7 +5931,7 @@ function drawPortalCubemap(pMatrix, portalInCameraCopy, frameTime, reflectorInfo
 			gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
 			gl.viewport(0, 0, framebuffer.width, framebuffer.height);
 			mat4.set(otherPortalMat, worldCamera);
-			xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);
+			xyzmove4mat(worldCamera, reflInfo.cubeViewShiftAdjusted);
 			rotateCameraForFace(ii);
 			
 			wSettingsArr.push( drawWorldScene(frameTime, true, null, portalNum) );
@@ -6012,7 +5942,7 @@ function drawPortalCubemap(pMatrix, portalInCameraCopy, frameTime, reflectorInfo
 				gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
 				gl.viewport(0, 0, framebuffer.width, framebuffer.height);
 				mat4.set(otherPortalMat, worldCamera);
-				xyzmove4mat(worldCamera, reflectorInfo.cubeViewShiftAdjusted);	
+				xyzmove4mat(worldCamera, reflInfo.cubeViewShiftAdjusted);	
 				rotateCameraForFace(ii);
 				
 				var activeProg = shaderPrograms.fullscreenTexturedWithDepthmap;
