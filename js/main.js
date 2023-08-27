@@ -769,22 +769,21 @@ function drawScene(frameTime){
 	nonCmapCullFunc = generateCullFunc(nonCmapPMatrix);										//todo only update pmatrix, nonCmapCullFunc if input variables have changed
 		
 
-
-	portalInCameraCopy = mat4.create(invertedWorldCamera);	//portalInCamera is calculated in different scope
+	mat4.set(invertedWorldCamera, portalInCameraCopy);
+		//portalInCamera is calculated in different scope
 		//TODO reorganise/tidy code, reduce duplication
-		//TODO user mat4.set (or write some abstraction to make it obvious (and know) which argument is to, from!)
 
 	var portals = portalsForWorld[offsetCameraContainer.world];
 	mat4.multiply(portalInCameraCopy, portals[0].matrix); //TODO is offsetCameraContainer.world updated yet?
 																				//if not may see 1 frame glitch on crossing
-	mat4.transpose(portalInCameraCopy);
+	mat4.transpose(portalInCameraCopy);	//TODO lose this, use indices 3,7,11 instead of 12,13,14 in calcReflectionInfo?
 
 	//mat4.set(cameraForScene, worldCamera);
 
 	calcReflectionInfo(portalInCameraCopy,reflectorInfo, portals[0].shared.radius);
 
 	//for 2nd portal in this world. TODO generalise
-	portalInCameraCopy2 = mat4.create(invertedWorldCamera);
+	mat4.set(invertedWorldCamera, portalInCameraCopy2);
 	mat4.multiply(portalInCameraCopy2, portals[1].matrix);
 	mat4.transpose(portalInCameraCopy2);
 	calcReflectionInfo(portalInCameraCopy2,reflectorInfo2, portals[1].shared.radius);
@@ -2505,14 +2504,16 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	}
 
 	var portals = portalsForWorld[worldA];
-	var portalMat = portals[0].matrix;
-	var portalInCamera = mat4.create(invertedWorldCamera);	//might reuse invertedWorldCamera for efficiency,			
-	mat4.multiply(portalInCamera, portalMat);			//but use new matrix for safety/code clarity.
 
-	//2nd portal for world (todo array arbitrary number of portals)
-	var portalMat2 = portals[1].matrix;
-	var portalInCamera2 = mat4.create(invertedWorldCamera);			
-	mat4.multiply(portalInCamera2, portalMat2);
+	var portalMatArr = portals.map(p => p.matrix);
+	
+	var portalInCameraArr = portals.map(p => {
+		var portalInCamera = mat4.create(invertedWorldCamera);	//TODO reuse matrix from pool
+		mat4.multiply(portalInCamera, p.matrix);
+		return portalInCamera;
+	});
+
+	var overrideColorForPortal = [false, true];
 
 	//draw frame around portal/reflector
 	if (guiParams.reflector.drawFrame){
@@ -2521,8 +2522,9 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		activeShaderProgram = shaderProgramTexmap;
 		shaderSetup(activeShaderProgram, texture);
 
-		drawPortalFrame(portals[0].shared.radius, activeShaderProgram, portalMat, portalInCamera);
-		drawPortalFrame(portals[1].shared.radius, activeShaderProgram, portalMat2, portalInCamera2,true);
+		for (var ii=0;ii<portals.length;ii++){
+			drawPortalFrame(portals[ii].shared.radius, activeShaderProgram, portalMatArr[ii], portalInCameraArr[ii],overrideColorForPortal[ii]);
+		}
 	}
 
 	function drawPortalFrame(frameScale, shaderProg, portalMat, portalInCamera, overrideColor){
@@ -2620,64 +2622,40 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			//at most one of the following portals will actually be seen (one are looking through.) 
 			// TODO don't draw the portal that are looking through.
 
-			if (frustumCull(portalInCamera,infoForPortals[1].rad)){
-				gl.uniform3f(activeShaderProgram.uniforms.uModelScale, portalRad,portalRad,portalRad);		
-				gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.black);
-				gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, pColor[0], pColor[1], pColor[2]);
-				mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
-				drawObjectFromBuffers(placeholderPortalMesh, activeShaderProgram);
+			for (var ii=0;ii<portals.length;ii++){
+				if (frustumCull(portalInCameraArr[ii],infoForPortals[1].rad)){		//<-- should this be 1 or ii?
+					gl.uniform3f(activeShaderProgram.uniforms.uModelScale, portalRad,portalRad,portalRad);		
+					gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.black);
+					gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, pColor[0], pColor[1], pColor[2]);
+					mat4.set(portalInCameraArr[ii], mvMatrix);mat4.set(portalMatArr[ii], mMatrix);
+					drawObjectFromBuffers(placeholderPortalMesh, activeShaderProgram);
+				}
 			}
-			if (frustumCull(portalInCamera2,infoForPortals[1].rad)){
-				gl.uniform3f(activeShaderProgram.uniforms.uModelScale, portalRad,portalRad,portalRad);		
-				gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.black);
-				gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, pColor[0], pColor[1], pColor[2]);
-				mat4.set(portalInCamera2, mvMatrix);mat4.set(portalMat2, mMatrix);
-				drawObjectFromBuffers(placeholderPortalMesh, activeShaderProgram);
-			}
-
+			
 		}else{
-			//draw 1st portal for this world
-			if (frustumCull(portalInCamera,reflectorInfo.rad)){
 
-				drawPortalCubemap(pMatrix, portalInCameraCopy, frameTime, reflectorInfo,0);
-
-				if (reverseCamera){
-					gl.cullFace(gl.FRONT);
-				}
-
-				//set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
-				gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
-				gl.viewport( 0,0, viewSettings.width, viewSettings.height );
-				mat4.set(nonCmapPMatrix, pMatrix);	
-				frustumCull = nonCmapCullFunc;
-
-				mat4.set(savedWorldCamera, worldCamera);
-				localVecFogColor=savedFogColor;
-				drawPortal(activeReflectorShader, portalMat, meshToDraw, reflectorInfo, portalInCamera);
-			}
-
+			var reflectorInfoArr = [reflectorInfo, reflectorInfo2];	//TODO populate this earlier instead of using 2 global variables!
 			
-			//draw the other portal for this world
-			//need to create earlier: reflectorInfo2, portalInCameraCopy2
-			
-			if (frustumCull(portalInCamera2,reflectorInfo2.rad)){
+			for (var ii=0;ii<portals.length;ii++){
+				if (frustumCull(portalInCameraArr[ii],reflectorInfoArr[ii].rad)){
+					drawPortalCubemap(pMatrix, portalInCameraArr[ii], frameTime, reflectorInfoArr[ii],ii);
 
-				drawPortalCubemap(pMatrix, portalInCameraCopy2, frameTime, reflectorInfo2,1);
-
-				if (reverseCamera){
-					gl.cullFace(gl.FRONT);
+					if (reverseCamera){
+						gl.cullFace(gl.FRONT);
+					}
+	
+					//set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
+					gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
+					gl.viewport( 0,0, viewSettings.width, viewSettings.height );
+					mat4.set(nonCmapPMatrix, pMatrix);	
+					frustumCull = nonCmapCullFunc;
+	
+					mat4.set(savedWorldCamera, worldCamera);
+					localVecFogColor=savedFogColor;
+					drawPortal(activeReflectorShader, portalMatArr[ii], meshToDraw, reflectorInfoArr[ii], portalInCameraArr[ii]);
 				}
-
-				//set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
-				gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
-				gl.viewport( 0,0, viewSettings.width, viewSettings.height );
-				mat4.set(nonCmapPMatrix, pMatrix);	
-				frustumCull = nonCmapCullFunc;
-
-				mat4.set(savedWorldCamera, worldCamera);
-				localVecFogColor=savedFogColor;
-				drawPortal(activeReflectorShader, portalMat2, meshToDraw, reflectorInfo2, portalInCamera2);
 			}
+			
 		}
 
 	}
@@ -5892,10 +5870,10 @@ var randomNormalised3vec = (function generate3vecRandomiser(){
 
 //TODO pass in relevant args (or move to inside of some IIFE with relevant globals...)
 
-function drawPortalCubemap(pMatrix, portalInCameraCopy, frameTime, reflInfo, portalNum){
+function drawPortalCubemap(pMatrix, portalInCamera, frameTime, reflInfo, portalNum){
 
 	//draw cubemap views
-	mat4.identity(worldCamera);	//TODO use correct matrices
+	//mat4.identity(worldCamera);	//TODO use correct matrices
 	
 	//TODO move pMatrix etc to only recalc on screen resize
 	//make a pmatrix for hemiphere perspective projection method.
@@ -5906,7 +5884,7 @@ function drawPortalCubemap(pMatrix, portalInCameraCopy, frameTime, reflInfo, por
 	frustumCull = squareFrustumCull;
 	if (guiParams.reflector.cmFacesUpdated>0){
 		var cubemapLevel = guiParams.reflector.cubemapDownsize == "auto" ? 
-			(portalInCameraCopy[15]>0.8 ? 0:(portalInCameraCopy[15]>0.5? 1:2))	:	//todo calculate angular resolution of cubemap in final camera,  
+			(portalInCamera[15]>0.8 ? 0:(portalInCamera[15]>0.5? 1:2))	:	//todo calculate angular resolution of cubemap in final camera,  
 					//dependent on distance, FOV, blur, screen resolution etc, and choose appropriate detail level
 					//currently just manually, roughly tuned for 1080p, current settings.
 			guiParams.reflector.cubemapDownsize ;
