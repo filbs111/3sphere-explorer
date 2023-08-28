@@ -547,7 +547,7 @@ function initBuffers(){
 }
 
 var reflectorInfoArr=[];
-for (var ii=0;ii<2;ii++){	//TODO how to cope with variable portal numbers? just assign max? (fixed number supported by shader)
+for (var ii=0;ii<4;ii++){	//TODO how to cope with variable portal numbers? just assign max? (fixed number supported by shader)
 	reflectorInfoArr.push({
 		centreTanAngleVectorScaled:[0,0,0],
 		rad:0.5
@@ -775,8 +775,6 @@ function drawScene(frameTime){
 																				//if not may see 1 frame glitch on crossing
 	mat4.transpose(portalInCameraCopy);	//TODO lose this, use indices 3,7,11 instead of 12,13,14 in calcReflectionInfo?
 
-	//mat4.set(cameraForScene, worldCamera);
-
 	calcReflectionInfo(portalInCameraCopy,reflectorInfoArr[0], portals[0].shared.radius);
 
 	//for 2nd portal in this world. TODO generalise
@@ -785,9 +783,12 @@ function drawScene(frameTime){
 	mat4.transpose(portalInCameraCopy2);
 	calcReflectionInfo(portalInCameraCopy2,reflectorInfoArr[1], portals[1].shared.radius);
 
-	mat4.set(cameraForScene, worldCamera);
-
-
+	if (portals.length>2){
+		mat4.set(invertedWorldCamera, portalInCameraCopy3);
+		mat4.multiply(portalInCameraCopy3, portals[2].matrix);
+		mat4.transpose(portalInCameraCopy3);
+		calcReflectionInfo(portalInCameraCopy3,reflectorInfoArr[2], portals[2].shared.radius);
+	}
 
 	//setup for drawing to screen
 	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -1329,7 +1330,7 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 			},{
 			}
 		],
-		sshipDrawMatrix:0,
+		sshipDrawMatrices:[],
 	}
 	var worldA;
 
@@ -1339,7 +1340,10 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 		var otherWorlds=[];
 
 		if (isCubemapView && guiParams.reflector.isPortal){
-			var relevantPs = portalsForWorld[offsetCameraContainer.world][portalNum].otherps;
+
+			var oldWorldPs = portalsForWorld[offsetCameraContainer.world][portalNum];
+
+			var relevantPs = oldWorldPs.otherps;
 
 			returnObj.worldA = worldA = relevantPs.world;
 			
@@ -1347,32 +1351,47 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 					//can be seen beyond the portal. this is likely the most visible portal light
 
 			//one of the below is previous worldB. the other is for the second portal in the world beyond the current portal.
-			otherWorlds.push(portalsForWorld[worldA][0].otherps.world);
-			otherWorlds.push(portalsForWorld[worldA][1].otherps.world);
 
-			psides.push(portalsForWorld[worldA][0]);
-			psides.push(portalsForWorld[worldA][1]);
+			var portalsForWorldA = portalsForWorld[worldA];
 
+			var otherWorldPsArr=[];
+
+			for (var ii=0;ii<portalsForWorldA.length;ii++){
+				otherWorldPsArr.push(portalsForWorldA[ii].otherps);
+				psides.push(portalsForWorldA[ii]);
+			}
 
 			//make sure the 0th is what was worldB (until pass both into shaders, necessary to ensure correct discarding
 				//or spaceship pix when crossing portal)
 			var oldWorldB = offsetCameraContainer.world;
-			if (otherWorlds[0]!=oldWorldB){
-				otherWorlds=[otherWorlds[1],otherWorlds[0]];
-				psides=[psides[1],psides[0]];
+
+			var oldWorldPsIdx = -1;	//should not happen!!
+			for (var ii=0;ii<portalsForWorldA.length;ii++){
+				if (otherWorldPsArr[ii] == oldWorldPs){
+					oldWorldPsIdx = ii;
+				}
 			}
+			if (oldWorldPsIdx==-1){
+				console.log("ERROR!!!!! oldWorldPsIdx==-1");
+			} else {
+				//swap so oldWorldIdx is in slot 0. note redundant if oldWorldIdx=0
+				var tmp = otherWorldPsArr[0];
+				otherWorldPsArr[0] = otherWorldPsArr[oldWorldPsIdx];
+				otherWorldPsArr[oldWorldPsIdx] = tmp;
+				tmp = psides[0];
+				psides[0] = psides[oldWorldPsIdx];
+				psides[oldWorldPsIdx] = tmp;
+			}
+			otherWorlds = otherWorldPsArr.map(ps => ps.world);
 
 		}else{
-			var relevantPs = portalsForWorld[offsetCameraContainer.world][0];
-			var relevantPs2 = portalsForWorld[offsetCameraContainer.world][1];
-
+			var portalsForOffsetCamWorld = portalsForWorld[offsetCameraContainer.world];
+			for (var ii=0;ii<portalsForOffsetCamWorld.length;ii++){
+				var relevantPs = portalsForOffsetCamWorld[ii];
+				otherWorlds.push(relevantPs.otherps.world);
+				psides.push(relevantPs);
+			}
 			returnObj.worldA = worldA = offsetCameraContainer.world;	// = relevantPs.world
-
-			otherWorlds.push(relevantPs.otherps.world);
-			otherWorlds.push(relevantPs2.otherps.world);
-
-			psides.push(relevantPs);
-			psides.push(relevantPs2);
 		}
 
 		var pmats = psides.map(x=>x.matrix);
@@ -1389,7 +1408,7 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 
 		var portalsForThisWorld = portalsForWorld[worldA];
 
-		for (var pp=0;pp<2;pp++){	//2 portals
+		for (var pp=0;pp<portalsForThisWorld.length;pp++){
 
 			var infoForPortal={};
 
@@ -1428,30 +1447,21 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 		}
 
 		if (sshipWorld == worldA){ //only draw spaceship if it's in the world that currently drawing. (TODO this for other objects eg shots)
-			returnObj.sshipDrawMatrix = sshipMatrix;
+			returnObj.sshipDrawMatrices = [sshipMatrix];
 		}else{
-			//find which portal it might be in. should just be one now, but in future could be many - TODO return array?
-			var relevantPortalSide; 
+			returnObj.sshipDrawMatrices =[];
 			var portals = portalsForWorld[worldA];
 			for (var pp=0;pp<portals.length;pp++){
 				var thisPortalSide = portals[pp];
 				if (thisPortalSide.otherps.world == sshipWorld){
-					relevantPortalSide = thisPortalSide.otherps;
+					var relevantPortalSide = thisPortalSide.otherps;
+					var portalRad = relevantPortalSide.shared.radius;
+					if (checkWithinReflectorRange(sshipMatrix, Math.tan(portalRad +0.1), relevantPortalSide)){	//TODO correct this
+						mat4.set(sshipMatrix, portaledMatrix);
+						moveMatrixThruPortal(portaledMatrix, portalRad, 1, relevantPortalSide);
+						returnObj.sshipDrawMatrices.push(portaledMatrix);
+					}
 				}
-			}
-			if (relevantPortalSide){
-				var portalRad = relevantPortalSide.shared.radius;
-				if (checkWithinReflectorRange(sshipMatrix, Math.tan(portalRad +0.1), relevantPortalSide)){	//TODO correct this
-					mat4.set(sshipMatrix, portaledMatrix);
-					moveMatrixThruPortal(portaledMatrix, portalRad, 1, relevantPortalSide);
-					returnObj.sshipDrawMatrix = portaledMatrix;
-
-					//returnObj.sshipDrawMatrix = mat4.create(portaledMatrix);
-				}else{
-					returnObj.sshipDrawMatrix = null;
-				}
-			}else{
-				returnObj.sshipDrawMatrix = null;
 			}
 		}
 		
@@ -1479,7 +1489,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	}
 
 	var wSettings = getWorldSceneSettings(isCubemapView, portalNum);
-	({worldA,worldInfo, localVecFogColor, infoForPortals, sshipDrawMatrix} = wSettings);
+	({worldA,worldInfo, localVecFogColor, infoForPortals, sshipDrawMatrices} = wSettings);
 		
 	if (!isCubemapView){
 		updateTerrain2QuadtreeForCampos(worldCamera.slice(12), worldInfo.spin);
@@ -1530,7 +1540,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	//only use 1 drop light. should be standard pos'n if drawing same world as light, and reflected pos'n if different
 	//if dropLight in the space that are currently drawing, move it through portal.
 	//TODO /note that 2nd light is relevant if sphere is reflector instead of portal.
-	if (worldA^sshipWorld){
+	if (worldA!=sshipWorld){
 		var dropLightReflectionInfo={};
 		calcReflectionInfo(sshipMatrixShifted,dropLightReflectionInfo, 0.123);	//????? pass in what radius??
 		mat4.multiply(lightMat, dropLightReflectionInfo.shaderMatrix2);
@@ -2283,8 +2293,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		"ball": drawBall
 	}[guiParams["player model"]];
 	
-	if (sshipDrawMatrix){
-		drawFunc(sshipDrawMatrix);
+	for (var mat of sshipDrawMatrices){
+		drawFunc(mat);
 	}
 	
 	function drawSpaceship(matrix){
@@ -2510,8 +2520,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		return portalInCamera;
 	});
 
-	var overrideColorForPortal = [false, true];
-
 	//draw frame around portal/reflector
 	if (guiParams.reflector.drawFrame){
 		//draw all frames for the current world (2 portal entrances per world)
@@ -2520,18 +2528,16 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		shaderSetup(activeShaderProgram, texture);
 
 		for (var ii=0;ii<portals.length;ii++){
-			drawPortalFrame(portals[ii].shared.radius, activeShaderProgram, portalMatArr[ii], portalInCameraArr[ii],overrideColorForPortal[ii]);
+			drawPortalFrame(portals[ii].shared, activeShaderProgram, portalMatArr[ii], portalInCameraArr[ii]);
 		}
 	}
 
-	function drawPortalFrame(frameScale, shaderProg, portalMat, portalInCamera, overrideColor){
+	function drawPortalFrame(sharedInfo, shaderProg, portalMat, portalInCamera){
+
+		var frameScale = sharedInfo.radius;
 		gl.uniform3f(shaderProg.uniforms.uModelScale, frameScale,frameScale,frameScale);
 
-		if (overrideColor){
-			gl.uniform4fv(shaderProg.uniforms.uColor, [1.0,1.0,1.0,1.0]);
-		}else{
-			gl.uniform4fv(shaderProg.uniforms.uColor, localVecFogColor);	//same colour as world this frame is in
-		}
+		gl.uniform4fv(shaderProg.uniforms.uColor, sharedInfo.color);
 
 		mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
 		drawObjectFromBuffers(cubeFrameSubdivBuffers, shaderProg);
@@ -2610,17 +2616,18 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			performShaderSetup(activeShaderProgram, wSettings);	//?? appears to not help
 
 			var placeholderPortalMesh = sphereBuffersHiRes;
-			var portalRad = 1.02*infoForPortals[1].rad;
-			//if don't scale up a bit, invisible because within discard radius!
-			//TODO a shader without discard - should also be emmissive, not lit by world...
-
-			var pColor = infoForPortals[1].localVecReflectorColor;
-			//because have ensured that the portal are looking through is portal 0, other portal is visible.
-			//at most one of the following portals will actually be seen (one are looking through.) 
+			
 			// TODO don't draw the portal that are looking through.
-
 			for (var ii=0;ii<portals.length;ii++){
-				if (frustumCull(portalInCameraArr[ii],infoForPortals[1].rad)){		//<-- should this be 1 or ii?
+				if (frustumCull(portalInCameraArr[ii],infoForPortals[ii].rad)){		//<-- should this be 1 or ii?
+							//TODO is infoForPortals similar to portals arr, or mixed up?
+
+					var portalRad = 1.02*portals[ii].shared.radius;
+					//if don't scale up a bit, invisible because within discard radius!
+					//TODO a shader without discard - should also be emmissive, not lit by world...
+
+					var pColor = worldColors[portals[ii].otherps.world];
+					
 					gl.uniform3f(activeShaderProgram.uniforms.uModelScale, portalRad,portalRad,portalRad);		
 					gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.black);
 					gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, pColor[0], pColor[1], pColor[2]);
@@ -2739,7 +2746,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using rgba, depth buffer images from previous rendering
 	//({worldA,worldInfo, localVecFogColor, localVecReflectorDiffColor, reflectorPosTransformed, dropLightPos} = wSettings);
 	
-	({worldInfo, sshipDrawMatrix, worldA} = wSettings);
+	({worldInfo, sshipDrawMatrices, worldA} = wSettings);
 	
 	var duocylinderSpin = worldInfo.spin;
 
@@ -3160,6 +3167,7 @@ var offsetCameraContainer = {matrix:offsetPlayerCamera, world:0}
 var worldCamera = mat4.create();
 var portalInCameraCopy = mat4.create();
 var portalInCameraCopy2 = mat4.create();
+var portalInCameraCopy3 = mat4.create();
 
 var cmapPMatrix = mat4.create();
 setProjectionMatrix(cmapPMatrix, -90.0, 1.0);	//-90 gets reflection to look right. (different for portal?)
