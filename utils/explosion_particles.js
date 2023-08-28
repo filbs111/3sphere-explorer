@@ -1,5 +1,5 @@
 
-var explosionParticleArrs = (function(){
+var explosionParticleArrs = (function(numworlds){
     var blockLen = 128;	//number of particles in an explosion.
     var numBlocks = 64;
     var arrayLen = blockLen*numBlocks;	// = 8192
@@ -103,5 +103,10 @@ var explosionParticleArrs = (function(){
         }
     }
 
-    return [new ExplosionParticleArr(),new ExplosionParticleArr(),new ExplosionParticleArr()];
-})();
+    var arrToReturn = [];
+    for (var ww=0;ww<numworlds;ww++){
+        arrToReturn.push(new ExplosionParticleArr());
+    }
+
+    return arrToReturn;
+})(4);

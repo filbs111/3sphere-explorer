@@ -542,9 +542,9 @@ function initBuffers(){
 		return loadBlenderExport(alteredMesh);
 	}
 	
-	explosionParticleArrs[0].init();
-	explosionParticleArrs[1].init();
-	explosionParticleArrs[2].init();
+	for (var ww=0;ww<guiParams.worlds.length;ww++){
+		explosionParticleArrs[ww].init();
+	}
 }
 
 var reflectorInfoArr=[];
@@ -3492,7 +3492,8 @@ var guiParams={
 	worlds:[
 		{fogColor:'#dca985',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:true,seaLevel:0,seaPeakiness:0.0},
 		{fogColor:'#5cd5e6',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
-		{fogColor:'#55ee66',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}
+		{fogColor:'#55ee66',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
+		{fogColor:'#111111',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}
 	],
 	drawShapes:{
 		boxes:{
@@ -3908,7 +3909,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	);
 	loadHeightmapTerrain(terrainSize, doUponTerrainInitialised);
 
-	for (var ii=0;ii<3;ii++){
+	for (var ii=0;ii<guiParams.worlds.length;ii++){
 		setFog(ii,guiSettingsForWorld[ii].fogColor);
 	}
 	setAtmosThicknessMultiplier(guiParams.display.atmosThicknessMultiplier);
