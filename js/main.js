@@ -1452,21 +1452,21 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 			returnObj.infoForPortals.push(infoForPortal);
 		}
 
-		if (sshipWorld == worldA){ //only draw spaceship if it's in the world that currently drawing. (TODO this for other objects eg shots)
-			returnObj.sshipDrawMatrices = [sshipMatrix];
-		}else{
-			returnObj.sshipDrawMatrices =[];
-			var portals = portalsForWorld[worldA];
-			for (var pp=0;pp<portals.length;pp++){
-				var thisPortalSide = portals[pp];
-				if (thisPortalSide.otherps.world == sshipWorld){
-					var relevantPortalSide = thisPortalSide.otherps;
-					var portalRad = relevantPortalSide.shared.radius;
-					if (checkWithinReflectorRange(sshipMatrix, Math.tan(portalRad +0.1), relevantPortalSide)){	//TODO correct this
-						mat4.set(sshipMatrix, portaledMatrix);
-						moveMatrixThruPortal(portaledMatrix, portalRad, 1, relevantPortalSide);
-						returnObj.sshipDrawMatrices.push(portaledMatrix);
-					}
+		returnObj.sshipDrawMatrices =[];
+		if (sshipWorld == worldA){ //draw spaceship if it's in the world that currently drawing. (TODO this for other objects eg shots)
+			returnObj.sshipDrawMatrices.push(sshipMatrix);
+		}
+		//do next part regardless of whether in world that are drawing, because possible for portals to have both ends in same world.
+		var portals = portalsForWorld[worldA];
+		for (var pp=0;pp<portals.length;pp++){
+			var thisPortalSide = portals[pp];
+			if (thisPortalSide.otherps.world == sshipWorld){
+				var relevantPortalSide = thisPortalSide.otherps;
+				var portalRad = relevantPortalSide.shared.radius;
+				if (checkWithinReflectorRange(sshipMatrix, Math.tan(portalRad +0.1), relevantPortalSide)){	//TODO correct this
+					mat4.set(sshipMatrix, portaledMatrix);
+					moveMatrixThruPortal(portaledMatrix, portalRad, 1, relevantPortalSide);
+					returnObj.sshipDrawMatrices.push(portaledMatrix);
 				}
 			}
 		}
