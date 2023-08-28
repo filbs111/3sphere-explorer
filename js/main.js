@@ -546,17 +546,13 @@ function initBuffers(){
 	explosionParticleArrs[2].init();
 }
 
-var reflectorInfo={
-	centreTanAngleVectorScaled:[0,0,0],
-	otherThing:[0,0,0],
-	rad:0.5
-};
-//for 2nd portal. TODO organise this sensibly for arbitray portal num!
-var reflectorInfo2={
-	centreTanAngleVectorScaled:[0,0,0],
-	otherThing:[0,0,0],
-	rad:0.5
-};
+var reflectorInfoArr=[];
+for (var ii=0;ii<2;ii++){	//TODO how to cope with variable portal numbers? just assign max? (fixed number supported by shader)
+	reflectorInfoArr.push({
+		centreTanAngleVectorScaled:[0,0,0],
+		rad:0.5
+	});
+}
 
 function calcReflectionInfo(toReflect,resultsObj, reflectorRad){
 	//use player position directly. expect to behave like transparent
@@ -726,8 +722,9 @@ function drawScene(frameTime){
 		//console.log(JSON.stringify({sshipWorld,numMoves,offsetCameraWorld:offsetCameraContainer.world}));
 	}
 	var portalsForThisWorldX = portalsForWorld[offsetCameraContainer.world];
-	reflectorInfo.rad = guiParams.reflector.draw!="none" ? portalsForThisWorldX[0].shared.radius : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
-	reflectorInfo2.rad = guiParams.reflector.draw!="none" ? portalsForThisWorldX[1].shared.radius : 0;
+	for (var ii=0;ii<portalsForThisWorldX.length;ii++){
+		reflectorInfoArr[ii].rad = guiParams.reflector.draw!="none" ? portalsForThisWorldX[ii].shared.radius : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
+	}
 
 	if (guiParams.display.stereo3d == "off"){
 		drawSceneToScreen(offsetPlayerCamera, {left:0,top:0,width:gl.viewportWidth,height:gl.viewportHeight});
@@ -780,13 +777,13 @@ function drawScene(frameTime){
 
 	//mat4.set(cameraForScene, worldCamera);
 
-	calcReflectionInfo(portalInCameraCopy,reflectorInfo, portals[0].shared.radius);
+	calcReflectionInfo(portalInCameraCopy,reflectorInfoArr[0], portals[0].shared.radius);
 
 	//for 2nd portal in this world. TODO generalise
 	mat4.set(invertedWorldCamera, portalInCameraCopy2);
 	mat4.multiply(portalInCameraCopy2, portals[1].matrix);
 	mat4.transpose(portalInCameraCopy2);
-	calcReflectionInfo(portalInCameraCopy2,reflectorInfo2, portals[1].shared.radius);
+	calcReflectionInfo(portalInCameraCopy2,reflectorInfoArr[1], portals[1].shared.radius);
 
 	mat4.set(cameraForScene, worldCamera);
 
@@ -2633,8 +2630,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			}
 			
 		}else{
-
-			var reflectorInfoArr = [reflectorInfo, reflectorInfo2];	//TODO populate this earlier instead of using 2 global variables!
 			
 			for (var ii=0;ii<portals.length;ii++){
 				if (frustumCull(portalInCameraArr[ii],reflectorInfoArr[ii].rad)){
