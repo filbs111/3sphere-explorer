@@ -16,16 +16,24 @@
 	uniform vec4 uFogColor;
 	uniform vec3 uReflectorDiffColor;
 	uniform vec3 uReflectorDiffColor2;
+	uniform vec3 uReflectorDiffColor3;
+
 	uniform vec4 uReflectorPos;
 	uniform vec4 uReflectorPos2;
+	uniform vec4 uReflectorPos3;
+
 	uniform float uReflectorCos;
 	uniform float uReflectorCos2;
+	uniform float uReflectorCos3;
+
 	varying vec4 adjustedPos;
 	varying vec4 transformedNormal;	
 	varying vec4 transformedCoord;	
 	
 	uniform vec3 uLightPosPlayerFrame;	//tmp. TODO do this stuff in v shader
 	uniform vec3 uLightPosPlayerFrame2;
+	uniform vec3 uLightPosPlayerFrame3;
+
 #ifdef CUSTOM_DEPTH
 	varying vec2 vZW;
 #endif
@@ -38,6 +46,10 @@
 
 		float posCosDiff2 = dot(normalize(transformedCoord),uReflectorPos2) - uReflectorCos2;
 		if (posCosDiff2>0.0){
+			discard;	//unnecessary if, when viewing thru portal, ensure is other one.
+		}
+		float posCosDiff3 = dot(normalize(transformedCoord),uReflectorPos3) - uReflectorCos3;
+		if (posCosDiff3>0.0){
 			discard;	//unnecessary if, when viewing thru portal, ensure is other one.
 		}
 	
@@ -65,17 +77,19 @@
 		//float gradRange = 1.0 / (1.0 + 3.0*dot(posCosDiff,posCosDiff));
 		float gradRange = (1.-uReflectorCos)/(1.-uReflectorCos - posCosDiff);	//~ r^2/x^2 falloff (since 1-cos(x)~x^2)
 		float gradRange2 = (1.-uReflectorCos2)/(1.-uReflectorCos2 - posCosDiff2);
+		float gradRange3 = (1.-uReflectorCos3)/(1.-uReflectorCos3 - posCosDiff3);
 
-		vec3 averageLight = uFogColor.xyz + uReflectorDiffColor * 0.5*gradRange + uReflectorDiffColor2 * 0.5*gradRange2;
+		vec3 averageLight = uFogColor.xyz + uReflectorDiffColor * 0.5*gradRange + uReflectorDiffColor2 * 0.5*gradRange2 + uReflectorDiffColor3 * 0.5*gradRange3;
 
 			//calculation contribution of gradient lights and sum. this is portalLight vector basically.
 		
 		vec3 modifiedLightDirection = gradRange*normalize(uLightPosPlayerFrame.xyz);	//TODO scale less when far from portal surf (by difference betwee "average" colour and fog) 
 		vec3 modifiedLightDirection2 = gradRange2*normalize(uLightPosPlayerFrame2.xyz);
+		vec3 modifiedLightDirection3 = gradRange3*normalize(uLightPosPlayerFrame3.xyz);
 		
-		vec3 modifiedLightDirectionR = modifiedLightDirection*uReflectorDiffColor.r + modifiedLightDirection2*uReflectorDiffColor2.r;	//todo matrix notation, do in vert shader
-		vec3 modifiedLightDirectionG = modifiedLightDirection*uReflectorDiffColor.g + modifiedLightDirection2*uReflectorDiffColor2.g;
-		vec3 modifiedLightDirectionB = modifiedLightDirection*uReflectorDiffColor.b + modifiedLightDirection2*uReflectorDiffColor2.b;
+		vec3 modifiedLightDirectionR = modifiedLightDirection*uReflectorDiffColor.r + modifiedLightDirection2*uReflectorDiffColor2.r + modifiedLightDirection3*uReflectorDiffColor3.r;	//todo matrix notation, do in vert shader
+		vec3 modifiedLightDirectionG = modifiedLightDirection*uReflectorDiffColor.g + modifiedLightDirection2*uReflectorDiffColor2.g + modifiedLightDirection3*uReflectorDiffColor3.g;
+		vec3 modifiedLightDirectionB = modifiedLightDirection*uReflectorDiffColor.b + modifiedLightDirection2*uReflectorDiffColor2.b + modifiedLightDirection3*uReflectorDiffColor3.b;
 
 		vec4 vChanWeightsR = vec4(modifiedLightDirectionR, averageLight.r-dot(modifiedLightDirectionR,vec3(0.5)));
 		vec4 vChanWeightsG = vec4(modifiedLightDirectionG, averageLight.g-dot(modifiedLightDirectionG,vec3(0.5)));

@@ -13,11 +13,11 @@ var portalsForWorld = (()=>{
         portalsForWorld[worldTwo].push(ps2);
     }
 
-    addPortalPair(0, 1, 0.05, [1.0,1.0,1.0,1.0]);   //??
-    addPortalPair(1, 2, 0.1, [0.1,0.1,0.1,1.0]);
-    addPortalPair(2, 0, 0.2, [1.0,0.1,0.1,1.0]);
+    addPortalPair(0, 1, 0.025, [0.5,0.5,0.5,1.0]);   //??
+    addPortalPair(1, 2, 0.05, [0.1,0.1,0.1,1.0]);
+    addPortalPair(2, 0, 0.1, [0.5,0.1,0.1,1.0]);
 
-    addPortalPair(0, 1, 0.15, [1.0,1.0,0.1,1.0]);
+    addPortalPair(0, 1, 0.075, [0.5,0.5,0.1,1.0]);
 
     //move one portal in each world away from default.
     xyzmove4mat( portalsForWorld[0][0].matrix, [0,0,1]);

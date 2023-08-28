@@ -419,6 +419,7 @@ function initBuffers(){
 	roadBoxBuffers.step=0;	//unused
 	
 	function loadBufferData(bufferObj, sourceData){
+
 		bufferObj.vertexPositionBuffer = gl.createBuffer();
 		bufferArrayData(bufferObj.vertexPositionBuffer, sourceData.vertices, sourceData.vertices_len || 3);
 		if (sourceData.uvcoords){
@@ -670,6 +671,8 @@ function drawScene(frameTime){
 	
 	offsetCam.setType(guiParams.display.cameraType);
 
+
+	
 	moveCamInSteps(500, offsetCam.getVec());
 
 	function moveCamInSteps(offsetSteps, offsetVec){
@@ -1045,6 +1048,7 @@ function drawScene(frameTime){
 		gl.disable(gl.BLEND);
 		gl.enable(gl.DEPTH_TEST);
 	}
+
 	
 	function drawTargetDecal(scale, color, pos){
 			//scale*= 0.01/pos[2];
@@ -1338,6 +1342,7 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 
 		var psides=[];
 		var otherWorlds=[];
+		
 
 		if (isCubemapView && guiParams.reflector.isPortal){
 
@@ -1396,6 +1401,7 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 
 		var pmats = psides.map(x=>x.matrix);
 		var pmatrads = psides.map(x=>x.shared.radius);
+
 
 		returnObj.worldInfo = guiSettingsForWorld[worldA];
 
@@ -1497,7 +1503,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	
 	gl.clearColor.apply(gl,worldColorsPlain[worldA]);
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-			
+	
 	mat4.set(worldCamera, invertedWorldCamera);
 	mat4.transpose(invertedWorldCamera);
 	
@@ -2018,7 +2024,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		draw8cellnet(activeShaderProgram, modelScale);	
 	}
 	
-	
 	if (guiParams["draw 16-cell"]){
 		var cellScale = 4/Math.sqrt(6);		//in the model, vertices are 0.75*sqrt(2) from the centre, and want to scale to tan(PI/3)=sqrt(3)		
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, cellScale,cellScale,cellScale);
@@ -2365,7 +2370,19 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		mat4.transpose(ssmCopy);
 		gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame2, lightBodge*ssmCopy[3],lightBodge*ssmCopy[7],lightBodge*ssmCopy[11]);
 
-
+		if (infoForPortals.length > 2){
+			mat4.set(matrix, ssmCopy);
+			xyzrotate4mat(ssmCopy, [-Math.PI/2,0,0]); 
+			mat4.transpose(ssmCopy);
+			mat4.set(infoForPortals[2].mat, tmpPortalMat);	//set 2nd matrix equal to 1st.
+			xyzrotate4mat(tmpPortalMat, [-Math.PI/2,0,0]); 
+			mat4.multiply(ssmCopy, tmpPortalMat);
+			mat4.transpose(ssmCopy);
+			gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame3, lightBodge*ssmCopy[3],lightBodge*ssmCopy[7],lightBodge*ssmCopy[11]);
+		}else{
+			gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame3, 0.5,0.5,0.5);
+			//zero?
+		}
 		
 		mat4.set(invertedWorldCamera, mvMatrix);
 		
@@ -2432,6 +2449,19 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			mat4.multiply(ssmCopy, tmpPortalMat);
 			mat4.transpose(ssmCopy);
 			gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame2, ssmCopy[3],ssmCopy[7],ssmCopy[11]);
+
+			if (infoForPortals.length > 2){
+				mat4.set(matrix, ssmCopy);
+				mat4.transpose(ssmCopy);
+				mat4.set(infoForPortals[2].mat, tmpPortalMat);	//set 2nd matrix equal to 1st.
+				xyzrotate4mat(tmpPortalMat, [Math.PI,0,0]); 
+				mat4.multiply(ssmCopy, tmpPortalMat);
+				mat4.transpose(ssmCopy);
+				gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame3, ssmCopy[3],ssmCopy[7],ssmCopy[11]);
+			}else{
+				gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame3, 0.5,0.5,0.5);
+				//zero?
+			}
 
 
 			gl.uniform4f(activeShaderProgram.uniforms.uOtherLightAmounts, 0,0,0,0);	//no thruster/gun light used here currently
@@ -2772,6 +2802,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 		gl.depthFunc(gl.LESS);
 		gl.depthMask(true);
 	}
+
 	
 	gl.enable(gl.BLEND);
 	gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -4131,7 +4162,7 @@ var iterateMechanics = (function iterateMechanics(){
 //		var duocylinderRotate = duoCylinderAngVelConst * timeElapsed*moveSpeed;
 		var duocylinderRotate = duoCylinderAngVelConst* (numSteps*timeStep)*moveSpeed;
 //		duocylinderSpin+=duocylinderRotate; 	//TODO match spin speed with sea wave speed
-		
+
 		if (guiParams.control.spinCorrection){
 			//rotate player in this frame (maybe better to drag towards this angular velocity, with drag prop to atmos density)
 			//what is direction along duocylinder in frame of player?
@@ -5239,7 +5270,6 @@ var iterateMechanics = (function iterateMechanics(){
 		if (!guiParams["drop spaceship"]){
 			mat4.set(playerCamera,sshipMatrixNoInterp);	//todo store gun matrices in player frame instead
 			sshipWorld = playerContainer.world;
-			
 			mat4.set(sshipMatrixNoInterp, sshipMatDCFrame);
 			rotate4matCols(sshipMatDCFrame, 0, 1, guiSettingsForWorld[sshipWorld].spin);	//get matrix in frame of duocylinder.
 		}else{
@@ -5692,10 +5722,27 @@ function setPortalInfoForShader(shader, infoForPortals){
 	if (shader.uniforms.uReflectorDiffColor2){
 		gl.uniform3fv(shader.uniforms.uReflectorDiffColor2, infoForPortals[1].localVecReflectorDiffColor);
 	}
+	if (shader.uniforms.uReflectorDiffColor3){
+		if (infoForPortals.length > 2){
+			gl.uniform3fv(shader.uniforms.uReflectorDiffColor3, infoForPortals[2].localVecReflectorDiffColor);
+		}else{
+			gl.uniform3fv(shader.uniforms.uReflectorDiffColor3, [0,0,0]);
+			//guess can be whatever
+		}
+	}
 	
 	gl.uniform4fv(shader.uniforms.uReflectorPos, infoForPortals[0].reflectorPosTransformed);
+
 	if (shader.uniforms.uReflectorPos2){
 		gl.uniform4fv(shader.uniforms.uReflectorPos2, infoForPortals[1].reflectorPosTransformed);
+	}
+	if (shader.uniforms.uReflectorPos3){
+		if (infoForPortals.length > 2){
+			gl.uniform4fv(shader.uniforms.uReflectorPos3, infoForPortals[2].reflectorPosTransformed);
+		}else{
+			gl.uniform4fv(shader.uniforms.uReflectorPos3, [0,0,0,1]);
+			//guess can just be whatever
+		}
 	}
 
 	if (shader.uniforms.uReflectorCos){
@@ -5704,12 +5751,27 @@ function setPortalInfoForShader(shader, infoForPortals){
 	if (shader.uniforms.uReflectorCos2){
 		gl.uniform1f(shader.uniforms.uReflectorCos2, infoForPortals[1].cosReflector);	
 	}
+	if (shader.uniforms.uReflectorCos3){
+		if (infoForPortals.length > 2){
+			gl.uniform1f(shader.uniforms.uReflectorCos3, infoForPortals[2].cosReflector);
+		}else{
+			gl.uniform1f(shader.uniforms.uReflectorCos3, 1);	//guess can be whatever, but 1 consistent with zero size portal
+		}
+	}
 
 	if (shader.uniforms.uReflectorPosVShaderCopy){
 		gl.uniform4fv(shader.uniforms.uReflectorPosVShaderCopy, infoForPortals[0].reflectorPosTransformed);
 	}
 	if (shader.uniforms.uReflectorPosVShaderCopy2){
 		gl.uniform4fv(shader.uniforms.uReflectorPosVShaderCopy2, infoForPortals[1].reflectorPosTransformed);
+	}
+	if (shader.uniforms.uReflectorPosVShaderCopy3){
+		if (infoForPortals.length > 2){
+			gl.uniform4fv(shader.uniforms.uReflectorPosVShaderCopy3, infoForPortals[2].reflectorPosTransformed);
+		}else{
+			gl.uniform4fv(shader.uniforms.uReflectorPosVShaderCopy3, [0,0,0,1]);
+			//guess can be whatever
+		}
 	}
 }
 function performGeneralShaderSetup(shader){
@@ -5917,6 +5979,7 @@ function drawPortalCubemap(pMatrix, portalInCamera, frameTime, reflInfo, portalN
 			
 			wSettingsArr.push( drawWorldScene(frameTime, true, null, portalNum) );
 		}
+		
 		if (guiParams.display.drawTransparentStuff){
 			for (var ii=0;ii<numFacesToUpdate;ii++){
 				var framebuffer = cubemapView.framebuffers[ii];
@@ -5945,6 +6008,7 @@ function drawPortalCubemap(pMatrix, portalInCamera, frameTime, reflInfo, portalN
 				
 			}
 		}
+		
 		
 		function rotateCameraForFace(ii){
 			switch(ii){

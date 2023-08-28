@@ -13,10 +13,16 @@
 	uniform vec4 uFogColor;
 	uniform vec3 uReflectorDiffColor;
 	uniform vec3 uReflectorDiffColor2;
+	uniform vec3 uReflectorDiffColor3;
+
 	uniform vec4 uReflectorPos;
 	uniform vec4 uReflectorPos2;
+	uniform vec4 uReflectorPos3;
+	
 	uniform float uReflectorCos;
 	uniform float uReflectorCos2;
+	uniform float uReflectorCos3;
+
 	uniform float uSpecularStrength;
 	uniform float uSpecularPower;
 
@@ -26,8 +32,11 @@
 	varying float fog;
 #endif
 	varying vec4 vPlayerLightPosTangentSpace;
+	
 	varying vec4 vPortalLightPosTangentSpace;
 	varying vec4 vPortalLightPosTangentSpace2;
+	varying vec4 vPortalLightPosTangentSpace3;
+
 	varying vec4 vEyePosTangentSpace;
 	varying vec4 transformedCoord;	
 	varying vec4 vColor;
@@ -55,11 +64,15 @@
 
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
 		float posCosDiff2 = dot(normalize(transformedCoord),uReflectorPos2) - uReflectorCos2;
-		
+		float posCosDiff3 = dot(normalize(transformedCoord),uReflectorPos3) - uReflectorCos3;
+
 		if (posCosDiff>0.0){
 			discard;
 		}
 		if (posCosDiff2>0.0){
+			discard;	//unnecessary if, when looking through portal (ie drawing cube map), is other portal 
+		}
+		if (posCosDiff3>0.0){
 			discard;	//unnecessary if, when looking through portal (ie drawing cube map), is other portal 
 		}
 /*	
@@ -123,6 +136,11 @@
 		float portalLight2 = dot( vPortalLightPosTangentSpaceAdj2, nmapNormal);
 		portalLight2 = max(0.5*portalLight2 +0.5+ posCosDiff2,0.0);	//unnecessary if camera pos = light pos
 
+		vec3 vPortalLightPosTangentSpaceAdj3 =normalize(vPortalLightPosTangentSpace3.xyz);
+		float portalLight3 = dot( vPortalLightPosTangentSpaceAdj3, nmapNormal);
+		portalLight3 = max(0.5*portalLight3 +0.5+ posCosDiff3,0.0);	//unnecessary if camera pos = light pos
+
+
 #ifdef SPECULAR_ACTIVE
 
 		//TODO take into account "size" of portal light
@@ -135,11 +153,17 @@
 		phongAmount = uSpecularStrength*pow( max(dot(halfVec, nmapNormal), 0.),uSpecularPower);
 		portalLight2*=(1.-uSpecularStrength);	//ensure total light doesn't go -ve
 		portalLight2+=phongAmount;
+
+		halfVec = normalize( normalizedEyePosAdj + vPortalLightPosTangentSpaceAdj3 );
+		phongAmount = uSpecularStrength*pow( max(dot(halfVec, nmapNormal), 0.),uSpecularPower);
+		portalLight3*=(1.-uSpecularStrength);	//ensure total light doesn't go -ve
+		portalLight3+=phongAmount;
 #endif
 
 		//falloff
 		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
 		portalLight2/=1.0 + 3.0*dot(posCosDiff2,posCosDiff2);
+		portalLight3/=1.0 + 3.0*dot(posCosDiff3,posCosDiff3);
 #ifdef VCOLOR
 		//vec4 adjustedColor = uColor*vColor;	//TODO this logid in vert shader
 		vec4 adjustedColor = uColor;	//temporarily disable this feature -seems input color data broken - some are black. reenable when fix data.
@@ -149,7 +173,7 @@
 		
 		//guess maybe similar to some gaussian light source
 		//vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*adjustedColor*vec4(texColor,1.) + (1.0-fog)*uFogColor;
-		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uReflectorDiffColor2*portalLight2 + uFogColor.xyz )*adjustedColor.xyz*texColor + (1.0-fog)*uFogColor.xyz , 1.);
+		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uReflectorDiffColor2*portalLight2 + uReflectorDiffColor3*portalLight3 + uFogColor.xyz )*adjustedColor.xyz*texColor + (1.0-fog)*uFogColor.xyz , 1.);
 				
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	

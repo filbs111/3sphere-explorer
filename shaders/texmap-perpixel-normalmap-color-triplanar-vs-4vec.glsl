@@ -20,10 +20,12 @@
 	uniform vec4 uCameraWorldPos;
 	uniform vec4 uReflectorPosVShaderCopy;
 	uniform vec4 uReflectorPosVShaderCopy2;
+	uniform vec4 uReflectorPosVShaderCopy3;
 
 	varying vec4 vPlayerLightPosTangentSpace;
 	varying vec4 vPortalLightPosTangentSpace;
 	varying vec4 vPortalLightPosTangentSpace2;
+	varying vec4 vPortalLightPosTangentSpace3;
 
 	varying vec4 vEyePosTangentSpace;
 	varying vec4 transformedCoord;
@@ -61,6 +63,7 @@
 		vPlayerLightPosTangentSpace = uDropLightPos* vertexMatrix;
 		vPortalLightPosTangentSpace = uReflectorPosVShaderCopy*vertexMatrix;
 		vPortalLightPosTangentSpace2 = uReflectorPosVShaderCopy2*vertexMatrix;
+		vPortalLightPosTangentSpace3 = uReflectorPosVShaderCopy3*vertexMatrix;
 
 #ifdef SPECULAR_ACTIVE
 		vEyePosTangentSpace = vec4(vec3(0.),1.)*vertexMatrix;	//eye pos
