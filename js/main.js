@@ -781,11 +781,12 @@ function drawScene(frameTime){
 	calcReflectionInfo(portalInCameraCopy,reflectorInfoArr[0], portals[0].shared.radius);
 
 	//for 2nd portal in this world. TODO generalise
-	mat4.set(invertedWorldCamera, portalInCameraCopy2);
-	mat4.multiply(portalInCameraCopy2, portals[1].matrix);
-	mat4.transpose(portalInCameraCopy2);
-	calcReflectionInfo(portalInCameraCopy2,reflectorInfoArr[1], portals[1].shared.radius);
-
+	if (portals.length>1){
+		mat4.set(invertedWorldCamera, portalInCameraCopy2);
+		mat4.multiply(portalInCameraCopy2, portals[1].matrix);
+		mat4.transpose(portalInCameraCopy2);
+		calcReflectionInfo(portalInCameraCopy2,reflectorInfoArr[1], portals[1].shared.radius);
+	}
 	if (portals.length>2){
 		mat4.set(invertedWorldCamera, portalInCameraCopy3);
 		mat4.multiply(portalInCameraCopy3, portals[2].matrix);
@@ -2361,14 +2362,19 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		mat4.transpose(ssmCopy);
 		gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame, lightBodge*ssmCopy[3],lightBodge*ssmCopy[7],lightBodge*ssmCopy[11]);
 
-		mat4.set(matrix, ssmCopy);
-		xyzrotate4mat(ssmCopy, [-Math.PI/2,0,0]); 
-		mat4.transpose(ssmCopy);
-		mat4.set(infoForPortals[1].mat, tmpPortalMat);	//set 2nd matrix equal to 1st.
-		xyzrotate4mat(tmpPortalMat, [-Math.PI/2,0,0]); 
-		mat4.multiply(ssmCopy, tmpPortalMat);
-		mat4.transpose(ssmCopy);
-		gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame2, lightBodge*ssmCopy[3],lightBodge*ssmCopy[7],lightBodge*ssmCopy[11]);
+		if (infoForPortals.length > 1){
+			mat4.set(matrix, ssmCopy);
+			xyzrotate4mat(ssmCopy, [-Math.PI/2,0,0]); 
+			mat4.transpose(ssmCopy);
+			mat4.set(infoForPortals[1].mat, tmpPortalMat);	//set 2nd matrix equal to 1st.
+			xyzrotate4mat(tmpPortalMat, [-Math.PI/2,0,0]); 
+			mat4.multiply(ssmCopy, tmpPortalMat);
+			mat4.transpose(ssmCopy);
+			gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame2, lightBodge*ssmCopy[3],lightBodge*ssmCopy[7],lightBodge*ssmCopy[11]);
+		}else{
+			gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame2, 0.5,0.5,0.5);
+			//zero?
+		}
 
 		if (infoForPortals.length > 2){
 			mat4.set(matrix, ssmCopy);
@@ -2442,13 +2448,18 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			mat4.transpose(ssmCopy);
 			gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame, ssmCopy[3],ssmCopy[7],ssmCopy[11]);
 
-			mat4.set(mMatrix, ssmCopy);
-			mat4.transpose(ssmCopy);
-			mat4.set(infoForPortals[1].mat, tmpPortalMat);	//set 2nd matrix equal to 1st.
-			xyzrotate4mat(tmpPortalMat, [Math.PI,0,0]); 
-			mat4.multiply(ssmCopy, tmpPortalMat);
-			mat4.transpose(ssmCopy);
-			gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame2, ssmCopy[3],ssmCopy[7],ssmCopy[11]);
+			if (infoForPortals.length > 1){
+				mat4.set(mMatrix, ssmCopy);
+				mat4.transpose(ssmCopy);
+				mat4.set(infoForPortals[1].mat, tmpPortalMat);	//set 2nd matrix equal to 1st.
+				xyzrotate4mat(tmpPortalMat, [Math.PI,0,0]); 
+				mat4.multiply(ssmCopy, tmpPortalMat);
+				mat4.transpose(ssmCopy);
+				gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame2, ssmCopy[3],ssmCopy[7],ssmCopy[11]);
+			}else{
+				gl.uniform3f(activeShaderProgram.uniforms.uLightPosPlayerFrame2, 0.5,0.5,0.5);
+				//zero?
+			}
 
 			if (infoForPortals.length > 2){
 				mat4.set(matrix, ssmCopy);
@@ -5721,7 +5732,12 @@ function setPortalInfoForShader(shader, infoForPortals){
 		gl.uniform3fv(shader.uniforms.uReflectorDiffColor, infoForPortals[0].localVecReflectorDiffColor);
 	}
 	if (shader.uniforms.uReflectorDiffColor2){
-		gl.uniform3fv(shader.uniforms.uReflectorDiffColor2, infoForPortals[1].localVecReflectorDiffColor);
+		if (infoForPortals.length > 1){
+			gl.uniform3fv(shader.uniforms.uReflectorDiffColor2, infoForPortals[1].localVecReflectorDiffColor);
+		}else{
+			gl.uniform3fv(shader.uniforms.uReflectorDiffColor2, [0,0,0]);
+			//guess can be whatever
+		}
 	}
 	if (shader.uniforms.uReflectorDiffColor3){
 		if (infoForPortals.length > 2){
@@ -5735,7 +5751,12 @@ function setPortalInfoForShader(shader, infoForPortals){
 	gl.uniform4fv(shader.uniforms.uReflectorPos, infoForPortals[0].reflectorPosTransformed);
 
 	if (shader.uniforms.uReflectorPos2){
-		gl.uniform4fv(shader.uniforms.uReflectorPos2, infoForPortals[1].reflectorPosTransformed);
+		if (infoForPortals.length > 1){
+			gl.uniform4fv(shader.uniforms.uReflectorPos2, infoForPortals[1].reflectorPosTransformed);
+		}else{
+			gl.uniform4fv(shader.uniforms.uReflectorPos2, [0,0,0,1]);
+			//guess can just be whatever
+		}
 	}
 	if (shader.uniforms.uReflectorPos3){
 		if (infoForPortals.length > 2){
@@ -5750,7 +5771,11 @@ function setPortalInfoForShader(shader, infoForPortals){
 		gl.uniform1f(shader.uniforms.uReflectorCos, infoForPortals[0].cosReflector);	
 	}
 	if (shader.uniforms.uReflectorCos2){
-		gl.uniform1f(shader.uniforms.uReflectorCos2, infoForPortals[1].cosReflector);	
+		if (infoForPortals.length > 1){
+			gl.uniform1f(shader.uniforms.uReflectorCos2, infoForPortals[1].cosReflector);
+		}else{
+			gl.uniform1f(shader.uniforms.uReflectorCos2, 1);	//guess can be whatever, but 1 consistent with zero size portal
+		}
 	}
 	if (shader.uniforms.uReflectorCos3){
 		if (infoForPortals.length > 2){
@@ -5764,7 +5789,12 @@ function setPortalInfoForShader(shader, infoForPortals){
 		gl.uniform4fv(shader.uniforms.uReflectorPosVShaderCopy, infoForPortals[0].reflectorPosTransformed);
 	}
 	if (shader.uniforms.uReflectorPosVShaderCopy2){
-		gl.uniform4fv(shader.uniforms.uReflectorPosVShaderCopy2, infoForPortals[1].reflectorPosTransformed);
+		if (infoForPortals.length > 1){
+			gl.uniform4fv(shader.uniforms.uReflectorPosVShaderCopy2, infoForPortals[1].reflectorPosTransformed);
+		}else{
+			gl.uniform4fv(shader.uniforms.uReflectorPosVShaderCopy2, [0,0,0,1]);
+			//guess can be whatever
+		}
 	}
 	if (shader.uniforms.uReflectorPosVShaderCopy3){
 		if (infoForPortals.length > 2){
