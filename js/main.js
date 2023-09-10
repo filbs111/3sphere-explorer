@@ -1047,18 +1047,34 @@ function drawScene(frameTime){
 			drawTargetDecal(0.001, colorArrs.hudYellow, fireDirectionVec);	//todo check whether this colour already set
 		}
 		
+		//drawing of text
+		bind2dTextureIfRequired(fontTexture);
+		drawTargetDecalCharacter(0.001, colorArrs.white, [0,0,1], "G");
+
+
 		gl.disable(gl.BLEND);
 		gl.enable(gl.DEPTH_TEST);
 	}
 
 	
-	function drawTargetDecal(scale, color, pos){
+	function drawTargetDecal(scale, color, pos, uvPosAndSize = [0,0,1,1]){
 			//scale*= 0.01/pos[2];
 			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, scale,scale,scale);
+			gl.uniform4fv(activeShaderProgram.uniforms.uUvCoords, uvPosAndSize);
 			gl.uniform4fv(activeShaderProgram.uniforms.uColor, color);
 			mat4.identity(mvMatrix);
 			xyzmove4mat(mvMatrix,[0.01*pos[0]/pos[2],0.01*pos[1]/pos[2],0.01]);
 			drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
+	}
+
+	function drawTargetDecalCharacter(scale, color, pos, inputText){
+		var charCode = inputText.charCodeAt(0);
+		var charInfo = text_util.charInfo[charCode];
+
+		drawTargetDecal(scale, color, pos, uvPosAndSize = [
+			charInfo.x/512,(1-charInfo.y/512) - charInfo.height/512,
+			charInfo.width/512, charInfo.height/512]);
+			//note could flip quad y to make above simpler (but will use different method anyway)
 	}
 
 	}
