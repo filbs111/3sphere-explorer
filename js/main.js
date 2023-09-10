@@ -1022,7 +1022,7 @@ function drawScene(frameTime){
 		//direction of flight
 		if (playerVelVec[2] > 0.1){	//??
 			bind2dTextureIfRequired(hudTexturePlus);		//todo texture atlas for all hud 
-			drawTargetDecal(standardDecalScale, colorArrs.hudFlightDir, playerVelVec);
+			drawTargetDecal(standardDecalScale, colorArrs.hudFlightDir, adjustedDirectionForFisheye(playerVelVec));
 		}
 		bind2dTextureIfRequired(hudTexture);	
 		
@@ -1030,11 +1030,14 @@ function drawScene(frameTime){
 		if (guiParams["targeting"]!="off"){
 			var shiftAmount = 1/muzzleVel;	//shift according to player velocity. 0.1 could be 1, but 
 			var scalescalar = 0.0037/(1+shiftAmount*playerVelVec[2]);
-			drawTargetDecal([scalescalar,scalescalar,0], colorArrs.hudYellow, [shiftAmount*playerVelVec[0],shiftAmount*playerVelVec[1],1+shiftAmount*playerVelVec[2]]);	//TODO vector add!
+			//TODO correct this for fisheye
+			// (size of outer ring actually means something. draw centre and outer ring separately?)
+			drawTargetDecal([scalescalar,scalescalar,0], colorArrs.hudYellow, adjustedDirectionForFisheye(
+				[shiftAmount*playerVelVec[0],shiftAmount*playerVelVec[1],1+shiftAmount*playerVelVec[2]]));	//TODO vector add!
 			
 			if (guiParams.target.type!="none" && targetWorldFrame[2]<0){	//if in front of player){
 				bind2dTextureIfRequired(hudTextureBox);				
-				drawTargetDecal(standardDecalScale, colorArrs.hudBox, targetWorldFrame);	//direction to target (shows where target is on screen)
+				drawTargetDecal(standardDecalScale, colorArrs.hudBox, adjustedDirectionForFisheye(targetWorldFrame));	//direction to target (shows where target is on screen)
 									//TODO put where is on screen, not direction from spaceship (obvious difference in 3rd person)
 				//bind2dTextureIfRequired(hudTextureSmallCircles);	
 				//drawTargetDecal(0.0008, [1, 0.1, 1, 0.5], selectedTargeting);	//where should shoot in order to hit target (accounting for player velocity)
@@ -1049,9 +1052,45 @@ function drawScene(frameTime){
 		if (fireDirectionVec[2] > 0.1){	//??
 			bind2dTextureIfRequired(hudTextureX);
 
-			drawTargetDecal(standardDecalScale, colorArrs.hudYellow, fireDirectionVec);	//todo check whether this colour already set
+			var reversed = fireDirectionVec.map(x=>-x);	//needs to do this for fisheye correction to work consistent with other hud icons
+			drawTargetDecal(standardDecalScale, colorArrs.green, adjustedDirectionForFisheye(reversed));	//todo check whether this colour already set
 		}
 		
+		function adjustedDirectionForFisheye(inPos){
+
+			if (!guiParams.display.fisheyeEnabled){
+				return inPos;
+			}
+
+			//note this calculation likely simplifyable!
+			//also could be wrong - expect at least wont handle when FOV>180
+
+			//normalise pos.
+			var posLength = Math.sqrt(inPos[0]*inPos[0] + inPos[1]*inPos[1] + inPos[2]*inPos[2]);
+			var outPos = inPos.map(elem=>elem/posLength);
+			//return outPos;
+
+
+			var sphereShift = 8*guiParams.display.uVarOne;
+			//how far back in sphere of radius 1 viewing the scene
+			// (scene effectiovely projected onto sphere, viewpoint shifted - shift 0 for rectilinear
+			// standard projection, 1 for stereographic)
+			
+			outPos[2] = outPos[2] + sphereShift;
+			
+			//scale such that pos[2] retains the same value for screen corner point at fx,fy
+			
+			//root(fsq) is opp, 1 is adj. hyp is root(fsq+1)
+			//stretch such that hyp is 1. 
+			//adj = 1/root(fsq+1)
+
+			//then multiply pos by adj/(-shift+adj)
+			var adj = 1/Math.sqrt(1+window.fsq);
+			outPos[2] = outPos[2]*adj/(adj-sphereShift); 
+
+			return outPos;
+		}
+
 
 		//draw something to show each portal.
 		var portalTexts = [];
@@ -1063,32 +1102,7 @@ function drawScene(frameTime){
 			mat4.multiply(relativeMat, mat);
 			var pos = relativeMat.slice(12,15);	//12,13,14
 
-			//fisheye
-			if (guiParams.display.fisheyeEnabled){
-				//note this calculation likely simplifyable!
-				//also could be wrong - expect at least wont handle when FOV>180
-
-				//normalise pos.
-				var posLength = Math.sqrt(1- relativeMat[15]*relativeMat[15] );
-				pos = pos.map(elem=>elem/posLength);
-
-				var sphereShift = 8*guiParams.display.uVarOne;
-				//how far back in sphere of radius 1 viewing the scene
-				// (scene effectiovely projected onto sphere, viewpoint shifted - shift 0 for rectilinear
-				// standard projection, 1 for stereographic)
-				
-				pos[2] = pos[2] + sphereShift;
-				
-				//scale such that pos[2] retains the same value for screen corner point at fx,fy
-				
-				//root(fsq) is opp, 1 is adj. hyp is root(fsq+1)
-				//stretch such that hyp is 1. 
-				//adj = 1/root(fsq+1)
-
-				//then multiply pos by adj/(-shift+adj)
-				var adj = 1/Math.sqrt(1+window.fsq);
-				pos[2] = pos[2]*adj/(adj-sphereShift); 
-			}
+			pos = adjustedDirectionForFisheye(pos);
 
 			if (pos[2]<0){	//note unintuitive sign
 				drawTargetDecal(standardDecalScale, colorArrs.white, pos);
