@@ -1050,32 +1050,34 @@ function drawScene(frameTime){
 			drawTargetDecal(standardDecalScale, colorArrs.hudYellow, fireDirectionVec);	//todo check whether this colour already set
 		}
 		
-		//drawing of text
-		//TODO efficient - currently many draw calls. could instance render, or create a mesh of multiple quads
-		var activeShaderProgram = shaderPrograms.decalSdf;
-		gl.useProgram(activeShaderProgram);
-		prepBuffersForDrawing(quadBuffers, activeShaderProgram);
-		gl.activeTexture(gl.TEXTURE0);
-		gl.enable(gl.BLEND);
-		gl.blendFunc(gl.SRC_ALPHA, gl.ONE);	
+		if (guiParams.debug.textWorldNum){
+			//drawing of text
+			//TODO efficient - currently many draw calls. could instance render, or create a mesh of multiple quads
+			var activeShaderProgram = shaderPrograms.decalSdf;
+			gl.useProgram(activeShaderProgram);
+			prepBuffersForDrawing(quadBuffers, activeShaderProgram);
+			gl.activeTexture(gl.TEXTURE0);
+			gl.enable(gl.BLEND);
+			gl.blendFunc(gl.SRC_ALPHA, gl.ONE);	
 
-		bind2dTextureIfRequired(fontTexture);
+			bind2dTextureIfRequired(fontTexture);
 
-		var textToDraw = "World " + playerContainer.world;
-		//var xpos = 0.6; var ypos = 0.15;	//(below) centre of screen, suitable if flash up on cross portal
-		var xpos = 3; var ypos = 1.5;	//bottom left. note scales with FOV!
+			var textToDraw = "World " + playerContainer.world;
+			//var xpos = 0.6; var ypos = 0.15;	//(below) centre of screen, suitable if flash up on cross portal
+			var xpos = 3; var ypos = 1.5;	//bottom left. note scales with FOV!
 
-		textToDraw.split('').forEach(ch => {
-			var cInfo = text_util.charInfo[ch.charCodeAt(0)];
-			xpos-=2* cInfo.xadvance/512;	//advance before draw. things drawn backward?
-											//TODO is xoffset correct?
-			drawTargetDecalCharacter(
-				[0.01*cInfo.width/512,0.01*cInfo.height/512,0], colorArrs.white,
-				 [xpos + 2*cInfo.xoffset/512 + (cInfo.width/512),
-				 ypos + 2*cInfo.yoffset/512 + (cInfo.height/512), //note awkward passing in size since currently quads are drawn -1 to +1
-				 1],
-				 cInfo);
-		});
+			textToDraw.split('').forEach(ch => {
+				var cInfo = text_util.charInfo[ch.charCodeAt(0)];
+				xpos-=2* cInfo.xadvance/512;	//advance before draw. things drawn backward?
+												//TODO is xoffset correct?
+				drawTargetDecalCharacter(
+					[0.01*cInfo.width/512,0.01*cInfo.height/512,0], colorArrs.white,
+					[xpos + 2*cInfo.xoffset/512 + (cInfo.width/512),
+					ypos + 2*cInfo.yoffset/512 + (cInfo.height/512), //note awkward passing in size since currently quads are drawn -1 to +1
+					1],
+					cInfo);
+			});
+		}
 
 		gl.disable(gl.BLEND);
 		gl.enable(gl.DEPTH_TEST);
@@ -2226,24 +2228,24 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	//	drawDuocylinderObject(wSettings, duocylinderObjects['sea'], guiParams.seaLevel, seaTime);
 	//}
 
+	if (guiParams.debug.textTextBox){
+		//draw a test cube to test text rendering.
+		var textTestMatrix = mat4.identity();	//TODO don't keep recreating
+		xyzmove4mat(textTestMatrix, [0,0,0.5]);
+		
+		shaderSetup(shaderPrograms.texmapPerPixelDiscardForText[ guiParams.display.atmosShader ], fontTexture); //TODO proper shader with variable contrasting
 
-	//draw a test cube to test text rendering.
-	var textTestMatrix = mat4.identity();	//TODO don't keep recreating
-	xyzmove4mat(textTestMatrix, [0,0,0.5]);
-	
-	shaderSetup(shaderPrograms.texmapPerPixelDiscardForText[ guiParams.display.atmosShader ], fontTexture); //TODO proper shader with variable contrasting
+		var textTextCubeScale = duocylinderSurfaceBoxScale*1;
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, textTextCubeScale,textTextCubeScale,textTextCubeScale);
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+		gl.uniform1f(activeShaderProgram.uniforms.uSharpScale, 0.5);	//? what should this be?
 
-	var textTextCubeScale = duocylinderSurfaceBoxScale*1;
-	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, textTextCubeScale,textTextCubeScale,textTextCubeScale);
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
-	gl.uniform1f(activeShaderProgram.uniforms.uSharpScale, 0.5);	//? what should this be?
+		mat4.set(textTestMatrix, mMatrix);
+		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.multiply(mvMatrix,mMatrix);
 
-	mat4.set(textTestMatrix, mMatrix);
-	mat4.set(invertedWorldCamera, mvMatrix);
-	mat4.multiply(mvMatrix,mMatrix);
-
-	drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
-
+		drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
+	}
 	
 	//draw objects without textures
 	activeShaderProgram = shaderProgramColored;
@@ -3678,7 +3680,9 @@ var guiParams={
 		showSpeedOverlay:false,
 		showGCInfo:false,
 		emitFire:false,
-		fireworks:false
+		fireworks:false,
+		textTextBox:false,
+		textWorldNum:true
 	},
 	audio:{
 		volume:0.2,
@@ -3879,7 +3883,9 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 		});
 	debugFolder.add(guiParams.debug, "emitFire");
 	debugFolder.add(guiParams.debug, "fireworks");
-	
+	debugFolder.add(guiParams.debug, "textTextBox");
+	debugFolder.add(guiParams.debug, "textWorldNum");
+
 	var audioFolder = gui.addFolder('audio');
 	audioFolder.add(guiParams.audio, "volume", 0,1,0.1).onChange(MySound.setGlobalVolume);
 	MySound.setGlobalVolume(guiParams.audio.volume);	//if set above 1, fallback html media element will throw exception!!!
