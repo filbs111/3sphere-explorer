@@ -1032,7 +1032,7 @@ function drawScene(frameTime){
 			
 			if (guiParams.target.type!="none" && targetWorldFrame[2]<0){	//if in front of player){
 				bind2dTextureIfRequired(hudTextureBox);				
-				drawTargetDecal(0.001, colorArrs.hudBox, targetWorldFrame);	//direction to target (shows where target is on screen)
+				drawTargetDecal(standardDecalScale, colorArrs.hudBox, targetWorldFrame);	//direction to target (shows where target is on screen)
 									//TODO put where is on screen, not direction from spaceship (obvious difference in 3rd person)
 				//bind2dTextureIfRequired(hudTextureSmallCircles);	
 				//drawTargetDecal(0.0008, [1, 0.1, 1, 0.5], selectedTargeting);	//where should shoot in order to hit target (accounting for player velocity)
