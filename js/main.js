@@ -1072,7 +1072,7 @@ function drawScene(frameTime){
 												//TODO is xoffset correct?
 				drawTargetDecalCharacter(
 					[0.01*cInfo.width/512,0.01*cInfo.height/512,0], colorArrs.white,
-					[xpos + 2*cInfo.xoffset/512 + (cInfo.width/512),
+					[xpos - 2*cInfo.xoffset/512 + (cInfo.width/512),
 					ypos + 2*cInfo.yoffset/512 + (cInfo.height/512), //note awkward passing in size since currently quads are drawn -1 to +1
 					1],
 					cInfo);
