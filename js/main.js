@@ -1056,8 +1056,15 @@ function drawScene(frameTime){
 		gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);	
 
 		bind2dTextureIfRequired(fontTexture);
-		drawTargetDecalCharacter(0.001, colorArrs.hudYellow, [0,0,1], "G");
 
+		var textToDraw = "WORLD 1";
+		var xpos = 0.6;
+		textToDraw.split('').forEach(ch => {
+			//var toAdvance = text_util.charInfo[ch.charCodeAt(0)].xadvance;
+			//^^ to use this properly, text quads should be drawn at proper sizes.
+			xpos-=0.15;
+			drawTargetDecalCharacter(0.001, colorArrs.hudYellow, [xpos,0.3,1], ch);
+		});
 
 		gl.disable(gl.BLEND);
 		gl.enable(gl.DEPTH_TEST);
