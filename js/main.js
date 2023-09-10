@@ -7,6 +7,7 @@ var shaderProgramColored,	//these are variables that are set to different shader
 var angle_ext;
 var fragDepth_ext;	//maybe pointless to store this, allegedly just need to call gl.getExtension('EXT_frag_depth')	https://developer.mozilla.org/en-US/docs/Web/API/EXT_frag_depth
 var depthTex_ext;
+var stdDerivs_ext;
 
 var myDebugStr = "TEST INFO TO GO HERE";
 
@@ -2186,6 +2187,25 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	//if (worldInfo.seaActive && isCubemapView){	//draw this in drawWorldScene2 for standard view (using depth image from drawWorldScene) TODO move there for cubemap view also.
 	//	drawDuocylinderObject(wSettings, duocylinderObjects['sea'], guiParams.seaLevel, seaTime);
 	//}
+
+
+	//draw a test cube to test text rendering.
+	var textTestMatrix = mat4.identity();	//TODO don't keep recreating
+	xyzmove4mat(textTestMatrix, [0,0,0.5]);
+	
+	shaderSetup(shaderPrograms.texmapPerPixelDiscardForText[ guiParams.display.atmosShader ], fontTexture); //TODO proper shader with variable contrasting
+
+	var textTextCubeScale = duocylinderSurfaceBoxScale*1;
+	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, textTextCubeScale,textTextCubeScale,textTextCubeScale);
+	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+	gl.uniform1f(activeShaderProgram.uniforms.uSharpScale, 0.5);	//? what should this be?
+
+	mat4.set(textTestMatrix, mMatrix);
+	mat4.set(invertedWorldCamera, mvMatrix);
+	mat4.multiply(mvMatrix,mMatrix);
+
+	drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
+
 	
 	//draw objects without textures
 	activeShaderProgram = shaderProgramColored;
@@ -3381,8 +3401,11 @@ function setupScene() {
 	targetMatrix = cellMatData.d16[0];
 }
 
-var texture,diffuseTexture,hudTexture,hudTextureSmallCircles,hudTexturePlus,hudTextureX,hudTextureBox,sshipTexture,sshipTexture2,cannonTexture,nmapTexture;
-var terrain2Texture, terrain2TextureB, terrain2TextureNormals;
+var texture,diffuseTexture,
+	hudTexture,hudTextureSmallCircles,hudTexturePlus,hudTextureX,hudTextureBox,
+	fontTexture,
+	sshipTexture,sshipTexture2,cannonTexture,nmapTexture,
+	terrain2Texture, terrain2TextureB, terrain2TextureNormals;
 
 function loadTmpFFTexture(id,directory){
 	directory = directory || 'img/';
@@ -3408,6 +3431,12 @@ function initTexture(){
 	hudTexturePlus = makeTexture("img/plus.png",gl.RGBA,gl.UNSIGNED_SHORT_4_4_4_4);
 	hudTextureX = makeTexture("img/x.png",gl.RGBA,gl.UNSIGNED_SHORT_4_4_4_4);
 	hudTextureBox = makeTexture("img/box.png",gl.RGBA,gl.UNSIGNED_SHORT_4_4_4_4);
+
+	//fontTexture = makeTexture("img/fonts/alpha8.png",gl.RGB,gl.UNSIGNED_SHORT_5_6_5, true, false);
+	fontTexture = makeTexture("img/fonts/alpha8.png",gl.RED,gl.UNSIGNED_BYTE, true, false);
+
+		//TODO grayscale image? TODO confirm linear
+
 	duocylinderObjects.grid.tex = makeTexture("img/grid-omni.png",gl.RGB,gl.UNSIGNED_SHORT_5_6_5);
 	duocylinderObjects.terrain.tex = makeTexture("data/terrain/turbulent-seamless.png",gl.RGB,gl.UNSIGNED_SHORT_5_6_5);
 	//duocylinderObjects.procTerrain.tex = texture;
@@ -3460,7 +3489,7 @@ function initTexture(){
 		//TODO auto generate normal map from heightmap data
 }
 
-function makeTexture(src, imgformat=gl.RGBA, imgtype=gl.UNSIGNED_BYTE, yFlip = true) {	//to do OO
+function makeTexture(src, imgformat=gl.RGBA, imgtype=gl.UNSIGNED_BYTE, yFlip = true, withMips = true) {	//to do OO
 	var texture = gl.createTexture();
 		
 	bind2dTextureIfRequired(texture);
@@ -3478,7 +3507,9 @@ function makeTexture(src, imgformat=gl.RGBA, imgtype=gl.UNSIGNED_BYTE, yFlip = t
 		gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);	//linear colorspace grad light texture (TODO handle other texture differently?)
 		gl.texImage2D(gl.TEXTURE_2D, 0, imgformat, imgformat, imgtype, texture.image);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, 
+			withMips? gl.LINEAR_MIPMAP_LINEAR: gl.LINEAR);
+
 		//gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 		gl.generateMipmap(gl.TEXTURE_2D);
 		bind2dTextureIfRequired(null);	//AFAIK this is just good practice to unwanted side effect bugs
@@ -3902,7 +3933,8 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	angle_ext = gl.getExtension("ANGLE_instanced_arrays");							
 	fragDepth_ext = gl.getExtension('EXT_frag_depth');
 	depthTex_ext = gl.getExtension('WEBGL_depth_texture');
-	
+	stdDerivs_ext = gl.getExtension('OES_standard_derivatives');
+
 	initTextureFramebuffer(rttFisheyeRectRenderOutput);
 	initTextureFramebuffer(rttFisheyeRectRenderOutput2);
 

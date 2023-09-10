@@ -172,6 +172,7 @@ function initShaders(shaderProgs){
 		coloredPerPixelDiscard:["perpixel-discard-vs", "perpixel-discard-fs", [],[],true],
 		coloredPerPixelDiscardBendy:["perpixel-discard-vs", "perpixel-discard-fs", ['BENDY_'],[],true],
 		texmapPerPixelDiscard:["texmap-perpixel-discard-vs", "texmap-perpixel-discard-fs", [],[],true],
+		texmapPerPixelDiscardForText:["texmap-perpixel-discard-vs", "texmap-perpixel-discard-text-fs", [],[],true],
 		texmapPerPixelDiscardPhong:["texmap-perpixel-discard-vs", "texmap-perpixel-discard-fs", [],['SPECULAR_ACTIVE'],true],
 		texmapPerPixelDiscardNormalmapV1:["texmap-perpixel-discard-normalmap-vs", "texmap-perpixel-discard-normalmap-fs", [],[],true],
 		texmapPerPixelDiscardNormalmap:["texmap-perpixel-discard-normalmap-efficient-vs", "texmap-perpixel-discard-normalmap-efficient-fs", [],[],true],	
