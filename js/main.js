@@ -1052,20 +1052,20 @@ function drawScene(frameTime){
 		
 
 		//draw something to show each portal.
-		var portals = portalsForWorld[offsetCameraContainer.world];
+		var portalTexts = [];
 			//note using offsetCameraContainer for this, but use playerContainer to display current world.
-		for (var portal of portals){
+		for (var portal of portalsForWorld[offsetCameraContainer.world]){
 			//get position relative to camera. 
 			var mat = portal.matrix;
-			var relativeMat = mat4.create(invertedPlayerCamera);
+			var relativeMat = mat4.create(invertedWorldCamera);
 			mat4.multiply(relativeMat, mat);
-			drawTargetDecal(standardDecalScale, colorArrs.blue, [
-				relativeMat[12],
-				relativeMat[13],
-				relativeMat[14]
-			]);
+			var pos = relativeMat.slice(12,15);	//12,13,14
+			if (pos[2]<0){	//note unintuitive sign
+				drawTargetDecal(standardDecalScale, colorArrs.white, pos);
+				var text = "world " + portal.otherps.world; 
+				portalTexts.push({pos,text});
+			}
 		}
-
 
 		if (guiParams.debug.textWorldNum){
 			//drawing of text
@@ -1079,21 +1079,30 @@ function drawScene(frameTime){
 
 			bind2dTextureIfRequired(fontTexture);
 
-			var textToDraw = "World " + playerContainer.world;
-			//var xpos = 0.6; var ypos = 0.15;	//(below) centre of screen, suitable if flash up on cross portal
-			var xpos = 3; var ypos = 1.5;	//bottom left. note scales with FOV!
+			//drawText("World " + playerContainer.world, 0.6, 0.15, 1); //(below) centre of screen, suitable if flash up on cross portal
+			drawText("World " + playerContainer.world, 3, 1.5, 1,1); //bottom left. note scales with FOV!
 
-			textToDraw.split('').forEach(ch => {
-				var cInfo = text_util.charInfo[ch.charCodeAt(0)];
-				xpos-=2* cInfo.xadvance/512;	//advance before draw. things drawn backward?
-												//TODO is xoffset correct?
-				drawTargetDecalCharacter(
-					[0.01*cInfo.width/512,0.01*cInfo.height/512,0], colorArrs.white,
-					[xpos - 2*cInfo.xoffset/512 + (cInfo.width/512),
-					ypos + 2*cInfo.yoffset/512 + (cInfo.height/512), //note awkward passing in size since currently quads are drawn -1 to +1
-					1],
-					cInfo);
+			portalTexts.forEach(pp=>{
+				drawText(pp.text, pp.pos[0], pp.pos[1], pp.pos[2], 0.3);
 			});
+
+			function drawText(textToDraw, xpos, ypos, zpos, size){
+				xpos/=size*zpos;
+				ypos/=size*zpos;
+				zpos=1/size;
+
+				textToDraw.split('').forEach(ch => {
+					var cInfo = text_util.charInfo[ch.charCodeAt(0)];
+					xpos-=2* cInfo.xadvance/512;	//advance before draw. things drawn backward?
+													//TODO is xoffset correct?
+					drawTargetDecalCharacter(
+						[0.01*size*cInfo.width/512, 0.01*size*cInfo.height/512, 0], colorArrs.white,
+						[xpos - 2*cInfo.xoffset/512 + (cInfo.width/512),
+						ypos + 2*cInfo.yoffset/512 + (cInfo.height/512), //note awkward passing in size since currently quads are drawn -1 to +1
+						zpos],
+						cInfo);
+				});
+			}
 		}
 
 		gl.disable(gl.BLEND);
