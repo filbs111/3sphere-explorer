@@ -1050,6 +1050,23 @@ function drawScene(frameTime){
 			drawTargetDecal(standardDecalScale, colorArrs.hudYellow, fireDirectionVec);	//todo check whether this colour already set
 		}
 		
+
+		//draw something to show each portal.
+		var portals = portalsForWorld[offsetCameraContainer.world];
+			//note using offsetCameraContainer for this, but use playerContainer to display current world.
+		for (var portal of portals){
+			//get position relative to camera. 
+			var mat = portal.matrix;
+			var relativeMat = mat4.create(invertedPlayerCamera);
+			mat4.multiply(relativeMat, mat);
+			drawTargetDecal(standardDecalScale, colorArrs.blue, [
+				relativeMat[12],
+				relativeMat[13],
+				relativeMat[14]
+			]);
+		}
+
+
 		if (guiParams.debug.textWorldNum){
 			//drawing of text
 			//TODO efficient - currently many draw calls. could instance render, or create a mesh of multiple quads
