@@ -1016,17 +1016,19 @@ function drawScene(frameTime){
 		gl.enable(gl.BLEND);
 		gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);	
 
+		var standardDecalScale = [0.001,0.001,0];
 		//direction of flight
 		if (playerVelVec[2] > 0.1){	//??
 			bind2dTextureIfRequired(hudTexturePlus);		//todo texture atlas for all hud 
-			drawTargetDecal(0.001, colorArrs.hudFlightDir, playerVelVec);
+			drawTargetDecal(standardDecalScale, colorArrs.hudFlightDir, playerVelVec);
 		}
 		bind2dTextureIfRequired(hudTexture);	
 		
 		//drawTargetDecal(0.004, [1.0, 1.0, 0.0, 0.5], [0,0,0.01]);	//camera near plane. todo render with transparency
 		if (guiParams["targeting"]!="off"){
 			var shiftAmount = 1/muzzleVel;	//shift according to player velocity. 0.1 could be 1, but 
-			drawTargetDecal(0.0037/(1+shiftAmount*playerVelVec[2]), colorArrs.hudYellow, [shiftAmount*playerVelVec[0],shiftAmount*playerVelVec[1],1+shiftAmount*playerVelVec[2]]);	//TODO vector add!
+			var scalescalar = 0.0037/(1+shiftAmount*playerVelVec[2]);
+			drawTargetDecal([scalescalar,scalescalar,0], colorArrs.hudYellow, [shiftAmount*playerVelVec[0],shiftAmount*playerVelVec[1],1+shiftAmount*playerVelVec[2]]);	//TODO vector add!
 			
 			if (guiParams.target.type!="none" && targetWorldFrame[2]<0){	//if in front of player){
 				bind2dTextureIfRequired(hudTextureBox);				
@@ -1044,26 +1046,35 @@ function drawScene(frameTime){
 		//show where guns will shoot
 		if (fireDirectionVec[2] > 0.1){	//??
 			bind2dTextureIfRequired(hudTextureX);
-			drawTargetDecal(0.001, colorArrs.hudYellow, fireDirectionVec);	//todo check whether this colour already set
+
+			drawTargetDecal(standardDecalScale, colorArrs.hudYellow, fireDirectionVec);	//todo check whether this colour already set
 		}
 		
 		//drawing of text
+		//TODO efficient - currently many draw calls. could instance render, or create a mesh of multiple quads
 		var activeShaderProgram = shaderPrograms.decalSdf;
 		gl.useProgram(activeShaderProgram);
 		prepBuffersForDrawing(quadBuffers, activeShaderProgram);
 		gl.activeTexture(gl.TEXTURE0);
 		gl.enable(gl.BLEND);
-		gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);	
+		gl.blendFunc(gl.SRC_ALPHA, gl.ONE);	
 
 		bind2dTextureIfRequired(fontTexture);
 
-		var textToDraw = "WORLD 1";
-		var xpos = 0.6;
+		var textToDraw = "World " + playerContainer.world;
+		//var xpos = 0.6; var ypos = 0.15;	//(below) centre of screen, suitable if flash up on cross portal
+		var xpos = 3; var ypos = 1.5;	//bottom left. note scales with FOV!
+
 		textToDraw.split('').forEach(ch => {
-			//var toAdvance = text_util.charInfo[ch.charCodeAt(0)].xadvance;
-			//^^ to use this properly, text quads should be drawn at proper sizes.
-			xpos-=0.15;
-			drawTargetDecalCharacter(0.001, colorArrs.hudYellow, [xpos,0.3,1], ch);
+			var cInfo = text_util.charInfo[ch.charCodeAt(0)];
+			xpos-=2* cInfo.xadvance/512;	//advance before draw. things drawn backward?
+											//TODO is xoffset correct?
+			drawTargetDecalCharacter(
+				[0.01*cInfo.width/512,0.01*cInfo.height/512,0], colorArrs.white,
+				 [xpos + 2*cInfo.xoffset/512 + (cInfo.width/512),
+				 ypos + 2*cInfo.yoffset/512 + (cInfo.height/512), //note awkward passing in size since currently quads are drawn -1 to +1
+				 1],
+				 cInfo);
 		});
 
 		gl.disable(gl.BLEND);
@@ -1073,7 +1084,7 @@ function drawScene(frameTime){
 	
 	function drawTargetDecal(scale, color, pos, uvPosAndSize = [0,0,1,1]){
 			//scale*= 0.01/pos[2];
-			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, scale,scale,scale);
+			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, scale);
 			gl.uniform4fv(activeShaderProgram.uniforms.uUvCoords, uvPosAndSize);
 			gl.uniform4fv(activeShaderProgram.uniforms.uColor, color);
 			mat4.identity(mvMatrix);
@@ -1081,10 +1092,7 @@ function drawScene(frameTime){
 			drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
 	}
 
-	function drawTargetDecalCharacter(scale, color, pos, inputText){
-		var charCode = inputText.charCodeAt(0);
-		var charInfo = text_util.charInfo[charCode];
-
+	function drawTargetDecalCharacter(scale, color, pos, charInfo){
 		drawTargetDecal(scale, color, pos, uvPosAndSize = [
 			charInfo.x/512,(1-charInfo.y/512) - charInfo.height/512,
 			charInfo.width/512, charInfo.height/512]);
