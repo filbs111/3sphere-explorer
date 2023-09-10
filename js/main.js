@@ -838,6 +838,8 @@ function drawScene(frameTime){
 			oversize = Math.min(oversize,4.0);
 			var oversizedViewport = [ 2*Math.floor(oversize*gl.viewportWidth/2),  2*Math.floor(oversize*gl.viewportHeight/2)];
 
+			window.fsq = sumInvSqs;	 //so can access elsewhere. TODO organise fisheye stuff
+
 			var fisheyeParams={
 				uInvF : uF.map(elem=>1/elem),
 				uVarOne : uVarOne,
@@ -1060,6 +1062,34 @@ function drawScene(frameTime){
 			var relativeMat = mat4.create(invertedWorldCamera);
 			mat4.multiply(relativeMat, mat);
 			var pos = relativeMat.slice(12,15);	//12,13,14
+
+			//fisheye
+			if (guiParams.display.fisheyeEnabled){
+				//note this calculation likely simplifyable!
+				//also could be wrong - expect at least wont handle when FOV>180
+
+				//normalise pos.
+				var posLength = Math.sqrt(1- relativeMat[15]*relativeMat[15] );
+				pos = pos.map(elem=>elem/posLength);
+
+				var sphereShift = 8*guiParams.display.uVarOne;
+				//how far back in sphere of radius 1 viewing the scene
+				// (scene effectiovely projected onto sphere, viewpoint shifted - shift 0 for rectilinear
+				// standard projection, 1 for stereographic)
+				
+				pos[2] = pos[2] + sphereShift;
+				
+				//scale such that pos[2] retains the same value for screen corner point at fx,fy
+				
+				//root(fsq) is opp, 1 is adj. hyp is root(fsq+1)
+				//stretch such that hyp is 1. 
+				//adj = 1/root(fsq+1)
+
+				//then multiply pos by adj/(-shift+adj)
+				var adj = 1/Math.sqrt(1+window.fsq);
+				pos[2] = pos[2]*adj/(adj-sphereShift); 
+			}
+
 			if (pos[2]<0){	//note unintuitive sign
 				drawTargetDecal(standardDecalScale, colorArrs.white, pos);
 				var text = "world " + portal.otherps.world; 
