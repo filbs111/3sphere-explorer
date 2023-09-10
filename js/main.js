@@ -1048,8 +1048,15 @@ function drawScene(frameTime){
 		}
 		
 		//drawing of text
+		var activeShaderProgram = shaderPrograms.decalSdf;
+		gl.useProgram(activeShaderProgram);
+		prepBuffersForDrawing(quadBuffers, activeShaderProgram);
+		gl.activeTexture(gl.TEXTURE0);
+		gl.enable(gl.BLEND);
+		gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);	
+
 		bind2dTextureIfRequired(fontTexture);
-		drawTargetDecalCharacter(0.001, colorArrs.white, [0,0,1], "G");
+		drawTargetDecalCharacter(0.001, colorArrs.hudYellow, [0,0,1], "G");
 
 
 		gl.disable(gl.BLEND);

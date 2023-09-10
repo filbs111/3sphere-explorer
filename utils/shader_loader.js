@@ -163,7 +163,8 @@ function initShaders(shaderProgs){
 		texmapPerVertex:["texmap-vs", "texmap-fs"],
 		//texmapPerPixel:["texmap-perpixel-vs", "texmap-perpixel-fs"],
 		zPrepass4Vec:["simple-nofog-vs-4vec", "simple-nofog-fs",[],[]],	//for z prepass. 
-		decal:["decal-vs", "decal-fs"],		
+		decal:["decal-vs", "decal-fs"],
+		decalSdf:["decal-vs", "decal-sdf-fs"],		
 		billboardQuads:["simple-moving-billboard-vs", "very-simple-fs",['INSTANCE_COLOR'],['INSTANCE_COLOR']],
 		terrain_l3dt_simple:["terrain-simple-vs", "terrain-textured-fs",["ATMOS_ONE",'CONST_ITERS 4.0'],[]],
 		terrain_l3dt_morph_4d_eff:["terrain-morph-vs", "terrain-textured-fs",["ATMOS_ONE",'CONST_ITERS 4.0',"IS_4D"],[]],
