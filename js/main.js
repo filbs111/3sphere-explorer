@@ -2352,6 +2352,57 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		}
 
 	}
+
+
+	
+	var targetRad=guiParams.target.scale;
+	
+	//var targetRad=0.02;
+	//change radii to test that have right bounding spheres for various cells.
+	//targetRad=Math.sqrt(3);		//8-cell
+	//targetRad=100;
+	//targetRad=0.4;	//empirically found for 120-cell
+	//targetRad=0.41;	//for 600-cell
+	//targetRad=1;		//24-cell
+	//targetRad=1.73;			//16-cell
+	//TODO find exact values and process to calculate ( either largest distance points from origin in model, or calculate)
+	
+	//draw object to be targeted by guns
+	if (guiParams.target.type!="none"){
+		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.multiply(mvMatrix,targetMatrix);
+		switch (guiParams.target.type){
+			case "sphere":
+				if (frustumCull(mvMatrix,targetRad)){	//normally use +ve radius
+											//-ve to make disappear when not entirely inside view frustum (for testing)
+					gl.uniform3f(activeShaderProgram.uniforms.uModelScale, targetRad,targetRad,targetRad);
+					gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.target);
+					var emitColor = Math.sin(frameTime*0.01);
+					//emitColor*=emitColor
+					gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, emitColor, emitColor, emitColor/2);	//YELLOW
+					//gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0.5, 0.5, 0.5]);
+					drawObjectFromBuffers(sphereBuffers, activeShaderProgram);
+					//drawObjectFromBuffers(icoballBuffers, activeShaderProgram);
+				}
+				break;
+			case "box":
+				var boxRad = targetRad*Math.sqrt(3);
+				if (frustumCull(mvMatrix,boxRad)){
+					var savedActiveProg = activeShaderProgram;	//todo push things onto a to draw list, 
+																//minimise shader switching
+					activeShaderProgram = shaderProgramTexmap;
+					gl.useProgram(activeShaderProgram);
+					gl.uniform3f(activeShaderProgram.uniforms.uModelScale, targetRad,targetRad,targetRad);
+					gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+					drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
+					activeShaderProgram = savedActiveProg;
+					gl.useProgram(activeShaderProgram);
+				}
+				break;
+		}
+	}
+
+
 	
 	var drawFunc = {
 		"spaceship" : drawSpaceship,
@@ -2564,52 +2615,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		}
 	}
 	
-	var targetRad=guiParams.target.scale;
-	
-	//var targetRad=0.02;
-	//change radii to test that have right bounding spheres for various cells.
-	//targetRad=Math.sqrt(3);		//8-cell
-	//targetRad=100;
-	//targetRad=0.4;	//empirically found for 120-cell
-	//targetRad=0.41;	//for 600-cell
-	//targetRad=1;		//24-cell
-	//targetRad=1.73;			//16-cell
-	//TODO find exact values and process to calculate ( either largest distance points from origin in model, or calculate)
-	
-	//draw object to be targeted by guns
-	if (guiParams.target.type!="none"){
-		mat4.set(invertedWorldCamera, mvMatrix);
-		mat4.multiply(mvMatrix,targetMatrix);
-		switch (guiParams.target.type){
-			case "sphere":
-				if (frustumCull(mvMatrix,targetRad)){	//normally use +ve radius
-											//-ve to make disappear when not entirely inside view frustum (for testing)
-					gl.uniform3f(activeShaderProgram.uniforms.uModelScale, targetRad,targetRad,targetRad);
-					gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.target);
-					var emitColor = Math.sin(frameTime*0.01);
-					//emitColor*=emitColor
-					gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, emitColor, emitColor, emitColor/2);	//YELLOW
-					//gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0.5, 0.5, 0.5]);
-					drawObjectFromBuffers(sphereBuffers, activeShaderProgram);
-					//drawObjectFromBuffers(icoballBuffers, activeShaderProgram);
-				}
-				break;
-			case "box":
-				var boxRad = targetRad*Math.sqrt(3);
-				if (frustumCull(mvMatrix,boxRad)){
-					var savedActiveProg = activeShaderProgram;	//todo push things onto a to draw list, 
-																//minimise shader switching
-					activeShaderProgram = shaderProgramTexmap;
-					gl.useProgram(activeShaderProgram);
-					gl.uniform3f(activeShaderProgram.uniforms.uModelScale, targetRad,targetRad,targetRad);
-					gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
-					drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
-					activeShaderProgram = savedActiveProg;
-					gl.useProgram(activeShaderProgram);
-				}
-				break;
-		}
-	}
 
 	var portals = portalsForWorld[worldA];
 
