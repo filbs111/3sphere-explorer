@@ -1053,7 +1053,8 @@ function drawScene(frameTime){
 			bind2dTextureIfRequired(hudTextureX);
 
 			var reversed = fireDirectionVec.map(x=>-x);	//needs to do this for fisheye correction to work consistent with other hud icons
-			drawTargetDecal(standardDecalScale, colorArrs.green, adjustedDirectionForFisheye(reversed));	//todo check whether this colour already set
+			drawTargetDecal(standardDecalScale, colorArrs.hudYellow, adjustedDirectionForFisheye(reversed), 0.1);	//todo check whether this colour already set
+			drawTargetDecal(standardDecalScale, colorArrs.hudYellow, adjustedDirectionForFisheye(reversed), -0.1);
 		}
 		
 		function adjustedDirectionForFisheye(inPos){
@@ -1105,7 +1106,8 @@ function drawScene(frameTime){
 			pos = adjustedDirectionForFisheye(pos);
 
 			if (pos[2]<0){	//note unintuitive sign
-				drawTargetDecal(standardDecalScale, colorArrs.white, pos);
+				drawTargetDecal(standardDecalScale, colorArrs.white, pos, -0.35);
+				drawTargetDecal(standardDecalScale, colorArrs.white, pos, 0.35);
 				var text = "world " + portal.otherps.world; 
 				portalTexts.push({pos,text});
 			}
@@ -1155,18 +1157,19 @@ function drawScene(frameTime){
 	}
 
 	
-	function drawTargetDecal(scale, color, pos, uvPosAndSize = [0,0,1,1]){
+	function drawTargetDecal(scale, color, pos, rotation=0, uvPosAndSize = [0,0,1,1]){
 			//scale*= 0.01/pos[2];
 			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, scale);
 			gl.uniform4fv(activeShaderProgram.uniforms.uUvCoords, uvPosAndSize);
 			gl.uniform4fv(activeShaderProgram.uniforms.uColor, color);
 			mat4.identity(mvMatrix);
 			xyzmove4mat(mvMatrix,[0.01*pos[0]/pos[2],0.01*pos[1]/pos[2],0.01]);
+			xyzrotate4mat(mvMatrix, [0,0,rotation]);
 			drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
 	}
 
 	function drawTargetDecalCharacter(scale, color, pos, charInfo){
-		drawTargetDecal(scale, color, pos, uvPosAndSize = [
+		drawTargetDecal(scale, color, pos, 0, uvPosAndSize = [
 			charInfo.x/512,(1-charInfo.y/512) - charInfo.height/512,
 			charInfo.width/512, charInfo.height/512]);
 			//note could flip quad y to make above simpler (but will use different method anyway)
