@@ -1135,7 +1135,7 @@ function drawScene(frameTime){
 				ypos/=size*zpos;
 				zpos=1/size;
 
-				textToDraw.split('').forEach(ch => {
+				textToDraw.toUpperCase().split('').forEach(ch => {
 					var cInfo = text_util.charInfo[ch.charCodeAt(0)];
 					
 					drawTargetDecalCharacter(
@@ -3548,8 +3548,7 @@ function initTexture(){
 	hudTextureX = makeTexture("img/x.png",gl.RGBA,gl.UNSIGNED_SHORT_4_4_4_4);
 	hudTextureBox = makeTexture("img/box.png",gl.RGBA,gl.UNSIGNED_SHORT_4_4_4_4);
 
-	//fontTexture = makeTexture("img/fonts/alpha8.png",gl.RGB,gl.UNSIGNED_SHORT_5_6_5, true, false);
-	fontTexture = makeTexture("img/fonts/alpha8.png",gl.RED,gl.UNSIGNED_BYTE, true, false);
+	fontTexture = makeTexture("img/fonts/player1up-alpha.png",gl.RED,gl.UNSIGNED_BYTE, true, false);
 
 		//TODO grayscale image? TODO confirm linear
 

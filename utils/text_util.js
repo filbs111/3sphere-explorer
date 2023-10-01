@@ -41,4 +41,6 @@ var text_util = (function(font_file){
     }
     xhr.send();
     return returnObject;
-})('img/fonts/out2.fnt');
+})('img/fonts/player1up.fnt');
+
+

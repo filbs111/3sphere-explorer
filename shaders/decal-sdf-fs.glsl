@@ -12,8 +12,30 @@ void main(void) {
     //or for a quad, just done in vert shader...
     //note also that doing fwidth of the sampled value doesn't work well for points where no gradient/
 
-    float wide = fwidth(sample);
-    float smoothStepped = smoothstep(0.5 - wide , 0.5 + wide, sample);
+    //float wide = fwidth(sample);
+
+    float derivX = dFdx(sample);
+    float derivY = dFdy(sample);
+    float wide = abs(derivX) + abs(derivY);
+
+    float growPix = 0.; //grow in screen space
+
+    float midval = 0.4;   //default 0.5, but can hack to smaller to grow in text space (ie proportional to letter size). 
+
+    float smoothStepped = smoothstep(midval - wide*(growPix + 1.) , midval - wide*(growPix - 1.), sample);
+
+
+        // TODO achieve vector display-like effect where lines are fixed width in screen frame 
+
+        // bloom effect
+        //TODO fix this - currently glitches for distant text. guess because hitting sdf maxima between chars.
+        // assumption that gradient magnitude is constant breaks down. perhaps better to pass in scale to shader, just use
+        // SDF value (not fwidth)
+        // maybe increasing border around chars on font sheet would help too
+        // or don't bother here, just do bloom as a final pass, perhaps on whole scene.
+    // float blurFactor = 5.;
+    // float blurry = smoothstep(midval - blurFactor*wide*(growPix + 1.) , midval - blurFactor*wide*(growPix - 1.), sample);
+    // smoothStepped = smoothStepped + blurry;
 
     gl_FragColor = uColor * vec4(vec3(1.0), smoothStepped);
 
