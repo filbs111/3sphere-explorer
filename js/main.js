@@ -1137,14 +1137,15 @@ function drawScene(frameTime){
 
 				textToDraw.split('').forEach(ch => {
 					var cInfo = text_util.charInfo[ch.charCodeAt(0)];
-					xpos-=2* cInfo.xadvance/512;	//advance before draw. things drawn backward?
-													//TODO is xoffset correct?
+					
 					drawTargetDecalCharacter(
-						[0.01*size*cInfo.width/512, 0.01*size*cInfo.height/512, 0], colorArrs.white,
-						[xpos - 2*cInfo.xoffset/512 + (cInfo.width/512),
+						[0.01*size*cInfo.width/512, 0.01*size*cInfo.height/512, 0], colorArrs.teapot,
+						[xpos - 2*cInfo.xoffset/512 - (cInfo.width/512),
 						ypos + 2*cInfo.yoffset/512 + (cInfo.height/512), //note awkward passing in size since currently quads are drawn -1 to +1
 						zpos],
 						cInfo);
+
+					xpos-=2* cInfo.xadvance/512;
 				});
 			}
 		}
