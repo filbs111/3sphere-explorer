@@ -2237,22 +2237,20 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		
 		//console.log("num drawn: " + numDrawn);
 	}
-
-
 	
-	//frigate (TODO rotate with duocylinder?)
 	if (guiParams.drawShapes.frigate){
 		activeShaderProgram = shaderProgramTexmap;
 		shaderSetup(activeShaderProgram, frigateTexture);
-		//piggyback on teapot stuff..
-		//TODO rotate with duocylinder?
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
 
 		modelScale = 0.001*guiParams.drawShapes.frigateScale;
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
-		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.set(invertedWorldCamera, mvMatrix);3
+		rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
 		mat4.multiply(mvMatrix,frigateMatrix);
-		mat4.set(frigateMatrix, mMatrix);	
+
+		mat4.identity(mMatrix);rotate4mat(mMatrix, 0, 1, duocylinderSpin);
+		mat4.multiply(mMatrix, frigateMatrix);
 		drawObjectFromBuffers(frigateBuffers, activeShaderProgram);
 	}
 
