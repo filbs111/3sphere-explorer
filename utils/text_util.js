@@ -14,7 +14,18 @@ var text_util = (function(font_file){
             console.log("font file is loaded!");
 
             returnObject.charInfo = (function(text){
-                var lines = text.split("\r\n");
+
+                //committed to git unix style (with \n separators)
+                //but it's possible that the user has checked out and hosted locally with line ending conversions on windows
+                // (like I was doing!)
+                //assume have a newline at end of the file. if penultimate char is \r, assume windows style newlines
+                var newline = "\n";
+                if (text.charAt(text.length - 2) == "\r".charAt(0)){
+                    newline = "\r\n";
+                    console.log("detected windows style line endings in font file.")
+                }
+
+                var lines = text.split(newline);
                 console.log("number of lines : " + lines.length);
                 var charInfo = {};
 
