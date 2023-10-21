@@ -1,14 +1,15 @@
-    attribute vec3 aVertexPosition;
-	attribute vec3 aVertexNormal;
-	attribute vec2 aTextureCoord;
-	attribute vec3 aVertexVelocity;
-	varying vec3 vTextureCoord;
+#version 300 es
+	in vec3 aVertexPosition;
+	in vec3 aVertexNormal;
+	in vec2 aTextureCoord;
+	in vec3 aVertexVelocity;
+	out vec3 vTextureCoord;
 #ifdef VEC_ATMOS_THICK
 	uniform vec3 uAtmosThickness;
-	varying vec3 fog;
+	out vec3 fog;	//varying
 #else
 	uniform float uAtmosThickness;
-	varying float fog;
+	out float fog;	//varying
 #endif
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
@@ -18,11 +19,11 @@
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 	uniform float uVertexMove;
 	uniform vec3 uModelScale;
-	varying vec4 adjustedPos;
-	varying vec4 transformedNormal;	
-	varying vec4 transformedCoord;
+	out vec4 adjustedPos;	//varying
+	out vec4 transformedNormal;	
+	out vec4 transformedCoord;
 #ifdef CUSTOM_DEPTH
-	varying vec2 vZW;
+	out vec2 vZW;
 #endif
 	void main(void) {
 #ifdef VERTVEL_ACTIVE

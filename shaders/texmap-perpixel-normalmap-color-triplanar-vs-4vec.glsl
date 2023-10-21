@@ -1,16 +1,17 @@
+#version 300 es
 //TODO determine whether more efficient to calc aVertexPosition, aVertexNormal from aTriCoord, aTriNormal here in vert shader, or precalc and pass in.
-	attribute vec4 aVertexPosition;
-	attribute vec4 aVertexNormal;	//AFAIK shouldn't need this, but removing it causes rendering bug. todo find and fix
-	attribute vec4 aVertexColor;
-	//attribute vec3 aVertexColor;
-	attribute vec3 aTriCoord;
-	attribute vec3 aTriNormal;
+	in vec4 aVertexPosition;
+	in vec4 aVertexNormal;	//AFAIK shouldn't need this, but removing it causes rendering bug. todo find and fix
+	in vec4 aVertexColor;
+	//in vec3 aVertexColor;
+	in vec3 aTriCoord;
+	in vec3 aTriNormal;
 #ifdef VEC_ATMOS_THICK
 	uniform vec3 uAtmosThickness;
-	varying vec3 fog;
+	out vec3 fog;
 #else
 	uniform float uAtmosThickness;
-	varying float fog;
+	out float fog;
 #endif
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
@@ -22,22 +23,22 @@
 	uniform vec4 uReflectorPosVShaderCopy2;
 	uniform vec4 uReflectorPosVShaderCopy3;
 
-	varying vec4 vPlayerLightPosTangentSpace;
-	varying vec4 vPortalLightPosTangentSpace;
-	varying vec4 vPortalLightPosTangentSpace2;
-	varying vec4 vPortalLightPosTangentSpace3;
+	out vec4 vPlayerLightPosTangentSpace;
+	out vec4 vPortalLightPosTangentSpace;
+	out vec4 vPortalLightPosTangentSpace2;
+	out vec4 vPortalLightPosTangentSpace3;
 
-	varying vec4 vEyePosTangentSpace;
-	varying vec4 transformedCoord;
-	varying vec3 vPos;		//3vector position (before mapping onto duocyinder)
-	varying vec3 vTexAmounts;
-	varying vec4 vColor;
-	varying vec3 vNormal;	
+	out vec4 vEyePosTangentSpace;
+	out vec4 transformedCoord;
+	out vec3 vPos;		//3vector position (before mapping onto duocyinder)
+	out vec3 vTexAmounts;
+	out vec4 vColor;
+	out vec3 vNormal;	
 #ifdef CUSTOM_DEPTH
-	varying vec2 vZW;
+	out vec2 vZW;
 #endif
 #ifdef DEPTH_AWARE
-	varying vec3 vScreenSpaceCoord;
+	out vec3 vScreenSpaceCoord;
 #endif
 	void main(void) {
 		//calculate vectors moved quarter way around world from this vertex, in the direction of each voxel axis. this is like TBNP "vertexMatrix" matrix, for a normal in one of these directions. (true normal is aVertexNormal though)

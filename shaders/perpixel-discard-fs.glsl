@@ -1,6 +1,4 @@
-#ifdef CUSTOM_DEPTH
-	#extension GL_EXT_frag_depth : enable
-#endif
+#version 300 es
 	precision mediump float;
 	uniform vec4 uColor;
 	uniform vec3 uEmitColor;
@@ -20,16 +18,19 @@
 	uniform float uReflectorCos3;
 
 #ifdef VEC_ATMOS_THICK
-	varying vec3 fog;
+	in vec3 fog;
 #else	
-	varying float fog;
+	in float fog;
 #endif
-	varying vec4 adjustedPos;
-	varying vec4 transformedNormal;
-	varying vec4 transformedCoord;
+	in vec4 adjustedPos;
+	in vec4 transformedNormal;
+	in vec4 transformedCoord;
 #ifdef CUSTOM_DEPTH
-	varying vec2 vZW;
-#endif	
+	in vec2 vZW;
+#endif
+
+out vec4 fragColor;
+
 	void main(void) {
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
 		if (posCosDiff>0.0){
@@ -80,14 +81,14 @@
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
 		
-		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
-		//gl_FragColor = vec4( pow(preGammaFragColor.r,0.455), pow(preGammaFragColor.g,0.455), pow(preGammaFragColor.b,0.455), pow(preGammaFragColor.a,0.455));
+		fragColor = pow(preGammaFragColor, vec4(0.455));
+		//fragColor = vec4( pow(preGammaFragColor.r,0.455), pow(preGammaFragColor.g,0.455), pow(preGammaFragColor.b,0.455), pow(preGammaFragColor.a,0.455));
 		
-		gl_FragColor.a =uColor.a;	//TODO confirm check logic for transparent objects
+		fragColor.a =uColor.a;	//TODO confirm check logic for transparent objects
 #ifdef CUSTOM_DEPTH
 		float depthVal = .5*(vZW.x/vZW.y) + .5;
-		gl_FragDepthEXT = depthVal;
-		gl_FragColor.a = depthVal;
+		gl_FragDepth = depthVal;
+		fragColor.a = depthVal;
 #endif
 	}
 

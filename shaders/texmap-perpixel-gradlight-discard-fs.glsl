@@ -1,17 +1,15 @@
-#ifdef CUSTOM_DEPTH
-	#extension GL_EXT_frag_depth : enable
-#endif
+#version 300 es
 	precision mediump float;
-	varying vec3 vTextureCoord;
+	in vec3 vTextureCoord;
 	uniform sampler2D uSampler;
 	uniform sampler2D uSampler2;
 	uniform vec4 uColor;
 	uniform vec3 uPlayerLightColor;
 	uniform vec4 uOtherLightAmounts;
 #ifdef VEC_ATMOS_THICK
-	varying vec3 fog;
+	in vec3 fog;
 #else	
-	varying float fog;
+	in float fog;
 #endif
 	uniform vec4 uFogColor;
 	uniform vec3 uReflectorDiffColor;
@@ -26,17 +24,20 @@
 	uniform float uReflectorCos2;
 	uniform float uReflectorCos3;
 
-	varying vec4 adjustedPos;
-	varying vec4 transformedNormal;	
-	varying vec4 transformedCoord;	
+	in vec4 adjustedPos;
+	in vec4 transformedNormal;	
+	in vec4 transformedCoord;	
 	
 	uniform vec3 uLightPosPlayerFrame;	//tmp. TODO do this stuff in v shader
 	uniform vec3 uLightPosPlayerFrame2;
 	uniform vec3 uLightPosPlayerFrame3;
 
 #ifdef CUSTOM_DEPTH
-	varying vec2 vZW;
+	in vec2 vZW;
 #endif
+
+out vec4 fragColor;
+
 	void main(void) {
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
 	
@@ -101,7 +102,7 @@
 		vChanWeightsG*=uMaxAlbedo;
 		vChanWeightsB*=uMaxAlbedo;	//todo just apply after litColor
 		
-		vec4 sampleColor = texture2DProj(uSampler, vTextureCoord);
+		vec4 sampleColor = textureProj(uSampler, vTextureCoord);
 		
 		vec3 litColor = vec3( dot(sampleColor, vChanWeightsR), 
 								dot(sampleColor, vChanWeightsG),
@@ -118,32 +119,32 @@
 		vec3 thrustLightColor = vec3(0.1,0.2,0.9)* uOtherLightAmounts.b;
 		vec3 gunLightColor = vec3(1.0,1.0,0.1)* uOtherLightAmounts.g;
 
-		vec4 sampleColor2 = texture2DProj(uSampler2, vTextureCoord);
+		vec4 sampleColor2 = textureProj(uSampler2, vTextureCoord);
 
 								//TODO matrix formulation
 		litColor += thrustLightColor*sampleColor2.b;	//thruster bake
 		litColor += gunLightColor*sampleColor2.g;	//gun bake
 
 		//guess maybe similar to some gaussian light source
-		//vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*uColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
+		//vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*uColor*textureProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		vec4 preGammaFragColor = vec4( fog*litColor + (1.0-fog)*uFogColor.xyz, 1.);
 
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
 		
-		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
-		//gl_FragColor = vec4( pow(preGammaFragColor.r,0.455), pow(preGammaFragColor.g,0.455), pow(preGammaFragColor.b,0.455), pow(preGammaFragColor.a,0.455));
+		fragColor = pow(preGammaFragColor, vec4(0.455));
+		//fragColor = vec4( pow(preGammaFragColor.r,0.455), pow(preGammaFragColor.g,0.455), pow(preGammaFragColor.b,0.455), pow(preGammaFragColor.a,0.455));
 	
 		
-		//gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
-		//gl_FragColor = (1.0-fog)*uFogColor;
+		//fragColor = uColor*fog*textureProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
+		//fragColor = (1.0-fog)*uFogColor;
 
 		float depthVal = .5*(vZW.x/vZW.y) + .5;
-		gl_FragColor.a = depthVal;
+		fragColor.a = depthVal;
 
 #ifdef CUSTOM_DEPTH
-		gl_FragDepthEXT = depthVal;
+		gl_FragDepth = depthVal;
 		//vec2 normZW=normalize(vZW);
-		//gl_FragDepthEXT = .5*(normZW.x/normZW.y) + .5;
+		//gl_FragDepth = .5*(normZW.x/normZW.y) + .5;
 #endif
 	}

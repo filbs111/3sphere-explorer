@@ -6,7 +6,7 @@ var canvas;
 //mostly from view-source:http://learningwebgl.com/lessons/lesson01/index.html
 function initGL(){
 	try {
-		gl = canvas.getContext("webgl",{antialias:false}) || canvas.getContext("experimental-webgl");
+		gl = canvas.getContext("webgl2",{antialias:false});
 		resizecanvas();
 	} catch (e) {
 	}

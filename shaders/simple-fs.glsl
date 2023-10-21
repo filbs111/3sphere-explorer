@@ -1,12 +1,13 @@
-//#extension GL_EXT_frag_depth : enable
-
+#version 300 es
 precision mediump float;
 uniform vec4 uColor;
 uniform vec3 uEmitColor;
-varying float fog;
+in float fog;
 uniform vec4 uFogColor;
-varying float light;
+in float light;
+
+out vec4 fragColor;
 
 void main(void) {
-    gl_FragColor = vec4( fog*(( vec3(light) + uFogColor.xyz )*uColor.xyz + uEmitColor), 1.0) + (1.0-fog)*uFogColor;
+    fragColor = vec4( fog*(( vec3(light) + uFogColor.xyz )*uColor.xyz + uEmitColor), 1.0) + (1.0-fog)*uFogColor;
 }

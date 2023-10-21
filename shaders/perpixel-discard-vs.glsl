@@ -1,11 +1,12 @@
-    attribute vec3 aVertexPosition;
-	attribute vec3 aVertexNormal;
+#version 300 es
+    in vec3 aVertexPosition;
+	in vec3 aVertexNormal;
 #ifdef VEC_ATMOS_THICK
 	uniform vec3 uAtmosThickness;
-	varying vec3 fog;
+	out vec3 fog;
 #else
 	uniform float uAtmosThickness;
-	varying float fog;
+	out float fog;
 #endif
 	uniform float uAtmosContrast;
 #ifdef BENDY_
@@ -21,12 +22,13 @@
 	uniform vec4 uCameraWorldPos;
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 	uniform vec3 uModelScale;
-	varying vec4 adjustedPos;
-	varying vec4 transformedNormal;
-	varying vec4 transformedCoord;
+	out vec4 adjustedPos;
+	out vec4 transformedNormal;
+	out vec4 transformedCoord;
 #ifdef CUSTOM_DEPTH
-	varying vec2 vZW;
-#endif	
+	out vec2 vZW;
+#endif
+
 	void main(void) {	
 
 #ifdef BENDY_

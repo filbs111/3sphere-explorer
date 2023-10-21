@@ -1,23 +1,24 @@
-#ifdef CUSTOM_DEPTH
-	#extension GL_EXT_frag_depth : enable
-#endif
+#version 300 es
 	precision mediump float;
 	uniform vec4 uColor;
 #ifdef CUSTOM_DEPTH
-	varying vec2 vZW;
+	in vec2 vZW;
 #endif
 #ifdef INSTANCE_COLOR
-	varying vec4 vColor;
+	in vec4 vColor;
 #endif
+
+out vec4 fragColor;
+
 	void main(void) {
 
 #ifdef INSTANCE_COLOR	
-		gl_FragColor = uColor*vColor;	//TODO lose uColor
+		fragColor = uColor*vColor;	//TODO lose uColor
 #else
-		gl_FragColor = uColor;
+		fragColor = uColor;
 #endif	
 	
 #ifdef CUSTOM_DEPTH
-		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
+		gl_FragDepth = .5*(vZW.x/vZW.y) + .5;
 #endif
 	}

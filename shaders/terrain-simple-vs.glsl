@@ -1,5 +1,6 @@
-attribute vec3 aVertexPosition;
-attribute vec2 aVertexGradient;
+#version 300 es
+in vec3 aVertexPosition;
+in vec2 aVertexGradient;
 
 uniform mat4 uMMatrix;
 uniform mat4 uMVMatrix;
@@ -8,20 +9,20 @@ uniform vec4 uCameraWorldPos;	//used for atmos calcs. TODO can this be combined 
 
 #ifdef VEC_ATMOS_THICK
 	uniform vec3 uAtmosThickness;
-	varying vec3 fog;
+	out vec3 fog;
 #else
 	uniform float uAtmosThickness;
-	varying float fog;
+	out float fog;
 #endif
 uniform float uAtmosContrast;
 
-varying vec2 vPos;
-varying vec2 vGrad;
-varying vec2 vTexBlend;
+out vec2 vPos;
+out vec2 vGrad;
+out vec2 vTexBlend;
 
-varying vec4 vDebugColor;
+out vec4 vDebugColor;
 
-varying vec2 vZW;	//for custom depth
+out vec2 vZW;	//for custom depth
 
 void main(void) {
 	// vec4 transformedCoord = uMVMatrix * vec4(aVertexPosition*0.5,1.0);	//todo use 4x3 mat?

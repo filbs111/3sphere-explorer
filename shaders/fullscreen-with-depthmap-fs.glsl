@@ -1,14 +1,17 @@
-#extension GL_EXT_frag_depth : enable
+#version 300 es
 precision mediump float;
 
-varying vec2 vTextureCoord;
+in vec2 vTextureCoord;
 uniform sampler2D uSampler;
 uniform sampler2D uSamplerDepthmap;
 
+// we need to declare an output for the fragment shader
+out vec4 fragColor;
+
 void main(void) {
 
-    gl_FragColor = texture2D(uSampler, vTextureCoord);
-    gl_FragDepthEXT = texture2D(uSamplerDepthmap, vTextureCoord).r;
+    fragColor = texture(uSampler, vTextureCoord);
+    gl_FragDepth = texture(uSamplerDepthmap, vTextureCoord).r;
 
-    //gl_FragDepthEXT = texture2D(uSampler, vTextureCoord).r;
+    //gl_FragDepth = texture(uSampler, vTextureCoord).r;
 }

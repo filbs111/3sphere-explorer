@@ -1,7 +1,7 @@
-#extension GL_EXT_frag_depth : enable
+#version 300 es
 precision mediump float;
 
-varying vec2 vTextureCoord;
+in vec2 vTextureCoord;
 uniform sampler2D uSampler;
 uniform sampler2D uSamplerDepthmap;
 
@@ -9,6 +9,8 @@ uniform vec2 uInvSize;
 uniform vec2 uInvF;
 uniform float uOversize;
 uniform float uVarOne;
+
+out vec4 fragColor;
 
 //WIP
 //TODO increase size of input texture so that doesn't go out of range after barrel distortion. (can see texture clamp around edges currently)
@@ -56,13 +58,13 @@ void main(void) {
     
     vec2 modifiedTextureCoord = 4.*(vTextureCoord - 0.5)/(uOversize*uInvF);	//TODO modify in vert shader.
     
-    //gl_FragColor = texture2DProj(uSampler, vec3(1.0,1.0,2.0)*(2.0 + uVarOne*dot(modifiedTextureCoord,modifiedTextureCoord)) + vec3(uInvF.st*modifiedTextureCoord.st, 0.0));
+    //fragColor = texture2DProj(uSampler, vec3(1.0,1.0,2.0)*(2.0 + uVarOne*dot(modifiedTextureCoord,modifiedTextureCoord)) + vec3(uInvF.st*modifiedTextureCoord.st, 0.0));
 
     vec3 centrePoint = (2.0 + uVarOne*dot(modifiedTextureCoord,modifiedTextureCoord)) + vec3(uInvF*modifiedTextureCoord, 0.0);
-    vec4 MIDv4 = texture2DProj(uSampler, vec3(1.0,1.0,2.0)*centrePoint );
+    vec4 MIDv4 = textureProj(uSampler, vec3(1.0,1.0,2.0)*centrePoint );
     
-    gl_FragColor = MIDv4;
+    fragColor = MIDv4;
 
-    gl_FragDepthEXT = texture2DProj(uSamplerDepthmap, vec3(1.0,1.0,2.0)*centrePoint ).r;
+    gl_FragDepth = textureProj(uSamplerDepthmap, vec3(1.0,1.0,2.0)*centrePoint ).r;
     //^unnecessary if decide to use alpha to contain depth info for input to blur
 }

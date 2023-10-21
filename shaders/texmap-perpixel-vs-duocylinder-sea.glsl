@@ -1,12 +1,13 @@
+#version 300 es
 #define CONST_TAU 6.2831853
 	
-	attribute vec2 aVertexPosition;
+	in vec2 aVertexPosition;
 #ifdef VEC_ATMOS_THICK
 	uniform vec3 uAtmosThickness;
-	varying vec3 fog;
+	out vec3 fog;
 #else
 	uniform float uAtmosThickness;
-	varying float fog;
+	out float fog;
 #endif
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
@@ -17,15 +18,15 @@
 	uniform float uPeakiness;
 	uniform vec4 uCameraWorldPos;
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
-	varying vec4 transformedCoord;
-	varying vec4 transformedNormal;
-	varying vec3 vTextureCoord;
-	varying vec4 adjustedPos;
+	out vec4 transformedCoord;
+	out vec4 transformedNormal;
+	out vec3 vTextureCoord;
+	out vec4 adjustedPos;
 #ifdef CUSTOM_DEPTH
-	varying vec2 vZW;
+	out vec2 vZW;
 #endif
 #ifdef DEPTH_AWARE
-	varying vec3 vScreenSpaceCoord;
+	out vec3 vScreenSpaceCoord;
 #endif
 
 	void addWaveContribution(in vec2 wavePosIn, inout vec3 wavePosAccum, inout vec3 vDerivativeWRTX, inout vec3 vDerivativeWRTY, float peakiness, vec2 waveCycles){	//waveCycles should be int2

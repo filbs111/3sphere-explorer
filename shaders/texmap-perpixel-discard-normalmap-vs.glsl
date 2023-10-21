@@ -1,9 +1,10 @@
-    attribute vec3 aVertexPosition;
-	attribute vec3 aVertexNormal;
-	attribute vec2 aTextureCoord;
-	attribute vec3 aVertexTangent;
-	attribute vec3 aVertexBinormal;
-	varying vec3 vTextureCoord;
+    #version 300 es
+	in vec3 aVertexPosition;
+	in vec3 aVertexNormal;
+	in vec2 aTextureCoord;
+	in vec3 aVertexTangent;
+	in vec3 aVertexBinormal;
+	out vec3 vTextureCoord;
 	uniform float uAtmosThickness;
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
@@ -11,13 +12,13 @@
 	uniform mat4 uPMatrix;
 	uniform vec4 uCameraWorldPos;
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
-	varying float fog;
+	out float fog;
 	uniform vec3 uModelScale;
-	varying vec4 adjustedPos;
-	varying vec4 transformedNormal;		//note could use mat4 varying to tidy up
-	varying vec4 transformedCoord;
-	varying vec4 transformedTangent;
-	varying vec4 transformedBinormal;
+	out vec4 adjustedPos;
+	out vec4 transformedNormal;		//note could use mat4 varying to tidy up
+	out vec4 transformedCoord;
+	out vec4 transformedTangent;
+	out vec4 transformedBinormal;
 	
 	void main(void) {
 		vec3 scaledPos = uModelScale*aVertexPosition;

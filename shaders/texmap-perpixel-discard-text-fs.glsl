@@ -1,22 +1,19 @@
+#version 300 es
 #define SMALL_AMOUNT 0.01
-#extension GL_OES_standard_derivatives : enable
-#ifdef CUSTOM_DEPTH
-	#extension GL_EXT_frag_depth : enable
-#endif
 	precision mediump float;
-	varying vec3 vTextureCoord;
+	in vec3 vTextureCoord;
 	uniform sampler2D uSampler;
 	uniform float uSharpScale;
 #ifdef DEPTH_AWARE
 	uniform sampler2D uSamplerDepthmap;
-	varying vec3 vScreenSpaceCoord;
+	in vec3 vScreenSpaceCoord;
 #endif
 	uniform vec4 uColor;
 	uniform vec3 uPlayerLightColor;
 #ifdef VEC_ATMOS_THICK
-	varying vec3 fog;
+	in vec3 fog;
 #else	
-	varying float fog;
+	in float fog;
 #endif
 	uniform vec4 uFogColor;
 	uniform vec3 uReflectorDiffColor;
@@ -33,16 +30,19 @@
 
 	uniform float uSpecularStrength;
 	uniform float uSpecularPower;
-	varying vec4 adjustedPos;
-	varying vec4 transformedNormal;	
-	varying vec4 transformedCoord;	
-	varying vec4 vColor;
+	in vec4 adjustedPos;
+	in vec4 transformedNormal;	
+	in vec4 transformedCoord;	
+	in vec4 vColor;
 #ifdef CUSTOM_DEPTH
-	varying vec2 vZW;
-#endif	
+	in vec2 vZW;
+#endif
+
+out vec4 fragColor;
+
 	void main(void) {
 #ifdef DEPTH_AWARE
-		float currentDepth =  texture2DProj(uSamplerDepthmap, vec3(.5,.5,1.)*vScreenSpaceCoord.xyz + vec3(.5,.5,0.)*vScreenSpaceCoord.z).r;
+		float currentDepth =  textureProj(uSamplerDepthmap, vec3(.5,.5,1.)*vScreenSpaceCoord.xyz + vec3(.5,.5,0.)*vScreenSpaceCoord.z).r;
 		float newDepth = .5*(vZW.x/vZW.y) + .5;	//this is duplicate of custom depth calculation
 		if (newDepth>currentDepth){
 			discard;
@@ -54,7 +54,7 @@
 	//TODO separate shader for sea if impacts perf
 #ifdef CUSTOM_DEPTH
 		float depthVal = .5*(vZW.x/vZW.y) + .5;
-		gl_FragDepthEXT = depthVal;
+		gl_FragDepth = depthVal;
 #endif
 //#endif
 
@@ -148,10 +148,10 @@
 #endif		
 		
 		//guess maybe similar to some gaussian light source
-		//vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*adjustedColor*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
+		//vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*adjustedColor*textureProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 
 
-		float colorFromTexture = texture2DProj(uSampler, vTextureCoord).y;
+		float colorFromTexture = textureProj(uSampler, vTextureCoord).y;
 
 		//TODO for text, 2d tex coordinates maybe more sensible.
 		//measure screen derivatives. simple version - just total length
@@ -173,27 +173,27 @@
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
 
-		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
-		//gl_FragColor = vec4( pow(preGammaFragColor.r,0.455), pow(preGammaFragColor.g,0.455), pow(preGammaFragColor.b,0.455), pow(preGammaFragColor.a,0.455));
+		fragColor = pow(preGammaFragColor, vec4(0.455));
+		//fragColor = vec4( pow(preGammaFragColor.r,0.455), pow(preGammaFragColor.g,0.455), pow(preGammaFragColor.b,0.455), pow(preGammaFragColor.a,0.455));
 	
 		
-		//gl_FragColor = uColor*fog*texture2DProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
-		//gl_FragColor = (1.0-fog)*uFogColor;
+		//fragColor = uColor*fog*textureProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
+		//fragColor = (1.0-fog)*uFogColor;
 
 #ifdef DEPTH_AWARE
-		//preGammaFragColor.rgb = texture2D(uSamplerDepthmap, gl_FragCoord.xy).rgb;	//just something to show can use texture.
+		//preGammaFragColor.rgb = texture(uSamplerDepthmap, gl_FragCoord.xy).rgb;	//just something to show can use texture.
 		float depthDifference = newDepth - currentDepth;	//TODO calculate actual length difference
 		//preGammaFragColor = vec4( vec3(depthDifference) ,1.);	//TODO use coords that project without extra term
-		gl_FragColor.a = 1.-exp(depthDifference*1000.);
+		fragColor.a = 1.-exp(depthDifference*1000.);
 #else
 
 	//test
-	//gl_FragColor.b =1.;
+	//fragColor.b =1.;
 
 	#ifdef CUSTOM_DEPTH
-			gl_FragColor.a = depthVal;	//note this is missed ifdef depth_aware, so blur on sea won't be right
+			fragColor.a = depthVal;	//note this is missed ifdef depth_aware, so blur on sea won't be right
 	#else
-			gl_FragColor.a =1.0;
+			fragColor.a =1.0;
 	#endif
 
 #endif	

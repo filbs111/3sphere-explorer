@@ -1,13 +1,14 @@
-    attribute vec4 aVertexPosition;
-	attribute vec4 aVertexNormal;
-	attribute vec2 aTextureCoord;
-	attribute vec4 aVertexColor;
+#version 300 es
+    in vec4 aVertexPosition;
+	in vec4 aVertexNormal;
+	in vec2 aTextureCoord;
+	in vec4 aVertexColor;
 #ifdef VEC_ATMOS_THICK
 	uniform vec3 uAtmosThickness;
-	varying vec3 fog;
+	out vec3 fog;
 #else
 	uniform float uAtmosThickness;
-	varying float fog;
+	out float fog;
 #endif
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
@@ -19,18 +20,18 @@
 	//uniform vec3 uReflectorDiffColor;
 	//uniform vec4 uReflectorPos;
 	//uniform float uReflectorCos;
-	//varying vec3 veclight;
-	//varying vec4 vVertexPos;
-	varying vec4 transformedCoord;
-	varying vec4 transformedNormal;
-	varying vec3 vTextureCoord;
-	varying vec4 vColor;
-	varying vec4 adjustedPos;
+	//out vec3 veclight;
+	//out vec4 vVertexPos;
+	out vec4 transformedCoord;
+	out vec4 transformedNormal;
+	out vec3 vTextureCoord;
+	out vec4 vColor;
+	out vec4 adjustedPos;
 #ifdef CUSTOM_DEPTH
-	varying vec2 vZW;
+	out vec2 vZW;
 #endif
 #ifdef DEPTH_AWARE
-	varying vec3 vScreenSpaceCoord;
+	out vec3 vScreenSpaceCoord;
 #endif
 	void main(void) {
 		transformedCoord = uMVMatrix * aVertexPosition;

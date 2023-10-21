@@ -1,11 +1,12 @@
+#version 300 es
 #define CONST_TAU 6.28318
 #define CONST_QPI 0.785398
 
-attribute vec3 aVertexPosition;
-attribute vec3 aVertexMorph;
-attribute vec2 aVertexGradient;
-attribute vec2 aVertexGradientMorph;
-//attribute vec3 aVertexNormal;
+in vec3 aVertexPosition;
+in vec3 aVertexMorph;
+in vec2 aVertexGradient;
+in vec2 aVertexGradientMorph;
+//in vec3 aVertexNormal;
 uniform mat4 uMMatrix;
 uniform mat4 uMVMatrix;
 uniform mat4 uPMatrix;
@@ -16,20 +17,20 @@ uniform float uDebugDarkeningMultiplier;
 
 #ifdef VEC_ATMOS_THICK
 	uniform vec3 uAtmosThickness;
-	varying vec3 fog;
+	out vec3 fog;
 #else
 	uniform float uAtmosThickness;
-	varying float fog;
+	out float fog;
 #endif
 uniform float uAtmosContrast;
 
-varying vec2 vPos;
-varying vec2 vGrad;
-varying vec2 vTexBlend;
+out vec2 vPos;
+out vec2 vGrad;
+out vec2 vTexBlend;
 
-varying vec4 vDebugColor;
+out vec4 vDebugColor;
 
-varying vec2 vZW;	//for custom depth
+out vec2 vZW;	//for custom depth
 
 void main(void) {
 

@@ -1,8 +1,11 @@
+#version 300 es
 precision mediump float;
 
-varying vec2 vTextureCoord;
+in vec2 vTextureCoord;
 uniform sampler2D uSampler;
 uniform vec2 uInvSize;
+
+out vec4 fragColor;
 
 void main(void) {	
     float FXAA_SPAN_MAX = 8.0;
@@ -11,12 +14,12 @@ void main(void) {
 
     vec4 luma = vec4(0.299,0.587,0.144,0.0);
     
-    vec4 MIDv4 = texture2D(uSampler, vTextureCoord);
+    vec4 MIDv4 = texture(uSampler, vTextureCoord);
     float MID = dot(luma,MIDv4);
-    float NW = dot(luma, texture2D(uSampler, vTextureCoord + uInvSize*vec2(-1.0,-1.0)));
-    float NE = dot(luma, texture2D(uSampler, vTextureCoord + uInvSize*vec2(1.0,-1.0)));
-    float SW = dot(luma, texture2D(uSampler, vTextureCoord + uInvSize*vec2(-1.0,1.0)));
-    float SE = dot(luma, texture2D(uSampler, vTextureCoord + uInvSize*vec2(1.0,1.0)));
+    float NW = dot(luma, texture(uSampler, vTextureCoord + uInvSize*vec2(-1.0,-1.0)));
+    float NE = dot(luma, texture(uSampler, vTextureCoord + uInvSize*vec2(1.0,-1.0)));
+    float SW = dot(luma, texture(uSampler, vTextureCoord + uInvSize*vec2(-1.0,1.0)));
+    float SE = dot(luma, texture(uSampler, vTextureCoord + uInvSize*vec2(1.0,1.0)));
     
     //calculate normal to gradient
     vec2 dir;
@@ -28,9 +31,9 @@ void main(void) {
     
     dir = max(vec2(-1.0,-1.0)*FXAA_SPAN_MAX , min( vec2(1.0,1.0)*FXAA_SPAN_MAX , dir*inverseDirAdjustment));
     
-    vec4 result1 = 0.5*(texture2D(uSampler, vTextureCoord + uInvSize*(0.16667*dir.xy)) + texture2D(uSampler, vTextureCoord - uInvSize*(0.16667*dir.xy)));
+    vec4 result1 = 0.5*(texture(uSampler, vTextureCoord + uInvSize*(0.16667*dir.xy)) + texture(uSampler, vTextureCoord - uInvSize*(0.16667*dir.xy)));
     
-    vec4 result2 = result1*0.5 + 0.25*(texture2D(uSampler, vTextureCoord + uInvSize*(0.5*dir.xy)) + texture2D(uSampler, vTextureCoord - uInvSize*(0.5*dir.xy)));
+    vec4 result2 = result1*0.5 + 0.25*(texture(uSampler, vTextureCoord + uInvSize*(0.5*dir.xy)) + texture(uSampler, vTextureCoord - uInvSize*(0.5*dir.xy)));
     
     float lumaM = dot(luma, MIDv4);
     float lumaMin = min(lumaM, min(min(NW,NE), min(SW,SE)));
@@ -41,8 +44,8 @@ void main(void) {
     result2.a=1.0;	//TODO ensure that input alpha=1 , or ensure output alpha doesn't matter, remove this 
 
     if (lumaResult2 < lumaMin || lumaResult2> lumaMax){
-        gl_FragColor = result1;
+        fragColor = result1;
     }else{
-        gl_FragColor = result2;
+        fragColor = result2;
     }		
 }

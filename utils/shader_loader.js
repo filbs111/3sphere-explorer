@@ -14,7 +14,6 @@ var getShaderUsingPromises = (function(){
 	var compileShaderPromises = {};
 
 	return function(gl, id, shaderType, defines = []){	//TODO infer shaderType from -fs / -vs
-
 		//add custom depth define if not already
 		//requires support in shader code. not applicable to all shaders, but guess negligible cost
 		if (!defines.includes("CUSTOM_DEPTH")){
@@ -24,7 +23,11 @@ var getShaderUsingPromises = (function(){
 		var idstring = id + ":" + defines.join(';');
 		compileShaderPromises[idstring] = compileShaderPromises[idstring] || 
 			getShaderFilePromise(id).then(shaderText=>{
-				var str = defines.map(elem => "#define " + elem + "\n").join('') + shaderText;
+				var str = "#version 300 es\n" + 	//in webgl2, should put this even before defines!
+					defines.map(elem => "#define " + elem + "\n").join('') +
+					"//" +	//comment out the "#version 300 es" in the shader file (useful there for IDE)
+					shaderText;
+
 				//console.log("got shader using promises!");
 				//console.log(str);
 				var shader = gl.createShader(shaderType);

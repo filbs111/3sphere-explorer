@@ -1,11 +1,12 @@
-attribute vec3 aVertexPosition;
-attribute vec3 aVertexNormal;
+#version 300 es
+in vec3 aVertexPosition;
+in vec3 aVertexNormal;
 uniform mat4 uMVMatrix;
 uniform mat4 uPMatrix;
 uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
-varying float fog;
+out float fog;
 uniform vec3 uModelScale;
-varying float light;
+out float light;
         
 void main(void) {
     vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));

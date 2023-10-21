@@ -1,6 +1,7 @@
-    attribute vec4 aVertexPosition;
-	attribute vec4 aVertexNormal;
-	attribute vec2 aTextureCoord;
+#version 300 es
+    in vec4 aVertexPosition;
+	in vec4 aVertexNormal;
+	in vec2 aTextureCoord;
 	uniform float uAtmosThickness;
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
@@ -12,13 +13,13 @@
 	uniform vec3 uReflectorDiffColor;
 	uniform vec4 uReflectorPos;
 	uniform float uReflectorCos;
-	varying float fog;
-	varying vec3 veclight;
-	varying vec4 vVertexPos;
-	varying vec3 vTextureCoord;
+	out float fog;
+	out vec3 veclight;
+	out vec4 vVertexPos;
+	out vec3 vTextureCoord;
 
 #ifdef CUSTOM_DEPTH
-	varying vec2 vZW;
+	out vec2 vZW;
 #endif
 
 	void main(void) {

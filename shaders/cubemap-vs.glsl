@@ -1,17 +1,18 @@
-    attribute vec3 aVertexPosition;
+#version 300 es
+    in vec3 aVertexPosition;
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
-	varying vec3 vPos;
+	out vec3 vPos;
 	uniform vec3 uModelScale;
 	uniform mat4 uPosShiftMat;
 	uniform float uPolarity;
 
 #ifdef VEC_ATMOS_THICK
 	uniform vec3 uAtmosThickness;
-	varying vec3 fog;
+	out vec3 fog;
 #else
 	uniform float uAtmosThickness;
-	varying float fog;
+	out float fog;
 #endif
 	uniform float uAtmosContrast;	//atmos variants specific
 	uniform mat4 uMMatrix;
@@ -19,9 +20,9 @@
 
 	uniform vec3 uCentrePosScaled;	//vertproj specific. this is position of cubemap centre point in unprojected model space
 	
-	varying vec3 vScreenSpaceCoord;
+	out vec3 vScreenSpaceCoord;
 #ifdef CUSTOM_DEPTH
-	varying vec2 vZW;
+	out vec2 vZW;
 #endif
 
 	void main(void) {

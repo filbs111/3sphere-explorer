@@ -1,9 +1,10 @@
+#version 300 es
 //TODO determine whether more efficient to calc aVertexPosition, aVertexNormal from aTriCoord, aTriNormal here in vert shader, or precalc and pass in.
-	attribute vec4 aVertexPosition;
-	attribute vec4 aVertexNormal;
-	attribute vec4 aVertexColor;
-	attribute vec3 aTriCoord;
-	attribute vec3 aTriNormal;
+	in vec4 aVertexPosition;
+	in vec4 aVertexNormal;
+	in vec4 aVertexColor;
+	in vec3 aTriCoord;
+	in vec3 aTriNormal;
 	uniform float uAtmosThickness;
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
@@ -12,15 +13,15 @@
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 	uniform vec4 uCameraWorldPos;
 	
-	varying float fog;
-	varying vec4 transformedCoord;
-	varying vec4 transformedNormal;
-	varying vec3 vPos;		//3vector position (before mapping onto duocyinder)
-	varying vec3 vTexAmounts;
-	varying vec4 vColor;
-	varying vec4 adjustedPos;
+	out float fog;
+	out vec4 transformedCoord;
+	out vec4 transformedNormal;
+	out vec3 vPos;		//3vector position (before mapping onto duocyinder)
+	out vec3 vTexAmounts;
+	out vec4 vColor;
+	out vec4 adjustedPos;
 #ifdef CUSTOM_DEPTH
-	varying vec2 vZW;
+	out vec2 vZW;
 #endif	
 	void main(void) {
 		transformedCoord = uMVMatrix * aVertexPosition;

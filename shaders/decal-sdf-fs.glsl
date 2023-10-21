@@ -1,12 +1,14 @@
-#extension GL_OES_standard_derivatives : enable
+#version 300 es
 precision mediump float;
-varying vec3 vTextureCoord;
+in vec3 vTextureCoord;
 uniform sampler2D uSampler;
 uniform vec4 uColor;
 
+out vec4 fragColor;
+
 void main(void) {
 
-    float sample= texture2DProj(uSampler, vTextureCoord).y; //TODO don't use projective texture if not necessary! (eg for quads)
+    float texSample= textureProj(uSampler, vTextureCoord).x; //TODO don't use projective texture if not necessary! (eg for quads)
 
     //note doing screenspace derivs here is maybe inefficient - for fixed size on screen, could just be a uniform,
     //or for a quad, just done in vert shader...
@@ -14,15 +16,15 @@ void main(void) {
 
     //float wide = fwidth(sample);
 
-    float derivX = dFdx(sample);
-    float derivY = dFdy(sample);
+    float derivX = dFdx(texSample);
+    float derivY = dFdy(texSample);
     float wide = abs(derivX) + abs(derivY);
 
     float growPix = 0.; //grow in screen space
 
     float midval = 0.4;   //default 0.5, but can hack to smaller to grow in text space (ie proportional to letter size). 
 
-    float smoothStepped = smoothstep(midval - wide*(growPix + 1.) , midval - wide*(growPix - 1.), sample);
+    float smoothStepped = smoothstep(midval - wide*(growPix + 1.) , midval - wide*(growPix - 1.), texSample);
 
 
         // TODO achieve vector display-like effect where lines are fixed width in screen frame 
@@ -37,6 +39,6 @@ void main(void) {
     // float blurry = smoothstep(midval - blurFactor*wide*(growPix + 1.) , midval - blurFactor*wide*(growPix - 1.), sample);
     // smoothStepped = smoothStepped + blurry;
 
-    gl_FragColor = uColor * vec4(vec3(1.0), smoothStepped);
+    fragColor = uColor * vec4(vec3(1.0), smoothStepped);
 
 }

@@ -1,8 +1,9 @@
-    attribute vec4 aVertexPosition;
+#version 300 es
+    in vec4 aVertexPosition;
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
 #ifdef CUSTOM_DEPTH
-	varying vec2 vZW;
+	out vec2 vZW;
 #endif
 	void main(void) {
 		vec4 transformedCoord = uMVMatrix * aVertexPosition;

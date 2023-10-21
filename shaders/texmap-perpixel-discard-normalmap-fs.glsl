@@ -1,9 +1,10 @@
+	#version 300 es
 	precision mediump float;
-	varying vec3 vTextureCoord;
+	in vec3 vTextureCoord;
 	uniform sampler2D uSampler;
 	uniform vec4 uColor;
 	uniform vec3 uPlayerLightColor;
-	varying float fog;
+	in float fog;
 	uniform vec4 uFogColor;
 	uniform vec3 uReflectorDiffColor;
 	uniform vec3 uReflectorDiffColor2;
@@ -11,12 +12,14 @@
 	uniform vec4 uReflectorPos2;
 	uniform float uReflectorCos;
 	uniform float uReflectorCos2;
-	varying vec4 adjustedPos;
-	varying vec4 transformedNormal;	
-	varying vec4 transformedCoord;
-	varying vec4 transformedTangent;
-	varying vec4 transformedBinormal;
-		
+	in vec4 adjustedPos;
+	in vec4 transformedNormal;	
+	in vec4 transformedCoord;
+	in vec4 transformedTangent;
+	in vec4 transformedBinormal;
+	
+	out vec4 fragColor;
+
 	void main(void) {
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
 	
@@ -29,7 +32,7 @@
 			discard;	//unneeded if ensure, when looking thru portal, that it's the other one.
 		}
 		
-		vec3 texSample = texture2DProj(uSampler, vTextureCoord).xyz;
+		vec3 texSample = textureProj(uSampler, vTextureCoord).xyz;
 				
 		vec3 texSampleAdjusted = texSample*vec3(2.)-vec3(1.);
 		texSampleAdjusted.xy*=0.4;	//make surface flatter.
@@ -70,7 +73,7 @@
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);		
 		
-		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
+		fragColor = pow(preGammaFragColor, vec4(0.455));
 
-		gl_FragColor.a =1.0;
+		fragColor.a =1.0;
 	}

@@ -4,11 +4,6 @@ var shaderProgramColored,	//these are variables that are set to different shader
 	shaderProgramColoredBendy,
 	shaderProgramTexmap;	//but keeping separate for now so know that all shaderPrograms.something are unchanging
 
-var angle_ext;
-var fragDepth_ext;	//maybe pointless to store this, allegedly just need to call gl.getExtension('EXT_frag_depth')	https://developer.mozilla.org/en-US/docs/Web/API/EXT_frag_depth
-var depthTex_ext;
-var stdDerivs_ext;
-
 var myDebugStr = "TEST INFO TO GO HERE";
 
 function bufferArrayData(buffer, arr, size){
@@ -1841,10 +1836,10 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			gl.vertexAttribPointer(activeShaderProgram.attributes.uMMatrix+3, 4, gl.FLOAT, false, 12, 12);
 			*/
 			/*
-			angle_ext.vertexAttribDivisorANGLE(attrIdx, 1);
-			angle_ext.vertexAttribDivisorANGLE(attrIdx+1, 1);
-			angle_ext.vertexAttribDivisorANGLE(attrIdx+2, 1);
-			angle_ext.vertexAttribDivisorANGLE(attrIdx+3, 1);
+			gl.vertexAttribDivisor(attrIdx, 1);
+			gl.vertexAttribDivisor(attrIdx+1, 1);
+			gl.vertexAttribDivisor(attrIdx+2, 1);
+			gl.vertexAttribDivisor(attrIdx+3, 1);
 			
 			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffers.a);
 			gl.vertexAttribPointer(attrIdx, 4, gl.FLOAT, false, 0, 0);	//https://community.khronos.org/t/how-to-specify-a-matrix-vertex-attribute/54102/3
@@ -1856,10 +1851,10 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			gl.vertexAttribPointer(attrIdx+3, 4, gl.FLOAT, false, 0, 0);
 			*/
 
-			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aMMatrixA, 1);
-			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aMMatrixB, 1);
-			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aMMatrixC, 1);
-			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aMMatrixD, 1)
+			gl.vertexAttribDivisor(activeShaderProgram.attributes.aMMatrixA, 1);
+			gl.vertexAttribDivisor(activeShaderProgram.attributes.aMMatrixB, 1);
+			gl.vertexAttribDivisor(activeShaderProgram.attributes.aMMatrixC, 1);
+			gl.vertexAttribDivisor(activeShaderProgram.attributes.aMMatrixD, 1)
 			
 			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffers.a);
 			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixA, 4, gl.FLOAT, false, 0, 0);	//https://community.khronos.org/t/how-to-specify-a-matrix-vertex-attribute/54102/3
@@ -1870,26 +1865,26 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffers.d);
 			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixD, 4, gl.FLOAT, false, 0, 0);
 			
-			angle_ext.drawElementsInstancedANGLE(gl.TRIANGLES, cubeBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, numRandomBoxes);
+			gl.drawElementsInstanced(gl.TRIANGLES, cubeBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, numRandomBoxes);
 										//DO NOT SET THIS HIGH ON CHROME! works great on firefox, think tanks chrome because due to whatever bug using the right matrices, huge overdraw
 			
-			//angle_ext.drawElementsInstancedANGLE(gl.TRIANGLES, cubeBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, 100);	//very low count - to avoid tanking framerate in chrome (bug in extension?)
+			//gl.drawElementsInstancedANGLE(gl.TRIANGLES, cubeBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, 100);	//very low count - to avoid tanking framerate in chrome (bug in extension?)
 					//TODO is consecutive attribute pointers for a matrix not guaranteed? TODO with bodging a matrix together from vectors in vshader.
 			
 			//switch off again??
 			/*
-			angle_ext.vertexAttribDivisorANGLE(attrIdx, 0);
-			angle_ext.vertexAttribDivisorANGLE(attrIdx+1, 0);
-			angle_ext.vertexAttribDivisorANGLE(attrIdx+2, 0);
-			angle_ext.vertexAttribDivisorANGLE(attrIdx+3, 0);
+			gl.vertexAttribDivisor(attrIdx, 0);
+			gl.vertexAttribDivisor(attrIdx+1, 0);
+			gl.vertexAttribDivisor(attrIdx+2, 0);
+			gl.vertexAttribDivisor(attrIdx+3, 0);
 			*/
 			
 			//this appears to be unnecessary - maybe only relevant when drawing using angle ext.
 			/*
-			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aMMatrixA, 0);
-			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aMMatrixB, 0);
-			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aMMatrixC, 0);
-			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aMMatrixD, 0);
+			gl.vertexAttribDivisor(activeShaderProgram.attributes.aMMatrixA, 0);
+			gl.vertexAttribDivisor(activeShaderProgram.attributes.aMMatrixB, 0);
+			gl.vertexAttribDivisor(activeShaderProgram.attributes.aMMatrixC, 0);
+			gl.vertexAttribDivisor(activeShaderProgram.attributes.aMMatrixD, 0);
 			*/
 			
 			zeroAttributeDivisors(activeShaderProgram);
@@ -1923,22 +1918,22 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		explosionParticles.getRangesToDraw(frameTime).forEach(elem=>{
 			//	console.log(elem);
 			var offs = elem.start * 16;
-			angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aVertexCentrePosition, 1);
+			gl.vertexAttribDivisor(activeShaderProgram.attributes.aVertexCentrePosition, 1);
 			gl.bindBuffer(gl.ARRAY_BUFFER, expParticleBuffers.posns);
 			gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexCentrePosition, 4, gl.SHORT, true, 16, offs);
 			if (activeShaderProgram.attributes.aVertexCentreDirection){
-				angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aVertexCentreDirection, 1);
+				gl.vertexAttribDivisor(activeShaderProgram.attributes.aVertexCentreDirection, 1);
 				gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexCentreDirection, 4, gl.SHORT, true, 16, offs+8);
 			}
 			if (activeShaderProgram.attributes.aColor){
-				angle_ext.vertexAttribDivisorANGLE(activeShaderProgram.attributes.aColor, 1);
+				gl.vertexAttribDivisor(activeShaderProgram.attributes.aColor, 1);
 				gl.bindBuffer(gl.ARRAY_BUFFER, expParticleBuffers.colrs);
 				gl.vertexAttribPointer(activeShaderProgram.attributes.aColor, 4, gl.UNSIGNED_BYTE, true, 4, offs/4);
 			}
 			if (activeShaderProgram.uniforms.uTime){		
 				gl.uniform1f(activeShaderProgram.uniforms.uTime, frameTime);			
 			}
-			angle_ext.drawElementsInstancedANGLE(gl.TRIANGLES, quadBuffers2D.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, elem.number);
+			gl.drawElementsInstanced(gl.TRIANGLES, quadBuffers2D.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, elem.number);
 		});
 		
 		//seems like maybe has effect outside of drawElementsInstancedANGLE calls. to be safe,
@@ -1951,7 +1946,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		//TODO store last value, only call angle_ext.vertexAttribDivisorANGLE when different (do values carry over when change shader?)
 
 		for (var ii=0;ii<shaderProg.numActiveAttribs;ii++){
-			angle_ext.vertexAttribDivisorANGLE(ii,0);
+			gl.vertexAttribDivisor(ii,0);
 		}
 		
 	}
@@ -3478,7 +3473,10 @@ function initCubemapFramebuffer(view, cubemapSize){
 		framebuffers[i]=framebuffer;
 		
 		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-		gl.texImage2D(face, 0, gl.RGBA, cubemapSize, cubemapSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+
+		texImage2DWithLogs("initialising cubemap", 
+			face, 0, gl.RGBA, cubemapSize, cubemapSize, 0, 
+			gl.RGBA, gl.UNSIGNED_BYTE, null);
 	
 		var renderbuffer = gl.createRenderbuffer();
 		gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffer);
@@ -3506,7 +3504,10 @@ function initCubemapFramebuffer(view, cubemapSize){
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
 		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, cubemapSize, cubemapSize, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+		texImage2DWithLogs("setting up intermediate textures",
+			gl.TEXTURE_2D, 0, gl.RGBA, cubemapSize, cubemapSize, 0,
+			gl.RGBA, gl.UNSIGNED_BYTE, null);
+
 		intermediateTextures.push(textureRgb);
 
 		var depthTexture = gl.createTexture();
@@ -3516,7 +3517,10 @@ function initCubemapFramebuffer(view, cubemapSize){
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-		gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT, cubemapSize, cubemapSize, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT , null);
+		texImage2DWithLogs("setting up intermediate textures 2",
+			gl.TEXTURE_2D, 0, 
+			gl.DEPTH_COMPONENT24, cubemapSize, cubemapSize, 0, 
+			gl.DEPTH_COMPONENT, gl.UNSIGNED_INT , null);
 		intermediateDepthTextures.push(depthTexture);
 		
 		gl.bindTexture(gl.TEXTURE_2D, null);
@@ -3629,14 +3633,17 @@ function initTexture(){
 }
 
 function makeTexture(src, imgformat=gl.RGBA, imgtype=gl.UNSIGNED_BYTE, yFlip = true, withMips = true) {	//to do OO
+	var internalFormat = imgformat == gl.RED ? gl.R8 : imgformat;
+
 	var texture = gl.createTexture();
 		
 	bind2dTextureIfRequired(texture);
 	//dummy 1 pixel image to avoid error logs. https://stackoverflow.com/questions/21954036/dartweb-gl-render-warning-texture-bound-to-texture-unit-0-is-not-renderable
 		//(TODO better to wait for load, or use single shared 1pix texture (bind2dTextureIfRequired to check that texture loaded, by flag on texture? if not loaded, bind the shared summy image?
 		//TODO progressive detail load?
-	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
-              new Uint8Array([255, 0, 255, 255])); // magenta. should be obvious when tex not loaded.
+	texImage2DWithLogs("after binding texture", gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
+		//new Uint8Array([255, 0, 255, 255])); // magenta. should be obvious when tex not loaded.
+		new Uint8Array([255, 150, 255, 255]));
 	
 	texture.image = new Image();
 	texture.image.onload = function(){
@@ -3644,7 +3651,14 @@ function makeTexture(src, imgformat=gl.RGBA, imgtype=gl.UNSIGNED_BYTE, yFlip = t
 		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, yFlip);
 
 		gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);	//linear colorspace grad light texture (TODO handle other texture differently?)
-		gl.texImage2D(gl.TEXTURE_2D, 0, imgformat, imgformat, imgtype, texture.image);
+		
+		//gl.texImage2D(gl.TEXTURE_2D, 0, imgformat, imgformat, imgtype, texture.image);
+		texImage2DWithLogs("after loading, binding texture", 
+			gl.TEXTURE_2D, 0, 
+			internalFormat, texture.image.width, texture.image.height, 0,
+			imgformat, imgtype, texture.image
+		);
+
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, 
 			withMips? gl.LINEAR_MIPMAP_LINEAR: gl.LINEAR);
@@ -4078,10 +4092,6 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	canvas.addEventListener("touchmove", handleTouchMove, false);
 	
 	initGL();
-	angle_ext = gl.getExtension("ANGLE_instanced_arrays");							
-	fragDepth_ext = gl.getExtension('EXT_frag_depth');
-	depthTex_ext = gl.getExtension('WEBGL_depth_texture');
-	stdDerivs_ext = gl.getExtension('OES_standard_derivatives');
 
 	initTextureFramebuffer(rttFisheyeRectRenderOutput);
 	initTextureFramebuffer(rttFisheyeRectRenderOutput2);
@@ -5796,6 +5806,11 @@ var rttView={};
 var rttStageOneView={};
 var rttFisheyeView2={};
 
+function texImage2DWithLogs(mssg, target, level, internalformat, width, height, border, format, type, offsetOrSource){
+	console.log({"mssg":"called texImage2D "+mssg, "parameters":{target, level, internalformat, width, height, border, format, type, offsetOrSource}});
+	gl.texImage2D(target, level, internalformat, width, height, border, format, type, offsetOrSource);
+}
+
 function setRttSize(view, width, height){	
 	if (view.sizeX == width && view.sizeY == height){return;}	// avoid setting again if same numbers ( has speed impact)
 																	//todo check for memory leak
@@ -5806,10 +5821,16 @@ function setRttSize(view, width, height){
 	view.framebuffer.height = height;	
 	
 	gl.bindTexture(gl.TEXTURE_2D, view.texture);
-	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, view.framebuffer.width, view.framebuffer.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+	texImage2DWithLogs("after binding view texture", 
+		gl.TEXTURE_2D, 0,
+		gl.RGBA, view.framebuffer.width, view.framebuffer.height, 0, 
+		gl.RGBA, gl.UNSIGNED_BYTE, null);
 	
 	gl.bindTexture(gl.TEXTURE_2D, view.depthTexture);
-	gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT, view.framebuffer.width, view.framebuffer.height, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_INT , null);	//can use gl.UNSIGNED_BYTE , gl.UNSIGNED_SHORT here but get depth fighting (though only on spaceship) gl.UNSIGNED_INT stops z-fighting, could use WEBGL_depth_texture UNSIGNED_INT_24_8_WEBGL .
+	texImage2DWithLogs("after binding depth texture",
+		 gl.TEXTURE_2D, 0,
+		 gl.DEPTH_COMPONENT24, view.framebuffer.width, view.framebuffer.height, 0,
+		 gl.DEPTH_COMPONENT, gl.UNSIGNED_INT , null);	//can use gl.UNSIGNED_BYTE , gl.UNSIGNED_SHORT here but get depth fighting (though only on spaceship) gl.UNSIGNED_INT stops z-fighting, could use WEBGL_depth_texture UNSIGNED_INT_24_8_WEBGL .
 	//note that possibly gl.UNSIGNED_INT might help z-fighting without needing to do custom depth writing.
 	
 	gl.bindTexture(gl.TEXTURE_2D, null);

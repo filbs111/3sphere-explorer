@@ -1,6 +1,7 @@
-attribute vec3 aVertexPosition;
-attribute vec2 aTextureCoord;
-varying vec3 vTextureCoord;
+#version 300 es
+in vec3 aVertexPosition;
+in vec2 aTextureCoord;
+out vec3 vTextureCoord;
 uniform mat4 uMVMatrix;
 uniform mat4 uPMatrix;
 uniform vec3 uModelScale;

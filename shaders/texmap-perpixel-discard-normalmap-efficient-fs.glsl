@@ -1,8 +1,7 @@
+#version 300 es
 	#define CONST_TAU 6.2831853
 	#define CONST_REPS 16.0
-#ifdef CUSTOM_DEPTH
-	#extension GL_EXT_frag_depth : enable
-#endif
+
 	precision mediump float;
 	uniform sampler2D uSampler;
 	uniform sampler2D uSamplerB;
@@ -10,14 +9,14 @@
 	uniform sampler2D uSampler2B;
 #ifdef DEPTH_AWARE
 	uniform sampler2D uSamplerDepthmap;
-	varying vec3 vScreenSpaceCoord;
+	in vec3 vScreenSpaceCoord;
 #endif
 	uniform vec4 uColor;
 	uniform vec3 uPlayerLightColor;
 #ifdef VEC_ATMOS_THICK
-	varying vec3 fog;
+	in vec3 fog;
 #else	
-	varying float fog;
+	in float fog;
 #endif
 	uniform vec4 uFogColor;
 	uniform vec3 uReflectorDiffColor;
@@ -36,25 +35,28 @@
 	uniform float uSpecularPower;
 	uniform float uTexBias;
 
-	varying vec4 vPlayerLightPosTangentSpace;
+	in vec4 vPlayerLightPosTangentSpace;
 	
-	varying vec4 vPortalLightPosTangentSpace;
-	varying vec4 vPortalLightPosTangentSpace2;
-	varying vec4 vPortalLightPosTangentSpace3;
+	in vec4 vPortalLightPosTangentSpace;
+	in vec4 vPortalLightPosTangentSpace2;
+	in vec4 vPortalLightPosTangentSpace3;
 
-	varying vec4 vEyePosTangentSpace;
+	in vec4 vEyePosTangentSpace;
 
-	varying vec4 transformedCoord;
-	varying vec3 vTextureCoord;
-	varying vec4 vVertexPos;
-	varying vec4 vColor;
+	in vec4 transformedCoord;
+	in vec3 vTextureCoord;
+	in vec4 vVertexPos;
+	in vec4 vColor;
 #ifdef CUSTOM_DEPTH
-	varying vec2 vZW;
+	in vec2 vZW;
 #endif
+
+out vec4 fragColor;
+
 	void main(void) {
 
 #ifdef DEPTH_AWARE
-		float currentDepth =  texture2DProj(uSamplerDepthmap, vec3(.5,.5,1.)*vScreenSpaceCoord.xyz + vec3(.5,.5,0.)*vScreenSpaceCoord.z).r;
+		float currentDepth =  textureProj(uSamplerDepthmap, vec3(.5,.5,1.)*vScreenSpaceCoord.xyz + vec3(.5,.5,0.)*vScreenSpaceCoord.z).r;
 		float newDepth = .5*(vZW.x/vZW.y) + .5;	//this is duplicate of custom depth calculation
 		if (newDepth>currentDepth){
 			discard;
@@ -63,7 +65,7 @@
 
 #ifndef DEPTH_AWARE
 #ifdef CUSTOM_DEPTH
-		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
+		gl_FragDepth = .5*(vZW.x/vZW.y) + .5;
 #endif
 #endif
 
@@ -85,24 +87,24 @@
 		
 #ifdef MAPPROJECT_ACTIVE
 		vec2 newTexCoord = vec2( atan(vVertexPos.x,vVertexPos.y)*CONST_REPS/CONST_TAU, atan(vVertexPos.z,vVertexPos.w)*CONST_REPS/CONST_TAU);
-		vec3 texSample = texture2D(uSampler, newTexCoord).xyz;
+		vec3 texSample = texture(uSampler, newTexCoord).xyz;
 #ifdef DOUBLE_TEXTURES
-		vec3 texSample2 = texture2D(uSampler2, newTexCoord).xyz;
+		vec3 texSample2 = texture(uSampler2, newTexCoord).xyz;
 		texSample = mix(texSample, texSample2, vColor.a);	//use tex vertex colour 4th channel
 #endif
 #else
 
 
 #ifdef CUSTOM_TEXBIAS
-	vec3 texSample = texture2DProj(uSampler, vTextureCoord, uTexBias).xyz;
+	vec3 texSample = textureProj(uSampler, vTextureCoord, uTexBias).xyz;
 #ifdef DOUBLE_TEXTURES
-	vec3 texSample2 = texture2DProj(uSampler2, vTextureCoord, uTexBias).xyz;
+	vec3 texSample2 = textureProj(uSampler2, vTextureCoord, uTexBias).xyz;
 	texSample = mix(texSample, texSample2, vColor.a);	//use tex vertex colour 4th channel
 #endif
 #else
-	vec3 texSample = texture2DProj(uSampler, vTextureCoord).xyz;	//is this case ever used?
+	vec3 texSample = textureProj(uSampler, vTextureCoord).xyz;	//is this case ever used?
 #ifdef DOUBLE_TEXTURES
-	vec3 texSample2 = texture2DProj(uSampler2, vTextureCoord).xyz;
+	vec3 texSample2 = textureProj(uSampler2, vTextureCoord).xyz;
 	texSample = mix(texSample, texSample2, vColor.a);	//use tex vertex colour 4th channel
 #endif
 #endif
@@ -124,18 +126,18 @@
 
 #ifdef DIFFUSE_TEX_ACTIVE
 #ifdef MAPPROJECT_ACTIVE
-		//adjustedColor*=texture2D(uSamplerB, newTexCoord);	//hope that 4th component is 1 (opaque). note currently only used in conjunction with MAPPROJECT_ACTIVE
-		vec4 diffuseSample=texture2D(uSamplerB, newTexCoord);
+		//adjustedColor*=texture(uSamplerB, newTexCoord);	//hope that 4th component is 1 (opaque). note currently only used in conjunction with MAPPROJECT_ACTIVE
+		vec4 diffuseSample=texture(uSamplerB, newTexCoord);
 #ifdef DOUBLE_TEXTURES
-		diffuseSample= mix(diffuseSample, texture2D(uSampler2B, newTexCoord), vColor.a);
-		//diffuseSample= mix(diffuseSample, texture2D(uSampler2B, newTexCoord), 0.);
+		diffuseSample= mix(diffuseSample, texture(uSampler2B, newTexCoord), vColor.a);
+		//diffuseSample= mix(diffuseSample, texture(uSampler2B, newTexCoord), 0.);
 #endif		
 		adjustedColor*=pow(diffuseSample,vec4(2.2));	//convert rgb to linear. this is inefficient and expect interpolation won't work right. todo figure out how to use properly, or convert to linear before using in shader.
 #else
 
-		vec4 diffuseSample=texture2DProj(uSamplerB, vTextureCoord);
+		vec4 diffuseSample=textureProj(uSamplerB, vTextureCoord);
 #ifdef DOUBLE_TEXTURES
-		diffuseSample= mix(diffuseSample, texture2DProj(uSampler2B, vTextureCoord), vColor.a);
+		diffuseSample= mix(diffuseSample, textureProj(uSampler2B, vTextureCoord), vColor.a);
 #endif
 		adjustedColor*=pow(diffuseSample,vec4(2.2));
 #endif
@@ -213,11 +215,11 @@
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);		
 		
-		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
+		fragColor = pow(preGammaFragColor, vec4(0.455));
 	
 
 		float depthVal = .5*(vZW.x/vZW.y) + .5;
-		gl_FragColor.a = depthVal;
+		fragColor.a = depthVal;
 
-		//gl_FragDepthEXT = gl_FragCoord.z;	//reproduces standard behaviour. TODO try z/(1+w) for stereographic projection (with some scaling to get inside capped range. 0->1 or -1->1 ?) , to avoid near/far clipping
+		//gl_FragDepth = gl_FragCoord.z;	//reproduces standard behaviour. TODO try z/(1+w) for stereographic projection (with some scaling to get inside capped range. 0->1 or -1->1 ?) , to avoid near/far clipping
 	}

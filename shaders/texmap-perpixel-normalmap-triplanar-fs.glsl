@@ -1,12 +1,10 @@
-#ifdef CUSTOM_DEPTH
-	#extension GL_EXT_frag_depth : enable
-#endif
+#version 300 es 
 	precision mediump float;
 	uniform sampler2D uSampler;
 	uniform sampler2D uSamplerB;
 #ifdef DEPTH_AWARE
 	uniform sampler2D uSamplerDepthmap;
-	varying vec3 vScreenSpaceCoord;
+	in vec3 vScreenSpaceCoord;
 #endif
 	uniform vec4 uColor;
 	uniform vec3 uPlayerLightColor;
@@ -27,29 +25,32 @@
 	uniform float uSpecularPower;
 
 #ifdef VEC_ATMOS_THICK
-	varying vec3 fog;
+	in vec3 fog;
 #else	
-	varying float fog;
+	in float fog;
 #endif
-	varying vec4 vPlayerLightPosTangentSpace;
+	in vec4 vPlayerLightPosTangentSpace;
 	
-	varying vec4 vPortalLightPosTangentSpace;
-	varying vec4 vPortalLightPosTangentSpace2;
-	varying vec4 vPortalLightPosTangentSpace3;
+	in vec4 vPortalLightPosTangentSpace;
+	in vec4 vPortalLightPosTangentSpace2;
+	in vec4 vPortalLightPosTangentSpace3;
 
-	varying vec4 vEyePosTangentSpace;
-	varying vec4 transformedCoord;	
-	varying vec4 vColor;
-	varying vec3 vPos;		//3vector position (before mapping onto duocyinder)
-	varying vec3 vNormal;
-	varying vec3 vTexAmounts;
+	in vec4 vEyePosTangentSpace;
+	in vec4 transformedCoord;	
+	in vec4 vColor;
+	in vec3 vPos;		//3vector position (before mapping onto duocyinder)
+	in vec3 vNormal;
+	in vec3 vTexAmounts;
 #ifdef CUSTOM_DEPTH
-	varying vec2 vZW;
-#endif	
+	in vec2 vZW;
+#endif
+
+out vec4 fragColor;
+
 	void main(void) {
 
 #ifdef DEPTH_AWARE
-		float currentDepth =  texture2DProj(uSamplerDepthmap, vec3(.5,.5,1.)*vScreenSpaceCoord.xyz + vec3(.5,.5,0.)*vScreenSpaceCoord.z).r;
+		float currentDepth =  textureProj(uSamplerDepthmap, vec3(.5,.5,1.)*vScreenSpaceCoord.xyz + vec3(.5,.5,0.)*vScreenSpaceCoord.z).r;
 		float newDepth = .5*(vZW.x/vZW.y) + .5;	//this is duplicate of custom depth calculation
 		if (newDepth>currentDepth){
 			discard;
@@ -58,7 +59,7 @@
 
 #ifndef DEPTH_AWARE
 #ifdef CUSTOM_DEPTH
-		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
+		gl_FragDepth = .5*(vZW.x/vZW.y) + .5;
 #endif
 #endif
 
@@ -84,7 +85,7 @@
 		float texOffset = 0.5;
 		
 #ifdef DIFFUSE_TEX_ACTIVE
-		vec3 texColor = mat3(texture2D(uSamplerB, vec2(vPos.y, vPos.z)).xyz, texture2D(uSamplerB, vec2(vPos.x, vPos.z + texOffset )).xyz, texture2D(uSamplerB, vec2(vPos.x + texOffset, vPos.y + texOffset )).xyz) * vTexAmounts;
+		vec3 texColor = mat3(texture(uSamplerB, vec2(vPos.y, vPos.z)).xyz, texture(uSamplerB, vec2(vPos.x, vPos.z + texOffset )).xyz, texture(uSamplerB, vec2(vPos.x + texOffset, vPos.y + texOffset )).xyz) * vTexAmounts;
 #else	
 		vec3 texColor = vec3(1.);		//todo use above to combine diffuse with normal map effect
 #endif
@@ -97,9 +98,9 @@
 		//vec3 normsq = sqrt(vNormal*vNormal);	//maybe not exactly right - something to stop texture stretching
 		vec3 normsq = abs(vNormal);	//maybe not exactly right - something to stop texture stretching
 
-		vec3 nmapA = vec3 ( texture2D(uSampler, vec2(vPos.y, vPos.z)).xy - vec2(0.5) , 0.0);	//TODO matrix formulation?
-		vec3 nmapB = vec3 ( texture2D(uSampler, vec2(vPos.x, vPos.z + texOffset )).xy - vec2(0.5) ,0.0);
-		vec3 nmapC = vec3 ( texture2D(uSampler, vec2(vPos.x + texOffset, vPos.y + texOffset )).xy - vec2(0.5) ,0.0);
+		vec3 nmapA = vec3 ( texture(uSampler, vec2(vPos.y, vPos.z)).xy - vec2(0.5) , 0.0);	//TODO matrix formulation?
+		vec3 nmapB = vec3 ( texture(uSampler, vec2(vPos.x, vPos.z + texOffset )).xy - vec2(0.5) ,0.0);
+		vec3 nmapC = vec3 ( texture(uSampler, vec2(vPos.x + texOffset, vPos.y + texOffset )).xy - vec2(0.5) ,0.0);
 		
 		vec3 nmapNormal = normalize( vNormal + nmapStrength * (normsq.x*nmapA.zxy + normsq.y*nmapB.xzy + normsq.z*nmapC.xyz ) );
 		
@@ -178,8 +179,8 @@
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
 		
-		gl_FragColor = pow(preGammaFragColor, vec4(0.455));
+		fragColor = pow(preGammaFragColor, vec4(0.455));
 		
 		float depthVal = .5*(vZW.x/vZW.y) + .5;
-		gl_FragColor.a = depthVal;
+		fragColor.a = depthVal;
 	}

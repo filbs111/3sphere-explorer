@@ -1,16 +1,17 @@
-    attribute vec3 aVertexPosition;
-	attribute vec3 aVertexNormal;
-	attribute vec2 aTextureCoord;
-	attribute vec3 aVertexTangent;
-	attribute vec3 aVertexBinormal;
-	attribute vec3 aVertexColor;
-	varying vec3 vTextureCoord;
+#version 300 es   
+    in vec3 aVertexPosition;
+	in vec3 aVertexNormal;
+	in vec2 aTextureCoord;
+	in vec3 aVertexTangent;
+	in vec3 aVertexBinormal;
+	in vec3 aVertexColor;
+	out vec3 vTextureCoord;
 #ifdef VEC_ATMOS_THICK
 	uniform vec3 uAtmosThickness;
-	varying vec3 fog;
+	out vec3 fog;
 #else
 	uniform float uAtmosThickness;
-	varying float fog;
+	out float fog;
 #endif
 	uniform float uAtmosContrast;
 #ifdef VS_MATMULT
@@ -19,11 +20,11 @@
 	uniform mat4 uMVMatrix;
 #endif
 #ifdef INSTANCED
-//	attribute mat4 uMMatrix;	//note still using u prefix so can share code with non instanced version
-	attribute vec4 aMMatrixA;
-	attribute vec4 aMMatrixB;
-	attribute vec4 aMMatrixC;
-	attribute vec4 aMMatrixD;
+//	in mat4 uMMatrix;	//note still using u prefix so can share code with non instanced version
+	in vec4 aMMatrixA;
+	in vec4 aMMatrixB;
+	in vec4 aMMatrixC;
+	in vec4 aMMatrixD;
 #else
 	uniform mat4 uMMatrix;
 #endif
@@ -36,16 +37,16 @@
 	uniform vec4 uReflectorPosVShaderCopy2;
 	uniform vec4 uReflectorPosVShaderCopy3;
 
-	varying vec4 vPlayerLightPosTangentSpace;
-	varying vec4 vPortalLightPosTangentSpace;
-	varying vec4 vPortalLightPosTangentSpace2;
-	varying vec4 vPortalLightPosTangentSpace3;
+	out vec4 vPlayerLightPosTangentSpace;
+	out vec4 vPortalLightPosTangentSpace;
+	out vec4 vPortalLightPosTangentSpace2;
+	out vec4 vPortalLightPosTangentSpace3;
 
-	varying vec4 vEyePosTangentSpace;			//does this get skipped automatically if not used?
+	out vec4 vEyePosTangentSpace;			//does this get skipped automatically if not used?
 	
-	varying vec4 transformedCoord;
+	out vec4 transformedCoord;
 #ifdef CUSTOM_DEPTH
-	varying vec2 vZW;
+	out vec2 vZW;
 #endif	
 	void main(void) {
 		

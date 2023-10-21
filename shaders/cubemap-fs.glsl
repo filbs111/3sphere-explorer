@@ -1,28 +1,29 @@
-#ifdef CUSTOM_DEPTH
-	#extension GL_EXT_frag_depth : enable
-#endif
+#version 300 es
 	precision mediump float;
 	uniform samplerCube uSampler;
-	varying vec3 vPos;
+	in vec3 vPos;
 #ifdef VEC_ATMOS_THICK
-	varying vec3 fog;
+	in vec3 fog;
 #else	
-	varying float fog;
+	in float fog;
 #endif
 	uniform vec4 uColor;	//TODO remove? (should be white, but useful to tint for debug/ coloured reflector)
 	uniform vec4 uFogColor;
 	uniform float uPortalRad;
-	varying vec3 vScreenSpaceCoord;
+	in vec3 vScreenSpaceCoord;
 	uniform vec4 uPortalCameraPos;	//for "special" 
 	uniform vec2 uFNumber;
 	uniform mat4 uMVMatrixFSCopy;
 	uniform vec3 uCentrePosScaledFSCopy;
 	uniform mat4 uPortaledMatrix;
 #ifdef CUSTOM_DEPTH
-	varying vec2 vZW;
-#endif	
+	in vec2 vZW;
+#endif
+
+out vec4 fragColor;
+
 	void main(void) {
-		//gl_FragColor = uColor*textureCube(uSampler, vPos);	//TODO use this (get rid of fog)
+		//fragColor = uColor*texture(uSampler, vPos);	//TODO use this (get rid of fog)
 
 #ifndef SPECIAL
 #ifndef VPROJ_MIX
@@ -75,7 +76,7 @@
 	//	vec3 preGammaFragColor = scaledPoint;	//looks solid!
 
 		//no mix version
-	//	vec3 preGammaFragColor = pow(textureCube(uSampler, normalize(-collisonPoint.xyz) - uCentrePosScaledFSCopy).xyz,vec3(2.2));
+	//	vec3 preGammaFragColor = pow(texture(uSampler, normalize(-collisonPoint.xyz) - uCentrePosScaledFSCopy).xyz,vec3(2.2));
 
 		//mix with simple planar (avoids wobbles at close range)
 		vec4 simplePlanarPortalDir = pointingDirection*uPortaledMatrix;
@@ -85,7 +86,7 @@
 				//simplePlanar will become dominant when other term small
 #endif
 		
-		vec4 fragColorRGBA = textureCube(uSampler, cubeFragCoords);
+		vec4 fragColorRGBA = texture(uSampler, cubeFragCoords);
 		vec3 preGammaFragColor =  pow(fragColorRGBA.xyz,vec3(2.2));
 
 		//undo tone mapping . y=1/(1+x) => x=y/(1-y)
@@ -99,16 +100,16 @@
 		//reapply tone mapping
 		preGammaFragColor = preToneMap/(1.+preToneMap);
 		
-		gl_FragColor = vec4( pow(preGammaFragColor, vec3(0.455)), fragColorRGBA.a);	//copy depth info from alpha channel
+		fragColor = vec4( pow(preGammaFragColor, vec3(0.455)), fragColorRGBA.a);	//copy depth info from alpha channel
 		
 #ifdef GREY_ALPHA
-	    gl_FragColor = vec4(vec3(fragColorRGBA.a),1.0);
+	    fragColor = vec4(vec3(fragColorRGBA.a),1.0);
 #endif
 
 #ifdef CUSTOM_DEPTH
-		gl_FragDepthEXT = .5*(vZW.x/vZW.y) + .5;
+		gl_FragDepth = .5*(vZW.x/vZW.y) + .5;
 		//vec2 normZW= normalize(vZW);
-		//gl_FragDepthEXT = .5*(normZW.x/normZW.y) + .5;
+		//gl_FragDepth = .5*(normZW.x/normZW.y) + .5;
 #endif
 }
 
