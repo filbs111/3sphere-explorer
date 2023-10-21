@@ -61,6 +61,7 @@ var pillarBuffers={};
 var sshipBuffers={};
 var gunBuffers={};
 var su57Buffers={};
+var frigateBuffers={};
 var icoballBuffers={};
 var hyperboloidBuffers={};
 var meshSphereBuffers={};
@@ -374,6 +375,7 @@ function initBuffers(){
 	loadBuffersFromObjFile(sshipBuffers, "./data/spaceship/sship-pointyc-tidy1-uv3-2020b-cockpit1b-yz-2020-10-04.obj", loadBufferData);
 	loadBuffersFromObjFile(gunBuffers, "./data/cannon/cannon-pointz-yz.obj", loadBufferData);
 	loadBuffersFromObjFile(su57Buffers, "./data/miscobjs/t50/su57yz-4a.obj", loadBufferData);
+	loadBuffersFromObjFile(frigateBuffers, "./data/frigate/frigate.obj", loadBufferData);
 
 	loadBuffersFromObjFile(meshSphereBuffers, "./data/miscobjs/mesh-sphere.obj", loadBufferData);
 
@@ -2236,6 +2238,25 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		//console.log("num drawn: " + numDrawn);
 	}
 
+
+	
+	//frigate (TODO rotate with duocylinder?)
+	if (guiParams.drawShapes.frigate){
+		activeShaderProgram = shaderProgramTexmap;
+		shaderSetup(activeShaderProgram, frigateTexture);
+		//piggyback on teapot stuff..
+		//TODO rotate with duocylinder?
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+
+		modelScale = 0.001*guiParams.drawShapes.frigateScale;
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
+		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.multiply(mvMatrix,frigateMatrix);
+		mat4.set(frigateMatrix, mMatrix);	
+		drawObjectFromBuffers(frigateBuffers, activeShaderProgram);
+	}
+
+
 	//general stuff used for all 4vec vertex format objects (currently)
 	mat4.set(invertedWorldCamera, mvMatrix);
 	rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
@@ -3584,6 +3605,8 @@ function initTexture(){
 	su57texture = makeTexture("data/miscobjs/t50/TexCombo4.png");
 	su57texture2 = makeTexture("data/miscobjs/t50/black.png");	//TODO add thruster texture
 
+	frigateTexture = makeTexture("data/frigate/frigate-tex.png");
+
 	randBoxBuffers.tex=texture;
 	towerBoxBuffers.tex=nmapTexture;towerBoxBuffers.texB=diffuseTexture;
 	stonehengeBoxBuffers.tex=texture;stonehengeBoxBuffers.texB=diffuseTexture;
@@ -3675,7 +3698,9 @@ var guiParams={
 		stonehenge:false,
 		singleBufferStonehenge:false,
 		roads:false,
-		singleBufferRoads:false
+		singleBufferRoads:false,
+		frigate:true,
+		frigateScale:5
 	},
 	'random boxes':{
 		number:maxRandBoxes,	//note ui controlled value does not affect singleBuffer
@@ -3783,8 +3808,9 @@ var playerLightUnscaled;
 var playerLight;
 var muzzleFlashAmounts=[0,0,0,0];
 var teapotMatrix=mat4.identity();
-//xyzmove4mat(teapotMatrix,[0,1.85,0]);
-xyzmove4mat(teapotMatrix,[0,0,-0.5]);
+xyzmove4mat(teapotMatrix,[0,1.85,0]);
+var frigateMatrix=mat4.identity();
+xyzmove4mat(frigateMatrix,[0,.7854,0]);
 
 var pillarMatrices=[];
 /*
@@ -3890,6 +3916,8 @@ function init(){
 	drawShapesFolder.add(guiParams.drawShapes,"singleBufferStonehenge");
 	drawShapesFolder.add(guiParams.drawShapes,"roads");
 	drawShapesFolder.add(guiParams.drawShapes,"singleBufferRoads");
+	drawShapesFolder.add(guiParams.drawShapes,"frigate");
+	drawShapesFolder.add(guiParams.drawShapes,"frigateScale",0.1,10.0,0.1);
 	
 	var polytopesFolder = gui.addFolder('polytopes');
 	polytopesFolder.add(guiParams,"draw 5-cell");
