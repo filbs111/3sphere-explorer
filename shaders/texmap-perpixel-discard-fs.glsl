@@ -165,7 +165,7 @@
 		//preGammaFragColor.rgb = texture2D(uSamplerDepthmap, gl_FragCoord.xy).rgb;	//just something to show can use texture.
 		float depthDifference = newDepth - currentDepth;	//TODO calculate actual length difference
 		//preGammaFragColor = vec4( vec3(depthDifference) ,1.);	//TODO use coords that project without extra term
-		gl_FragColor.a = 1.-exp(depthDifference*1000.);
+		gl_FragColor.a = 1.-exp(depthDifference*40000.);
 #else
 
 	#ifdef CUSTOM_DEPTH
