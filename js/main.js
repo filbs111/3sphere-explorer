@@ -3747,7 +3747,7 @@ var guiParams={
 		eyeSepWorld:0.0004,	//half distance between eyes in game world
 		eyeTurnIn:0.002,
 		showHud:true,
-		fisheyeEnabled:true,
+		fisheyeEnabled:false,
 		renderViaTexture:'blur-b-use-alpha',
 		renderLastStage:'fxaa',
 		drawTransparentStuff:true,
