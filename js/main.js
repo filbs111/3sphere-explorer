@@ -1130,6 +1130,8 @@ function drawScene(frameTime){
 			});
 
 			function drawText(textToDraw, xpos, ypos, zpos, size){
+				if (!text_util.isLoaded){return;}
+
 				xpos/=size*zpos;
 				ypos/=size*zpos;
 				zpos=1/size;
