@@ -3822,7 +3822,7 @@ var playerLightUnscaled;
 var playerLight;
 var muzzleFlashAmounts=[0,0,0,0];
 var teapotMatrix=mat4.identity();
-xyzmove4mat(teapotMatrix,[0,1.85,0]);
+xyzmove4mat(teapotMatrix,[0,0,-1]);
 var frigateMatrix=mat4.identity();
 xyzmove4mat(frigateMatrix,[0,.7854,0]);
 
