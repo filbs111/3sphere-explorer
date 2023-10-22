@@ -3128,22 +3128,19 @@ function generateCullFunc(pMat){
 }
 
 var enableDisableAttributes = (function generateEnableDisableAttributesFunc(){
-	var numEnabled = 0;
 	
 	return function(shaderProg){
+		//in webgl2, seems attributes don't necessarily take numbers from 0 to shaderProg.numActiveAttribs - 1
+		//TODO make this less inefficient - track (bit array) whether attributes are enabled or disabled
 		
-		var numToBeEnabled = shaderProg.numActiveAttribs;
-		if (numToBeEnabled>numEnabled){
-			for (var ii=numEnabled;ii<numToBeEnabled;ii++){
-				gl.enableVertexAttribArray(ii);
-			}
+		var maxNum = 16;
+		//var maxNum = gl.MAX_VERTEX_ATTRIBS;	//bad idea!
+		for (var ii=0;ii<maxNum;ii++){
+			gl.disableVertexAttribArray(ii);
 		}
-		if (numToBeEnabled<numEnabled){
-			for (var ii=numToBeEnabled;ii<numEnabled;ii++){
-				gl.disableVertexAttribArray(ii);
-			}
+		for (var attr of Object.values(shaderProg.attributes)){
+			gl.enableVertexAttribArray(attr);
 		}
-		numEnabled = numToBeEnabled;
 	};
 })();
 
