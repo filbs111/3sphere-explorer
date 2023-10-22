@@ -3729,7 +3729,7 @@ var guiParams={
 	"draw 24-cell":false,
 	"24-cell scale":1,
 	"draw 120-cell":false,
-	"draw 600-cell":true,
+	"draw 600-cell":false,
 	"player model":"spaceship",
 	"drop spaceship":false,
 	target:{
