@@ -1,6 +1,9 @@
 #version 300 es
     in vec3 aVertexPosition;
 	in vec3 aVertexNormal;
+#ifdef VERTCOLOR
+	in vec3 aVertexColor;
+#endif
 #ifdef VEC_ATMOS_THICK
 	uniform vec3 uAtmosThickness;
 	out vec3 fog;
@@ -25,6 +28,9 @@
 	out vec4 adjustedPos;
 	out vec4 transformedNormal;
 	out vec4 transformedCoord;
+#ifdef VERTCOLOR
+	out vec3 vVertexColor;
+#endif
 #ifdef CUSTOM_DEPTH
 	out vec2 vZW;
 #endif
@@ -74,7 +80,11 @@ transformedNormal = blendWeights.x*transformedNormalA + blendWeights.y*transform
 
 
 		gl_Position = uPMatrix * transformedCoord;
-	
+
+#ifdef VERTCOLOR
+	vVertexColor = aVertexColor;
+#endif
+
 #ifdef ATMOS_CONSTANT		
 #ifdef VEC_ATMOS_THICK
 		fog = vec3(0.5*(1.0 + transformedCoord.w));

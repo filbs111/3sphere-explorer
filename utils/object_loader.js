@@ -1,13 +1,13 @@
 //loading .obj data and similar from files eg .obj, instead of generating json data from.obj files offline
 
-function loadBuffersFromObjFile(bufferObj, location, cb){
+function loadBuffersFromObjFile(bufferObj, location, cb, expectedVertLength=3){
     var oReq = new XMLHttpRequest();
-    oReq.addEventListener("load", x => {loadBuffersFromObjFileResponse(bufferObj, x.target.response, cb);});
+    oReq.addEventListener("load", x => {loadBuffersFromObjFileResponse(bufferObj, x.target.response, cb, expectedVertLength);});
     oReq.open("GET", location);
     oReq.send();
 }
 
-function loadBuffersFromObjFileResponse(bufferObj, response, cb){
+function loadBuffersFromObjFileResponse(bufferObj, response, cb, expectedVertLength){
     console.log(response);
     var lines = response.split("\n");
     console.log(lines.length);
@@ -28,8 +28,8 @@ function loadBuffersFromObjFileResponse(bufferObj, response, cb){
 
         if (firstPart == 'v'){
             verts.push(floatArr);
-            if (floatArr.length != 3){
-                alert("vertex with length != 3", floatArr, ll);
+            if (floatArr.length != expectedVertLength){
+               alert("vertex vector size " + floatArr.length + ", but expected length "+expectedVertLength , floatArr, ll);
             }
         }
         if (firstPart == 'vt'){
@@ -76,6 +76,7 @@ function loadBuffersFromObjFileResponse(bufferObj, response, cb){
 
     var sourceData = {
         vertices: [].concat.apply([],newVerts.map(x=>verts[x[0]])),
+        vertices_len: expectedVertLength,   //not required if is 3 (normal)
         uvcoords: [].concat.apply([],newVerts.map(x=>uvs[x[1]])),
         normals: [].concat.apply([],newVerts.map(x=>norms[x[2]])),
         indices: [].concat.apply([],newFaces)

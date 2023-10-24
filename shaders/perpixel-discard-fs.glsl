@@ -25,6 +25,9 @@
 	in vec4 adjustedPos;
 	in vec4 transformedNormal;
 	in vec4 transformedCoord;
+#ifdef VERTCOLOR
+	in vec3 vVertexColor;
+#endif
 #ifdef CUSTOM_DEPTH
 	in vec2 vZW;
 #endif
@@ -76,7 +79,14 @@ out vec4 fragColor;
 		//guess maybe similar to some gaussian light source
 		
 		//vec4 preGammaFragColor = vec4( fog*(( uPlayerLightColor*light+ uReflectorDiffColor*portalLight + uFogColor.xyz )*uColor.xyz + uEmitColor), 1.0) + (1.0-fog)*uFogColor;
-		vec4 preGammaFragColor = vec4( fog*(( uPlayerLightColor*light+ uReflectorDiffColor*portalLight + uReflectorDiffColor2*portalLight2 + uReflectorDiffColor3*portalLight3 + uFogColor.xyz )*uColor.xyz + uEmitColor) + (1.0-fog)*uFogColor.xyz , 1.0);
+
+#ifdef VERTCOLOR
+	vec3 surfaceColor = vVertexColor*uColor.xyz;
+#else
+	vec3 surfaceColor = uColor.xyz;
+#endif
+
+		vec4 preGammaFragColor = vec4( fog*(( uPlayerLightColor*light+ uReflectorDiffColor*portalLight + uReflectorDiffColor2*portalLight2 + uReflectorDiffColor3*portalLight3 + uFogColor.xyz )*surfaceColor + uEmitColor) + (1.0-fog)*uFogColor.xyz , 1.0);
 		
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	

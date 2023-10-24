@@ -60,6 +60,7 @@ var frigateBuffers={};
 var icoballBuffers={};
 var hyperboloidBuffers={};
 var meshSphereBuffers={};
+var buildingBuffers={};
 
 //var sshipModelScale=0.0001;
 var sshipModelScale=0.00005;
@@ -373,6 +374,7 @@ function initBuffers(){
 	loadBuffersFromObjFile(frigateBuffers, "./data/frigate/frigate.obj", loadBufferData);
 
 	loadBuffersFromObjFile(meshSphereBuffers, "./data/miscobjs/mesh-sphere.obj", loadBufferData);
+	loadBuffersFromObjFile(buildingBuffers, "./data/miscobjs/buildings.obj", loadBufferData, 6);
 
 	var thisMatT;
 	for (var ii=0;ii<maxRandBoxes;ii++){
@@ -2250,6 +2252,22 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		mat4.multiply(mMatrix, frigateMatrix);
 		drawObjectFromBuffers(frigateBuffers, activeShaderProgram);
 	}
+	if (guiParams.drawShapes.building){
+		activeShaderProgram = shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ];
+		shaderSetup(activeShaderProgram);
+
+		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+
+		modelScale = 0.001*guiParams.drawShapes.buildingScale;
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
+		mat4.set(invertedWorldCamera, mvMatrix);3
+		rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
+		mat4.multiply(mvMatrix,buildingMatrix);
+
+		mat4.identity(mMatrix);rotate4mat(mMatrix, 0, 1, duocylinderSpin);
+		mat4.multiply(mMatrix, buildingMatrix);
+		drawObjectFromBuffers(buildingBuffers, activeShaderProgram);
+	}
 
 
 	//general stuff used for all 4vec vertex format objects (currently)
@@ -3231,7 +3249,17 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 	enableDisableAttributes(shaderProg);	//TODO more this to shadersetup!!
 	
 	gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexPositionBuffer);
-    gl.vertexAttribPointer(shaderProg.attributes.aVertexPosition, bufferObj.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+	if (shaderProg.attributes.aVertexColor){
+		//assume vertex coloured object has 3 pos, 3 colour (expect vertexPositionBuffer.itemSize = 6)
+		//TODO use byte for colour instead of float?
+		var iSize = bufferObj.vertexPositionBuffer.itemSize;
+		var numColors = iSize - 3;
+		gl.vertexAttribPointer(shaderProg.attributes.aVertexPosition, 3, gl.FLOAT, false, 4*iSize, 0);
+		gl.vertexAttribPointer(shaderProg.attributes.aVertexColor, numColors, gl.FLOAT, false, 4*iSize, 4*3);
+	}else{
+		gl.vertexAttribPointer(shaderProg.attributes.aVertexPosition, bufferObj.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+	}
 	
 	if (bufferObj.vertexNormalBuffer && shaderProg.attributes.aVertexNormal){
 		gl.bindBuffer(gl.ARRAY_BUFFER, bufferObj.vertexNormalBuffer);
@@ -3686,7 +3714,7 @@ var guiParams={
 	worlds:[
 		{fogColor:'#dca985',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:true,seaLevel:0,seaPeakiness:0.0},
 		{fogColor:'#5cd5e6',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
-		{fogColor:'#55ee66',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
+		{fogColor:'#bbbbbb',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
 		{fogColor:'#111111',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}
 	],
 	drawShapes:{
@@ -3711,7 +3739,9 @@ var guiParams={
 		roads:false,
 		singleBufferRoads:false,
 		frigate:true,
-		frigateScale:5
+		frigateScale:5,
+		building:true,
+		buildingScale:5
 	},
 	'random boxes':{
 		number:maxRandBoxes,	//note ui controlled value does not affect singleBuffer
@@ -3822,6 +3852,8 @@ var teapotMatrix=mat4.identity();
 xyzmove4mat(teapotMatrix,[0,0,-1]);
 var frigateMatrix=mat4.identity();
 xyzmove4mat(frigateMatrix,[0,.7854,0]);
+var buildingMatrix=mat4.identity();
+xyzmove4mat(buildingMatrix,[0,.76,0]);
 
 var pillarMatrices=[];
 /*
@@ -3928,8 +3960,10 @@ function init(){
 	drawShapesFolder.add(guiParams.drawShapes,"roads");
 	drawShapesFolder.add(guiParams.drawShapes,"singleBufferRoads");
 	drawShapesFolder.add(guiParams.drawShapes,"frigate");
-	drawShapesFolder.add(guiParams.drawShapes,"frigateScale",0.1,10.0,0.1);
-	
+	drawShapesFolder.add(guiParams.drawShapes,"frigateScale",0.1,20.0,0.1);
+	drawShapesFolder.add(guiParams.drawShapes,"building");
+	drawShapesFolder.add(guiParams.drawShapes,"buildingScale",0.1,20.0,0.1);
+
 	var polytopesFolder = gui.addFolder('polytopes');
 	polytopesFolder.add(guiParams,"draw 5-cell");
 	polytopesFolder.add(guiParams,"draw 8-cell");
