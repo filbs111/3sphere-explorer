@@ -374,7 +374,7 @@ function initBuffers(){
 	loadBuffersFromObjFile(frigateBuffers, "./data/frigate/frigate.obj", loadBufferData);
 
 	loadBuffersFromObjFile(meshSphereBuffers, "./data/miscobjs/mesh-sphere.obj", loadBufferData);
-	loadBuffersFromObjFile(buildingBuffers, "./data/miscobjs/buildings.obj", loadBufferData, 6);
+	loadBuffersFromObj3File(buildingBuffers, "./data/miscobjs/menger-edgesplit.obj3", loadBufferData, 6);
 
 	var thisMatT;
 	for (var ii=0;ii<maxRandBoxes;ii++){
