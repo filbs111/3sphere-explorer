@@ -3,8 +3,8 @@
 function loadBuffersFromObjFile(bufferObj, location, cb, expectedVertLength=3){
     loadBuffersFromFile(bufferObj, location, cb, expectedVertLength, loadBuffersFromObjFileResponse);
 }
-function loadBuffersFromObj3File(bufferObj, location, cb, expectedVertLength=3){
-    loadBuffersFromFile(bufferObj, location, cb, expectedVertLength, loadBuffersFromObj3FileResponse);
+function loadBuffersFromObj2Or3File(bufferObj, location, cb, expectedVertLength=3){
+    loadBuffersFromFile(bufferObj, location, cb, expectedVertLength, loadBuffersFromObj2Or3FileResponse);
 }
 function loadBuffersFromFile(bufferObj, location, cb, expectedVertLength, loaderFunc){
     var oReq = new XMLHttpRequest();
@@ -96,12 +96,14 @@ function loadBuffersFromObjFileResponse(bufferObj, response, cb, expectedVertLen
     bufferObj.isLoaded = true;  //should check this before drawing using these buffers (or set some initial dummy data)
 }
 
-function loadBuffersFromObj3FileResponse(bufferObj, response, cb, expectedVertLength){
+function loadBuffersFromObj2Or3FileResponse(bufferObj, response, cb, expectedVertLength){
     //console.log(response);
     var lines = response.split("\n");
     console.log(lines.length);
 
     var expectedColoursLength = expectedVertLength-3;
+
+    var hasVertexColours = (expectedColoursLength > 0);
 
     var positions = [];
     var colours = [];
@@ -119,7 +121,7 @@ function loadBuffersFromObj3FileResponse(bufferObj, response, cb, expectedVertLe
 
         var floatArr = theRest.map((x)=>{return parseFloat(x)});
         
-        if (firstPart == 'vp'){
+        if (firstPart == 'vp' || firstPart == 'v'){
             positions.push(floatArr);
             if (floatArr.length != 3){
                alert("vertex vector size " + floatArr.length + ", but expected length 3" , floatArr);
@@ -162,12 +164,13 @@ function loadBuffersFromObj3FileResponse(bufferObj, response, cb, expectedVertLe
         newFaces.push(face.map(x=>parseInt(x)));    //using zero-indexed attributes.
     }
 
-    //halfway house - code that uses result expects vertex positions and colours to be stuck together.
-    //TODO for symmetry (with normals, uvcoods...), separate 
-    var vertPositionsAndColours = [].concat.apply([],newVerts.map(x=> positions[x[0]].concat(colours[x[3]])));
-
     var sourceData = {
-        vertices: vertPositionsAndColours,
+        vertices: (hasVertexColours? 
+            //halfway house - code that uses result expects vertex positions and colours to be stuck together.
+            //TODO for symmetry (with normals, uvcoods...), separate 
+            [].concat.apply([],newVerts.map(x=> positions[x[0]].concat(colours[x[3]]))):
+            [].concat.apply([],newVerts.map(x=> positions[x[0]]))
+            ),
         vertices_len: expectedVertLength,   //not required if is 3 (normal)
         normals: [].concat.apply([],newVerts.map(x=>norms[x[2]])),
         indices: [].concat.apply([],newFaces)
@@ -176,9 +179,9 @@ function loadBuffersFromObj3FileResponse(bufferObj, response, cb, expectedVertLe
         sourceData.uvcoords = [].concat.apply([],newVerts.map(x=>uvs[x[1]]));
     }
 
-    // console.log("Obj3 data:");
-    // console.log(newVerts);
-    // console.log(sourceData);
+    console.log("custom Obj data:");
+    console.log(newVerts);
+    console.log(sourceData);
 
     cb(bufferObj, sourceData);  //loadBufferData
     bufferObj.isLoaded = true;  //should check this before drawing using these buffers (or set some initial dummy data)

@@ -367,14 +367,15 @@ function initBuffers(){
 	loadBufferData(icoballBuffers, icoballObj);
 	loadBufferData(hyperboloidBuffers, hyperboloidData);
 	
-	loadBuffersFromObjFile(pillarBuffers, "./data/pillar/pillar.obj", loadBufferData);
-	loadBuffersFromObjFile(sshipBuffers, "./data/spaceship/sship-pointyc-tidy1-uv3-2020b-cockpit1b-yz-2020-10-04.obj", loadBufferData);
+	loadBuffersFromObj2Or3File(pillarBuffers, "./data/pillar/pillar.obj2", loadBufferData);
+	loadBuffersFromObj2Or3File(sshipBuffers, "./data/spaceship/sship-pointyc-tidy1-uv3-2020b-cockpit1b-yz-2020-10-04.obj2", loadBufferData);
+
 	loadBuffersFromObjFile(gunBuffers, "./data/cannon/cannon-pointz-yz.obj", loadBufferData);
 	loadBuffersFromObjFile(su57Buffers, "./data/miscobjs/t50/su57yz-4a.obj", loadBufferData);
 	loadBuffersFromObjFile(frigateBuffers, "./data/frigate/frigate.obj", loadBufferData);
 
 	loadBuffersFromObjFile(meshSphereBuffers, "./data/miscobjs/mesh-sphere.obj", loadBufferData);
-	loadBuffersFromObj3File(buildingBuffers, "./data/miscobjs/menger-edgesplit.obj3", loadBufferData, 6);
+	loadBuffersFromObj2Or3File(buildingBuffers, "./data/miscobjs/menger-edgesplit.obj3", loadBufferData, 6);
 
 	var thisMatT;
 	for (var ii=0;ii<maxRandBoxes;ii++){
