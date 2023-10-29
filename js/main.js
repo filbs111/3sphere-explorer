@@ -2253,7 +2253,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		mat4.multiply(mMatrix, frigateMatrix);
 		drawObjectFromBuffers(frigateBuffers, activeShaderProgram);
 	}
-	if (guiParams.drawShapes.building){
+	if (guiParams.drawShapes.building && buildingBuffers.isLoaded){
 		activeShaderProgram = shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ];
 		shaderSetup(activeShaderProgram);
 
@@ -2524,8 +2524,10 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	}
 	
 	function drawSpaceship(matrix){
-		drawPlayerGradlightObject(matrix, sshipBuffers, sshipTexture, sshipTexture2, sshipModelScale, 1,true);
+		if (sshipBuffers.isLoaded){
+			drawPlayerGradlightObject(matrix, sshipBuffers, sshipTexture, sshipTexture2, sshipModelScale, 1,true);
 			//TODO use object that doesn't require scaling
+		}
 	}
 
 	function drawPlane(matrix){
