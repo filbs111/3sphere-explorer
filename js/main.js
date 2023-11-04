@@ -88,8 +88,8 @@ var landingLegData=[
 
 playerCentreBallData = {pos:[0,0,0],suspHeight:0,cubeColPen:0};
 
-var maxRandBoxes = 8192;
-//var maxRandBoxes = 50;	//tmp smaller to make startup faster?
+//var maxRandBoxes = 8192;
+var maxRandBoxes = 128;	//tmp smaller to make startup faster?
 var randomMats = [];	//some random poses. used for "dust motes". really only positions required, but flexible, can use for random boxes/whatever 		
 var randomMatsT = [];
 
@@ -1798,19 +1798,28 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			}
 		}
 		
-		if (guiParams['random boxes'].drawType == 'instancedArrays'){
-			shaderSetup(shaderPrograms.texmapPerPixelDiscardNormalmapPhongInstanced[ guiParams.display.atmosShader ]);
+		if (['instancedArrays','instancedArraysMenger'].includes(guiParams["random boxes"].drawType)){
+			var objBufferForInstances;
+			if (guiParams["random boxes"].drawType == 'instancedArraysMenger'){
+				shaderSetup(shaderPrograms.coloredPerPixelDiscardVertexColoredInstanced[ guiParams.display.atmosShader ]);
+				objBufferForInstances = buildingBuffers;
+
+				gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+			}else{
+				shaderSetup(shaderPrograms.texmapPerPixelDiscardNormalmapPhongInstanced[ guiParams.display.atmosShader ]);
+				objBufferForInstances = cubeBuffers;
+				gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.red);
+			}
 			
-			//gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.randBoxes);
-			gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.red);
+			
 			boxSize = guiParams['random boxes'].size;
 			boxRad = boxSize*Math.sqrt(3);
 			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
 			
 			//numRandomBoxes = Math.min(randomMats.length, numRandomBoxes);	//todo figure out how to draw part of array of boxes. also for "singleBuffer" version
 			
-			prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
-			
+			prepBuffersForDrawing(objBufferForInstances, activeShaderProgram);
+
 			var matrixBuffers = randBoxBuffers.randMatrixBuffers;	//todo neater selection code (array of terrain types?) TODO select mats array for other drawing types (eg indivVsMatmult)
 			if (['procTerrain','voxTerrain','voxTerrain2'].includes(worldInfo.duocylinderModel)) {
 				matrixBuffers = randBoxBuffers.forTerrain[worldInfo.duocylinderModel];
@@ -1870,7 +1879,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffers.d);
 			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixD, 4, gl.FLOAT, false, 0, 0);
 			
-			gl.drawElementsInstanced(gl.TRIANGLES, cubeBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, numRandomBoxes);
+			gl.drawElementsInstanced(gl.TRIANGLES, objBufferForInstances.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, numRandomBoxes);
 										//DO NOT SET THIS HIGH ON CHROME! works great on firefox, think tanks chrome because due to whatever bug using the right matrices, huge overdraw
 			
 			//gl.drawElementsInstancedANGLE(gl.TRIANGLES, cubeBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, 100);	//very low count - to avoid tanking framerate in chrome (bug in extension?)
@@ -2259,7 +2268,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
 
-		modelScale = 0.001*guiParams.drawShapes.buildingScale;
+		modelScale = 0.01*guiParams.drawShapes.buildingScale;
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
 		mat4.set(invertedWorldCamera, mvMatrix);3
 		rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
@@ -3945,11 +3954,18 @@ function init(){
 		boxesFolder.add(guiParams.drawShapes.boxes, shape );
 	}
 	var randBoxesFolder = drawShapesFolder.addFolder("random boxes");
-	randBoxesFolder.add(guiParams["random boxes"],"number",0,maxRandBoxes,64);
-	randBoxesFolder.add(guiParams["random boxes"],"size",0.001,0.01,0.001);
+	randBoxesFolder.add(guiParams["random boxes"],"number",0,maxRandBoxes,8);
+	randBoxesFolder.add(guiParams["random boxes"],"size",0.001,0.1,0.001);
 	randBoxesFolder.add(guiParams["random boxes"],"collision");
-	randBoxesFolder.add(guiParams["random boxes"],"drawType", ["singleBuffer","indiv","indivVsMatmult","instancedArrays","instanced speckles"]);
-	randBoxesFolder.add(guiParams["random boxes"],"numToMove", 0,maxRandBoxes,64);
+	randBoxesFolder.add(guiParams["random boxes"],"drawType", [
+		"singleBuffer",
+		"indiv",
+		"indivVsMatmult",
+		"instancedArrays",
+		"instancedArraysMenger",
+		"instanced speckles"
+	]);
+	randBoxesFolder.add(guiParams["random boxes"],"numToMove", 0,maxRandBoxes,8);
 	drawShapesFolder.add(guiParams.drawShapes,"teapot");
 	drawShapesFolder.add(guiParams.drawShapes,"teapot scale",0.05,2.0,0.05);
 	drawShapesFolder.add(guiParams.drawShapes,"pillars");
@@ -4313,7 +4329,7 @@ var iterateMechanics = (function iterateMechanics(){
 			xyzmove4mat(randomMats[ii],moveVec);	//this maybe slow part
 		}
 		
-		if (guiParams["random boxes"].drawType=='instancedArrays'){
+		if (['instancedArrays','instancedArraysMenger'].includes(guiParams["random boxes"].drawType)){
 			//this copypasted from elsewhere. todo cleaner
 			var matrixF32ArrA = new Float32Array(matsToMove*4);	// TODO reuse Float32Array!
 			var matrixF32ArrB = new Float32Array(matsToMove*4);

@@ -18,8 +18,16 @@
 	uniform mat4 uMMatrixB;
 	uniform mat4 uMVMatrixB;	//TODO don't have separate mmatrix, mvmatrix x 2 for bendy. should be able to have fewer inputs
 #else
+#ifdef INSTANCED
+	in vec4 aMMatrixA;
+	in vec4 aMMatrixB;
+	in vec4 aMMatrixC;
+	in vec4 aMMatrixD;
+	uniform mat4 uVMatrix;
+#else
 	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
+#endif
 #endif
 	uniform mat4 uPMatrix;
 	uniform vec4 uCameraWorldPos;
@@ -68,8 +76,16 @@ transformedNormal = blendWeights.x*transformedNormalA + blendWeights.y*transform
 
 #else
 		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
-		transformedCoord = uMVMatrix * aVertexPositionNormalized;
-		transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
+#ifdef INSTANCED
+	//bodge together a matrix from input vectors because suspect chrome bug
+		mat4 uMMatrix = mat4( aMMatrixA, aMMatrixB, aMMatrixC, aMMatrixD );
+		mat4 MVMatrix = uVMatrix * uMMatrix;
+#else
+		mat4 MVMatrix = uMVMatrix;
+#endif
+
+		transformedCoord = MVMatrix * aVertexPositionNormalized;
+		transformedNormal = MVMatrix * vec4(aVertexNormal,0.0);
 #endif
 
 #ifdef CUSTOM_DEPTH
