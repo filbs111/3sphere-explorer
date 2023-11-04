@@ -50,10 +50,17 @@ var voxTerrainData = (function generateMultiVoxTerrainData(){
 	//var voxFunction = shiftedbrejao;
 	//var voxFunction = longHolesTwo;
 
-	return {
-		'voxTerrain': generateVoxTerrainData(shiftedbrejao),
-		'voxTerrain2': generateVoxTerrainData(balls)
-	}
+	var terrainFuncs = {
+		'voxTerrain': shiftedbrejao,
+		'voxTerrain2': balls,
+		'voxTerrain3': sinesfunctionthree
+	};
+	var terrainData = {};
+	Object.keys(terrainFuncs).forEach(kk => {
+		terrainData[kk] = generateVoxTerrainData(terrainFuncs[kk]);
+	});
+	
+	return terrainData;
 	
 	function generateVoxTerrainData(voxFunction){
 		

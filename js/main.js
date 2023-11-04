@@ -29,7 +29,8 @@ var duocylinderObjects={
 	procTerrain:{divs:1,step:2*Math.PI,isStrips:true},
 	sea:{divs:1,step:2*Math.PI,isStrips:true},
 	voxTerrain:{divs:2,step:Math.PI},
-	voxTerrain2:{divs:2,step:Math.PI}
+	voxTerrain2:{divs:2,step:Math.PI},
+	voxTerrain3:{divs:2,step:Math.PI}
 	//voxTerrain:{divs:1,step:2*Math.PI}
 	};
 
@@ -268,7 +269,7 @@ function initBuffers(){
 	loadDuocylinderBufferData(duocylinderObjects.procTerrain, proceduralTerrainData);
 	loadDuocylinderSeaBufferData(duocylinderObjects.sea, gridData);	//for use in a different shader. no precalculation of mapping to 4-verts
 	
-	['voxTerrain','voxTerrain2'].forEach(x=>{
+	Object.keys(voxTerrainData).forEach(x=>{
 		loadGridData(voxTerrainData[x]);	//TODO don't do this... - different shader like sea - either don't precalc 4-vec mapping, or store 3vec co-ords 
 		loadDuocylinderBufferData(duocylinderObjects[x], voxTerrainData[x]);
 	});
@@ -455,7 +456,7 @@ function initBuffers(){
 
 	randBoxBuffers.forTerrain={};
 	randBoxBuffers.forTerrain['procTerrain']=glBufferMatrixUniformDataForInstancedDrawing(procTerrainSurfaceParticleMats);
-	['voxTerrain','voxTerrain2'].forEach(x=>{
+	Object.keys(voxTerrainData).forEach(x=>{
 		randBoxBuffers.forTerrain[x] = glBufferMatrixUniformDataForInstancedDrawing(voxTerrainData[x].surfaceParticleMats);
 	});
 	
@@ -1821,7 +1822,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			prepBuffersForDrawing(objBufferForInstances, activeShaderProgram);
 
 			var matrixBuffers = randBoxBuffers.randMatrixBuffers;	//todo neater selection code (array of terrain types?) TODO select mats array for other drawing types (eg indivVsMatmult)
-			if (['procTerrain','voxTerrain','voxTerrain2'].includes(worldInfo.duocylinderModel)) {
+			if (['procTerrain','voxTerrain','voxTerrain2','voxTerrain3'].includes(worldInfo.duocylinderModel)) {
 				matrixBuffers = randBoxBuffers.forTerrain[worldInfo.duocylinderModel];
 			}
 			
@@ -2011,7 +2012,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h *Math.sqrt(2), [1.0, 0.4, 1.0, 1.0], cubeBuffers);
 		}
 	
-		if (['voxTerrain','voxTerrain2'].includes(worldInfo.duocylinderModel)){
+		if (Object.keys(voxTerrainData).includes(worldInfo.duocylinderModel)){
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix, closestPointTestMat);
 			mat4.set(closestPointTestMat, mMatrix);
@@ -3662,6 +3663,10 @@ function initTexture(){
 	duocylinderObjects.voxTerrain2.tex = nmapTexture;
 	duocylinderObjects.voxTerrain2.usesTriplanarMapping=true;
 
+	duocylinderObjects.voxTerrain3.texB = diffuseTexture;
+	duocylinderObjects.voxTerrain3.tex = nmapTexture;
+	duocylinderObjects.voxTerrain3.usesTriplanarMapping=true;
+
 	//texture = makeTexture("img/ash_uvgrid01-grey.tiny.png");	//numbered grid
 
 	//for l3dt/cdlod terrain
@@ -3941,7 +3946,7 @@ function init(){
 			setFog(nn,color);
 		});
 		worldFolder.add(world, "duocylinderModel", [
-			"grid","terrain","procTerrain",'voxTerrain','voxTerrain2','l3dt-brute','l3dt-blockstrips','none'] );
+			"grid","terrain","procTerrain",'voxTerrain','voxTerrain2','voxTerrain3','l3dt-brute','l3dt-blockstrips','none'] );
 		worldFolder.add(world, "spinRate", -2.5,2.5,0.25);
 		worldFolder.add(world, "seaActive" );
 		worldFolder.add(world, "seaLevel", -0.05,0.05,0.005);
@@ -4781,7 +4786,7 @@ var iterateMechanics = (function iterateMechanics(){
 			if (worldInfo.seaActive){
 				distanceForTerrainNoise = getHeightAboveSeaFor4VecPos(playerPos, lastSeaTime, dcSpin);	//height. todo use distance (unimportant because sea gradient low
 			}
-			if (['voxTerrain','voxTerrain2'].includes(worldInfo.duocylinderModel)){
+			if (Object.keys(voxTerrainData).includes(worldInfo.duocylinderModel)){
 				voxTerrainData[worldInfo.duocylinderModel].test2VoxABC(dcSpin);	//updates closestPointTestMat
 				
 				distanceForVox = distBetween4mats(playerCamera, closestPointTestMat);
@@ -5171,7 +5176,7 @@ var iterateMechanics = (function iterateMechanics(){
 			if (worldInfo.duocylinderModel == "l3dt-brute" || worldInfo.duocylinderModel == "l3dt-blockstrips"){
 				if (getHeightAboveTerrain2For4VecPos(bulletPos, dcSpin)<0){detonateBullet(bullet, true, [0.3,0.3,0.3,1]);}
 			}
-			if (['voxTerrain','voxTerrain2'].includes(worldInfo.duocylinderModel)){	//TODO generalise collision by specifying a function for terrain. (voxTerrain, procTerrain)
+			if (Object.keys(voxTerrainData).includes(worldInfo.duocylinderModel)){	//TODO generalise collision by specifying a function for terrain. (voxTerrain, procTerrain)
 				if (voxTerrainData[worldInfo.duocylinderModel].collisionFunction(bulletPos, dcSpin)>0){detonateBullet(bullet, true, [0.5,0.5,0.5,1]);}
 			}
 			if (worldInfo.seaActive){
