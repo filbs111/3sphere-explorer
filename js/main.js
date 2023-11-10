@@ -463,42 +463,16 @@ function initBuffers(){
 	function glBufferMatrixUniformDataForInstancedDrawing(sourceMatArr){
 		//make a matrix buffer for instanced drawing of random boxes
 		var numMats = sourceMatArr.length;
-		//var matrixF32Arr = new Float32Array(numMats*16);
-		console.log("buffering matrix in bits!!!!!!!!");
-		var matrixF32ArrA = new Float32Array(numMats*4);
-		var matrixF32ArrB = new Float32Array(numMats*4);
-		var matrixF32ArrC = new Float32Array(numMats*4);
-		var matrixF32ArrD = new Float32Array(numMats*4);
+		var matrixF32Arr = new Float32Array(numMats*16);
 		
-		var thisMat;
-		for (var ii=0,pp=0;ii<numMats;ii++,pp+=4){
-			thisMat=sourceMatArr[ii];
-			matrixF32ArrA.set(thisMat.slice(0,4),pp);
-			matrixF32ArrB.set(thisMat.slice(4,8),pp);
-			matrixF32ArrC.set(thisMat.slice(8,12),pp);
-			matrixF32ArrD.set(thisMat.slice(12,16),pp);
+		for (var ii=0,pp=0;ii<numMats;ii++,pp+=16){
+			matrixF32Arr.set(sourceMatArr[ii], pp);
 		}
-		/*
-		console.log("made f32 arrs");
-		console.log(matrixF32ArrA);
-		console.log(matrixF32ArrB);
-		console.log(matrixF32ArrC);
-		console.log(matrixF32ArrD);
-		*/
-		//randBoxBuffers.mats = gl.createBuffer();
-		//bufferArrayData(randBoxBuffers.mats, matrixF32Arr, 16);	//note that piggybacking on buffer object that's used in a different drawing mode - "singleBuffer", wheras mats are used for instanced drawing mode
-		//above seems like doesn't work. should pass matrices by 4 vectors. perhaps buffers should be like that too...
-		//TODO this properly with stride etc? at least do neatly
-		var matA = gl.createBuffer();
-		var matB = gl.createBuffer();
-		var matC = gl.createBuffer();
-		var matD = gl.createBuffer();
-		bufferArrayDataGeneral(matA, matrixF32ArrA, 4);
-		bufferArrayDataGeneral(matB, matrixF32ArrB, 4);
-		bufferArrayDataGeneral(matC, matrixF32ArrC, 4);
-		bufferArrayDataGeneral(matD, matrixF32ArrD, 4);
 		
-		return {a:matA, b:matB, c:matC, d:matD};
+		var matA = gl.createBuffer();
+		bufferArrayDataGeneral(matA, matrixF32Arr, 16);
+		
+		return matA;
 	}
 	
 	function loadBlenderExport(meshToLoad){
@@ -1871,14 +1845,11 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			gl.vertexAttribDivisor(activeShaderProgram.attributes.aMMatrixC, 1);
 			gl.vertexAttribDivisor(activeShaderProgram.attributes.aMMatrixD, 1)
 			
-			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffers.a);
-			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixA, 4, gl.FLOAT, false, 0, 0);	//https://community.khronos.org/t/how-to-specify-a-matrix-vertex-attribute/54102/3
-			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffers.b);
-			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixB, 4, gl.FLOAT, false, 0, 0);
-			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffers.c);
-			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixC, 4, gl.FLOAT, false, 0, 0);
-			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffers.d);
-			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixD, 4, gl.FLOAT, false, 0, 0);
+			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffers);
+			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixA, 4, gl.FLOAT, false, 64, 0);	//https://community.khronos.org/t/how-to-specify-a-matrix-vertex-attribute/54102/3
+			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixB, 4, gl.FLOAT, false, 64, 16);
+			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixC, 4, gl.FLOAT, false, 64, 32);
+			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixD, 4, gl.FLOAT, false, 64, 48);
 			
 			gl.drawElementsInstanced(gl.TRIANGLES, objBufferForInstances.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, numRandomBoxes);
 										//DO NOT SET THIS HIGH ON CHROME! works great on firefox, think tanks chrome because due to whatever bug using the right matrices, huge overdraw
