@@ -1123,7 +1123,6 @@ function drawScene(frameTime){
 						ypos + 2*cInfo.yoffset/512 + (cInfo.height/512), //note awkward passing in size since currently quads are drawn -1 to +1
 						zpos],
 						cInfo);
-
 					xpos-=2* cInfo.xadvance/512;
 				});
 			}
@@ -2105,7 +2104,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,mMatrix);
 	}
-	
 	
 	//draw blender object - a csg cube minus sphere. draw 8 cells for tesseract.
 	var modelScale = smoothGuiParams.get("8-cell scale");
@@ -4330,7 +4328,6 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		
 		
-		
 		var duoCylinderAngVelConst = guiSettingsForWorld[playerContainer.world].spinRate;
 		
 		timeTracker+=timeElapsed;
@@ -4560,7 +4557,6 @@ var iterateMechanics = (function iterateMechanics(){
 			//get the current atmospheric density.
 			var atmosThick = 0.001*guiParams.display.atmosThickness;	//1st constant just pulled out of the air. 
 			atmosThick*=Math.pow(2.71, guiParams.display.atmosContrast*(playerPos[0]*playerPos[0] + playerPos[1]*playerPos[1] -0.5)); //as atmosScale increases, scale height decreases
-
 
 
 
@@ -4839,7 +4835,6 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			
 			
-			
 			currentPen = Math.max(currentPen,0);	//TODO better place for this? box penetration should not be -ve
 
 			closestBoxDist =100; //used for thwop noise. initialise to arbitrarily large. TODO store point so pan sound
@@ -5050,7 +5045,6 @@ var iterateMechanics = (function iterateMechanics(){
 			var thrustVolume = Math.tanh(40*Math.hypot.apply(null, currentThrustInput));	//todo jet noise. take speed, atmos thickness into account. should be loud when going fast but not thrusting, pitch shift
 			myAudioPlayer.setJetSound({delay:0, gain:thrustVolume, pan:0});
 		}
-		
 		
 		
 		//value used in sphere collision TODO? avoid this if switched to box. eg referencing some general
@@ -5303,8 +5297,6 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			}
 
-
-			
 			//octohedron collision
 			if (guiParams["draw 24-cell"]){
 				var cellSize24 = guiParams["24-cell scale"];
@@ -5333,8 +5325,6 @@ var iterateMechanics = (function iterateMechanics(){
 						}
 					}
 				}
-				
-
 			}
 			
 			if (guiParams["draw 120-cell"]){
@@ -6198,7 +6188,7 @@ function drawPortalCubemap(pMatrix, portalInCamera, frameTime, reflInfo, portalN
 	
 	//TODO move pMatrix etc to only recalc on screen resize
 	//make a pmatrix for hemiphere perspective projection method.
-	
+
 	var otherPortalMat = guiParams.reflector.isPortal ? portalsForWorld[offsetCameraContainer.world][portalNum].otherps.matrix : 
 		portalsForWorld[offsetCameraContainer.world][portalNum].matrix;
 
@@ -6291,5 +6281,4 @@ function drawPortalCubemap(pMatrix, portalInCamera, frameTime, reflInfo, portalN
 		}
 		
 	}
-
 }
