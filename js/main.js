@@ -5150,6 +5150,16 @@ var iterateMechanics = (function iterateMechanics(){
 			//todo 2 another simple optimisation - sphere check by xyzw distance. previous check only if passes
 			//todo 3 heirarchical bounding boxes or gridding system!
 			
+			//menger sponge. 
+			if (guiParams.drawShapes.building){
+				//test with box collision
+				var transposedBuildingMatrix = mat4.create(buildingMatrix);
+				mat4.transpose(transposedBuildingMatrix);	//TODO reuse/fixed.
+				var bSize = 0.01*guiParams.drawShapes.buildingScale;
+				var critSize = 1/Math.sqrt(1+3*bSize*bSize);
+				boxCollideCheck(transposedBuildingMatrix,bSize,critSize,bulletPosDCF4V, true);
+			}
+
 			//box rings
 			var guiBoxes= guiParams.drawShapes.boxes;
 			if (guiBoxes['y=z=0']){checkCollisionForBoxRing(ringCellsT[0]);}
