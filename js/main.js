@@ -5082,35 +5082,31 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 		})(guiParams.target.type);
 
-		function boxCollideArray(bArray){
-			for (var bb of bArray){
-				boxCollideCheck(bb.matrixT,duocylinderSurfaceBoxScale,critValueDCBox, bulletPosDCF4V, true);
-			}
-		}
-		var currentBullet;	//hack to pull funcs out of checkBulletCollision. set currentBullet=bullet inside checkBulletCollision
-		function boxCollideCheck(cellMatT,thisBoxSize,boxCritValue, bulletPos4V, moveWithDuocylinder){
-				mat4.multiplyVec4(cellMatT, bulletPos4V, tmpVec4);
-				if (tmpVec4[3]<boxCritValue){return;}	//early sphere check
-				if (Math.max(Math.abs(tmpVec4[0]),
-							Math.abs(tmpVec4[1]),
-							Math.abs(tmpVec4[2]))<thisBoxSize*tmpVec4[3]){
-					detonateBullet(currentBullet, moveWithDuocylinder, [1,0.8,0.6,1]);
-			}
-		}
-		function checkCollisionForBoxRing(ringCellMatsT){
-			for (var ii=0;ii<ringCellMatsT.length;ii++){
-				boxCollideCheck(ringCellMatsT[ii],ringBoxSize,critValueRingBox,bulletPos4V);
-			}
-		}
-
 		var tmpVec4 = vec4.create();				//variable referring to this to make quicker to reference?
 		var bulletPos = new Array(4); 
 		var bulletPos4V = vec4.create();
 		var bulletPosDCF4V = vec4.create();
-
 		//slightly less ridiculous place for this - not declaring functions inside for loop!
 		function checkBulletCollision(bullet, bulletMoveAmount){
-			currentBullet=bullet;
+			function boxCollideArray(bArray){
+				for (var bb of bArray){
+					boxCollideCheck(bb.matrixT,duocylinderSurfaceBoxScale,critValueDCBox, bulletPosDCF4V, true);
+				}
+			}
+			function boxCollideCheck(cellMatT,thisBoxSize,boxCritValue, bulletPos4V, moveWithDuocylinder){
+					mat4.multiplyVec4(cellMatT, bulletPos4V, tmpVec4);
+					if (tmpVec4[3]<boxCritValue){return;}	//early sphere check
+					if (Math.max(Math.abs(tmpVec4[0]),
+								Math.abs(tmpVec4[1]),
+								Math.abs(tmpVec4[2]))<thisBoxSize*tmpVec4[3]){
+						detonateBullet(bullet, moveWithDuocylinder, [1,0.8,0.6,1]);
+				}
+			}
+			function checkCollisionForBoxRing(ringCellMatsT){
+				for (var ii=0;ii<ringCellMatsT.length;ii++){
+					boxCollideCheck(ringCellMatsT[ii],ringBoxSize,critValueRingBox,bulletPos4V);
+				}
+			}
 
 			var worldInfo = guiSettingsForWorld[bullet.world];
 			var dcSpin = worldInfo.spin;
