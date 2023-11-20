@@ -5155,9 +5155,21 @@ var iterateMechanics = (function iterateMechanics(){
 				//test with box collision
 				var transposedBuildingMatrix = mat4.create(buildingMatrix);
 				mat4.transpose(transposedBuildingMatrix);	//TODO reuse/fixed.
+				//var bSize = 0.01*guiParams.drawShapes.buildingScale;
+				//var critSize = 1/Math.sqrt(1+3*bSize*bSize);
+				//boxCollideCheck(transposedBuildingMatrix,bSize,critSize,bulletPosDCF4V, true);
+
+				mat4.multiplyVec4(transposedBuildingMatrix, bulletPosDCF4V, tmpVec4);
+
 				var bSize = 0.01*guiParams.drawShapes.buildingScale;
-				var critSize = 1/Math.sqrt(1+3*bSize*bSize);
-				boxCollideCheck(transposedBuildingMatrix,bSize,critSize,bulletPosDCF4V, true);
+
+				var homogenous = tmpVec4.slice(0,3).map(xx=>xx/tmpVec4[3]);
+
+				var scaledInput = homogenous.map(x=>x/bSize);
+
+				if (mengerUtils.isInside(scaledInput,3)){
+					detonateBullet(bullet, true, [0.3,0.3,0.3,1]);
+				}
 			}
 
 			//box rings
