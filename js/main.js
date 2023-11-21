@@ -5167,12 +5167,14 @@ var iterateMechanics = (function iterateMechanics(){
 
 				var bSize = 0.01*guiParams.drawShapes.buildingScale;
 
-				var homogenous = tmpVec4.slice(0,3).map(xx=>xx/tmpVec4[3]);
+				if (tmpVec4[3]>0){
+					var homogenous = tmpVec4.slice(0,3).map(xx=>xx/tmpVec4[3]);
 
-				var scaledInput = homogenous.map(x=>x/bSize);
+					var scaledInput = homogenous.map(x=>x/bSize);
 
-				if (mengerUtils.isInside(scaledInput,3)){
-					detonateBullet(bullet, true, [0.3,0.3,0.3,1]);
+					if (mengerUtils.isInside(scaledInput,3)){
+						detonateBullet(bullet, true, [0.3,0.3,0.3,1]);
+					}
 				}
 			}
 
