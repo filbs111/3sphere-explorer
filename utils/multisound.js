@@ -189,3 +189,23 @@ function makeDistortionCurve(amount) {
   return curve;
 };
 
+/*
+* note this is a hack on top of existing code.
+* TODO make existing code nicer? sound class instead of separate funcs setWhooshSound, setWhooshSoundBox...
+*/
+var setSoundHelper= ( function(){
+	var terrainNoiseRad = 0.01;
+	var noisySpeed = 20;
+
+	//note successive calls in same iteration repeat calculation of spdFactor from speed
+	//TODO pass in speed factor? 
+	return function(cb, noiseDist, panAmount, spd){
+		var spdFactor = spd/Math.hypot(spd,noisySpeed);
+
+		var adjustedDist = Math.hypot(noiseDist,terrainNoiseRad);
+		var vol = terrainNoiseRad/adjustedDist;
+		adjustedDist = Math.min(adjustedDist,2);	//clamp. (TODO set value to max delay). prevents log spam
+
+		cb({delay:adjustedDist, gain:vol*spdFactor, pan:panAmount})
+	};
+})();

@@ -4805,23 +4805,15 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 			
 			
-			
 			//whoosh sound. simple educated guess model for sound of passing by objects. maybe with a some component of pure wind noise
 			//volume increase with speed - either generally, or component perpendicular to nearest surface normal
 			//volume increases with proximity to obstacles. (can just use 1/r consistent with other sounds)
 			//todo use the projected nearest surface point to inform stereo pan
 			//todo use atmos thickness
 			//todo use correct speed of sound (consistent with elsewhere)
-			var terrainNoiseRad = 0.01;
-			var adjustedDist = Math.hypot(distanceForTerrainNoise,terrainNoiseRad)
-			var vol = terrainNoiseRad/adjustedDist;
-			var noisySpeed = 20;	//around/above this speed, spdFactor tends to 1. below this, ~linear
-			var spdFactor = spd/Math.hypot(spd,noisySpeed);
-			adjustedDist = Math.min(adjustedDist,2);	//clamp. (TODO set value to max delay). prevents log spam
-			myAudioPlayer.setWhooshSound({delay:adjustedDist, gain:vol*spdFactor, pan:panForTerrainNoise});
+			setSoundHelper(myAudioPlayer.setWhooshSound, distanceForTerrainNoise, panForTerrainNoise, spd);
 			
-			
-			
+
 			//apply same forces for other items. 
 			//start with just player centre. 
 			var gridSqs = getGridSqFor4Pos(playerPos, dcSpin);
@@ -4863,13 +4855,7 @@ var iterateMechanics = (function iterateMechanics(){
 				var soundSize = 0.002;
 				panForBoxNoise = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));
 			}
-			
-			adjustedDist = Math.hypot(distanceForBoxNoise,terrainNoiseRad)
-			var vol = terrainNoiseRad/adjustedDist;
-			
-			vol = terrainNoiseRad/adjustedDist;
-			adjustedDist = Math.min(adjustedDist,2);	//clamp. (TODO set value to max delay). prevents log spam
-			myAudioPlayer.setWhooshSoundBox({delay:adjustedDist, gain:vol*spdFactor, pan:panForBoxNoise});	
+			setSoundHelper(myAudioPlayer.setWhooshSoundBox, distanceForBoxNoise, panForBoxNoise, spd);
 			
 			
 			function processBoxCollisionsForBoxInfoAllPoints(boxInfo){
