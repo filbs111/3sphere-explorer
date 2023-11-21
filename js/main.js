@@ -1983,17 +1983,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		}
 	
 		if (Object.keys(voxTerrainData).includes(worldInfo.duocylinderModel)){
-			mat4.set(invertedWorldCamera, mvMatrix);
-			mat4.multiply(mvMatrix, closestPointTestMat);
-			mat4.set(closestPointTestMat, mMatrix);
-			gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.magenta);
-			drawTriAxisCross(0.02);
-			
-			mat4.set(invertedWorldCamera, mvMatrix);
-			mat4.multiply(mvMatrix, voxCollisionDebugMat);
-			mat4.set(voxCollisionDebugMat, mMatrix);
-			gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.blue);
-			drawTriAxisCross(0.01);
+			drawTriAxisCrossForMatrixColorAndScale(closestPointTestMat, colorArrs.magenta, 0.02);
+			drawTriAxisCrossForMatrixColorAndScale(voxCollisionDebugMat, colorArrs.blue, 0.01);
 		}
 	}
 	
@@ -2032,47 +2023,20 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		}
 	}
 	
-	if (guiParams.debug.closestPoint){	//draw collision test object
-		mat4.set(invertedWorldCamera, mvMatrix);
-		mat4.multiply(mvMatrix, collisionTestObjMat);
-		mat4.set(collisionTestObjMat, mMatrix);
+	if (guiParams.debug.closestPoint){	//draw collision test object		
 		var testObjScale=0.001;
+		drawTriAxisCrossForMatrixColorAndScale(collisionTestObjMat, colorArrs.cyan, testObjScale*20);
 		
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.cyan);
-		drawTriAxisCross(testObjScale*20);
-		
-		//draw object centred on object colliding with to see if anything happening!
-		mat4.set(invertedWorldCamera, mvMatrix);
-		mat4.multiply(mvMatrix, collisionTestObj2Mat);
-		mat4.set(collisionTestObj2Mat, mMatrix);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.magenta);
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, 2*testObjScale,2*testObjScale,2*testObjScale);
-		drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
-		//draw object shifted by normal
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.green);
-		mat4.set(invertedWorldCamera, mvMatrix);
-		mat4.multiply(mvMatrix, collisionTestObj3Mat);
-		mat4.set(collisionTestObj3Mat, mMatrix);
-		drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+		//object centred on object colliding with to see if anything happening!
+		drawTestCubeForMatrixColorAndScale(collisionTestObj2Mat, colorArrs.magenta, 2*testObjScale);
+
+		//object shifted by normal
+		drawTestCubeForMatrixColorAndScale(collisionTestObj3Mat, colorArrs.green, 2*testObjScale);
 
 		//try to get something drawing at colliding object, relative to
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.blue);
-		mat4.set(invertedWorldCamera, mvMatrix);
-		mat4.multiply(mvMatrix, collisionTestObj4Mat);
-		mat4.set(collisionTestObj4Mat, mMatrix);
-		drawTriAxisCross(0.02);
-		
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.red);
-		mat4.set(invertedWorldCamera, mvMatrix);
-		mat4.multiply(mvMatrix, collisionTestObj5Mat);
-		mat4.set(collisionTestObj5Mat, mMatrix);
-		drawTriAxisCross(0.02);
-		
-		//procTerrain
-		mat4.set(invertedWorldCamera, mvMatrix);
-		mat4.multiply(mvMatrix, procTerrainNearestPointTestMat);
-		mat4.set(procTerrainNearestPointTestMat, mMatrix);
-		drawTriAxisCross(0.02);
+		drawTriAxisCrossForMatrixColorAndScale(collisionTestObj4Mat, colorArrs.blue, 0.02);
+		drawTriAxisCrossForMatrixColorAndScale(collisionTestObj5Mat, colorArrs.red, 0.02);
+		drawTriAxisCrossForMatrixColorAndScale(procTerrainNearestPointTestMat, colorArrs.red, 0.02);
 	}
 	
 	function drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, buffers, invertedCamera){
@@ -5913,7 +5877,14 @@ function initTextureFramebuffer(view, useNearestFiltering) {
 	*/
 }
 
-
+function drawTestCubeForMatrixColorAndScale(mat, cubeColor, scale){
+	mat4.set(invertedWorldCamera, mvMatrix);
+	mat4.multiply(mvMatrix, mat);
+	mat4.set(mat, mMatrix);
+	gl.uniform4fv(shaderProgramTexmap.uniforms.uColor, cubeColor);
+	gl.uniform3f(shaderProgramTexmap.uniforms.uModelScale, scale, scale, scale);
+	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
+}
 function drawTriAxisCross(scale){
 	var smallScale = scale/20;
 	gl.uniform3f(shaderProgramTexmap.uniforms.uModelScale, smallScale,smallScale,scale);
@@ -5924,10 +5895,14 @@ function drawTriAxisCross(scale){
 	drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
 };
 function drawTriAxisCrossForMatrix(mat){
+	drawTriAxisCrossForMatrixColorAndScale(mat, colorArrs.gray, 0.05);
+}
+function drawTriAxisCrossForMatrixColorAndScale(mat, crossColor, scale){
+	gl.uniform4fv(shaderProgramTexmap.uniforms.uColor, crossColor);
 	mat4.set(invertedWorldCamera, mvMatrix);
 	mat4.multiply(mvMatrix, mat);
 	mat4.set(mat, mMatrix);
-	drawTriAxisCross(0.05);
+	drawTriAxisCross(scale);
 }
 function drawTriAxisCrossForPosition(posn){
 	drawTriAxisCrossForMatrix(matForPos(posn));
