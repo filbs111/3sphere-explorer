@@ -5875,94 +5875,36 @@ function matForPos(posn){	//this is wasteful - makes a new matrix each time
 	xyzmove4mat(mat, moveVec);
 	return mat;
 }
+function conditionalSetUniform(glfun, uniform, val){
+	if (!uniform){return;}
+	glfun.bind(gl)(uniform, val);	
+}
 function setPortalInfoForShader(shader, infoForPortals){
-	if (shader.uniforms.uReflectorDiffColor){
-		gl.uniform3fv(shader.uniforms.uReflectorDiffColor, infoForPortals[0].localVecReflectorDiffColor);
-	}
-	if (shader.uniforms.uReflectorDiffColor2){
-		if (infoForPortals.length > 1){
-			gl.uniform3fv(shader.uniforms.uReflectorDiffColor2, infoForPortals[1].localVecReflectorDiffColor);
-		}else{
-			gl.uniform3fv(shader.uniforms.uReflectorDiffColor2, [0,0,0]);
-			//guess can be whatever
-		}
-	}
-	if (shader.uniforms.uReflectorDiffColor3){
-		if (infoForPortals.length > 2){
-			gl.uniform3fv(shader.uniforms.uReflectorDiffColor3, infoForPortals[2].localVecReflectorDiffColor);
-		}else{
-			gl.uniform3fv(shader.uniforms.uReflectorDiffColor3, [0,0,0]);
-			//guess can be whatever
-		}
-	}
-	
-	gl.uniform4fv(shader.uniforms.uReflectorPos, infoForPortals[0].reflectorPosTransformed);
-
-	if (shader.uniforms.uReflectorPos2){
-		if (infoForPortals.length > 1){
-			gl.uniform4fv(shader.uniforms.uReflectorPos2, infoForPortals[1].reflectorPosTransformed);
-		}else{
-			gl.uniform4fv(shader.uniforms.uReflectorPos2, [0,0,0,1]);
-			//guess can just be whatever
-		}
-	}
-	if (shader.uniforms.uReflectorPos3){
-		if (infoForPortals.length > 2){
-			gl.uniform4fv(shader.uniforms.uReflectorPos3, infoForPortals[2].reflectorPosTransformed);
-		}else{
-			gl.uniform4fv(shader.uniforms.uReflectorPos3, [0,0,0,1]);
-			//guess can just be whatever
-		}
-	}
-
-	if (shader.uniforms.uReflectorCos){
-		gl.uniform1f(shader.uniforms.uReflectorCos, infoForPortals[0].cosReflector);	
-	}
-	if (shader.uniforms.uReflectorCos2){
-		if (infoForPortals.length > 1){
-			gl.uniform1f(shader.uniforms.uReflectorCos2, infoForPortals[1].cosReflector);
-		}else{
-			gl.uniform1f(shader.uniforms.uReflectorCos2, 1);	//guess can be whatever, but 1 consistent with zero size portal
-		}
-	}
-	if (shader.uniforms.uReflectorCos3){
-		if (infoForPortals.length > 2){
-			gl.uniform1f(shader.uniforms.uReflectorCos3, infoForPortals[2].cosReflector);
-		}else{
-			gl.uniform1f(shader.uniforms.uReflectorCos3, 1);	//guess can be whatever, but 1 consistent with zero size portal
-		}
-	}
-
-	if (shader.uniforms.uReflectorPosVShaderCopy){
-		gl.uniform4fv(shader.uniforms.uReflectorPosVShaderCopy, infoForPortals[0].reflectorPosTransformed);
-	}
-	if (shader.uniforms.uReflectorPosVShaderCopy2){
-		if (infoForPortals.length > 1){
-			gl.uniform4fv(shader.uniforms.uReflectorPosVShaderCopy2, infoForPortals[1].reflectorPosTransformed);
-		}else{
-			gl.uniform4fv(shader.uniforms.uReflectorPosVShaderCopy2, [0,0,0,1]);
-			//guess can be whatever
-		}
-	}
-	if (shader.uniforms.uReflectorPosVShaderCopy3){
-		if (infoForPortals.length > 2){
-			gl.uniform4fv(shader.uniforms.uReflectorPosVShaderCopy3, infoForPortals[2].reflectorPosTransformed);
-		}else{
-			gl.uniform4fv(shader.uniforms.uReflectorPosVShaderCopy3, [0,0,0,1]);
-			//guess can be whatever
-		}
-	}
+	conditionalSetUniform(gl.uniform3fv, shader.uniforms.uReflectorDiffColor, infoForPortals[0].localVecReflectorDiffColor);
+	conditionalSetUniform(gl.uniform3fv, shader.uniforms.uReflectorDiffColor2, 
+		infoForPortals.length > 1 ? infoForPortals[1].localVecReflectorDiffColor: [0,0,0]);	
+	conditionalSetUniform(gl.uniform3fv, shader.uniforms.uReflectorDiffColor3, 
+		infoForPortals.length > 2 ? infoForPortals[2].localVecReflectorDiffColor: [0,0,0]);
+	conditionalSetUniform(gl.uniform4fv, shader.uniforms.uReflectorPos, infoForPortals[0].reflectorPosTransformed);
+	conditionalSetUniform(gl.uniform4fv, shader.uniforms.uReflectorPos2, 
+		infoForPortals.length > 1? infoForPortals[1].reflectorPosTransformed: [0,0,0,1]);
+	conditionalSetUniform(gl.uniform4fv, shader.uniforms.uReflectorPos3,
+		infoForPortals.length > 2? infoForPortals[2].reflectorPosTransformed: [0,0,0,1]);
+	conditionalSetUniform(gl.uniform1f, shader.uniforms.uReflectorCos, infoForPortals[0].cosReflector)
+	conditionalSetUniform(gl.uniform1f, shader.uniforms.uReflectorCos2, 
+		infoForPortals.length > 1? infoForPortals[1].cosReflector: 1); //guess can be whatever, but 1 consistent with zero size portal
+	conditionalSetUniform(gl.uniform1f, shader.uniforms.uReflectorCos3, 
+		infoForPortals.length > 2? infoForPortals[2].cosReflector: 1);
+	conditionalSetUniform(gl.uniform4fv, shader.uniforms.uReflectorPosVShaderCopy, infoForPortals[0].reflectorPosTransformed);
+	conditionalSetUniform(gl.uniform4fv, shader.uniforms.uReflectorPosVShaderCopy2, 
+		infoForPortals.length > 1? infoForPortals[1].reflectorPosTransformed: [0,0,0,1]);
+	conditionalSetUniform(gl.uniform4fv, shader.uniforms.uReflectorPosVShaderCopy3, 
+		infoForPortals.length > 2? infoForPortals[2].reflectorPosTransformed: [0,0,0,1]);
 }
 function performGeneralShaderSetup(shader){
-	if (shader.uniforms.uSpecularStrength){
-		gl.uniform1f(shader.uniforms.uSpecularStrength, guiParams.display.specularStrength);	
-	}
-	if (shader.uniforms.uSpecularPower){
-		gl.uniform1f(shader.uniforms.uSpecularPower, guiParams.display.specularPower);	
-	}
-	if (shader.uniforms.uTexBias){
-		gl.uniform1f(shader.uniforms.uTexBias, guiParams.display.texBias);
-	}
+	conditionalSetUniform(gl.uniform1f, shader.uniforms.uSpecularStrength, guiParams.display.specularStrength);
+	conditionalSetUniform(gl.uniform1f, shader.uniforms.uSpecularPower, guiParams.display.specularPower);
+	conditionalSetUniform(gl.uniform1f, shader.uniforms.uTexBias, guiParams.display.texBias);
 }
 function performShaderSetup(shader, wSettings, tex){	//TODO use this more widely, possibly by pulling out to higher level. similar to performCommon4vecShaderSetup
 	({localVecFogColor, infoForPortals, dropLightPos} = wSettings);
@@ -5972,20 +5914,16 @@ function performShaderSetup(shader, wSettings, tex){	//TODO use this more widely
 	if (tex){
 		bind2dTextureIfRequired(tex);
 	}
-	if (shader.uniforms.uFogColor){
-		gl.uniform4fv(shader.uniforms.uFogColor, localVecFogColor);
-	}
+
+	conditionalSetUniform(gl.uniform4fv, shader.uniforms.uFogColor, localVecFogColor);
+
 	setPortalInfoForShader(shader, infoForPortals);
 
-	if (shader.uniforms.uPlayerLightColor){
-		gl.uniform3fv(shader.uniforms.uPlayerLightColor, playerLight);
-	}
+	conditionalSetUniform(gl.uniform3fv, shader.uniforms.uPlayerLightColor, playerLight);
 	
 	performGeneralShaderSetup(shader);
 	
-	if (shader.uniforms.uDropLightPos){
-		gl.uniform4fv(shader.uniforms.uDropLightPos, dropLightPos);
-	}
+	conditionalSetUniform(gl.uniform4fv, shader.uniforms.uDropLightPos, dropLightPos);
 }
 function performCommon4vecShaderSetup(activeShaderProgram, wSettings, logtag){	//todo move to top level? are inner functions inefficient?
 	({worldA,worldInfo, localVecFogColor, infoForPortals, dropLightPos} = wSettings);
@@ -6001,9 +5939,8 @@ function performCommon4vecShaderSetup(activeShaderProgram, wSettings, logtag){	/
 
 	setPortalInfoForShader(activeShaderProgram, infoForPortals);
 
-	if (activeShaderProgram.uniforms.uPlayerLightColor){
-		gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
-	}
+	conditionalSetUniform(gl.uniform3fv, activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
+
 	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
 	performGeneralShaderSetup(activeShaderProgram);
 }
