@@ -2192,7 +2192,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 
 		modelScale = 0.01*guiParams.drawShapes.buildingScale;
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
-		mat4.set(invertedWorldCamera, mvMatrix);3
+		mat4.set(invertedWorldCamera, mvMatrix);
 		rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
 		mat4.multiply(mvMatrix,buildingMatrix);
 
