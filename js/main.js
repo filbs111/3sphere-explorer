@@ -4981,7 +4981,9 @@ var iterateMechanics = (function iterateMechanics(){
 				var relativePos = [relativeMat[3], relativeMat[7], relativeMat[11], relativeMat[15]];	//need last one?
 	
 				var bSize = 0.01*guiParams.drawShapes.buildingScale;
-				var pointScaledInSpongeFrame = relativePos.slice(0,3).map(x => x/(bSize*relativePos[3]));
+				var pSize = ( guiParams["drop spaceship"] ? settings.characterBallRad : settings.playerBallRad );
+
+				var pointScaledInSpongeFrame = relativePos.slice(0,3).map(x => x/(bSize));	//*relativePos[3]));
 
 				var closestPointInSpongeFrame = mengerUtils.getClosestPoint(pointScaledInSpongeFrame,3);
 				var closestPointScaledBack = closestPointInSpongeFrame.map(x=>-x*bSize);
@@ -4990,6 +4992,16 @@ var iterateMechanics = (function iterateMechanics(){
 				mat4.set(buildingMatrix, debugMat);
 								
 				xyzmove4mat(debugMat, closestPointScaledBack);
+
+				//take difference between position, closest point 
+				//calculate by taking difference between input, output points in 3d, or 4D from matrices. result approx same for small distances,
+				//and 4d version would not be exact as is, because the closest point used is not accurate (is calculated for 3d flat space)
+				var distFromSurfaceSq = pointScaledInSpongeFrame.map((xx,ii)=>xx - closestPointInSpongeFrame[ii] )
+					.reduce((xx,accum) => accum+xx*xx, 0)*bSize*bSize;
+
+				if (distFromSurfaceSq < pSize*pSize){
+					console.log("crashed!");
+				}
 			}
 
 
