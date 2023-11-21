@@ -4980,6 +4980,10 @@ var iterateMechanics = (function iterateMechanics(){
 				
 				var relativePos = [relativeMat[3], relativeMat[7], relativeMat[11], relativeMat[15]];	//need last one?
 	
+				if (relativePos[3]<0){
+					return;	//don't bother if in other half of the world. TODO tighter early discard (compare with number other than 0.)
+				}
+
 				var bSize = 0.01*guiParams.drawShapes.buildingScale;
 				var pSize = ( guiParams["drop spaceship"] ? settings.characterBallRad : settings.playerBallRad );
 
