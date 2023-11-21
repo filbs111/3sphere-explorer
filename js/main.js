@@ -4785,6 +4785,7 @@ var iterateMechanics = (function iterateMechanics(){
 			if (guiParams.drawShapes.roads || guiParams.drawShapes.singleBufferRoads){
 				processBoxCollisionsForBoxInfoAllPoints(duocylinderBoxInfo.roads);
 			}
+			processMengerSpongeCollision();	//after boxes to reuse whoosh noise (assume not close to both at same time)
 			
 			//whoosh for boxes, using result from closest point calculation done inside collision function
 			var distanceForBoxNoise = 100;
@@ -4966,6 +4967,32 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			}
 			
+			function processMengerSpongeCollision(){
+				//TODO actual collision.
+				//TODO whoosh noise for flying close.
+		
+				var relativeMat = mat4.create();	//TODO reuse
+	
+				//get player position in frame of buildingMatrix
+				//note full matrix rotation is maybe not needed here. only vector output is wanted.		
+				mat4.set(playerMatrixTransposedDCRefFrame, relativeMat);
+				mat4.multiply(relativeMat, buildingMatrix);
+				
+				var relativePos = [relativeMat[3], relativeMat[7], relativeMat[11], relativeMat[15]];	//need last one?
+	
+				var bSize = 0.01*guiParams.drawShapes.buildingScale;
+				var pointScaledInSpongeFrame = relativePos.slice(0,3).map(x => x/(bSize*relativePos[3]));
+
+				var closestPointInSpongeFrame = mengerUtils.getClosestPoint(pointScaledInSpongeFrame,3);
+				var closestPointScaledBack = closestPointInSpongeFrame.map(x=>-x*bSize);
+
+				var debugMat = debugDraw.mats[6];
+				mat4.set(buildingMatrix, debugMat);
+								
+				xyzmove4mat(debugMat, closestPointScaledBack);
+			}
+
+
 			rotatePlayer(scalarvectorprod(timeStep * rotateSpeed,playerAngVelVec));
 			movePlayer(scalarvectorprod(timeStep * moveSpeed,playerVelVec));
 			

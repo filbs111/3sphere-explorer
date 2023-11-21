@@ -1,7 +1,8 @@
 var debugDraw = (function(){
 
-    var mats = [6];
-    for (var ii=0;ii<6;ii++){
+    var nummats = 7;
+    var mats = [nummats];
+    for (var ii=0;ii<nummats;ii++){
         mats[ii] = mat4.identity();
     }
 
@@ -52,6 +53,9 @@ var debugDraw = (function(){
 
 		//terrain nearest point
 		drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[5], colorArrs.red, 0.02);
+
+        //menger sponge
+        drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[6], colorArrs.red, 0.01);
     }
     
     return {
