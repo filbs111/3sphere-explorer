@@ -2023,22 +2023,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		}
 	}
 	
-	if (guiParams.debug.closestPoint){	//draw collision test object		
-		var testObjScale=0.001;
-		debugDraw.drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[0], colorArrs.cyan, testObjScale*20);
-		
-		//object centred on object colliding with to see if anything happening!
-		debugDraw.drawTestCubeForMatrixColorAndScale(debugDraw.mats[1], colorArrs.magenta, 2*testObjScale);
-
-		//object shifted by normal
-		debugDraw.drawTestCubeForMatrixColorAndScale(debugDraw.mats[2], colorArrs.green, 2*testObjScale);
-
-		//try to get something drawing at colliding object, relative to
-		debugDraw.drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[3], colorArrs.blue, 0.02);
-		debugDraw.drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[4], colorArrs.red, 0.02);
-
-		//terrain nearest point
-		debugDraw.drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[5], colorArrs.red, 0.02);
+	if (guiParams.debug.closestPoint){	//draw collision test objects		
+		debugDraw.drawDebugStuff();
 	}
 	
 	function drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, buffers, invertedCamera){

@@ -35,10 +35,27 @@ var debugDraw = (function(){
     // function drawTriAxisCrossForPosition(posn){
     //     drawTriAxisCrossForMatrix(matForPos(posn));
     // }
+
+    function drawDebugStuff(){
+        var testObjScale=0.001;
+		drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[0], colorArrs.cyan, testObjScale*20);
+		
+		//object centred on object colliding with to see if anything happening!
+		drawTestCubeForMatrixColorAndScale(debugDraw.mats[1], colorArrs.magenta, 2*testObjScale);
+
+		//object shifted by normal
+		drawTestCubeForMatrixColorAndScale(debugDraw.mats[2], colorArrs.green, 2*testObjScale);
+
+		//try to get something drawing at colliding object, relative to
+		drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[3], colorArrs.blue, 0.02);
+		drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[4], colorArrs.red, 0.02);
+
+		//terrain nearest point
+		drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[5], colorArrs.red, 0.02);
+    }
     
     return {
         mats,
-        drawTestCubeForMatrixColorAndScale,
-        drawTriAxisCrossForMatrixColorAndScale
+        drawDebugStuff
     }
 })();
