@@ -52,6 +52,13 @@ var mengerUtils = (function(){
         }
     }
 
+    var lastPen = 0;
+    function getLastPen(current){
+        last = lastPen;
+        lastPen=current;
+        return last;
+    }
+
     /*
      * this is inefficient, but reused existing distance function
      * TODO dedicated function
@@ -64,6 +71,7 @@ var mengerUtils = (function(){
 
     return {
         getClosestPoint,
-        isInside
+        isInside,
+        getLastPen
     };
 })();

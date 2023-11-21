@@ -3679,7 +3679,7 @@ var guiParams={
 		frigate:true,
 		frigateScale:5,
 		building:true,
-		buildingScale:5
+		buildingScale:10
 	},
 	'random boxes':{
 		number:maxRandBoxes,	//note ui controlled value does not affect singleBuffer
@@ -3791,7 +3791,7 @@ xyzmove4mat(teapotMatrix,[0,0,-1]);
 var frigateMatrix=mat4.identity();
 xyzmove4mat(frigateMatrix,[0,.7854,0]);
 var buildingMatrix=mat4.identity();
-xyzmove4mat(buildingMatrix,[0,.76,0]);
+xyzmove4mat(buildingMatrix,[0,.7,0]);
 
 var pillarMatrices=[];
 /*
@@ -4983,7 +4983,8 @@ var iterateMechanics = (function iterateMechanics(){
 				var bSize = 0.01*guiParams.drawShapes.buildingScale;
 				var pSize = ( guiParams["drop spaceship"] ? settings.characterBallRad : settings.playerBallRad );
 
-				var pointScaledInSpongeFrame = relativePos.slice(0,3).map(x => x/(bSize));	//*relativePos[3]));
+				var playerInSpongeFrame = relativePos.slice(0,3);
+				var pointScaledInSpongeFrame = playerInSpongeFrame.map(x => x/(bSize));	//*relativePos[3]));
 
 				var closestPointInSpongeFrame = mengerUtils.getClosestPoint(pointScaledInSpongeFrame,3);
 				var closestPointScaledBack = closestPointInSpongeFrame.map(x=>-x*bSize);
@@ -4996,12 +4997,42 @@ var iterateMechanics = (function iterateMechanics(){
 				//take difference between position, closest point 
 				//calculate by taking difference between input, output points in 3d, or 4D from matrices. result approx same for small distances,
 				//and 4d version would not be exact as is, because the closest point used is not accurate (is calculated for 3d flat space)
-				var distFromSurfaceSq = pointScaledInSpongeFrame.map((xx,ii)=>xx - closestPointInSpongeFrame[ii] )
-					.reduce((xx,accum) => accum+xx*xx, 0)*bSize*bSize;
+				var displacement = pointScaledInSpongeFrame.map((xx,ii)=>xx - closestPointInSpongeFrame[ii] );
+				var displacementSq = displacement.reduce((accum, xx) => accum+xx*xx, 0);
+				var displacementLength = Math.sqrt(displacementSq);
+				var scaledDisplacementLen = bSize*displacementLength;
+				currentPen = pSize - scaledDisplacementLen; //note will fall over if player centre inside sponge!
 
-				if (distFromSurfaceSq < pSize*pSize){
-					console.log("crashed!");
+				var penChange = currentPen - mengerUtils.getLastPen(currentPen);
+				var reactionForce = Math.max(50*currentPen + 1000*penChange, 0);
+
+				if (currentPen > 0 && reactionForce> 0){	//penetration
+
+					//var reactionNormal=displacement.map(elem => elem/scaledDisplacementLen);
+
+					var relativeMatC = mat4.create();
+					mat4.set(playerMatrixTransposedDCRefFrame, relativeMatC);
+
+					//commented out version more similar to box collision, which seems overcomplicated -
+					//var tempMat = mat4.create();
+					//mat4.set(buildingMatrix, tempMat);
+					//xyzmove4mat(tempMat, [-relativePos[0],-relativePos[1],-relativePos[2]]);	//player's position in sponge frame
+					//xyzmove4mat(tempMat, reactionNormal);	//shifted by the reaction normal!
+					//mat4.multiply(relativeMatC, tempMat);
+					//mat4.set(debugMat, tempMat);	//TODO alternative version something like this. should scale by distance
+
+					mat4.multiply(relativeMatC, debugMat);
+
+					var relativePosC = relativeMatC.slice(12);
+					//normalise. note could just assume that length is player radius, or matches existing calculation for penetration etc, to simplify.
+					var relativePosCLength = Math.sqrt(1-relativePosC[3]*relativePosC[3]);	//assume matrix SO4
+					var relativePosCNormalised = relativePosC.map(x=>x/relativePosCLength);
+					var forcePlayerFrame = relativePosCNormalised.map(function(elem){return elem*reactionForce;});
+					for (var cc=0;cc<3;cc++){
+						playerVelVec[cc]+=forcePlayerFrame[cc];
+					}
 				}
+
 			}
 
 
