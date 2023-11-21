@@ -1,4 +1,10 @@
 var debugDraw = (function(){
+
+    var mats = [6];
+    for (var ii=0;ii<6;ii++){
+        mats[ii] = mat4.identity();
+    }
+
     function drawTestCubeForMatrixColorAndScale(mat, cubeColor, scale){
         mat4.set(invertedWorldCamera, mvMatrix);
         mat4.multiply(mvMatrix, mat);
@@ -31,6 +37,7 @@ var debugDraw = (function(){
     // }
     
     return {
+        mats,
         drawTestCubeForMatrixColorAndScale,
         drawTriAxisCrossForMatrixColorAndScale
     }

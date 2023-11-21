@@ -2025,18 +2025,20 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	
 	if (guiParams.debug.closestPoint){	//draw collision test object		
 		var testObjScale=0.001;
-		debugDraw.drawTriAxisCrossForMatrixColorAndScale(collisionTestObjMat, colorArrs.cyan, testObjScale*20);
+		debugDraw.drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[0], colorArrs.cyan, testObjScale*20);
 		
 		//object centred on object colliding with to see if anything happening!
-		debugDraw.drawTestCubeForMatrixColorAndScale(collisionTestObj2Mat, colorArrs.magenta, 2*testObjScale);
+		debugDraw.drawTestCubeForMatrixColorAndScale(debugDraw.mats[1], colorArrs.magenta, 2*testObjScale);
 
 		//object shifted by normal
-		debugDraw.drawTestCubeForMatrixColorAndScale(collisionTestObj3Mat, colorArrs.green, 2*testObjScale);
+		debugDraw.drawTestCubeForMatrixColorAndScale(debugDraw.mats[2], colorArrs.green, 2*testObjScale);
 
 		//try to get something drawing at colliding object, relative to
-		debugDraw.drawTriAxisCrossForMatrixColorAndScale(collisionTestObj4Mat, colorArrs.blue, 0.02);
-		debugDraw.drawTriAxisCrossForMatrixColorAndScale(collisionTestObj5Mat, colorArrs.red, 0.02);
-		debugDraw.drawTriAxisCrossForMatrixColorAndScale(procTerrainNearestPointTestMat, colorArrs.red, 0.02);
+		debugDraw.drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[3], colorArrs.blue, 0.02);
+		debugDraw.drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[4], colorArrs.red, 0.02);
+
+		//terrain nearest point
+		debugDraw.drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[5], colorArrs.red, 0.02);
 	}
 	
 	function drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, buffers, invertedCamera){
@@ -3834,14 +3836,6 @@ var bullets=new Set();
 var gunMatrices=[mat4.create(),mat4.create(),mat4.create(),mat4.create()];	//? what happens if draw before set these to something sensible?
 var canvas;
 
-var collisionTestObjMat = mat4.identity();
-var collisionTestObj2Mat = mat4.identity();
-var collisionTestObj3Mat = mat4.identity();
-var collisionTestObj4Mat = mat4.identity();
-var collisionTestObj5Mat = mat4.identity();
-
-var procTerrainNearestPointTestMat = mat4.identity();
-
 var atmosThicknessMultiplier;	//TODO different settings for different worlds
 
 function setupStats(dummyStats){
@@ -4689,7 +4683,7 @@ var iterateMechanics = (function iterateMechanics(){
 					myDebugStr += ", distNearestPointPlayerFrame: " + distNearestPointPlayerFrame.toFixed(4);
 					
 					if (useForThwop){
-						mat4.set(nearestPosMat, procTerrainNearestPointTestMat);	//for visual debugging (TODO display object for each contact)
+						mat4.set(nearestPosMat, debugDraw.mats[5]);	//for visual debugging (TODO display object for each contact)
 					
 						distanceForTerrainNoise = distNearestPointPlayerFrame;	//assumes only 1 thing used for thwop
 						var soundSize = 0.002;	//reduced this below noiseRad so get more pan
@@ -4935,30 +4929,30 @@ var iterateMechanics = (function iterateMechanics(){
 								//then can calc this point in frame of player
 								//todo what is sense of 4vec relativePos, 3vec normal?
 								
-								mat4.set(bb.matrix, collisionTestObjMat);
-								mat4.set(bb.matrix, collisionTestObj2Mat);
-								xyzmove4mat(collisionTestObjMat, [-relativePos[0],-relativePos[1],-relativePos[2]]);
+								mat4.set(bb.matrix, debugDraw.mats[0]);
+								mat4.set(bb.matrix, debugDraw.mats[1]);
+								xyzmove4mat(debugDraw.mats[0], [-relativePos[0],-relativePos[1],-relativePos[2]]);
 								
-								//mat4.set(bb.matrix, collisionTestObj3Mat);
-								//xyzmove4mat(collisionTestObj3Mat, [-relativePos[0],-relativePos[1],-relativePos[2]]);
-								//xyzmove4mat(collisionTestObj3Mat, reactionNormal);
-								mat4.set(tempMat3, collisionTestObj3Mat);		//just set because using outside if (drawDebugStuff)
+								//mat4.set(bb.matrix, debugDraw.mats[2]);
+								//xyzmove4mat(debugDraw.mats[2], [-relativePos[0],-relativePos[1],-relativePos[2]]);
+								//xyzmove4mat(debugDraw.mats[2], reactionNormal);
+								mat4.set(tempMat3, debugDraw.mats[2]);		//just set because using outside if (drawDebugStuff)
 								
 								
 								//this might show that should have /relativePos[3] here.
 								
-								//get the position of collisionTestObj3Mat in the frame of the player.
+								//get the position of debugDraw.mats[2] in the frame of the player.
 								//draw something at this position (similar to how draw landing legs)
 								//....
 								
 								//already have relativeMat. position of box relative to player maybe already available
 								var relativePosB = relativeMat.slice(12);
-								mat4.set(playerCamera, collisionTestObj4Mat);
-								xyzmove4mat(collisionTestObj4Mat, [-relativePosB[0],-relativePosB[1],-relativePosB[2]]);
+								mat4.set(playerCamera, debugDraw.mats[3]);
+								xyzmove4mat(debugDraw.mats[3], [-relativePosB[0],-relativePosB[1],-relativePosB[2]]);
 								//TODO account for duocylinder rotation (currently assuming unrotated)
 								
-								mat4.set(bb.matrix, collisionTestObj5Mat);
-								xyzmove4mat(collisionTestObj5Mat, surfacePoint);
+								mat4.set(bb.matrix, debugDraw.mats[4]);
+								xyzmove4mat(debugDraw.mats[5], surfacePoint);
 							}
 							
 							//apply force in this direction
