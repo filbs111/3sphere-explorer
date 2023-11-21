@@ -5010,12 +5010,21 @@ var iterateMechanics = (function iterateMechanics(){
 				var penChange = currentPen - mengerUtils.getLastPen(currentPen);
 				var reactionForce = Math.max(50*currentPen + 1000*penChange, 0);
 
+
+				mat4.set(playerMatrixTransposedDCRefFrame, tmpRelativeMat);
+				mat4.multiply(tmpRelativeMat, debugMat);
+				distanceForMengerNoise = distBetween4mats(tmpRelativeMat, identMat);
+					//TODO can this result be reused in the if statement below?
+				var soundSize = 0.002;
+				panForMengerNoise = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));
+				setSoundHelper(myAudioPlayer.setWhooshSoundMenger, distanceForMengerNoise, panForMengerNoise, spd);
+
 				if (currentPen > 0 && reactionForce> 0){	//penetration
 
 					//var reactionNormal=displacement.map(elem => elem/scaledDisplacementLen);
 
-					var relativeMatC = mat4.create();
-					mat4.set(playerMatrixTransposedDCRefFrame, relativeMatC);
+					
+					var relativeMatC = mat4.create(playerMatrixTransposedDCRefFrame);
 
 					//commented out version more similar to box collision, which seems overcomplicated -
 					//var tempMat = mat4.create();
