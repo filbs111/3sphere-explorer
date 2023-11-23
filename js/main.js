@@ -548,14 +548,14 @@ function calcReflectionInfo(toReflect,resultsObj, reflectorRad){
 	var polarity = guiParams.reflector.isPortal? -1:1;
 	var correctionFactor = -polarity * Math.atan(reflectionCentreTanAngle)/mag;
 	var cubeViewShiftAdjusted = cubeViewShift.map(function(val){return val*correctionFactor});
-	var cubeViewShiftAdjustedMinus = cubeViewShiftAdjusted.map(function(val){return -polarity*val});
+	var cubeViewShiftAdjustedMinus = cubeViewShiftAdjusted.map(val => -polarity*val);
 	//reflectorInfo.polarity=polarity;	
 	resultsObj.polarity=polarity;	//??
 	
 	//position within spherical reflector BEFORE projection
 	var correctionFactorB = reflectionCentreTanAngle/mag;
 	correctionFactorB/=reflectorRad;
-	resultsObj.centreTanAngleVectorScaled = cubeViewShift.map(function(val){return -val*correctionFactorB});
+	resultsObj.centreTanAngleVectorScaled = cubeViewShift.map(val => -val*correctionFactorB);
 
 	var reflectShaderMatrix = mat4.identity();
 	xyzmove4mat(reflectShaderMatrix, cubeViewShiftAdjustedMinus);	
@@ -1323,7 +1323,7 @@ function updateGunTargeting(matrix){
 		//normalise x,y,z parts of to target vector.
 		var length = Math.sqrt(1-targetWorldFrame[3]*targetWorldFrame[3]);	//TODO ensure not 0. can combo with range check.
 		
-		targetWorldFrame = targetWorldFrame.map(function(val){return val/length;});	//FWIW last value unneeded
+		targetWorldFrame = targetWorldFrame.map(val => val/length);	//FWIW last value unneeded
 		
 		//confirm tWF length 1? 
 		var lensqtwf=0;
@@ -1331,9 +1331,9 @@ function updateGunTargeting(matrix){
 			lensqtwf += targetWorldFrame[ii]*targetWorldFrame[ii];
 		}
 		
-		var playerVelVecMagsq = playerVelVec.reduce(function(total, val){return total+ val*val;}, 0);	//v.v
+		var playerVelVecMagsq = playerVelVec.reduce((total, val) => total+ val*val, 0);	//v.v
 					//todo reuse code or result (copied from elsewhere)
-		var tDotV = playerVelVec.reduce(function(total, val, ii){return total+ val*targetWorldFrame[ii];}, 0);
+		var tDotV = playerVelVec.reduce((total, val, ii) => total+ val*targetWorldFrame[ii], 0);
 		var inSqrtBracket =  tDotV*tDotV + muzzleVel*muzzleVel -playerVelVecMagsq;
 		
 		//console.log(inSqrtBracket);
@@ -1346,8 +1346,8 @@ function updateGunTargeting(matrix){
 			targetingResultTwo[ii] = targetWorldFrame[ii]*(tDotV - sqrtResult) - playerVelVec[ii];
 		}
 		//check lengths of these = muzzle vel sq
-		var targetingResultOneLengthSq = targetingResultOne.reduce(function(total, val){return total+ val*val;}, 0);
-		var targetingResultTwoLengthSq = targetingResultTwo.reduce(function(total, val){return total+ val*val;}, 0);
+		var targetingResultOneLengthSq = targetingResultOne.reduce((total, val) => total+ val*val, 0);
+		var targetingResultTwoLengthSq = targetingResultTwo.reduce((total, val) => total+ val*val, 0);
 
 		//select a result.
 		//appears to in practice pick solution 2, which seems to be correct result
@@ -1392,13 +1392,13 @@ function updateGunTargeting(matrix){
 				rotvec=getRotFromPointing(pointingDir);
 				
 				//override fireDirectionVec for hud purposes
-				fireDirectionVec = [-pointingDir.x,-pointingDir.y,pointingDir.z].map(function(val){return val*muzzleVel;}); 
+				fireDirectionVec = [-pointingDir.x,-pointingDir.y,pointingDir.z].map(val=> val*muzzleVel); 
 					//todo pointingdir simple vector!( not .x, .y, ,z)
 				
 					//redo adding player velocity (todo maybe combine with where do this elsewhere..)
 					//ie guntargetingvec
 					//todo solve targeting in mechanics loop - currently doing when drawing !!!!!!!!!!!!!!!!!!! stupid!
-				fireDirectionVec = fireDirectionVec.map(function(val,ii){return val+playerVelVec[ii];});
+				fireDirectionVec = fireDirectionVec.map((val,ii) => val+playerVelVec[ii]);
 					
 			}
 		}
@@ -4399,7 +4399,7 @@ var iterateMechanics = (function iterateMechanics(){
 			currentThrustInput[1]=keyThing.keystate(32)-keyThing.keystate(220);	//vertical
 			currentThrustInput[2]=keyThing.keystate(87)-keyThing.keystate(83);	//fwd/back
 			
-			currentThrustInput=currentThrustInput.map(function(elem){return elem*thrust;});
+			currentThrustInput=currentThrustInput.map(elem => elem*thrust);
 			
 			var currentRotateInput=[];
 			
@@ -4414,7 +4414,7 @@ var iterateMechanics = (function iterateMechanics(){
 					gpMove[1] = Math.abs(axes[1])>gpSettings.deadZone ? moveSpeed*axes[1] : 0; //vertical
 					gpMove[2] = moveSpeed*(buttons[7].value-buttons[6].value); //fwd/back	//note Firefox at least fails to support analog triggers https://bugzilla.mozilla.org/show_bug.cgi?id=1434408
 					
-					var magsq = gpMove.reduce(function(total, val){return total+ val*val;}, 0);
+					var magsq = gpMove.reduce((total, val) => total+ val*val, 0);
 					
 					for (var cc=0;cc<3;cc++){
 						currentThrustInput[cc]+=gpMove[cc]*5000000000*magsq;
@@ -4435,7 +4435,7 @@ var iterateMechanics = (function iterateMechanics(){
 				gpRotate[1] = Math.abs(axes[gpSettings.turnAxis])>gpSettings.deadZone ? fixedRotateAmount*gpSettings.turnMultiplier*axes[gpSettings.turnAxis] : 0; //turn
 				gpRotate[2] = 0;	//moved to code above
 					
-				magsq = gpRotate.reduce(function(total, val){return total+ val*val;}, 0);
+				magsq = gpRotate.reduce((total, val) => total+ val*val, 0);
 				var magpow = Math.pow(50*magsq,1.5);	//TODO handle fact that max values separately maxed out, so currently turns faster in diagonal direction.
 				
 				lastPlayerAngMove = scalarvectorprod(100000*magpow*timeStepMultiplier,gpRotate);
@@ -4474,8 +4474,8 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			//square drag //want something like spd = spd - const*spd*spd = spd (1 - const*|spd|)
 
-			var airSpdVec = playerVelVec.map(function(val, idx){return val-spinVelPlayerCoords[idx];});
-			//var spd = Math.sqrt(airSpdVec.map(function(val){return val*val;}).reduce(function(val, sum){return val+sum;}));
+			var airSpdVec = playerVelVec.map((val, idx) => val-spinVelPlayerCoords[idx]);
+			//var spd = Math.sqrt(airSpdVec.map(val => val*val).reduce((val, sum) => val+sum));
 			var spd = Math.hypot.apply(null, airSpdVec);
 			
 			//print speed
@@ -4555,7 +4555,7 @@ var iterateMechanics = (function iterateMechanics(){
 			var scaledAirSpdVec = airSpdVec.map((elem,ii)=>elem/airSpdScale[ii]);
 			var spdScaled = Math.hypot.apply(null, scaledAirSpdVec);
 			
-			playerVelVec=scalarvectorprod(1.0-atmosThick*spdScaled,scaledAirSpdVec).map(function(val,idx){return val*airSpdScale[idx]+spinVelPlayerCoords[idx];});
+			playerVelVec=scalarvectorprod(1.0-atmosThick*spdScaled,scaledAirSpdVec).map((val,idx) => val*airSpdScale[idx]+spinVelPlayerCoords[idx]);
 			
 			
 			if (autoFireCountdown>0){
@@ -4577,7 +4577,7 @@ var iterateMechanics = (function iterateMechanics(){
 				if (Math.random()<0.5){
 					//making a new matrix is inefficient - expect better if reused a temp matrix, copied it into buffer
 					var newm4 = mat4.create(sshipMatrix);
-					xyzmove4mat(newm4, [1,1,1].map(elem => {return sshipModelScale*60*elem*(Math.random()-0.5)}));	//square uniform distibution
+					xyzmove4mat(newm4, [1,1,1].map(elem => sshipModelScale*60*elem*(Math.random()-0.5)));	//square uniform distibution
 					new Explosion({matrix:newm4,world:sshipWorld}, sshipModelScale*0.5, [0.2,0.06,0.06]);
 				}
 			}
@@ -4631,7 +4631,7 @@ var iterateMechanics = (function iterateMechanics(){
 					var nearestPos = nearestPosMat.slice(12);
 					
 					//find length from this to position in player space.
-					var lengthToNearest = Math.hypot.apply(null, nearestPos.map((elem,ii)=>{return elem-legPos[ii];}));
+					var lengthToNearest = Math.hypot.apply(null, nearestPos.map((elem,ii) => elem-legPos[ii]));
 
 					//bodge to get signed distance. TODO more sensible method without if/ternary
 					forceSwitch =  nearestTerrainPosInfo.altitude > 0 ? 1 : -1;
@@ -4729,7 +4729,7 @@ var iterateMechanics = (function iterateMechanics(){
 				//if (penetration>0){
 				var pointDisplacement = tmpRelativeMat.slice(12, 15);	//for small distances, length of this is ~ distanceForVox
 				mat4.set(playerCamera, voxCollisionDebugMat);
-				xyzmove4mat(voxCollisionDebugMat, pointDisplacement.map(function(elem){return elem*-1;}));
+				xyzmove4mat(voxCollisionDebugMat, pointDisplacement.map(elem => -elem));
 				
 				if (penetration>0){
 					var springConstant = 100;	//simple spring. rebounding force proportional to penetration. //high number = less likely tunneling at high speed.
@@ -4739,7 +4739,7 @@ var iterateMechanics = (function iterateMechanics(){
 					
 					multiplier/=signedDistanceForVox;	//normalise. playerBallRad would give near same result assuming penetrations remain small
 					
-					var forcePlayerFrame = pointDisplacement.map(function(elem){return elem*multiplier;});	//TODO use vector class?
+					var forcePlayerFrame = pointDisplacement.map(elem => elem*multiplier);	//TODO use vector class?
 					for (var cc=0;cc<3;cc++){
 						playerVelVec[cc]+=forcePlayerFrame[cc];
 						//playerVelVec[cc]*=0.96;	////simple bodge for some friction that does not work because doesnt account for duocylinder spin. 
@@ -4812,7 +4812,7 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 			
 			function processBoxCollisionsForBoxInfo(boxInfo, landingLeg, collisionBallSize, drawDebugStuff, useForThwop){
-				var pointOffset = landingLeg.pos.map(function(elem){return -elem;});	//why reversed? probably optimisable. TODO untangle signs!
+				var pointOffset = landingLeg.pos.map( elem => -elem);	//why reversed? probably optimisable. TODO untangle signs!
 								
 				var relativeMat = mat4.identity();
 				var boxArrs = boxInfo.gridContents;
@@ -4864,8 +4864,8 @@ var iterateMechanics = (function iterateMechanics(){
 						//??possibly want to do projectedPos = relativePos[0-2]/relativePos[3] , cmp with duocylinderSurfaceBoxScale
 						
 						//rounded box. TODO 1st check within bounding box of the rounded box.
-						var vectorFromBox = relativePos.map(function(elem){return elem>0 ? Math.max(elem - projectedBoxSize,0) : Math.min(elem + projectedBoxSize,0);});
-						var surfacePoint = vectorFromBox.map((elem,ii)=>{return elem-relativePos[ii];});
+						var vectorFromBox = relativePos.map(elem => elem>0 ? Math.max(elem - projectedBoxSize,0) : Math.min(elem + projectedBoxSize,0));
+						var surfacePoint = vectorFromBox.map((elem,ii)=> elem-relativePos[ii]);
 						var distFromBox = Math.hypot.apply(null, vectorFromBox.slice(0,3));		//todo handle distSqFromBox =0 (centre of collision ball is inside box) - can happen if moving fast, cover collisionBallSize in 1 step. currently results in passing thru box)
 						
 						if (useForThwop && (distFromBox < closestBoxDist)){
@@ -4884,7 +4884,7 @@ var iterateMechanics = (function iterateMechanics(){
 							var penChange = currentPen - landingLeg.cubeColPen;
 							landingLeg.cubeColPen = currentPen;
 							
-							var reactionNormal=vectorFromBox.map(function(elem){return elem/distFromBox;});
+							var reactionNormal=vectorFromBox.map(elem => elem/distFromBox);
 							
 							//reaction force proportional to currentPen -> spring force, penChange -> damper
 						//	var reactionForce = Math.max(20*currentPen+150*penChange, 0);	//soft like landing leg. for body collision, increase constants
@@ -4943,7 +4943,7 @@ var iterateMechanics = (function iterateMechanics(){
 							}
 							
 							//apply force in this direction
-							var forcePlayerFrame = relativePosC.map(function(elem){return elem*reactionForce;});
+							var forcePlayerFrame = relativePosC.map(elem => elem*reactionForce);
 							for (var cc=0;cc<3;cc++){
 								playerVelVec[cc]+=forcePlayerFrame[cc];
 							}
@@ -4988,7 +4988,7 @@ var iterateMechanics = (function iterateMechanics(){
 				var pSize = ( guiParams["drop spaceship"] ? settings.characterBallRad : settings.playerBallRad );
 
 				var playerInSpongeFrame = relativePos.slice(0,3);
-				var pointScaledInSpongeFrame = playerInSpongeFrame.map(x => x/(bSize));	//*relativePos[3]));
+				var pointScaledInSpongeFrame = playerInSpongeFrame.map(x => x/bSize);	//*relativePos[3]));
 
 				var closestPointInSpongeFrame = mengerUtils.getClosestPoint(pointScaledInSpongeFrame,3);
 				var closestPointScaledBack = closestPointInSpongeFrame.map(x=>-x*bSize);
@@ -5040,7 +5040,7 @@ var iterateMechanics = (function iterateMechanics(){
 					//normalise. note could just assume that length is player radius, or matches existing calculation for penetration etc, to simplify.
 					var relativePosCLength = Math.sqrt(1-relativePosC[3]*relativePosC[3]);	//assume matrix SO4
 					var relativePosCNormalised = relativePosC.map(x=>x/relativePosCLength);
-					var forcePlayerFrame = relativePosCNormalised.map(function(elem){return elem*reactionForce;});
+					var forcePlayerFrame = relativePosCNormalised.map(elem => elem*reactionForce);
 					for (var cc=0;cc<3;cc++){
 						playerVelVec[cc]+=forcePlayerFrame[cc];
 					}
@@ -5229,7 +5229,7 @@ var iterateMechanics = (function iterateMechanics(){
 					
 					if (relativeMat[15]<0.5){continue;}	//early sphere check	TODO correct value (closer to 1 for smaller objects.
 					
-					if (hyperboloidData.colCheck([relativeMat[3],relativeMat[7],relativeMat[11]].map(function(val){return val/(relativeMat[15]);}))){
+					if (hyperboloidData.colCheck([relativeMat[3],relativeMat[7],relativeMat[11]].map(val => val/(relativeMat[15])))){
 						detonateBullet(bullet, true);
 					}
 				}
@@ -5242,9 +5242,9 @@ var iterateMechanics = (function iterateMechanics(){
 					mat4.set(bulletMatrixTransposed, relativeMat);
 					mat4.multiply(relativeMat, cellMatData.d8[dd]);											
 					if (relativeMat[15]>0){
-						var projectedPosAbs = [relativeMat[3],relativeMat[7],relativeMat[11]].map(function(val){return Math.abs(val)/(cellSize*relativeMat[15]);});
+						var projectedPosAbs = [relativeMat[3],relativeMat[7],relativeMat[11]].map(val => Math.abs(val)/(cellSize*relativeMat[15]));
 						if (Math.max(projectedPosAbs[0],projectedPosAbs[1],projectedPosAbs[2])<1){
-							var count=projectedPosAbs.reduce(function (sum,val){return val>0.8?sum+1:sum;},0);
+							var count=projectedPosAbs.reduce((sum,val) => val>0.8?sum+1:sum,0);
 							if (count>1){
 								detonateBullet(bullet);
 							}
@@ -5272,7 +5272,7 @@ var iterateMechanics = (function iterateMechanics(){
 					mat4.set(bulletMatrixTransposed, relativeMat);
 					mat4.multiply(relativeMat, thisMat);		
 
-					var projectedPos = [relativeMat[3],relativeMat[7],relativeMat[11]].map(function(val){return val/(cellScale*relativeMat[15]);});
+					var projectedPos = [relativeMat[3],relativeMat[7],relativeMat[11]].map(val => val/(cellScale*relativeMat[15]));
 					
 					//initially just find a corner
 					//seems is triangular pyramid, with "top" in 1-axis direction
@@ -5351,7 +5351,7 @@ var iterateMechanics = (function iterateMechanics(){
 						//todo speed up. division for all vec parts not necessary
 						//change number inside if rhs comparison
 						//also should apply multiplier to 0.8 for inner check.
-						var projectedPosAbs = [relativeMat[3],relativeMat[7],relativeMat[11]].map(function(val){return Math.abs(val)/(cellSize24*relativeMat[15]);});
+						var projectedPosAbs = [relativeMat[3],relativeMat[7],relativeMat[11]].map(val => Math.abs(val)/(cellSize24*relativeMat[15]));
 						if (projectedPosAbs[0]+projectedPosAbs[1]+projectedPosAbs[2] < 1){
 							//inside octohedron. frame is octohedron minus small octohedron extruded.
 							if (projectedPosAbs[0]+projectedPosAbs[1]>2*projectedPosAbs[2]+0.8 ||
@@ -5392,7 +5392,7 @@ var iterateMechanics = (function iterateMechanics(){
 						mat4.set(bulletMatrixTransposed, relativeMat);
 						mat4.multiply(relativeMat, cellMats[dd]);
 						
-						var projectedPos = [relativeMat[3],relativeMat[7],relativeMat[11]].map(function(val){return val/(dodecaScale*relativeMat[15]);});
+						var projectedPos = [relativeMat[3],relativeMat[7],relativeMat[11]].map(val => val/(dodecaScale*relativeMat[15]));
 						
 						var selection = -1;
 						var best = 0;
@@ -5485,7 +5485,7 @@ var iterateMechanics = (function iterateMechanics(){
 			muzzleFlashAmounts[gg]*=Math.pow(0.8, numSteps);
 			flashAmount+= muzzleFlashAmounts[gg];	
 		}
-		playerLight = playerLightUnscaled.map(function(val){return val*flashAmount});
+		playerLight = playerLightUnscaled.map(val => val*flashAmount);
 		
 		portalTestMultiPortal(playerContainer, 0);	//TODO switch off portal in reflector mode. requires camera changes too.
 		
@@ -5505,12 +5505,12 @@ var iterateMechanics = (function iterateMechanics(){
 
 					var towardsPortal = [portalRelativeMat[3],portalRelativeMat[7],portalRelativeMat[11],portalRelativeMat[15]]; //in player frame
 					var normalisingFactor=1/Math.sqrt(1-towardsPortal[3]*towardsPortal[3])
-					towardsPortal = towardsPortal.map(function(elem){return elem*normalisingFactor;});
+					towardsPortal = towardsPortal.map(elem => elem*normalisingFactor);
 					//vel toward portal 
 					var velTowardsPortal = ( towardsPortal[0]*playerVelVec[0] + towardsPortal[1]*playerVelVec[1] + towardsPortal[2]*playerVelVec[2]);
 					velTowardsPortal*=1.2;					//multiply by 1+coefficient of restitution
 					if (velTowardsPortal<0){
-						//playerVelVec = playerVelVec.map(function(elem){return -elem;}); //simple reverse velocity
+						//playerVelVec = playerVelVec.map(elem => -elem); //simple reverse velocity
 						for (var cc=0;cc<3;cc++){
 							playerVelVec[cc] -= velTowardsPortal*towardsPortal[cc];
 						}
@@ -5539,7 +5539,7 @@ var iterateMechanics = (function iterateMechanics(){
 
 //TODO less of a bodge!
 function rotateVelVec(velVec,rotateVec){
-	//var velVecMagsq = velVec.reduce(function(total, val){return total+ val*val;}, 0);
+	//var velVecMagsq = velVec.reduce((total, val) => total+ val*val, 0);
 	//var len = 1-Math.sqrt(velVecMagsq);
 	var velVecMag = Math.hypot.apply(null, velVec);
 	var len = 1-velVecMag;
