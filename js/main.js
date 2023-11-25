@@ -642,7 +642,7 @@ function drawScene(frameTime){
 
 	offsetCameraContainer.world = playerContainer.world;
 	
-	mat4.set(playerCameraInterp, offsetPlayerCamera);	
+	setMat4FromToWithQuats(playerCameraInterp, offsetPlayerCamera);	
 	//mat4.set(playerCamera, offsetPlayerCamera);	
 	
 	offsetCam.setType(guiParams.display.cameraType);
@@ -654,20 +654,20 @@ function drawScene(frameTime){
 	function moveCamInSteps(offsetSteps, offsetVec){
 		//todo proper move thru portal taking into account path. or can make more efficient by binary search (~log(n) tests)
 		
-		var tmp4mat = mat4.create();
+		var tmp4mat = newIdMatWithQuats();
 		var tmpOffsetArr = new Array(3);
 		var wentThrough = false;
 
-		var numMoves = 0;
 		var portalsForThisWorld = portalsForWorld[sshipWorld];
 
+		setMat4FromToWithQuats(offsetPlayerCamera, tmp4mat);
+
+		for (var cc=0;cc<3;cc++){
+			tmpOffsetArr[cc] = offsetVec[cc]/offsetSteps;
+		}
+
 		for (var ii=0;ii<offsetSteps;ii++){	//TODO more efficient. if insufficient subdivision, transition stepped.
-			mat4.set(offsetPlayerCamera, tmp4mat);	//TODO check order
-			for (var cc=0;cc<3;cc++){
-				tmpOffsetArr[cc] = offsetVec[cc]*ii/offsetSteps;
-			}
-
-
+			
 			xyzmove4mat(tmp4mat,tmpOffsetArr);
 			//TODO rewrite less stupidly (don't check within range then redo calculation right away!!)
 			var isWithinAPortal = false;
@@ -678,21 +678,14 @@ function drawScene(frameTime){
 			}
 
 			if (isWithinAPortal){
-				if (numMoves > 0){
-					console.log("error! detecting portal transition for stepped camera, but has already occurred!");
-				}else{
-					numMoves++;
+				setMat4FromToWithQuats(tmp4mat, offsetPlayerCamera);
+				//xyzmove4mat(offsetPlayerCamera, tmpOffsetArr.map(elem=>elem*(ii+1)));
 
-					//portalTest will pass, so repeat with original matrix
-					xyzmove4mat(offsetPlayerCamera,tmpOffsetArr);
-					portalTestMultiPortal(offsetCameraContainer,0);
-					wentThrough = true;
-					//assume wont cross twice, move remainder of way
-					for (var cc=0;cc<3;cc++){
-						tmpOffsetArr[cc] = offsetVec[cc]-tmpOffsetArr[cc];
-					}
-					xyzmove4mat(offsetPlayerCamera,tmpOffsetArr);
-				}
+				portalTestMultiPortal(offsetCameraContainer,0);
+				wentThrough = true;
+				//assume wont cross twice, move remainder of way
+				xyzmove4mat(offsetPlayerCamera,tmpOffsetArr.map(elem => elem*(offsetSteps-ii))); //should -1 be there? or should xyzmove4mat happen later?
+				return;
 			}	
 		}
 		if (!wentThrough){
@@ -712,13 +705,14 @@ function drawScene(frameTime){
 		//no centre of perspective shift (rotate cameras inward by eyeTurnIn is not ideal)
 		//TODO shift x-hairs when using turn in or persp shift (eye x-hairs appear to be at screen depth)
 		var savedCam = mat4.create();
-		mat4.set(offsetPlayerCamera, savedCam);
+		setMat4FromToWithQuats(offsetPlayerCamera, savedCam);
+
 		var savedWorld = offsetCameraContainer.world;
 		moveCamInSteps(100, [-guiParams.display.eyeSepWorld,0,0]);
 		xyzrotate4mat(offsetPlayerCamera, [0,guiParams.display.eyeTurnIn,0]);
 		drawSceneToScreen(offsetPlayerCamera, {left:0,top:0,width:gl.viewportWidth,height:gl.viewportHeight/2});
 
-		mat4.set(savedCam, offsetPlayerCamera);
+		setMat4FromToWithQuats(savedCam, offsetPlayerCamera);
 		offsetCameraContainer.world = savedWorld;
 		moveCamInSteps(100, [guiParams.display.eyeSepWorld,0,0]);
 		xyzrotate4mat(offsetPlayerCamera, [0,-guiParams.display.eyeTurnIn,0]);
@@ -3315,8 +3309,8 @@ console.log({firstPortalSide, otherPortalSide: firstPortalSide.otherps});
 var portalMats = [firstPortalSide.matrix, firstPortalSide.otherps.matrix];	//does not yet use other portals
 
 
-var playerCameraInterp = mat4.create();
-var offsetPlayerCamera = mat4.create();
+var playerCameraInterp = newIdMatWithQuats();
+var offsetPlayerCamera = newIdMatWithQuats();
 var playerContainer = {matrix:playerCamera, world:0}
 var offsetCameraContainer = {matrix:offsetPlayerCamera, world:0}
 
@@ -5532,7 +5526,7 @@ var iterateMechanics = (function iterateMechanics(){
 		updateGunTargeting(sshipMatrixNoInterp);
 
 		//rotate remainder of time for aesthetic. (TODO ensure doesn't cock up frustum culling, hud etc)
-		mat4.set(playerCamera, playerCameraInterp);
+		setMat4FromToWithQuats(playerCamera, playerCameraInterp);
 		xyzrotate4mat(playerCameraInterp, scalarvectorprod(timeTracker/timeStep -1,lastPlayerAngMove));
 	}
 })();

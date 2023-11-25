@@ -351,3 +351,12 @@ function check4mat(mat){
 	var logResults = resultsarrRowSq.map(function(val){return Math.log(val);});
 	console.log(logResults);
 }
+
+function setMat4FromToWithQuats(fromMat, toMat){
+	mat4.set(fromMat, toMat);
+	for (var qq=0;qq<2;qq++){
+		for (var ii=0;ii<4;ii++){
+			toMat.qPair[qq,ii] = fromMat.qPair[qq,ii]
+		}
+	}
+}
