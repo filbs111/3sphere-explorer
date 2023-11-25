@@ -5574,13 +5574,11 @@ function portalTestForGivenPortal(obj, adjustedRad, portal){
 	return false;
 }
 function checkWithinRangeOfGivenPortal(obj, rad, portal){
-	//calculate in frame of portal
-	var portalRelativeMat = mat4.create(portal.matrix);
-	mat4.transpose(portalRelativeMat);
-	mat4.multiply(portalRelativeMat,obj.matrix);
-
-	//return obj.matrix[15]>1/Math.sqrt(1+rad*rad);
-	return portalRelativeMat[15]>1/Math.sqrt(1+rad*rad);
+	var dotProd = 0;
+	for (var ii=12;ii<16;ii++){
+		dotProd+= obj.matrix[ii] * portal.matrix[ii]
+	}
+	return dotProd>1/Math.sqrt(1+rad*rad);
 }
 
 var checkWithinReflectorRange = (function(){
