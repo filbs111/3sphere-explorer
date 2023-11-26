@@ -3075,18 +3075,41 @@ function generateCullFunc(pMat){
 
 var enableDisableAttributes = (function generateEnableDisableAttributesFunc(){
 	
+	var maxNum = 16;
+	var isEnabled = new Array(16);
+	var shouldBeEnabled = new Array(16);
+
+	for (var ii=0;ii<maxNum;ii++){
+		isEnabled[ii] = false;
+	}
+
+	var swapArr;
+
 	return function(shaderProg){
 		//in webgl2, seems attributes don't necessarily take numbers from 0 to shaderProg.numActiveAttribs - 1
-		//TODO make this less inefficient - track (bit array) whether attributes are enabled or disabled
 		
-		var maxNum = 16;
-		//var maxNum = gl.MAX_VERTEX_ATTRIBS;	//bad idea!
 		for (var ii=0;ii<maxNum;ii++){
-			gl.disableVertexAttribArray(ii);
+			shouldBeEnabled[ii] = false;
 		}
 		for (var attr of Object.values(shaderProg.attributes)){
-			gl.enableVertexAttribArray(attr);
+			shouldBeEnabled[attr] = true;
 		}
+
+		for (var ii=0;ii<maxNum;ii++){
+			if (shouldBeEnabled[ii]){
+				if (!isEnabled[ii]){
+					gl.enableVertexAttribArray(ii);
+				}
+			}else{
+				if (isEnabled[ii]){
+					gl.disableVertexAttribArray(ii);
+				}
+			}
+		}
+
+		swapArr = isEnabled;
+		isEnabled = shouldBeEnabled;
+		shouldBeEnabled = swapArr;	//now contains junk, but avoids memory churn
 	};
 })();
 
