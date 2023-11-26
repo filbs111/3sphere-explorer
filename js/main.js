@@ -673,7 +673,7 @@ function drawScene(frameTime){
 			var isWithinAPortal = false;
 			for (var pp=0;pp<portalsForThisWorld.length;pp++){
 				var portal = portalsForThisWorld[pp];
-				isWithinAPortal ||= checkWithinRangeOfGivenPortal({matrix:tmp4mat,world:sshipWorld}, portal.shared.radius, portal);
+				isWithinAPortal ||= checkWithinRangeOfGivenPortal(tmp4mat, portal.shared.radius, portal);
 				//TODO separate reflectorInfo per portal
 			}
 
@@ -1549,7 +1549,7 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 			if (thisPortalSide.otherps.world == sshipWorld){
 				var relevantPortalSide = thisPortalSide.otherps;
 				var portalRad = relevantPortalSide.shared.radius;
-				if (checkWithinReflectorRange(sshipMatrix, Math.tan(portalRad +0.1), relevantPortalSide)){	//TODO correct this
+				if (checkWithinRangeOfGivenPortal(sshipMatrix, Math.tan(portalRad +0.1), relevantPortalSide)){	//TODO correct this
 					mat4.set(sshipMatrix, portaledMatrix);
 					moveMatrixThruPortal(portaledMatrix, portalRad, 1, relevantPortalSide);
 					returnObj.sshipDrawMatrices.push(portaledMatrix);
@@ -5489,10 +5489,12 @@ var iterateMechanics = (function iterateMechanics(){
 			for (var pp=0;pp<portals.length;pp++){
 				var thisPortal = portals[pp];
 				var effectiveRange = Math.tan(Math.atan(thisPortal.shared.radius)+Math.atan(0.003));	//TODO reformulate more efficiently
-				if (checkWithinReflectorRange(playerCamera, effectiveRange, thisPortal)){				
+				if (checkWithinRangeOfGivenPortal(playerCamera.matrix, effectiveRange, thisPortal)){				
 					
 					//calculate in frame of portal
 					//logic is repeated from checkWithinReflectorRange
+					// TODO simplify - checkWithinReflectorRange was since replaced by checkWithinRangeOfGivenPortal which avoids
+					// creating matrices
 					var portalRelativeMat = mat4.create(thisPortal.matrix);
 					mat4.transpose(portalRelativeMat);
 					mat4.multiply(portalRelativeMat,playerCamera);
@@ -5566,38 +5568,20 @@ function portalTestMultiPortal(obj, amount){
 	}
 }
 function portalTestForGivenPortal(obj, adjustedRad, portal){
-	if (checkWithinRangeOfGivenPortal(obj, adjustedRad, portal)){
+	if (checkWithinRangeOfGivenPortal(obj.matrix, adjustedRad, portal)){
 		moveMatrixThruPortal(obj.matrix, adjustedRad, 1.00000001, portal);
 		obj.world=portal.otherps.world;
 		return true;
 	}
 	return false;
 }
-function checkWithinRangeOfGivenPortal(obj, rad, portal){
+function checkWithinRangeOfGivenPortal(objMat, rad, portal){
 	var dotProd = 0;
 	for (var ii=12;ii<16;ii++){
-		dotProd+= obj.matrix[ii] * portal.matrix[ii]
+		dotProd+= objMat[ii] * portal.matrix[ii]
 	}
 	return dotProd>1/Math.sqrt(1+rad*rad);
 }
-
-var checkWithinReflectorRange = (function(){
-
-	var portalRelativeMat = mat4.create();
-
-	return function (objMat, rad, portalSide){
-
-		//calculate in frame of portal
-		mat4.set(portalSide.matrix, portalRelativeMat);
-		mat4.transpose(portalRelativeMat);
-		mat4.multiply(portalRelativeMat,objMat);
-	
-		//return objMat[15]>1/Math.sqrt(1+rad*rad);
-		return portalRelativeMat[15]>1/Math.sqrt(1+rad*rad);
-	}
-
-})();
-
 
 function moveMatrixThruPortal(matrix, rad, hackMultiplier, portal, skipStartEndRotations){
 	//TODO just work with qpairs (and save on updating matrix)
