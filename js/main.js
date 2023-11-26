@@ -3769,7 +3769,7 @@ var guiParams={
 		cubemapDownsize:'auto',
 		mappingType:'vertex projection',
 		isPortal:true,
-		drawFrame:true,
+		drawFrame:false,
 		test1:false
 	},
 	debug:{
