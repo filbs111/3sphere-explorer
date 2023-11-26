@@ -3770,6 +3770,7 @@ var guiParams={
 		mappingType:'vertex projection',
 		isPortal:true,
 		drawFrame:false,
+		forceZeroPosition:false,
 		test1:false
 	},
 	debug:{
@@ -4005,6 +4006,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	reflectorFolder.add(guiParams.reflector, "isPortal");
 	reflectorFolder.add(guiParams.reflector, "drawFrame");
 	reflectorFolder.add(guiParams.reflector, "test1");
+	reflectorFolder.add(guiParams.reflector, "forceZeroPosition");
 
 	window.addEventListener("keydown",function(evt){
 		//console.log("key pressed : " + evt.keyCode);
@@ -6169,7 +6171,12 @@ function drawPortalCubemap(pMatrix, portalInCamera, frameTime, reflInfo, portalN
 
 		//todo this transformation once, not repeat in following loop
 		mat4.set(otherPortalMat, worldCamera);
-		xyzmove4mat(worldCamera, reflInfo.cubeViewShiftAdjusted);
+
+		var centreShift = guiParams.reflector.forceZeroPosition ? [0,0,0]: reflInfo.cubeViewShiftAdjusted;
+			//for testing whether drawing from centre is acceptable approximation for distant portals.
+			//if is, can use static cubemap, (+mips)
+
+		xyzmove4mat(worldCamera, centreShift);
 
 		if (worldInPortalInfo.duocylinderModel == 'l3dt-blockstrips'){
 			//TODO revise this - does it take enough inputs? (now worlds have separate spins)
@@ -6182,7 +6189,7 @@ function drawPortalCubemap(pMatrix, portalInCamera, frameTime, reflInfo, portalN
 			gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
 			gl.viewport(0, 0, framebuffer.width, framebuffer.height);
 			mat4.set(otherPortalMat, worldCamera);
-			xyzmove4mat(worldCamera, reflInfo.cubeViewShiftAdjusted);
+			xyzmove4mat(worldCamera, centreShift);
 			rotateCameraForFace(ii);
 			
 			wSettingsArr.push( drawWorldScene(frameTime, true, null, portalNum) );
@@ -6194,7 +6201,7 @@ function drawPortalCubemap(pMatrix, portalInCamera, frameTime, reflInfo, portalN
 				gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
 				gl.viewport(0, 0, framebuffer.width, framebuffer.height);
 				mat4.set(otherPortalMat, worldCamera);
-				xyzmove4mat(worldCamera, reflInfo.cubeViewShiftAdjusted);	
+				xyzmove4mat(worldCamera, centreShift);	
 				rotateCameraForFace(ii);
 				
 				var activeProg = shaderPrograms.fullscreenTexturedWithDepthmap;
