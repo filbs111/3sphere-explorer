@@ -5513,7 +5513,7 @@ var iterateMechanics = (function iterateMechanics(){
 			for (var pp=0;pp<portals.length;pp++){
 				var thisPortal = portals[pp];
 				var effectiveRange = Math.tan(Math.atan(thisPortal.shared.radius)+Math.atan(0.003));	//TODO reformulate more efficiently
-				if (checkWithinRangeOfGivenPortal(playerCamera.matrix, effectiveRange, thisPortal)){				
+				if (checkWithinRangeOfGivenPortal(playerCamera, effectiveRange, thisPortal)){
 					
 					//calculate in frame of portal
 					//logic is repeated from checkWithinReflectorRange
