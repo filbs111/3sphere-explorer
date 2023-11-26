@@ -1583,7 +1583,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	var wSettings = getWorldSceneSettings(isCubemapView, portalNum);
 	({worldA,worldInfo, localVecFogColor, infoForPortals, sshipDrawMatrices} = wSettings);
 		
-	if (!isCubemapView){
+	if (!isCubemapView && worldInfo.duocylinderModel == "l3dt-blockstrips"){
 		updateTerrain2QuadtreeForCampos(worldCamera.slice(12), worldInfo.spin);
 	}
 	
@@ -6120,8 +6120,11 @@ function drawPortalCubemap(pMatrix, portalInCamera, frameTime, reflInfo, portalN
 	//TODO move pMatrix etc to only recalc on screen resize
 	//make a pmatrix for hemiphere perspective projection method.
 
-	var otherPortalMat = guiParams.reflector.isPortal ? portalsForWorld[offsetCameraContainer.world][portalNum].otherps.matrix : 
-		portalsForWorld[offsetCameraContainer.world][portalNum].matrix;
+	var otherPortalSide = guiParams.reflector.isPortal ? portalsForWorld[offsetCameraContainer.world][portalNum].otherps : 
+	portalsForWorld[offsetCameraContainer.world][portalNum];
+
+	var otherPortalMat = otherPortalSide.matrix;
+	var worldInPortalInfo = guiSettingsForWorld[otherPortalSide.world];
 
 	frustumCull = squareFrustumCull;
 	if (guiParams.reflector.cmFacesUpdated>0){
@@ -6143,7 +6146,11 @@ function drawPortalCubemap(pMatrix, portalInCamera, frameTime, reflInfo, portalN
 		//todo this transformation once, not repeat in following loop
 		mat4.set(otherPortalMat, worldCamera);
 		xyzmove4mat(worldCamera, reflInfo.cubeViewShiftAdjusted);
-		updateTerrain2QuadtreeForCampos(worldCamera.slice(12), guiSettingsForWorld[offsetCameraContainer.world].spin);	//TODO only if this terrain type active
+
+		if (worldInPortalInfo.duocylinderModel == 'l3dt-blockstrips'){
+			//TODO revise this - does it take enough inputs? (now worlds have separate spins)
+			updateTerrain2QuadtreeForCampos(worldCamera.slice(12), guiSettingsForWorld[offsetCameraContainer.world].spin);
+		}
 
 		for (var ii=0;ii<numFacesToUpdate;ii++){	//only using currently to check perf impact. could use more "properly" and cycle/alternate.
 			var framebuffer = guiParams.display.drawTransparentStuff ? cubemapView.intermediateFramebuffers[ii] : cubemapView.framebuffers[ii];
