@@ -3786,6 +3786,8 @@ var frigateMatrix=mat4.identity();
 xyzmove4mat(frigateMatrix,[0,.7854,0]);
 var buildingMatrix=mat4.identity();
 xyzmove4mat(buildingMatrix,[0,.7,0]);
+var transposedBuildingMatrix = mat4.create(buildingMatrix);
+mat4.transpose(transposedBuildingMatrix);
 
 var pillarMatrices=[];
 /*
@@ -5160,8 +5162,7 @@ var iterateMechanics = (function iterateMechanics(){
 			//menger sponge. 
 			if (guiParams.drawShapes.building){
 				//test with box collision
-				var transposedBuildingMatrix = mat4.create(buildingMatrix);
-				mat4.transpose(transposedBuildingMatrix);	//TODO reuse/fixed.
+				
 				//var bSize = 0.01*guiParams.drawShapes.buildingScale;
 				//var critSize = 1/Math.sqrt(1+3*bSize*bSize);
 				//boxCollideCheck(transposedBuildingMatrix,bSize,critSize,bulletPosDCF4V, true);
