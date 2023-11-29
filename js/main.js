@@ -652,47 +652,171 @@ function drawScene(frameTime){
 	moveCamInSteps(500, offsetCam.getVec());
 
 	function moveCamInSteps(offsetSteps, offsetVec){
-		//todo proper move thru portal taking into account path. or can make more efficient by binary search (~log(n) tests)
-		
-		var tmp4mat = newIdMatWithQuats();
-		var tmpOffsetArr = new Array(3);
+
 		var wentThrough = false;
 
-		var portalsForThisWorld = portalsForWorld[sshipWorld];
+		if (moveMatHandlingPortal(offsetPlayerCamera, sshipWorld, offsetVec)){
+			//^^ temporary version, check works in part (should rule out collisions with portal in some cases)
 
-		setMat4FromToWithQuats(offsetPlayerCamera, tmp4mat);
-
-		for (var cc=0;cc<3;cc++){
-			tmpOffsetArr[cc] = offsetVec[cc]/offsetSteps;
-		}
-
-		for (var ii=0;ii<offsetSteps;ii++){	//TODO more efficient. if insufficient subdivision, transition stepped.
+			//todo proper move thru portal taking into account path. or can make more efficient by binary search (~log(n) tests)
 			
-			xyzmove4mat(tmp4mat,tmpOffsetArr);
-			//TODO rewrite less stupidly (don't check within range then redo calculation right away!!)
-			var isWithinAPortal = false;
-			for (var pp=0;pp<portalsForThisWorld.length;pp++){
-				var portal = portalsForThisWorld[pp];
-				isWithinAPortal ||= checkWithinRangeOfGivenPortal(tmp4mat, portal.shared.radius, portal);
-				//TODO separate reflectorInfo per portal
+			var tmp4mat = newIdMatWithQuats();
+			var tmpOffsetArr = new Array(3);
+			var wentThrough = false;
+
+			var portalsForThisWorld = portalsForWorld[sshipWorld];
+
+			setMat4FromToWithQuats(offsetPlayerCamera, tmp4mat);
+
+			for (var cc=0;cc<3;cc++){
+				tmpOffsetArr[cc] = offsetVec[cc]/offsetSteps;
 			}
 
-			if (isWithinAPortal){
-				setMat4FromToWithQuats(tmp4mat, offsetPlayerCamera);
-				//xyzmove4mat(offsetPlayerCamera, tmpOffsetArr.map(elem=>elem*(ii+1)));
+			for (var ii=0;ii<offsetSteps;ii++){	//TODO more efficient. if insufficient subdivision, transition stepped.
+				
+				xyzmove4mat(tmp4mat,tmpOffsetArr);
+				//TODO rewrite less stupidly (don't check within range then redo calculation right away!!)
+				var isWithinAPortal = false;
+				for (var pp=0;pp<portalsForThisWorld.length;pp++){
+					var portal = portalsForThisWorld[pp];
+					isWithinAPortal ||= checkWithinRangeOfGivenPortal(tmp4mat, portal.shared.radius, portal);
+					//TODO separate reflectorInfo per portal
+				}
 
-				portalTestMultiPortal(offsetCameraContainer,0);
-				wentThrough = true;
-				//assume wont cross twice, move remainder of way
-				xyzmove4mat(offsetPlayerCamera,tmpOffsetArr.map(elem => elem*(offsetSteps-ii))); //should -1 be there? or should xyzmove4mat happen later?
-				return;
-			}	
+				if (isWithinAPortal){
+					setMat4FromToWithQuats(tmp4mat, offsetPlayerCamera);
+					//xyzmove4mat(offsetPlayerCamera, tmpOffsetArr.map(elem=>elem*(ii+1)));
+
+					portalTestMultiPortal(offsetCameraContainer,0);
+					wentThrough = true;
+					//assume wont cross twice, move remainder of way
+					xyzmove4mat(offsetPlayerCamera,tmpOffsetArr.map(elem => elem*(offsetSteps-ii))); //should -1 be there? or should xyzmove4mat happen later?
+					return;
+				}	
+			}
 		}
+
 		if (!wentThrough){
 			xyzmove4mat(offsetPlayerCamera,offsetVec);
 		}
 		//console.log(JSON.stringify({sshipWorld,numMoves,offsetCameraWorld:offsetCameraContainer.world}));
 	}
+
+	/*
+	* to replace moveCamInSteps without steps. might also use for eg bullets.
+	*/
+	function moveMatHandlingPortal(inputMatrix, inputWorld, offsetVec){
+		//inputMatrix = offsetPlayerCamera , inputWorld = sshipWorld
+		// for initial use case (which is initially just at player spaceship position)
+		//offsetVec is in frame of inputMatrix.
+		
+		//for each portal, find whether line from position contained in inputMatrix, to position contained in 
+		//inputMatrix once moved by offsetVec, crosses the portal.
+		//this can be done by 1st checking that both start, end point are on same half of world as portal in question.
+		//this is not strictly required, but is is assumed that offsetVec is short, and making this assumption makes 
+		//thinking about problem easier, avoids edge cases.
+		//then consider straight line in projective flat space - if the projected straight line crosses the projected
+		//portal sphere, calculate how far along, move that distance, move through portal, move rest of distance.
+		
+		//calculate the start and end position
+		var startPos = inputMatrix.slice(12);
+
+		var tmp4mat = newIdMatWithQuats();
+		setMat4FromToWithQuats(inputMatrix, tmp4mat);
+		xyzmove4mat(tmp4mat,offsetVec);
+
+		var endPos = tmp4mat.slice(12);
+
+
+		var portalsForThisWorld = portalsForWorld[inputWorld];
+
+		for (var pp=0;pp<portalsForThisWorld.length;pp++){
+			var portal = portalsForThisWorld[pp];
+			var portalMat = portal.matrix;
+
+			//???
+			var portalMatT = mat4.create(portalMat);
+			mat4.transpose(portalMatT);
+
+			var startPosInPortalSpace = vec4.create();
+			mat4.multiplyVec4(portalMatT, startPos, startPosInPortalSpace);
+			var endPosInPortalSpace = vec4.create();
+			mat4.multiplyVec4(portalMatT, endPos, endPosInPortalSpace);
+				//TODO do without transpose/ new matrix creation.
+
+			if (startPosInPortalSpace[3]<0.5 || endPosInPortalSpace[3]<0.5){
+				//TODO consider cutoff value
+				continue;
+			}
+
+			//project
+			var difference = new Array(3);
+			var differenceSq = 0;
+			var differenceDotStart = 0;
+			var differenceDotEnd = 0;
+			for (var ii=0;ii<3;ii++){
+				startPosInPortalSpace[ii]/=startPosInPortalSpace[3];
+				endPosInPortalSpace[ii]/=endPosInPortalSpace[3];
+				difference[ii] = endPosInPortalSpace[ii] - startPosInPortalSpace[ii];
+				differenceSq+= difference[ii]*difference[ii];
+
+				//difference = d
+				//movement unit vector is d / sqrt(d.d) = d/sqrt(dsq)
+				//start component in movement direction
+				// is start.d / sqrt(d.d)
+				// and remaining part is then start - start.d/sqrt(dsq)
+
+				differenceDotStart += difference[ii]*startPosInPortalSpace[ii];
+				differenceDotEnd += difference[ii]*endPosInPortalSpace[ii];
+			}
+			
+			//collide this line with sphere.
+			//basically a 2d problem crossing circle.
+
+			var closestApproachVec = new Array(3);
+			var closestApproachSq = 0;
+			var startComponentInMovementDirection = new Array(3);
+			//var endComponentInMovementDirection = new Array(3);
+			//var differenceMag = Math.sqrt(differenceSq);
+			//var normalisedDifference = difference.map(x=>x/differenceMag);
+
+			for (var ii=0;ii<3;ii++){
+				startComponentInMovementDirection[ii] = differenceDotStart*difference[ii]/differenceSq;
+				//endComponentInMovementDirection[ii] = differenceDotEnd*difference[ii]/differenceSq;
+				closestApproachVec[ii] = startPosInPortalSpace[ii]-startComponentInMovementDirection[ii];
+				closestApproachSq+= closestApproachVec[ii]*closestApproachVec[ii];
+			}
+			var rad = portal.shared.radius;
+
+			var otherTriangleSideSq = rad*rad-closestApproachSq;
+
+			if (otherTriangleSideSq<0){
+			//	console.log("impossible!! rad = " + rad + ", closestApproachSq = " + closestApproachSq);
+				continue; //collision impossible
+			}
+
+			var otherTriangleSide = Math.sqrt(otherTriangleSideSq);
+
+			//what possibilities?
+			//critical values are determined by pythagoras (hyp=radius)
+			// if startComponentInMovementDirection, endComponentInMovementDirection have opposite signs, cross.
+			// assume that start is always outside. therefore check is,
+			// if start -ve , and end is > -critical value, crosses.
+			// if start +ve, and end is < +critical value, crosses.
+
+			//find if crosses. if does, calculate how far along (by projecting back to curved space.)
+
+			//TODO avoid ifs- choose variables such that start always +ve/-ve?
+			
+			//temporary test
+			//return true if collision not ruled out.
+			return true;
+		}
+		//console.log("ruled out portal camera traversal");
+		return false;
+	}
+
+
 	var portalsForThisWorldX = portalsForWorld[offsetCameraContainer.world];
 	for (var ii=0;ii<portalsForThisWorldX.length;ii++){
 		reflectorInfoArr[ii].rad = guiParams.reflector.draw!="none" ? portalsForThisWorldX[ii].shared.radius : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
