@@ -32,7 +32,7 @@ var draw8cellnet = (function(){
         for (var ii=0;ii<8;ii++){
             mat4.identity(mMatrix);
 		    mat4.set(invertedWorldCamera, mvMatrix);
-            gl.uniform4fv(activeShaderProgram.uniforms.uColor, colors[ii]);
+            uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colors[ii]);
             xyzmove4mat(mvMatrix, cubes[ii].map(x=>x*moveAmount));
             drawObjectFromPreppedBuffers(cubeFrameSubdivBuffers, activeShaderProgram);
         }

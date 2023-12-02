@@ -1255,7 +1255,7 @@ function drawScene(frameTime){
 			//scale*= 0.01/pos[2];
 			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, scale);
 			gl.uniform4fv(activeShaderProgram.uniforms.uUvCoords, uvPosAndSize);
-			gl.uniform4fv(activeShaderProgram.uniforms.uColor, color);
+			uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", color);
 			mat4.identity(mvMatrix);
 			xyzmove4mat(mvMatrix,[0.01*pos[0]/pos[2],0.01*pos[1]/pos[2],0.01]);
 			xyzrotate4mat(mvMatrix, [0,0,rotation]);
@@ -1783,11 +1783,9 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		}
 		
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
-		dropLightPosSetter.setIfDifferent(activeShaderProgram, dropLightPos);
-
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
 		
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
-
 		//new for this version of shader
 		//gl.uniform1f(activeShaderProgram.uniforms.uVertexMove, guiParams.normalMove + boxSize);
 		gl.uniform1f(activeShaderProgram.uniforms.uVertexMove, 0.01*Math.abs(Math.cos((Math.PI/1000)*(frameTime % 2000 ))) + boxSize);
@@ -1825,7 +1823,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	if (guiBoxes['x=w=0']){drawBoxRing(ringCells[5],colorArrs.cyan);}
 	
 	function drawBoxRing(ringCellMatData,color){
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, color);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", color);
 		drawArrayOfModels(
 			ringCellMatData,
 			(guiParams.display.culling ? boxRad: false),
@@ -1840,8 +1838,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	
 	if (numRandomBoxes>0){
 		if (guiParams['random boxes'].drawType == 'indiv'){
-			gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.randBoxes);
-			
+			uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.randBoxes);
+
 			boxSize = guiParams['random boxes'].size;
 			boxRad = boxSize*Math.sqrt(3);
 			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
@@ -1866,7 +1864,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			
 			shaderSetup(shaderPrograms.texmapPerPixelDiscardNormalmapPhongVsMatmult[ guiParams.display.atmosShader ]);
 			
-			gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.randBoxes);
+			uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.randBoxes);
 			
 			boxSize = guiParams['random boxes'].size;
 			boxRad = boxSize*Math.sqrt(3);
@@ -1895,12 +1893,11 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			if (guiParams["random boxes"].drawType == 'instancedArraysMenger'){
 				shaderSetup(shaderPrograms.coloredPerPixelDiscardVertexColoredInstanced[ guiParams.display.atmosShader ]);
 				objBufferForInstances = buildingBuffers;
-
-				gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+				uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
 			}else{
 				shaderSetup(shaderPrograms.texmapPerPixelDiscardNormalmapPhongInstanced[ guiParams.display.atmosShader ]);
 				objBufferForInstances = cubeBuffers;
-				gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.red);
+				uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.red);
 			}
 			
 			
@@ -2000,9 +1997,9 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		activeShaderProgram = shaderPrograms.billboardQuads;
 		gl.useProgram(activeShaderProgram);
 		
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
 		if (activeShaderProgram.uniforms.uDropLightPos){
-			dropLightPosSetter.setIfDifferent(activeShaderProgram, dropLightPos);
+			uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
 		}
 		
 		//cut down version of prepBuffersForDrawing
@@ -2147,7 +2144,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	
 	function drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, buffers, invertedCamera){
 		var invertedCamera = invertedCamera || invertedWorldCamera;
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, bb.color);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", bb.color);
 		mat4.set(invertedCamera, mvMatrix);
 		mat4.multiply(mvMatrix, bb.matrix);
 		
@@ -2158,7 +2155,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	}
 	
 	function drawPreppedBufferOnDuocylinder(aa, bb, hh, cc, buff){
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, cc);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", cc);
 		moveToDuocylinderAB(aa,bb,hh);
 		drawObjectFromPreppedBuffers(buff, shaderProgramTexmap);
 	}
@@ -2178,7 +2175,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	//draw blender object - a csg cube minus sphere. draw 8 cells for tesseract.
 	var modelScale = smoothGuiParams.get("8-cell scale");
 	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
 
 	if (guiParams["draw 8-cell"]){
 		drawArrayOfModels(
@@ -2229,7 +2226,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	
 	mat4.set(invertedWorldCamera, mvMatrix);
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.darkGray);	//DARK
+	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.darkGray);
 
 	var sortId = sortIdForMatrix(mvMatrix);	//lookup sort order for cells
 	
@@ -2290,7 +2287,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	if (guiParams.drawShapes.frigate){
 		activeShaderProgram = shaderProgramTexmap;
 		shaderSetup(activeShaderProgram, frigateTexture);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
 
 		modelScale = 0.001*guiParams.drawShapes.frigateScale;
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
@@ -2306,7 +2303,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		activeShaderProgram = shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ];
 		shaderSetup(activeShaderProgram);
 
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.gray);
 
 		modelScale = 0.01*guiParams.drawShapes.buildingScale;
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
@@ -2331,12 +2328,12 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	performCommon4vecShaderSetup(activeShaderProgram, wSettings, "not normal map");
 
 	if (guiParams["random boxes"].drawType == 'singleBuffer'){
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.randBoxes);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.randBoxes);
 		drawTennisBall(randBoxBuffers, activeShaderProgram);	//todo draw subset of buffer according to ui controlled number
 	}
 	
 	if (guiParams.drawShapes.singleBufferStonehenge){
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.gray);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.gray);
 		drawTennisBall(stonehengeBoxBuffers, activeShaderProgram);
 	}
 	
@@ -2345,7 +2342,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	performCommon4vecShaderSetup(activeShaderProgram, wSettings, "normal map");
 	
 	if (guiParams.drawShapes.singleBufferTowers){
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);	//uColor is redundant here since have vertex colors. TODO lose it?
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);	//uColor is redundant here since have vertex colors. TODO lose it?
 		drawTennisBall(towerBoxBuffers, activeShaderProgram);
 	}
 	
@@ -2354,7 +2351,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	performCommon4vecShaderSetup(activeShaderProgram, wSettings, "normal map");
 	
 	if (guiParams.drawShapes.singleBufferRoads){
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.darkGray);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.darkGray);
 		drawTennisBall(roadBoxBuffers, activeShaderProgram);
 	}
 	/*
@@ -2395,7 +2392,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 
 		var textTextCubeScale = duocylinderSurfaceBoxScale*1;
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, textTextCubeScale,textTextCubeScale,textTextCubeScale);
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
 		gl.uniform1f(activeShaderProgram.uniforms.uSharpScale, 0.5);	//? what should this be?
 
 		mat4.set(textTestMatrix, mMatrix);
@@ -2421,10 +2418,10 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	if (activeShaderProgram.uniforms.uPlayerLightColor){
 		gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 	}
-	dropLightPosSetter.setIfDifferent(activeShaderProgram, dropLightPos);
+	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
 
 	if (guiParams.drawShapes.teapot){
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.teapot);	//BLUE
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.teapot);
 		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0.1,0.3);	//some emission
 
 		modelScale = guiParams.drawShapes["teapot scale"];
@@ -2436,7 +2433,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	}
 	
 	if (guiParams.drawShapes.hyperboloid){
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.gray);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.gray);
 		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);	//no emission
 		modelScale = 1.0;
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
@@ -2458,7 +2455,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	}
 	
 	if (guiParams.drawShapes.pillars && pillarBuffers.isLoaded){
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.darkGray);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.darkGray);
 		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);	//no emission
 		modelScale=0.1;
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale/4,modelScale/4,modelScale);
@@ -2488,9 +2485,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		if (activeShaderProgram.uniforms.uPlayerLightColor){
 			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 		}
-		dropLightPosSetter.setIfDifferent(activeShaderProgram, dropLightPos);
-
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.veryDarkGray);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.veryDarkGray);
 		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);	//no emission
 		modelScale=0.1;
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale/4,modelScale/4,modelScale);
@@ -2534,7 +2530,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 				if (frustumCull(mvMatrix,targetRad)){	//normally use +ve radius
 											//-ve to make disappear when not entirely inside view frustum (for testing)
 					gl.uniform3f(activeShaderProgram.uniforms.uModelScale, targetRad,targetRad,targetRad);
-					gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.target);
+					uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.target);
 					var emitColor = Math.sin(frameTime*0.01);
 					//emitColor*=emitColor
 					gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, emitColor, emitColor, emitColor/2);	//YELLOW
@@ -2551,7 +2547,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 					activeShaderProgram = shaderProgramTexmap;
 					gl.useProgram(activeShaderProgram);
 					gl.uniform3f(activeShaderProgram.uniforms.uModelScale, targetRad,targetRad,targetRad);
-					gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+					uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
 					drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
 					activeShaderProgram = savedActiveProg;
 					gl.useProgram(activeShaderProgram);
@@ -2605,7 +2601,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 		}
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
-		dropLightPosSetter.setIfDifferent(activeShaderProgram, dropLightPos);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
 		
 		if (activeShaderProgram.uniforms.uOtherLightAmounts){
 			gl.uniform4f(activeShaderProgram.uniforms.uOtherLightAmounts, 0, 100*(muzzleFlashAmounts[0]+muzzleFlashAmounts[1]), 20*(currentThrustInput[2]>0 ? 1:0) , 0);
@@ -2614,7 +2610,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		mat4.set(matrix, rotatedMatrix);	//because using rotated model data for sship model
 		xyzrotate4mat(rotatedMatrix, [-Math.PI/2,0,0]); 
 		
-		//gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.gray);
+		//uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.gray);
 		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
 		
@@ -2766,7 +2762,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 						//sphere centre inside voxel volume OR sphere intersects with voxel zero surface.
 			//note could just have a simple signed distance, of vox field value divided by magnitide of gradient. however, current gradient is in abc space. TODO make work with this clunky version, then try abc-> player space gradient conversion, check results are consistent.
 		
-		gl.uniform4fv(activeShaderProgram.uniforms.uColor, voxColliding ? colorArrs.red: colorArrs.white);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", voxColliding ? colorArrs.red: colorArrs.white);
 		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,	matrix);
@@ -2803,7 +2799,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		var frameScale = sharedInfo.radius;
 		gl.uniform3f(shaderProg.uniforms.uModelScale, frameScale,frameScale,frameScale);
 
-		gl.uniform4fv(shaderProg.uniforms.uColor, sharedInfo.color);
+		uniform4fvSetter.setIfDifferent(shaderProg, "uColor", sharedInfo.color);
 
 		mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
 		drawObjectFromBuffers(cubeFrameSubdivBuffers, shaderProg);
@@ -2813,15 +2809,15 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		gl.uniform3f(shaderProg.uniforms.uModelScale, smallScale,smallScale,smallScale);
 		var moveAmount = Math.atan(frameScale) + smallScale;	//to portal surface then by small frame size
 
-		gl.uniform4fv(shaderProg.uniforms.uColor, colorArrs.red);
+		uniform4fvSetter.setIfDifferent(shaderProg, "uColor", colorArrs.red);
 		mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
 		xyzmove4mat(mvMatrix, [moveAmount,0,0]);	//TODO correct mMatrix, but IIRC only impacts lighting 
 		drawObjectFromBuffers(cubeBuffers, shaderProg);
-		gl.uniform4fv(shaderProg.uniforms.uColor, colorArrs.green);
+		uniform4fvSetter.setIfDifferent(shaderProg, "uColor", colorArrs.green);
 		mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
 		xyzmove4mat(mvMatrix, [0,moveAmount,0]);	//TODO correct mMatrix, but IIRC only impacts lighting 
 		drawObjectFromBuffers(cubeBuffers, shaderProg);
-		gl.uniform4fv(shaderProg.uniforms.uColor, colorArrs.blue);
+		uniform4fvSetter.setIfDifferent(shaderProg, "uColor", colorArrs.blue);
 		mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
 		xyzmove4mat(mvMatrix, [0,0,moveAmount]);	//TODO correct mMatrix, but IIRC only impacts lighting 
 		drawObjectFromBuffers(cubeBuffers, shaderProg);
@@ -2895,7 +2891,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 					var pColor = worldColors[portals[ii].otherps.world];
 					
 					gl.uniform3f(activeShaderProgram.uniforms.uModelScale, portalRad,portalRad,portalRad);		
-					gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.black);
+					uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.black);
 					gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, pColor[0], pColor[1], pColor[2]);
 					mat4.set(portalInCameraArr[ii], mvMatrix);mat4.set(portalMatArr[ii], mMatrix);
 					drawObjectFromBuffers(placeholderPortalMesh, activeShaderProgram);
@@ -2939,7 +2935,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		gl.useProgram(shaderProgram);
 		gl.uniformMatrix4fv(shaderProgram.uniforms.uPosShiftMat, false, reflInfo.shaderMatrix);
 		
-		gl.uniform4fv(shaderProgram.uniforms.uColor, colorArrs.white);
+		uniform4fvSetter.setIfDifferent(shaderProgram, "uColor", colorArrs.white);
 		gl.uniform4fv(shaderProgram.uniforms.uFogColor, localVecFogColor);
 
 		if (shaderProgram.uniforms.uPlayerLightColor){
@@ -6135,7 +6131,7 @@ function performShaderSetup(shader, wSettings, tex){	//TODO use this more widely
 	performGeneralShaderSetup(shader);
 	
 	if (shader.uniforms.uDropLightPos){
-		dropLightPosSetter.setIfDifferent(shader, dropLightPos);
+		uniform4fvSetter.setIfDifferent(shader, "uDropLightPos", dropLightPos);
 	}
 }
 function performCommon4vecShaderSetup(activeShaderProgram, wSettings, logtag){	//todo move to top level? are inner functions inefficient?
@@ -6154,7 +6150,7 @@ function performCommon4vecShaderSetup(activeShaderProgram, wSettings, logtag){	/
 
 	conditionalSetUniform(gl.uniform3fv, activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 
-	dropLightPosSetter.setIfDifferent(activeShaderProgram, dropLightPos);
+	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
 
 	performGeneralShaderSetup(activeShaderProgram);
 }
@@ -6212,7 +6208,7 @@ function drawDuocylinderObject(wSettings, duocylinderObj, zeroLevel, seaPeakines
 		gl.uniform1f(activeShaderProgram.uniforms.uPeakiness, seaPeakiness);
 	}
 	
-	gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
+	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
 	performCommon4vecShaderSetup(activeShaderProgram, wSettings);
 	
 	drawTennisBall(duocylinderObj, activeShaderProgram, depthMap);
@@ -6385,32 +6381,27 @@ function drawPortalCubemap(pMatrix, portalInCamera, frameTime, reflInfo, portalN
 //TODO decay stats with some timescale, or save, reset stats eg each frame
 //TODO instead put last known value alongside idx in shader. eg  shader.uniforms.whatever = {idx, lastValue}
 //TODO put to file with other gl methods
-var dropLightPosSetter = (function(){
+var uniform4fvSetter = (function(){
 	//something to see how many uniform sets can be avoided.
 	//if a decent chunk, implement this for more uniforms
 
-	var lastSetForShader = {};
+	var lastSet = {};
 	var numTimesSet = 0;
 	var numTimesAvoidedSet = 0;
 
-	var setIfDifferent = function(shader, dropLightPos){
+	var setIfDifferent = function(shader, uniformName, valueToSet){
+		var shaderAndUniform = shader.name + ":" + uniformName;
 
-		if (dropLightPos.length != 4){
-			console.log("WHOOPS!!");
-			return;
-		}
-
-		var shadername = shader.name;
-		var lastSet = lastSetForShader[shadername];
+		var last = lastSet[shaderAndUniform];
 		//TODO decide whether last set should be a copy, or should be the last passed in array (in which case can check for 
 		//same object)
-		if (lastSet && lastSet.map((ls, ii) => ls == dropLightPos[ii]).reduce((accum, current)=>accum && current , true)){
+		if (last && last.map((ls, ii) => ls == valueToSet[ii]).reduce((accum, current)=>accum && current , true)){
 			numTimesAvoidedSet++;
 			return;
 		}
-		lastSetForShader[shadername] = dropLightPos.map(x=>x);	//make a copy (TODO determine if necessary)
+		lastSet[shaderAndUniform] = valueToSet.map(x=>x);	//make a copy (TODO determine if necessary)
 		numTimesSet++;
-		gl.uniform4fv(shader.uniforms.uDropLightPos, dropLightPos);
+		gl.uniform4fv(shader.uniforms[uniformName], valueToSet);
 	}
 
 	var stats = () => {return {numTimesSet, numTimesAvoidedSet, percentAvoided: 100*numTimesAvoidedSet/(numTimesSet+numTimesAvoidedSet)}};
@@ -6418,6 +6409,6 @@ var dropLightPosSetter = (function(){
 	return {
 		setIfDifferent,
 		stats,
-	    lastSetForShader
+	    lastSet
 	};
 })();

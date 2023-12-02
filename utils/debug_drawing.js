@@ -10,7 +10,7 @@ var debugDraw = (function(){
         mat4.set(invertedWorldCamera, mvMatrix);
         mat4.multiply(mvMatrix, mat);
         mat4.set(mat, mMatrix);
-        gl.uniform4fv(shaderProgramTexmap.uniforms.uColor, cubeColor);
+        uniform4fvSetter.setIfDifferent(shaderProgramTexmap, "uColor", cubeColor);
         gl.uniform3f(shaderProgramTexmap.uniforms.uModelScale, scale, scale, scale);
         drawObjectFromPreppedBuffers(cubeBuffers, shaderProgramTexmap);
     }
@@ -27,7 +27,7 @@ var debugDraw = (function(){
         drawTriAxisCrossForMatrixColorAndScale(mat, colorArrs.gray, 0.05);
     }
     function drawTriAxisCrossForMatrixColorAndScale(mat, crossColor, scale){
-        gl.uniform4fv(shaderProgramTexmap.uniforms.uColor, crossColor);
+        uniform4fvSetter.setIfDifferent(shaderProgramTexmap, "uColor", crossColor);
         mat4.set(invertedWorldCamera, mvMatrix);
         mat4.multiply(mvMatrix, mat);
         mat4.set(mat, mMatrix);
