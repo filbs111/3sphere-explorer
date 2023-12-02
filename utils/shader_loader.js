@@ -113,7 +113,7 @@ function getLocationsForShadersUsingPromises(cb){
 
 //var atmosVariants = ['CONSTANT','ONE','TWO'];
 var atmosVariants = ['ONE'];	//disable variants to speed up loading
-function genShaderVariants(vs_id, fs_id, vs_defines=[], fs_defines=[], usesVecAtmosThickness){
+function genShaderVariants(name, vs_id, fs_id, vs_defines=[], fs_defines=[], usesVecAtmosThickness){
 	var shaders = {};
 	if (usesVecAtmosThickness){
 		vs_defines.push('VEC_ATMOS_THICK');
@@ -138,6 +138,7 @@ function genShaderVariants(vs_id, fs_id, vs_defines=[], fs_defines=[], usesVecAt
 		var variantString = "ATMOS_"+variant;
 		shaders[variant]=loadShader(vs_id, fs_id, vs_defines.concat(variantString), fs_defines.concat(variantString));
 		shaders[variant].usesVecAtmosThickness = usesVecAtmosThickness;
+		shaders[variant].name = name + "_" + variantString;
 	}
 	//temp:
 	//shaders.constant = shaders.CONSTANT;
@@ -235,8 +236,10 @@ function initShaders(shaderProgs){
 
 	Object.entries(shaderProgNoVariationsList).forEach(([key,value])=>{
 		shaderProgs[key] = loadShader.apply(null, value);
+		shaderProgs[key].name = key;
 	});
 	Object.entries(shaderProgWithVariationsList).forEach(([key,value])=>{
+		value.unshift(key)	//add key to start of args (this doesn't return altered value, so can't easily make one liner).
 		shaderProgs[key] = genShaderVariants.apply(null, value);
 	});
 

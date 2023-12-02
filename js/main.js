@@ -1783,7 +1783,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		}
 		
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
-		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
+		dropLightPosSetter.setIfDifferent(activeShaderProgram, dropLightPos);
 
 		
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
@@ -2002,7 +2002,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.white);
 		if (activeShaderProgram.uniforms.uDropLightPos){
-			gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
+			dropLightPosSetter.setIfDifferent(activeShaderProgram, dropLightPos);
 		}
 		
 		//cut down version of prepBuffersForDrawing
@@ -2421,7 +2421,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	if (activeShaderProgram.uniforms.uPlayerLightColor){
 		gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 	}
-	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
+	dropLightPosSetter.setIfDifferent(activeShaderProgram, dropLightPos);
 
 	if (guiParams.drawShapes.teapot){
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.teapot);	//BLUE
@@ -2488,7 +2488,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		if (activeShaderProgram.uniforms.uPlayerLightColor){
 			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 		}
-		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
+		dropLightPosSetter.setIfDifferent(activeShaderProgram, dropLightPos);
 
 		gl.uniform4fv(activeShaderProgram.uniforms.uColor, colorArrs.veryDarkGray);
 		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);	//no emission
@@ -2605,7 +2605,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 		}
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
-		gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
+		dropLightPosSetter.setIfDifferent(activeShaderProgram, dropLightPos);
 		
 		if (activeShaderProgram.uniforms.uOtherLightAmounts){
 			gl.uniform4f(activeShaderProgram.uniforms.uOtherLightAmounts, 0, 100*(muzzleFlashAmounts[0]+muzzleFlashAmounts[1]), 20*(currentThrustInput[2]>0 ? 1:0) , 0);
@@ -6134,7 +6134,9 @@ function performShaderSetup(shader, wSettings, tex){	//TODO use this more widely
 	
 	performGeneralShaderSetup(shader);
 	
-	conditionalSetUniform(gl.uniform4fv, shader.uniforms.uDropLightPos, dropLightPos);
+	if (shader.uniforms.uDropLightPos){
+		dropLightPosSetter.setIfDifferent(shader, dropLightPos);
+	}
 }
 function performCommon4vecShaderSetup(activeShaderProgram, wSettings, logtag){	//todo move to top level? are inner functions inefficient?
 	({worldA,worldInfo, localVecFogColor, infoForPortals, dropLightPos} = wSettings);
@@ -6152,7 +6154,8 @@ function performCommon4vecShaderSetup(activeShaderProgram, wSettings, logtag){	/
 
 	conditionalSetUniform(gl.uniform3fv, activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 
-	gl.uniform4fv(activeShaderProgram.uniforms.uDropLightPos, dropLightPos);
+	dropLightPosSetter.setIfDifferent(activeShaderProgram, dropLightPos);
+
 	performGeneralShaderSetup(activeShaderProgram);
 }
 function drawDuocylinderObject(wSettings, duocylinderObj, zeroLevel, seaPeakiness, seaTime, depthMap){	
@@ -6375,3 +6378,46 @@ function drawPortalCubemap(pMatrix, portalInCamera, frameTime, reflInfo, portalN
 		
 	}
 }
+
+
+
+//TODO employ for other attributes
+//TODO decay stats with some timescale, or save, reset stats eg each frame
+//TODO instead put last known value alongside idx in shader. eg  shader.uniforms.whatever = {idx, lastValue}
+//TODO put to file with other gl methods
+var dropLightPosSetter = (function(){
+	//something to see how many uniform sets can be avoided.
+	//if a decent chunk, implement this for more uniforms
+
+	var lastSetForShader = {};
+	var numTimesSet = 0;
+	var numTimesAvoidedSet = 0;
+
+	var setIfDifferent = function(shader, dropLightPos){
+
+		if (dropLightPos.length != 4){
+			console.log("WHOOPS!!");
+			return;
+		}
+
+		var shadername = shader.name;
+		var lastSet = lastSetForShader[shadername];
+		//TODO decide whether last set should be a copy, or should be the last passed in array (in which case can check for 
+		//same object)
+		if (lastSet && lastSet.map((ls, ii) => ls == dropLightPos[ii]).reduce((accum, current)=>accum && current , true)){
+			numTimesAvoidedSet++;
+			return;
+		}
+		lastSetForShader[shadername] = dropLightPos.map(x=>x);	//make a copy (TODO determine if necessary)
+		numTimesSet++;
+		gl.uniform4fv(shader.uniforms.uDropLightPos, dropLightPos);
+	}
+
+	var stats = () => {return {numTimesSet, numTimesAvoidedSet, percentAvoided: 100*numTimesAvoidedSet/(numTimesSet+numTimesAvoidedSet)}};
+
+	return {
+		setIfDifferent,
+		stats,
+	    lastSetForShader
+	};
+})();
