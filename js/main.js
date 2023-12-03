@@ -6087,26 +6087,30 @@ function conditionalSetUniform(glfun, uniform, val){
 	if (!uniform){return;}
 	glfun.bind(gl)(uniform, val);	
 }
+function conditionalSetUniform4fv(shader, uniformName, val){
+	if (shader.uniforms[uniformName]){return;}
+	uniform4fvSetter.setIfDifferent(shader, uniformName, val);
+}
 function setPortalInfoForShader(shader, infoForPortals){
 	conditionalSetUniform(gl.uniform3fv, shader.uniforms.uReflectorDiffColor, infoForPortals[0].localVecReflectorDiffColor);
 	conditionalSetUniform(gl.uniform3fv, shader.uniforms.uReflectorDiffColor2, 
 		infoForPortals.length > 1 ? infoForPortals[1].localVecReflectorDiffColor: [0,0,0]);	
 	conditionalSetUniform(gl.uniform3fv, shader.uniforms.uReflectorDiffColor3, 
 		infoForPortals.length > 2 ? infoForPortals[2].localVecReflectorDiffColor: [0,0,0]);
-	conditionalSetUniform(gl.uniform4fv, shader.uniforms.uReflectorPos, infoForPortals[0].reflectorPosTransformed);
-	conditionalSetUniform(gl.uniform4fv, shader.uniforms.uReflectorPos2, 
+	conditionalSetUniform4fv(shader, "uReflectorPos", infoForPortals[0].reflectorPosTransformed);
+	conditionalSetUniform4fv(shader, "uReflectorPos2", 
 		infoForPortals.length > 1? infoForPortals[1].reflectorPosTransformed: [0,0,0,1]);
-	conditionalSetUniform(gl.uniform4fv, shader.uniforms.uReflectorPos3,
+	conditionalSetUniform4fv(shader, "uReflectorPos3",
 		infoForPortals.length > 2? infoForPortals[2].reflectorPosTransformed: [0,0,0,1]);
 	conditionalSetUniform(gl.uniform1f, shader.uniforms.uReflectorCos, infoForPortals[0].cosReflector)
 	conditionalSetUniform(gl.uniform1f, shader.uniforms.uReflectorCos2, 
 		infoForPortals.length > 1? infoForPortals[1].cosReflector: 1); //guess can be whatever, but 1 consistent with zero size portal
 	conditionalSetUniform(gl.uniform1f, shader.uniforms.uReflectorCos3, 
 		infoForPortals.length > 2? infoForPortals[2].cosReflector: 1);
-	conditionalSetUniform(gl.uniform4fv, shader.uniforms.uReflectorPosVShaderCopy, infoForPortals[0].reflectorPosTransformed);
-	conditionalSetUniform(gl.uniform4fv, shader.uniforms.uReflectorPosVShaderCopy2, 
+	conditionalSetUniform4fv(shader, "uReflectorPosVShaderCopy", infoForPortals[0].reflectorPosTransformed);
+	conditionalSetUniform4fv(shader, "uReflectorPosVShaderCopy2", 
 		infoForPortals.length > 1? infoForPortals[1].reflectorPosTransformed: [0,0,0,1]);
-	conditionalSetUniform(gl.uniform4fv, shader.uniforms.uReflectorPosVShaderCopy3, 
+	conditionalSetUniform4fv(shader, "uReflectorPosVShaderCopy3", 
 		infoForPortals.length > 2? infoForPortals[2].reflectorPosTransformed: [0,0,0,1]);
 }
 function performGeneralShaderSetup(shader){
