@@ -635,6 +635,7 @@ function drawScene(frameTime){
 	iterateMechanics(frameTime);	//TODO make movement speed independent of framerate
 	
 	requestAnimationFrame(drawScene);
+	uniform4fvSetter.storeAndResetStats();
 	stats.end();
 	stats.begin();
 	
@@ -6378,7 +6379,6 @@ function drawPortalCubemap(pMatrix, portalInCamera, frameTime, reflInfo, portalN
 }
 
 
-
 //TODO employ for other attributes
 //TODO decay stats with some timescale, or save, reset stats eg each frame
 //TODO instead put last known value alongside idx in shader. eg  shader.uniforms.whatever = {idx, lastValue}
@@ -6390,6 +6390,7 @@ var uniform4fvSetter = (function(){
 	var lastSet = {};
 	var numTimesSet = 0;
 	var numTimesAvoidedSet = 0;
+	var stats = {};
 
 	var setIfDifferent = function(shader, uniformName, valueToSet){
 		var shaderAndUniform = shader.cacheIdx + ":" + uniformName;
@@ -6406,11 +6407,18 @@ var uniform4fvSetter = (function(){
 		gl.uniform4fv(shader.uniforms[uniformName], valueToSet);
 	}
 
-	var stats = () => {return {numTimesSet, numTimesAvoidedSet, percentAvoided: 100*numTimesAvoidedSet/(numTimesSet+numTimesAvoidedSet)}};
+	var storeAndResetStats = () => {
+		stats = {numTimesSet, numTimesAvoidedSet, percentAvoided: 100*numTimesAvoidedSet/(numTimesSet+numTimesAvoidedSet)};
+		numTimesSet = 0;
+		numTimesAvoidedSet = 0;
+	}
+
+	var getStats = () => stats;
 
 	return {
 		setIfDifferent,
-		stats,
+		getStats,
+		storeAndResetStats,
 	    lastSet
 	};
 })();
