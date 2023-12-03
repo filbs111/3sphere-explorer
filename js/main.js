@@ -6383,13 +6383,10 @@ function drawPortalCubemap(pMatrix, portalInCamera, frameTime, reflInfo, portalN
 }
 
 
-//TODO employ for other attributes
-//TODO decay stats with some timescale, or save, reset stats eg each frame
 //TODO instead put last known value alongside idx in shader. eg  shader.uniforms.whatever = {idx, lastValue}
 //TODO put to file with other gl methods
 var uniform4fvSetter = (function(){
-	//something to see how many uniform sets can be avoided.
-	//if a decent chunk, implement this for more uniforms
+	//NOTE this is caching is currently commented out, since profiler suggests makes things slower overall!
 
 	var lastSet = {};
 	var numTimesSet = 0;
@@ -6397,18 +6394,42 @@ var uniform4fvSetter = (function(){
 	var stats = {};
 
 	var setIfDifferent = function(shader, uniformName, valueToSet){
-		var shaderAndUniform = shader.cacheIdx + ":" + uniformName;
 
-		var last = lastSet[shaderAndUniform];
-		//TODO decide whether last set should be a copy, or should be the last passed in array (in which case can check for 
-		//same object)
-		if (last && last.map((ls, ii) => ls == valueToSet[ii]).reduce((accum, current)=>accum && current , true)){
-			numTimesAvoidedSet++;
-			return;
+		//force to float32 array (seems many are this, others are regular array)
+		//seems big perf improvement!
+		//TODO change value passed in? (TODO avoid conversion here)
+		if (Array.isArray(valueToSet)){
+			valueToSet = new Float32Array(valueToSet);
 		}
-		lastSet[shaderAndUniform] = valueToSet.map(x=>x);	//make a copy (TODO determine if necessary)
+
+		// var shaderAndUniform = shader.cacheIdx + ":" + uniformName;
+		// 	//TODO use uniqe ids, dense array insterad of object
+
+		// var last = lastSet[shaderAndUniform];
+		// //var last = [-1,-1,-1,-1];
+		// //TODO decide whether last set should be a copy, or should be the last passed in array (in which case can check for 
+		// //same object)
+		// if (isSame(valueToSet, last)){
+		// 	numTimesAvoidedSet++;
+		// 	return;
+		// }
+		// lastSet[shaderAndUniform] = valueToSet.map(x=>x);	//make a copy (TODO determine if necessary)
+		// //lastSet[shaderAndUniform] = valueToSet;
+
 		numTimesSet++;
 		gl.uniform4fv(shader.uniforms[uniformName], valueToSet);
+	}
+
+	var isSame = function(vecNow, vecLast){
+		// return false;
+		if (!vecLast){return false;}	//TODO initialise all so can rid of this.
+		var componentsMatched = 0;
+		for (var ii=0;ii<4;ii++){
+			if (vecNow[ii]==vecLast[ii]){
+				componentsMatched+=1;
+			}
+		}
+		return (componentsMatched == 4);
 	}
 
 	var storeAndResetStats = () => {
