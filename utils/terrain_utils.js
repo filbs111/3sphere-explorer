@@ -346,7 +346,7 @@ function drawTerrain2(wSettings){
 	gl.uniformMatrix4fv(shaderProg.uniforms.uMVMatrix, false, mvMatrix);
 	gl.uniformMatrix4fv(shaderProg.uniforms.uMMatrix, false, mMatrix);
 
-    gl.uniform4fv(shaderProg.uniforms.uFogColor, wSettings.localVecFogColor);
+	uniform4fvSetter.setIfDifferent(shaderProg, "uFogColor", wSettings.localVecFogColor);
 
     //this is "bruteforenomorph" from terrainTest project
     for (var ii=0;ii<DIVISIONS;ii++){
@@ -384,8 +384,7 @@ function drawTerrain2BlockStrips(wSettings){
 	gl.uniformMatrix4fv(shaderProg.uniforms.uMVMatrix, false, mvMatrix);
 	gl.uniformMatrix4fv(shaderProg.uniforms.uMMatrix, false, mMatrix);
 
-    gl.uniform4fv(shaderProg.uniforms.uFogColor, wSettings.localVecFogColor);
-
+	uniform4fvSetter.setIfDifferent(shaderProg, "uFogColor", wSettings.localVecFogColor);
     var centrePos = terrainScene.getPos();
 
     // if (shaderProg.uniforms.uCentrePos){

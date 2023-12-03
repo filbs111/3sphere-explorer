@@ -1254,7 +1254,7 @@ function drawScene(frameTime){
 	function drawTargetDecal(scale, color, pos, rotation=0, uvPosAndSize = [0,0,1,1]){
 			//scale*= 0.01/pos[2];
 			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, scale);
-			gl.uniform4fv(activeShaderProgram.uniforms.uUvCoords, uvPosAndSize);
+			uniform4fvSetter.setIfDifferent(activeShaderProgram, "uUvCoords", uvPosAndSize);
 			uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", color);
 			mat4.identity(mvMatrix);
 			xyzmove4mat(mvMatrix,[0.01*pos[0]/pos[2],0.01*pos[1]/pos[2],0.01]);
@@ -1774,7 +1774,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		var activeShaderProgram = shaderPrograms.texmapPerPixelDiscardExplode[ guiParams.display.atmosShader ];
 			//setup code largely shared with setting regular texmap code. todo generalise setup
 		gl.useProgram(activeShaderProgram);
-		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uFogColor", localVecFogColor);
 
 		setPortalInfoForShader(activeShaderProgram, infoForPortals);
 
@@ -2411,7 +2411,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	}
 	
 	gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);	//no emmision
-	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
+	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uFogColor", localVecFogColor);
 
 	setPortalInfoForShader(activeShaderProgram, infoForPortals);
 
@@ -2478,7 +2478,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 
 		gl.useProgram(activeShaderProgram);
 		
-		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uFogColor", localVecFogColor);
 
 		setPortalInfoForShader(activeShaderProgram, infoForPortals);
 
@@ -2593,7 +2593,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		bind2dTextureIfRequired(tex2, gl.TEXTURE2);
 		
 		//set uniforms - todo generalise this code (using for many shaders)
-		gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uFogColor", localVecFogColor);
 
 		setPortalInfoForShader(activeShaderProgram, infoForPortals);
 
@@ -2936,7 +2936,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		gl.uniformMatrix4fv(shaderProgram.uniforms.uPosShiftMat, false, reflInfo.shaderMatrix);
 		
 		uniform4fvSetter.setIfDifferent(shaderProgram, "uColor", colorArrs.white);
-		gl.uniform4fv(shaderProgram.uniforms.uFogColor, localVecFogColor);
+		uniform4fvSetter.setIfDifferent(shaderProgram, "uFogColor", localVecFogColor);
 
 		if (shaderProgram.uniforms.uPlayerLightColor){
 			gl.uniform3fv(shaderProgram.uniforms.uPlayerLightColor, playerLight);
@@ -2944,7 +2944,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		
 		//TODO check that mvmatrix stacks up with worldCamera OK...
 		if (shaderProgram.uniforms.uPortalCameraPos){
-			gl.uniform4fv(shaderProgram.uniforms.uPortalCameraPos, portalInCamera.slice(12));
+			uniform4fvSetter.setIfDifferent(shaderProgram, "uPortalCameraPos", portalInCamera.slice(12));
 		}
 		
 		mat4.set(portalInCamera, mvMatrix);
@@ -3365,7 +3365,7 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 	}
 	
 	if (shaderProg.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader. TODO do less ofteen (move camera less often than switch buffers)
-		gl.uniform4fv(shaderProg.uniforms.uCameraWorldPos, worldCamera.slice(12));
+		uniform4fvSetter.setIfDifferent(shaderProg, "uCameraWorldPos", worldCamera.slice(12));
 	}
 	
 	setupShaderAtmos(shaderProg);
@@ -6122,7 +6122,9 @@ function performShaderSetup(shader, wSettings, tex){	//TODO use this more widely
 		bind2dTextureIfRequired(tex);
 	}
 
-	conditionalSetUniform(gl.uniform4fv, shader.uniforms.uFogColor, localVecFogColor);
+	if (shader.uniforms.uFogColor){
+		uniform4fvSetter.setIfDifferent(shader, "uFogColor", localVecFogColor);
+	}
 
 	setPortalInfoForShader(shader, infoForPortals);
 
@@ -6142,9 +6144,9 @@ function performCommon4vecShaderSetup(activeShaderProgram, wSettings, logtag){	/
 	}
 
 	if (activeShaderProgram.uniforms.uCameraWorldPos){	//extra info used for atmosphere shader
-		gl.uniform4fv(activeShaderProgram.uniforms.uCameraWorldPos, worldCamera.slice(12));
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uCameraWorldPos", worldCamera.slice(12));
 	}
-	gl.uniform4fv(activeShaderProgram.uniforms.uFogColor, localVecFogColor);
+	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uFogColor", localVecFogColor);
 
 	setPortalInfoForShader(activeShaderProgram, infoForPortals);
 
