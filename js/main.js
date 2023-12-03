@@ -6088,8 +6088,9 @@ function conditionalSetUniform(glfun, uniform, val){
 	glfun.bind(gl)(uniform, val);	
 }
 function conditionalSetUniform4fv(shader, uniformName, val){
-	if (shader.uniforms[uniformName]){return;}
-	uniform4fvSetter.setIfDifferent(shader, uniformName, val);
+	if (shader.uniforms[uniformName]){
+		uniform4fvSetter.setIfDifferent(shader, uniformName, val);
+	}
 }
 function setPortalInfoForShader(shader, infoForPortals){
 	conditionalSetUniform(gl.uniform3fv, shader.uniforms.uReflectorDiffColor, infoForPortals[0].localVecReflectorDiffColor);
@@ -6386,9 +6387,8 @@ function drawPortalCubemap(pMatrix, portalInCamera, frameTime, reflInfo, portalN
 //TODO instead put last known value alongside idx in shader. eg  shader.uniforms.whatever = {idx, lastValue}
 //TODO put to file with other gl methods
 var uniform4fvSetter = (function(){
-	//NOTE this is caching is currently commented out, since profiler suggests makes things slower overall!
+	//NOTE caching itself seems expensive, perhaps manaually avoiding calling set is better
 
-	var lastSet = {};
 	var numTimesSet = 0;
 	var numTimesAvoidedSet = 0;
 	var stats = {};
@@ -6402,27 +6402,19 @@ var uniform4fvSetter = (function(){
 			valueToSet = new Float32Array(valueToSet);
 		}
 
-		// var shaderAndUniform = shader.cacheIdx + ":" + uniformName;
-		// 	//TODO use uniqe ids, dense array insterad of object
+		var last = shader.uniformCache[uniformName];
 
-		// var last = lastSet[shaderAndUniform];
-		// //var last = [-1,-1,-1,-1];
-		// //TODO decide whether last set should be a copy, or should be the last passed in array (in which case can check for 
-		// //same object)
-		// if (isSame(valueToSet, last)){
-		// 	numTimesAvoidedSet++;
-		// 	return;
-		// }
-		// lastSet[shaderAndUniform] = valueToSet.map(x=>x);	//make a copy (TODO determine if necessary)
-		// //lastSet[shaderAndUniform] = valueToSet;
+		if (isSame(valueToSet, last)){
+			numTimesAvoidedSet++;
+			return;
+		}
+		last.set(valueToSet);
 
 		numTimesSet++;
 		gl.uniform4fv(shader.uniforms[uniformName], valueToSet);
 	}
 
 	var isSame = function(vecNow, vecLast){
-		// return false;
-		if (!vecLast){return false;}	//TODO initialise all so can rid of this.
 		var componentsMatched = 0;
 		for (var ii=0;ii<4;ii++){
 			if (vecNow[ii]==vecLast[ii]){
@@ -6443,7 +6435,6 @@ var uniform4fvSetter = (function(){
 	return {
 		setIfDifferent,
 		getStats,
-		storeAndResetStats,
-	    lastSet
+		storeAndResetStats
 	};
 })();

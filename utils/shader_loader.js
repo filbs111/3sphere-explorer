@@ -87,6 +87,7 @@ function getLocationsForShadersUsingPromises(cb){
 			}
 			
 			shaderProgram.uniforms={};
+			shaderProgram.uniformCache={};	//TODO combo with uniforms? (same keys)
 			shaderProgram.attributes={};
 			
 			var numActiveAttribs = gl.getProgramParameter(shaderProgram, gl.ACTIVE_ATTRIBUTES);
@@ -101,8 +102,14 @@ function getLocationsForShadersUsingPromises(cb){
 			var numActiveUniforms = gl.getProgramParameter(shaderProgram, gl.ACTIVE_UNIFORMS);
 			if (numActiveUniforms>0){
 				for (var uu=0;uu<numActiveUniforms;uu++){
-					var uName = gl.getActiveUniform(shaderProgram,uu).name;
+					var activeUniform =  gl.getActiveUniform(shaderProgram,uu);
+					var uName = activeUniform.name;
+					var uType = activeUniform.type;
 					shaderProgram.uniforms[uName] = gl.getUniformLocation(shaderProgram, uName);
+					if (uType == gl.FLOAT_VEC4){
+						//TODO is this doable without ifs? just get the current value?
+						shaderProgram.uniformCache[uName] = new Float32Array([-1,-1,-1,-1]);
+					}
 				}
 			}
 		});
@@ -138,7 +145,6 @@ function genShaderVariants(name, vs_id, fs_id, vs_defines=[], fs_defines=[], use
 		var variantString = "ATMOS_"+variant;
 		shaders[variant]=loadShader(vs_id, fs_id, vs_defines.concat(variantString), fs_defines.concat(variantString));
 		shaders[variant].usesVecAtmosThickness = usesVecAtmosThickness;
-		shaders[variant].cacheIdx = nextShaderCacheIdx++;
 	}
 	//temp:
 	//shaders.constant = shaders.CONSTANT;
@@ -236,7 +242,6 @@ function initShaders(shaderProgs){
 
 	Object.entries(shaderProgNoVariationsList).forEach(([key,value])=>{
 		shaderProgs[key] = loadShader.apply(null, value);
-		shaderProgs[key].cacheIdx = nextShaderCacheIdx++;
 	});
 	Object.entries(shaderProgWithVariationsList).forEach(([key,value])=>{
 		value.unshift(key)	//add key to start of args (this doesn't return altered value, so can't easily make one liner).
@@ -246,5 +251,3 @@ function initShaders(shaderProgs){
 	//get locations later by calling getLocationsForShadersUsingPromises (when expect compiles/links to have completed)
 	console.log("time to init shaders: " + ( performance.now() - initShaderTimeStart ) + "ms");
 }
-
-var nextShaderCacheIdx = 0;
