@@ -138,7 +138,7 @@ function genShaderVariants(name, vs_id, fs_id, vs_defines=[], fs_defines=[], use
 		var variantString = "ATMOS_"+variant;
 		shaders[variant]=loadShader(vs_id, fs_id, vs_defines.concat(variantString), fs_defines.concat(variantString));
 		shaders[variant].usesVecAtmosThickness = usesVecAtmosThickness;
-		shaders[variant].name = name + "_" + variantString;
+		shaders[variant].cacheIdx = nextShaderCacheIdx++;
 	}
 	//temp:
 	//shaders.constant = shaders.CONSTANT;
@@ -236,7 +236,7 @@ function initShaders(shaderProgs){
 
 	Object.entries(shaderProgNoVariationsList).forEach(([key,value])=>{
 		shaderProgs[key] = loadShader.apply(null, value);
-		shaderProgs[key].name = key;
+		shaderProgs[key].cacheIdx = nextShaderCacheIdx++;
 	});
 	Object.entries(shaderProgWithVariationsList).forEach(([key,value])=>{
 		value.unshift(key)	//add key to start of args (this doesn't return altered value, so can't easily make one liner).
@@ -246,3 +246,5 @@ function initShaders(shaderProgs){
 	//get locations later by calling getLocationsForShadersUsingPromises (when expect compiles/links to have completed)
 	console.log("time to init shaders: " + ( performance.now() - initShaderTimeStart ) + "ms");
 }
+
+var nextShaderCacheIdx = 0;

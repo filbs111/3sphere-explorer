@@ -6392,7 +6392,7 @@ var uniform4fvSetter = (function(){
 	var numTimesAvoidedSet = 0;
 
 	var setIfDifferent = function(shader, uniformName, valueToSet){
-		var shaderAndUniform = shader.name + ":" + uniformName;
+		var shaderAndUniform = shader.cacheIdx + ":" + uniformName;
 
 		var last = lastSet[shaderAndUniform];
 		//TODO decide whether last set should be a copy, or should be the last passed in array (in which case can check for 
