@@ -770,6 +770,11 @@ function drawScene(frameTime){
 				differenceDotStart += difference[ii]*startPosInPortalSpace[ii];
 				differenceDotEnd += difference[ii]*endPosInPortalSpace[ii];
 			}
+
+			if (differenceSq<=0){
+				alert("differenceSq<=0 . should not be possible!");
+				return false;	//if camera not moved. AFAIK impossible
+			}
 			
 			//collide this line with sphere.
 			//basically a 2d problem crossing circle.
@@ -777,15 +782,22 @@ function drawScene(frameTime){
 			var closestApproachVec = new Array(3);
 			var closestApproachSq = 0;
 			var startComponentInMovementDirection = new Array(3);
-			//var endComponentInMovementDirection = new Array(3);
+			var endComponentInMovementDirection = new Array(3);
 			//var differenceMag = Math.sqrt(differenceSq);
 			//var normalisedDifference = difference.map(x=>x/differenceMag);
 
+			var scimdDotMd = 0;
+			var ecimdDotMd = 0;
+
 			for (var ii=0;ii<3;ii++){
 				startComponentInMovementDirection[ii] = differenceDotStart*difference[ii]/differenceSq;
-				//endComponentInMovementDirection[ii] = differenceDotEnd*difference[ii]/differenceSq;
+				endComponentInMovementDirection[ii] = differenceDotEnd*difference[ii]/differenceSq;
+
 				closestApproachVec[ii] = startPosInPortalSpace[ii]-startComponentInMovementDirection[ii];
 				closestApproachSq+= closestApproachVec[ii]*closestApproachVec[ii];
+
+				scimdDotMd += startComponentInMovementDirection[ii]*difference[ii];
+				ecimdDotMd += endComponentInMovementDirection[ii]*difference[ii];
 			}
 			var rad = portal.shared.radius;
 
@@ -796,6 +808,20 @@ function drawScene(frameTime){
 				continue; //collision impossible
 			}
 
+			if (scimdDotMd>0){
+				return false;	//not moving towards portal.
+			}
+
+			var thresh = otherTriangleSideSq*differenceSq;
+
+			if ((scimdDotMd*scimdDotMd) < thresh ){
+				alert("(scimdDotMd*scimdDotMd)/differenceSq < otherTriangleSideSq  ! unexpected - seems already within portal!")
+				return false;
+			}
+			if (ecimdDotMd < 0 && (ecimdDotMd*ecimdDotMd) > thresh){
+				//not moved across boundary
+				return false;
+			}
 			var otherTriangleSide = Math.sqrt(otherTriangleSideSq);
 
 			//what possibilities?
