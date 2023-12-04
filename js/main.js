@@ -649,53 +649,54 @@ function drawScene(frameTime){
 	offsetCam.setType(guiParams.display.cameraType);
 
 
-	
-	moveCamInSteps(500, offsetCam.getVec());
+	//moveCamInSteps(20000, offsetCam.getVec());
+
+	var outcome = moveMatHandlingPortal(offsetPlayerCamera, sshipWorld, offsetCam.getVec())
+	if (outcome == false){
+		xyzmove4mat(offsetPlayerCamera, offsetCam.getVec());
+	}
 
 	function moveCamInSteps(offsetSteps, offsetVec){
 
 		var wentThrough = false;
 
-		if (moveMatHandlingPortal(offsetPlayerCamera, sshipWorld, offsetVec)){
-			//^^ temporary version, check works in part (should rule out collisions with portal in some cases)
+		//todo proper move thru portal taking into account path. or can make more efficient by binary search (~log(n) tests)
+		
+		var tmp4mat = newIdMatWithQuats();
+		var tmpOffsetArr = new Array(3);
+		var wentThrough = false;
 
-			//todo proper move thru portal taking into account path. or can make more efficient by binary search (~log(n) tests)
-			
-			var tmp4mat = newIdMatWithQuats();
-			var tmpOffsetArr = new Array(3);
-			var wentThrough = false;
+		var portalsForThisWorld = portalsForWorld[sshipWorld];
 
-			var portalsForThisWorld = portalsForWorld[sshipWorld];
+		setMat4FromToWithQuats(offsetPlayerCamera, tmp4mat);
 
-			setMat4FromToWithQuats(offsetPlayerCamera, tmp4mat);
-
-			for (var cc=0;cc<3;cc++){
-				tmpOffsetArr[cc] = offsetVec[cc]/offsetSteps;
-			}
-
-			for (var ii=0;ii<offsetSteps;ii++){	//TODO more efficient. if insufficient subdivision, transition stepped.
-				
-				xyzmove4mat(tmp4mat,tmpOffsetArr);
-				//TODO rewrite less stupidly (don't check within range then redo calculation right away!!)
-				var isWithinAPortal = false;
-				for (var pp=0;pp<portalsForThisWorld.length;pp++){
-					var portal = portalsForThisWorld[pp];
-					isWithinAPortal ||= checkWithinRangeOfGivenPortal(tmp4mat, portal.shared.radius, portal);
-					//TODO separate reflectorInfo per portal
-				}
-
-				if (isWithinAPortal){
-					setMat4FromToWithQuats(tmp4mat, offsetPlayerCamera);
-					//xyzmove4mat(offsetPlayerCamera, tmpOffsetArr.map(elem=>elem*(ii+1)));
-
-					portalTestMultiPortal(offsetCameraContainer,0);
-					wentThrough = true;
-					//assume wont cross twice, move remainder of way
-					xyzmove4mat(offsetPlayerCamera,tmpOffsetArr.map(elem => elem*(offsetSteps-ii))); //should -1 be there? or should xyzmove4mat happen later?
-					return;
-				}	
-			}
+		for (var cc=0;cc<3;cc++){
+			tmpOffsetArr[cc] = offsetVec[cc]/offsetSteps;
 		}
+
+		for (var ii=0;ii<offsetSteps;ii++){	//TODO more efficient. if insufficient subdivision, transition stepped.
+			
+			xyzmove4mat(tmp4mat,tmpOffsetArr);
+			//TODO rewrite less stupidly (don't check within range then redo calculation right away!!)
+			var isWithinAPortal = false;
+			for (var pp=0;pp<portalsForThisWorld.length;pp++){
+				var portal = portalsForThisWorld[pp];
+				isWithinAPortal ||= checkWithinRangeOfGivenPortal(tmp4mat, portal.shared.radius, portal);
+				//TODO separate reflectorInfo per portal
+			}
+
+			if (isWithinAPortal){
+				setMat4FromToWithQuats(tmp4mat, offsetPlayerCamera);
+				//xyzmove4mat(offsetPlayerCamera, tmpOffsetArr.map(elem=>elem*(ii+1)));
+
+				portalTestMultiPortal(offsetCameraContainer,0);
+				wentThrough = true;
+				//assume wont cross twice, move remainder of way
+				xyzmove4mat(offsetPlayerCamera,tmpOffsetArr.map(elem => elem*(offsetSteps-ii))); //should -1 be there? or should xyzmove4mat happen later?
+				return;
+			}	
+		}
+		
 
 		if (!wentThrough){
 			xyzmove4mat(offsetPlayerCamera,offsetVec);
@@ -750,6 +751,13 @@ function drawScene(frameTime){
 				continue;
 			}
 
+			//only used if pass tests, uses all 4 components
+			//TODO move later (after projection) - initially here because easier to reason about.
+			var startDotEnd = 0;
+			for (var ii=0;ii<4;ii++){
+				startDotEnd += startPosInPortalSpace[ii]*endPosInPortalSpace[ii];
+			}
+
 			//project
 			var difference = new Array(3);
 			var differenceSq = 0;
@@ -789,6 +797,8 @@ function drawScene(frameTime){
 			var scimdDotMd = 0;
 			var ecimdDotMd = 0;
 
+			var scimdSq = 0;
+
 			for (var ii=0;ii<3;ii++){
 				startComponentInMovementDirection[ii] = differenceDotStart*difference[ii]/differenceSq;
 				endComponentInMovementDirection[ii] = differenceDotEnd*difference[ii]/differenceSq;
@@ -798,6 +808,8 @@ function drawScene(frameTime){
 
 				scimdDotMd += startComponentInMovementDirection[ii]*difference[ii];
 				ecimdDotMd += endComponentInMovementDirection[ii]*difference[ii];
+
+				scimdSq += startComponentInMovementDirection[ii]*startComponentInMovementDirection[ii];
 			}
 			var rad = portal.shared.radius;
 
@@ -822,21 +834,55 @@ function drawScene(frameTime){
 				//not moved across boundary
 				return false;
 			}
+
 			var otherTriangleSide = Math.sqrt(otherTriangleSideSq);
 
-			//what possibilities?
-			//critical values are determined by pythagoras (hyp=radius)
-			// if startComponentInMovementDirection, endComponentInMovementDirection have opposite signs, cross.
-			// assume that start is always outside. therefore check is,
-			// if start -ve , and end is > -critical value, crosses.
-			// if start +ve, and end is < +critical value, crosses.
+			//can calculate point on projected sphere that will hit.
+			//likely this can be simplified!
+			var collisionPoint = [];
+			var collisionPointSq=0;	//this can be simplified since comes from portal radius.
+			var factor = otherTriangleSide/Math.sqrt(scimdSq);
+			for (var ii=0;ii<3;ii++){
+				collisionPoint[ii] = closestApproachVec[ii] + factor * startComponentInMovementDirection[ii];
+				collisionPointSq+=collisionPoint[ii]*collisionPoint[ii];
+			}
+			//then find the angle between start point and this.
+			//and the angle between start and finish points
+			//then move by appropriate fraction
 
-			//find if crosses. if does, calculate how far along (by projecting back to curved space.)
-
-			//TODO avoid ifs- choose variables such that start always +ve/-ve?
+			//take dot product, normalise/unproject by sqrt(1+sumsq)
+			//still have startPosInPortalSpace[3], endPosInPortalSpace[3] for projection  
 			
-			//temporary test
-			//return true if collision not ruled out.
+			//angle start to end = acos(start.end)
+			var angleStartToEnd = Math.acos(startDotEnd);
+
+			//angle start to collision = acos(start.collision)
+			var startDotCollisionPoint = 1;
+			for (var ii=0;ii<3;ii++){
+				startDotCollisionPoint += collisionPoint[ii]*startPosInPortalSpace[ii];
+			}
+			//reverse lengthening due to projecting startPos
+			startDotCollisionPoint*=startPosInPortalSpace[3];
+			//reverse lengthening for projected collisionPoint
+			startDotCollisionPoint/=Math.sqrt(1+collisionPointSq);
+			var angleToCollisionPoint = Math.acos(Math.min(1,startDotCollisionPoint));
+				//TODO use x-product instead of dot to avoid small angle problem?
+
+			//here can't know will pass portal test, so for quick hack, just move a bit more
+			// this might not work for grazing collision, and is noticeable (especially for cockpit camera)
+			//TODO explicitly move through portal?
+			angleToCollisionPoint+=0.0005;
+
+			var fractionToCollision =angleToCollisionPoint/angleStartToEnd;
+
+			//console.log({angleToCollisionPoint, angleStartToEnd, fractionToCollision});	//expect 0 to 1
+
+			xyzmove4mat(offsetPlayerCamera,offsetVec.map(elem => elem*fractionToCollision));
+			portalTestMultiPortal(offsetCameraContainer,0);
+
+			var remainingFraction = 1- fractionToCollision;
+			xyzmove4mat(offsetPlayerCamera,offsetVec.map(elem => elem*remainingFraction));
+
 			return true;
 		}
 		//console.log("ruled out portal camera traversal");
