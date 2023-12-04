@@ -855,7 +855,7 @@ function drawScene(frameTime){
 		//basic left/right shifted cameras
 		//no centre of perspective shift (rotate cameras inward by eyeTurnIn is not ideal)
 		//TODO shift x-hairs when using turn in or persp shift (eye x-hairs appear to be at screen depth)
-		var savedCam = mat4.create();
+		var savedCam = newIdMatWithQuats();
 		setMat4FromToWithQuats(offsetPlayerCamera, savedCam);
 
 		var savedWorld = offsetCameraContainer.world;
