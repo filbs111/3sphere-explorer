@@ -763,10 +763,13 @@ function drawScene(frameTime){
 			var differenceSq = 0;
 			var differenceDotStart = 0;
 			var differenceDotEnd = 0;
+			var startPosInPortalSpaceProj = vec4.create();
+			var endPosInPortalSpaceProj = vec4.create();
+
 			for (var ii=0;ii<3;ii++){
-				startPosInPortalSpace[ii]/=startPosInPortalSpace[3];
-				endPosInPortalSpace[ii]/=endPosInPortalSpace[3];
-				difference[ii] = endPosInPortalSpace[ii] - startPosInPortalSpace[ii];
+				startPosInPortalSpaceProj[ii] = startPosInPortalSpace[ii]/startPosInPortalSpace[3];
+				endPosInPortalSpaceProj[ii]=endPosInPortalSpace[ii]/endPosInPortalSpace[3];
+				difference[ii] = endPosInPortalSpaceProj[ii] - startPosInPortalSpaceProj[ii];
 				differenceSq+= difference[ii]*difference[ii];
 
 				//difference = d
@@ -775,8 +778,8 @@ function drawScene(frameTime){
 				// is start.d / sqrt(d.d)
 				// and remaining part is then start - start.d/sqrt(dsq)
 
-				differenceDotStart += difference[ii]*startPosInPortalSpace[ii];
-				differenceDotEnd += difference[ii]*endPosInPortalSpace[ii];
+				differenceDotStart += difference[ii]*startPosInPortalSpaceProj[ii];
+				differenceDotEnd += difference[ii]*endPosInPortalSpaceProj[ii];
 			}
 
 			if (differenceSq<=0){
@@ -803,7 +806,7 @@ function drawScene(frameTime){
 				startComponentInMovementDirection[ii] = differenceDotStart*difference[ii]/differenceSq;
 				endComponentInMovementDirection[ii] = differenceDotEnd*difference[ii]/differenceSq;
 
-				closestApproachVec[ii] = startPosInPortalSpace[ii]-startComponentInMovementDirection[ii];
+				closestApproachVec[ii] = startPosInPortalSpaceProj[ii]-startComponentInMovementDirection[ii];
 				closestApproachSq+= closestApproachVec[ii]*closestApproachVec[ii];
 
 				scimdDotMd += startComponentInMovementDirection[ii]*difference[ii];
@@ -840,40 +843,34 @@ function drawScene(frameTime){
 			//can calculate point on projected sphere that will hit.
 			//likely this can be simplified!
 			var collisionPoint = [];
-			var collisionPointSq=0;	//this can be simplified since comes from portal radius.
+			var collisionPointSq=1;	//this can be simplified since comes from portal radius.
 			var factor = otherTriangleSide/Math.sqrt(scimdSq);
 			for (var ii=0;ii<3;ii++){
 				collisionPoint[ii] = closestApproachVec[ii] + factor * startComponentInMovementDirection[ii];
 				collisionPointSq+=collisionPoint[ii]*collisionPoint[ii];
 			}
+			collisionPoint[3]=1;
 			//then find the angle between start point and this.
 			//and the angle between start and finish points
 			//then move by appropriate fraction
-
-			//take dot product, normalise/unproject by sqrt(1+sumsq)
-			//still have startPosInPortalSpace[3], endPosInPortalSpace[3] for projection  
 			
-			//angle start to end = acos(start.end)
-			var angleStartToEnd = Math.acos(startDotEnd);
-
-			//angle start to collision = acos(start.collision)
-			var startDotCollisionPoint = 1;
-			for (var ii=0;ii<3;ii++){
-				startDotCollisionPoint += collisionPoint[ii]*startPosInPortalSpace[ii];
+			var halfAngleStartToEnd = halfAngleBetween4Vecs(startPosInPortalSpace, endPosInPortalSpace);
+				//note don't have to be in portal space. could use startPos, endPos, not create extra Proj vectors, but want either for next calc...
+			
+			//unproject/normalise the collision point
+			var collisionPointLen = Math.sqrt(collisionPointSq);
+			for (var ii=0;ii<4;ii++){
+				collisionPoint[ii]/=collisionPointLen;
 			}
-			//reverse lengthening due to projecting startPos
-			startDotCollisionPoint*=startPosInPortalSpace[3];
-			//reverse lengthening for projected collisionPoint
-			startDotCollisionPoint/=Math.sqrt(1+collisionPointSq);
-			var angleToCollisionPoint = Math.acos(Math.min(1,startDotCollisionPoint));
-				//TODO use x-product instead of dot to avoid small angle problem?
+
+			var halfAngleToCollisionPoint = halfAngleBetween4Vecs(startPosInPortalSpace, collisionPoint)
 
 			//here can't know will pass portal test, so for quick hack, just move a bit more
 			// this might not work for grazing collision, and is noticeable (especially for cockpit camera)
 			//TODO explicitly move through portal?
-			angleToCollisionPoint+=0.0005;
+			halfAngleToCollisionPoint+=0.0002;
 
-			var fractionToCollision =angleToCollisionPoint/angleStartToEnd;
+			var fractionToCollision =halfAngleToCollisionPoint/halfAngleStartToEnd;
 
 			//console.log({angleToCollisionPoint, angleStartToEnd, fractionToCollision});	//expect 0 to 1
 

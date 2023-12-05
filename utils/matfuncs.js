@@ -360,3 +360,15 @@ function setMat4FromToWithQuats(fromMat, toMat){
 		}
 	}
 }
+
+function halfAngleBetween4Vecs(vec1, vec2){
+	var difflensq = 0;
+	var sumlensq = 0;
+	for (var ii=0;ii<4;ii++){
+		var diff = vec1[ii] - vec2[ii];
+		var sum = vec1[ii] + vec2[ii];
+		difflensq+=diff*diff;
+		sumlensq+=sum*sum;
+	}
+	return Math.atan2(Math.sqrt(difflensq), Math.sqrt(sumlensq));
+}
