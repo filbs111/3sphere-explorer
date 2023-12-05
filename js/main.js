@@ -648,66 +648,19 @@ function drawScene(frameTime){
 	
 	offsetCam.setType(guiParams.display.cameraType);
 
-
-	//moveCamInSteps(20000, offsetCam.getVec());
-
-	var outcome = moveMatHandlingPortal(offsetPlayerCamera, sshipWorld, offsetCam.getVec())
-	if (outcome == false){
-		xyzmove4mat(offsetPlayerCamera, offsetCam.getVec());
-	}
-
-	function moveCamInSteps(offsetSteps, offsetVec){
-
-		var wentThrough = false;
-
-		//todo proper move thru portal taking into account path. or can make more efficient by binary search (~log(n) tests)
-		
-		var tmp4mat = newIdMatWithQuats();
-		var tmpOffsetArr = new Array(3);
-		var wentThrough = false;
-
-		var portalsForThisWorld = portalsForWorld[sshipWorld];
-
-		setMat4FromToWithQuats(offsetPlayerCamera, tmp4mat);
-
-		for (var cc=0;cc<3;cc++){
-			tmpOffsetArr[cc] = offsetVec[cc]/offsetSteps;
-		}
-
-		for (var ii=0;ii<offsetSteps;ii++){	//TODO more efficient. if insufficient subdivision, transition stepped.
-			
-			xyzmove4mat(tmp4mat,tmpOffsetArr);
-			//TODO rewrite less stupidly (don't check within range then redo calculation right away!!)
-			var isWithinAPortal = false;
-			for (var pp=0;pp<portalsForThisWorld.length;pp++){
-				var portal = portalsForThisWorld[pp];
-				isWithinAPortal ||= checkWithinRangeOfGivenPortal(tmp4mat, portal.shared.radius, portal);
-				//TODO separate reflectorInfo per portal
-			}
-
-			if (isWithinAPortal){
-				setMat4FromToWithQuats(tmp4mat, offsetPlayerCamera);
-				//xyzmove4mat(offsetPlayerCamera, tmpOffsetArr.map(elem=>elem*(ii+1)));
-
-				portalTestMultiPortal(offsetCameraContainer,0);
-				wentThrough = true;
-				//assume wont cross twice, move remainder of way
-				xyzmove4mat(offsetPlayerCamera,tmpOffsetArr.map(elem => elem*(offsetSteps-ii))); //should -1 be there? or should xyzmove4mat happen later?
-				return;
-			}	
-		}
-		
-
-		if (!wentThrough){
-			xyzmove4mat(offsetPlayerCamera,offsetVec);
-		}
-		//console.log(JSON.stringify({sshipWorld,numMoves,offsetCameraWorld:offsetCameraContainer.world}));
-	}
+	moveMatHandlingPortal(offsetCameraContainer, offsetCam.getVec())
+	
 
 	/*
 	* to replace moveCamInSteps without steps. might also use for eg bullets.
 	*/
-	function moveMatHandlingPortal(inputMatrix, inputWorld, offsetVec){
+	function moveMatHandlingPortal(matContainer, offsetVec){
+		//NOTE fails if input vec = 0. TODO make more robust!
+		if (offsetVec[0]==0 && offsetVec[1]==0 && offsetVec[2]==0){return;}
+
+		var inputMatrix = matContainer.matrix;
+		var inputWorld = matContainer.world;
+
 		//inputMatrix = offsetPlayerCamera , inputWorld = sshipWorld
 		// for initial use case (which is initially just at player spaceship position)
 		//offsetVec is in frame of inputMatrix.
@@ -763,6 +716,7 @@ function drawScene(frameTime){
 			var differenceSq = 0;
 			var differenceDotStart = 0;
 			var differenceDotEnd = 0;
+
 			var startPosInPortalSpaceProj = vec4.create();
 			var endPosInPortalSpaceProj = vec4.create();
 
@@ -784,7 +738,7 @@ function drawScene(frameTime){
 
 			if (differenceSq<=0){
 				alert("differenceSq<=0 . should not be possible!");
-				return false;	//if camera not moved. AFAIK impossible
+				continue;	//if camera not moved. AFAIK impossible
 			}
 			
 			//collide this line with sphere.
@@ -824,18 +778,18 @@ function drawScene(frameTime){
 			}
 
 			if (scimdDotMd>0){
-				return false;	//not moving towards portal.
+				continue;	//not moving towards portal.
 			}
 
 			var thresh = otherTriangleSideSq*differenceSq;
 
 			if ((scimdDotMd*scimdDotMd) < thresh ){
 				alert("(scimdDotMd*scimdDotMd)/differenceSq < otherTriangleSideSq  ! unexpected - seems already within portal!")
-				return false;
+				continue;
 			}
 			if (ecimdDotMd < 0 && (ecimdDotMd*ecimdDotMd) > thresh){
 				//not moved across boundary
-				return false;
+				continue;
 			}
 
 			var otherTriangleSide = Math.sqrt(otherTriangleSideSq);
@@ -874,16 +828,23 @@ function drawScene(frameTime){
 
 			//console.log({angleToCollisionPoint, angleStartToEnd, fractionToCollision});	//expect 0 to 1
 
-			xyzmove4mat(offsetPlayerCamera,offsetVec.map(elem => elem*fractionToCollision));
-			portalTestMultiPortal(offsetCameraContainer,0);
+			xyzmove4mat(inputMatrix,offsetVec.map(elem => elem*fractionToCollision));
+
+			var currentWorld = matContainer.world;
+
+			portalTestMultiPortal(matContainer,0);
+
+			var newWorld = matContainer.world;
+
+			if (newWorld == currentWorld){console.log("worlds same, though expected portal transition!");}
 
 			var remainingFraction = 1- fractionToCollision;
-			xyzmove4mat(offsetPlayerCamera,offsetVec.map(elem => elem*remainingFraction));
+			xyzmove4mat(inputMatrix,offsetVec.map(elem => elem*remainingFraction));
 
-			return true;
+			return;
 		}
 		//console.log("ruled out portal camera traversal");
-		return false;
+		xyzmove4mat(inputMatrix, offsetVec);
 	}
 
 
@@ -902,13 +863,13 @@ function drawScene(frameTime){
 		setMat4FromToWithQuats(offsetPlayerCamera, savedCam);
 
 		var savedWorld = offsetCameraContainer.world;
-		moveCamInSteps(100, [-guiParams.display.eyeSepWorld,0,0]);
+		moveMatHandlingPortal(offsetCameraContainer, [-guiParams.display.eyeSepWorld,0,0]);
 		xyzrotate4mat(offsetPlayerCamera, [0,guiParams.display.eyeTurnIn,0]);
 		drawSceneToScreen(offsetPlayerCamera, {left:0,top:0,width:gl.viewportWidth,height:gl.viewportHeight/2});
 
 		setMat4FromToWithQuats(savedCam, offsetPlayerCamera);
 		offsetCameraContainer.world = savedWorld;
-		moveCamInSteps(100, [guiParams.display.eyeSepWorld,0,0]);
+		moveMatHandlingPortal(offsetCameraContainer, [guiParams.display.eyeSepWorld,0,0]);
 		xyzrotate4mat(offsetPlayerCamera, [0,-guiParams.display.eyeTurnIn,0]);
 		drawSceneToScreen(offsetPlayerCamera, {left:0,top:gl.viewportHeight/2,width:gl.viewportWidth,height:gl.viewportHeight/2});
 		//note inefficient currently, since does full screen full render for each eye view.
