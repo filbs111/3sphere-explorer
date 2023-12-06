@@ -1663,7 +1663,7 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 
 			//undo reuse of vectors. (caused bug when moved portal cubemap to just before drawing portal, within main world drawing)
 			//TODO instantiate a separate wSettings objects and reuse for different parts of rendering... (otherwise creates garbage)
-			infoForPortal.localVecReflectorDiffColor=new Array(3);
+			infoForPortal.localVecReflectorDiffColor=new Float32Array(3);
 			infoForPortal.localVecReflectorColor=localVecReflectorColor;
 
 			for (var cc=0;cc<3;cc++){
@@ -4262,7 +4262,10 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	setupScene();
 	
 	function setFog(world,color){
-		worldColorsPlain[world]=colorArrFromUiString(color).concat(1);
+		var vec4Color = new Float32Array(4);
+		vec4Color.set(colorArrFromUiString(color),0);
+		vec4Color[3]=1;
+		worldColorsPlain[world] = vec4Color;
 		worldColors[world]=worldColorsPlain[world].map(function(elem){
 			var withGamma =Math.pow(elem,2.2);
 			return withGamma/(1.01-withGamma);	//undo tone mapping
@@ -4275,14 +4278,14 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 		var r = parseInt(color.substring(1,3),16) /255;
 		var g = parseInt(color.substring(3,5),16) /255;
 		var b = parseInt(color.substring(5,7),16) /255;
-		playerLightUnscaled=[r,g,b].map(function(elem){return Math.pow(elem,2.2)});	//apply gamma
+		playerLightUnscaled=new Float32Array([r,g,b]).map(function(elem){return Math.pow(elem,2.2)});	//apply gamma
 	}
 }
 function colorArrFromUiString(color){
 	var r = parseInt(color.substring(1,3),16) /255;
 	var g = parseInt(color.substring(3,5),16) /255;
 	var b = parseInt(color.substring(5,7),16) /255;
-	return [r,g,b];
+	return new Float32Array([r,g,b]);
 }
 
 var playerVelVec = [0,0,0];	//TODO use matrix/quaternion for this
