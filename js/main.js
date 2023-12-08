@@ -62,6 +62,7 @@ var icoballBuffers={};
 var hyperboloidBuffers={};
 var meshSphereBuffers={};
 var buildingBuffers={};
+var octoFractalBuffers={};
 
 //var sshipModelScale=0.0001;
 var sshipModelScale=0.00005;
@@ -377,6 +378,8 @@ function initBuffers(){
 
 	loadBuffersFromObjFile(meshSphereBuffers, "./data/miscobjs/mesh-sphere.obj", loadBufferData);
 	loadBuffersFromObj2Or3File(buildingBuffers, "./data/miscobjs/menger-edgesplit.obj3", loadBufferData, 6);
+	loadBuffersFromObj2Or3File(octoFractalBuffers, "./data/miscobjs/fractal-octahedron4.obj3", loadBufferData, 6);
+
 
 	var thisMatT;
 	for (var ii=0;ii<maxRandBoxes;ii++){
@@ -2345,6 +2348,25 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		mat4.identity(mMatrix);rotate4mat(mMatrix, 0, 1, duocylinderSpin);
 		mat4.multiply(mMatrix, buildingMatrix);
 		drawObjectFromBuffers(buildingBuffers, activeShaderProgram);
+	if (octoFractalBuffers.isLoaded){
+		//using same shader as above. avoid re-setting stuff. TODO avoid more.
+		var desiredProgram = shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ];
+		if (activeShaderProgram != desiredProgram){
+			activeShaderProgram = desiredProgram;
+			shaderSetup(activeShaderProgram);
+		}
+
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.gray);
+
+		modelScale = 0.01*guiParams.drawShapes.buildingScale;
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
+		mat4.set(invertedWorldCamera, mvMatrix);
+		rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
+		mat4.multiply(mvMatrix,octoFractalMatrix);
+
+		mat4.identity(mMatrix);rotate4mat(mMatrix, 0, 1, duocylinderSpin);
+		mat4.multiply(mMatrix, octoFractalMatrix);
+		drawObjectFromBuffers(octoFractalBuffers, activeShaderProgram);
 	}
 
 
@@ -3964,6 +3986,12 @@ xyzmove4mat(buildingMatrix,[0,.7,0]);
 var transposedBuildingMatrix = mat4.create(buildingMatrix);
 mat4.transpose(transposedBuildingMatrix);
 
+var octoFractalMatrix=mat4.identity();
+xyzrotate4mat(octoFractalMatrix,[0,0,Math.PI/2]);
+xyzmove4mat(octoFractalMatrix,[0,.76,0]);
+var transposedOctoFractalMatrix = mat4.create(octoFractalMatrix);
+mat4.transpose(transposedOctoFractalMatrix);
+
 var pillarMatrices=[];
 /*
 for (var ii=0,ang=0,angstep=2*Math.PI/30;ii<30;ii++,ang+=angstep){	//number of reps obtained by trial and error. TODO calculate
@@ -5339,6 +5367,7 @@ var iterateMechanics = (function iterateMechanics(){
 			//todo 3 heirarchical bounding boxes or gridding system!
 			
 			//menger sponge. 
+			var bSize = 0.01*guiParams.drawShapes.buildingScale;
 			if (guiParams.drawShapes.building){
 				//test with box collision
 				
@@ -5347,8 +5376,6 @@ var iterateMechanics = (function iterateMechanics(){
 				//boxCollideCheck(transposedBuildingMatrix,bSize,critSize,bulletPosDCF4V, true);
 
 				mat4.multiplyVec4(transposedBuildingMatrix, bulletPosDCF4V, tmpVec4);
-
-				var bSize = 0.01*guiParams.drawShapes.buildingScale;
 
 				if (tmpVec4[3]>0){
 					var homogenous = tmpVec4.slice(0,3).map(xx=>xx/tmpVec4[3]);
@@ -5361,6 +5388,16 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			}
 
+			//octohedron. TODO fractal, temporarily collision with bounding octahedron.
+			mat4.multiplyVec4(transposedOctoFractalMatrix, bulletPosDCF4V, tmpVec4);
+			if (tmpVec4[3]>0){
+				var homogenous = tmpVec4.slice(0,3).map(xx=>xx/tmpVec4[3]);
+				var scaledAbsInput = homogenous.map(x=>Math.abs(x/bSize));
+				var total = scaledAbsInput[0]+scaledAbsInput[1]+scaledAbsInput[2];
+				if (total<1){
+					detonateBullet(bullet, true, [0.3,0.3,0.3,1]);
+				}
+			}
 			//box rings
 			var guiBoxes= guiParams.drawShapes.boxes;
 			if (guiBoxes['y=z=0']){checkCollisionForBoxRing(ringCellsT[0]);}
