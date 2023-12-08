@@ -5392,12 +5392,35 @@ var iterateMechanics = (function iterateMechanics(){
 			mat4.multiplyVec4(transposedOctoFractalMatrix, bulletPosDCF4V, tmpVec4);
 			if (tmpVec4[3]>0){
 				var homogenous = tmpVec4.slice(0,3).map(xx=>xx/tmpVec4[3]);
-				var scaledAbsInput = homogenous.map(x=>Math.abs(x/bSize));
+
+				var scaledInput = homogenous.map(x=>x/bSize);
+				var scaledAbsInput = scaledInput.map(x=>Math.abs(x));
 				var total = scaledAbsInput[0]+scaledAbsInput[1]+scaledAbsInput[2];
-				if (total<1){
-					detonateBullet(bullet, true, [0.3,0.3,0.3,1]);
+
+				if (total<1){	//in outermost octahedron
+					scaledInput = scaledInput.map(x=>x/2);
+					if (scaledAbsInput[0]>scaledAbsInput[1]){
+						if (scaledAbsInput[2]>scaledAbsInput[0]){
+							scaledInput[2]-= scaledInput[2]>0?1:-1;
+						}else{
+							scaledInput[0]-= scaledInput[0]>0?1:-1;
+						}
+					}else{
+						if (scaledAbsInput[2]>scaledAbsInput[1]){
+							scaledInput[2]-= scaledInput[2]>0?1:-1;
+						}else{
+							scaledInput[1]-= scaledInput[1]>0?1:-1;
+						}
+					}
+
+					scaledAbsInput = scaledInput.map(x=>Math.abs(x));
+					total = scaledAbsInput[0]+scaledAbsInput[1]+scaledAbsInput[2];
+					if (total<1){
+						detonateBullet(bullet, true, [0.3,0.3,0.3,1]);
+					}
 				}
 			}
+
 			//box rings
 			var guiBoxes= guiParams.drawShapes.boxes;
 			if (guiBoxes['y=z=0']){checkCollisionForBoxRing(ringCellsT[0]);}
