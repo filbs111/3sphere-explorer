@@ -5394,31 +5394,38 @@ var iterateMechanics = (function iterateMechanics(){
 				var homogenous = tmpVec4.slice(0,3).map(xx=>xx/tmpVec4[3]);
 
 				var scaledInput = homogenous.map(x=>x/bSize);
-				var scaledAbsInput = scaledInput.map(x=>Math.abs(x));
-				var total = scaledAbsInput[0]+scaledAbsInput[1]+scaledAbsInput[2];
 
-				if (total<1){	//in outermost octahedron
-					scaledInput = scaledInput.map(x=>x/2);
-					if (scaledAbsInput[0]>scaledAbsInput[1]){
-						if (scaledAbsInput[2]>scaledAbsInput[0]){
-							scaledInput[2]-= scaledInput[2]>0?1:-1;
-						}else{
-							scaledInput[0]-= scaledInput[0]>0?1:-1;
-						}
+				if (fractalOctahedonCollision(scaledInput, 3)){
+					detonateBullet(bullet, true, [0.3,0.3,0.3,1]);
+				}
+			}
+
+			function fractalOctahedonCollision(inputVec, levels){
+				if (levels<0){
+					return true;
+				}
+				inputVec = inputVec.map(x => 2*Math.abs(x));	//TODO modify in place? (can sum in loop too)
+				var total = inputVec[0]+inputVec[1]+inputVec[2];
+
+				if (total>2){
+					return false;
+				}
+
+				if (inputVec[0]>inputVec[1]){
+					if (inputVec[2]>inputVec[0]){
+						--inputVec[2];
 					}else{
-						if (scaledAbsInput[2]>scaledAbsInput[1]){
-							scaledInput[2]-= scaledInput[2]>0?1:-1;
-						}else{
-							scaledInput[1]-= scaledInput[1]>0?1:-1;
-						}
+						--inputVec[0];
 					}
-
-					scaledAbsInput = scaledInput.map(x=>Math.abs(x));
-					total = scaledAbsInput[0]+scaledAbsInput[1]+scaledAbsInput[2];
-					if (total<1){
-						detonateBullet(bullet, true, [0.3,0.3,0.3,1]);
+				}else{
+					if (inputVec[2]>inputVec[1]){
+						--inputVec[2];
+					}else{
+						--inputVec[1];
 					}
 				}
+
+				return fractalOctahedonCollision(inputVec, --levels);
 			}
 
 			//box rings
