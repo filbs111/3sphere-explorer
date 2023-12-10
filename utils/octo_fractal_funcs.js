@@ -2,9 +2,32 @@ var octoFractalUtils = (function(){
 
     function getClosestPoint(input, levels){
         //basically collide with the nearest solid octohedron (num levels down.)
-        //find closest octohedron, then find closest of the 6 at next nevel down, and so on.
+        //find closest octohedron, then find closest of the 6 at next level down, and so on.
 
-        //initial test - find approx closest point on outer octohedron (doesn't handle edges correctly)
+        if (levels<1){
+            return getClosestPointSimpleOctohedon(input);
+        }
+
+        var absInput = input.map(Math.abs);
+        var largestComponent;
+        if (absInput[0]>absInput[1]){
+            largestComponent = absInput[2]>absInput[0] ? 2:0;
+        }else{
+            largestComponent = absInput[2]>absInput[1] ? 2:1;
+        }
+
+        var centreToCollideWith = [0,0,0];       
+        centreToCollideWith[largestComponent]+=input[largestComponent]>0?  1:-1;
+
+        var remainderInput = input.map((xx, ii)=> xx*2 - centreToCollideWith[ii] );
+
+        var returnValFromNextLevel = getClosestPoint(remainderInput,--levels);
+        return returnValFromNextLevel.map((xx,ii) => (xx+centreToCollideWith[ii])/2);
+    }
+
+    function getClosestPointSimpleOctohedon(input){
+        // finds closest point on plane for the 1/8th space (x,y,z signs)
+        // NOTE doesn't handle edges correctly - TODO return points on edges, not on plane beyond tri faces
         
         var absInput = input.map(Math.abs);
         var signInput = input.map((xx,ii)=> xx/absInput[ii]);
@@ -14,10 +37,6 @@ var octoFractalUtils = (function(){
         var movedToSurface = input.map((xx,ii)=>xx-awayFromToSurface[ii]);
 
         return movedToSurface;
-
-        // if (absInput[0]>absInput[1]){
-
-        // }
     }
 
     var lastPen = 0;
