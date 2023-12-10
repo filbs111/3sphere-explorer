@@ -5418,38 +5418,10 @@ var iterateMechanics = (function iterateMechanics(){
 					var bSize = 0.01*guiParams.drawShapes.octoFractalScale;
 					var scaledInput = homogenous.map(x=>x/bSize);
 
-					if (fractalOctahedonCollision(scaledInput, 3)){
+					if (octoFractalUtils.isInside(scaledInput, 3)){
 						detonateBullet(bullet, true, [0.3,0.3,0.3,1]);
 					}
 				}
-			}
-
-			function fractalOctahedonCollision(inputVec, levels){
-				if (levels<0){
-					return true;
-				}
-				inputVec = inputVec.map(x => 2*Math.abs(x));	//TODO modify in place? (can sum in loop too)
-				var total = inputVec[0]+inputVec[1]+inputVec[2];
-
-				if (total>2){
-					return false;
-				}
-
-				if (inputVec[0]>inputVec[1]){
-					if (inputVec[2]>inputVec[0]){
-						--inputVec[2];
-					}else{
-						--inputVec[0];
-					}
-				}else{
-					if (inputVec[2]>inputVec[1]){
-						--inputVec[2];
-					}else{
-						--inputVec[1];
-					}
-				}
-
-				return fractalOctahedonCollision(inputVec, --levels);
 			}
 
 			//box rings

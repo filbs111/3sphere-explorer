@@ -28,9 +28,37 @@ var octoFractalUtils = (function(){
         return last;
     }
 
+    var isInside = function(inputVec, levels){
+        if (levels<0){
+            return true;
+        }
+        inputVec = inputVec.map(x => 2*Math.abs(x));	//TODO modify in place? (can sum in loop too)
+        var total = inputVec[0]+inputVec[1]+inputVec[2];
+
+        if (total>2){
+            return false;
+        }
+
+        if (inputVec[0]>inputVec[1]){
+            if (inputVec[2]>inputVec[0]){
+                --inputVec[2];
+            }else{
+                --inputVec[0];
+            }
+        }else{
+            if (inputVec[2]>inputVec[1]){
+                --inputVec[2];
+            }else{
+                --inputVec[1];
+            }
+        }
+
+        return isInside(inputVec, --levels);
+    }
+
     return {
         getClosestPoint,
-        //isInside,
+        isInside,
         getLastPen
     };
 })();
