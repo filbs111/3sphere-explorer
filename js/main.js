@@ -5177,12 +5177,23 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 			
 			function processMengerSpongeCollision(){
+				collidePlayerWithObjectByClosestPointFunc(
+					0.01*guiParams.drawShapes.buildingScale,
+					buildingMatrix,
+					debugDraw.mats[6],
+					point => mengerUtils.getClosestPoint(point, 3),
+					mengerUtils.getLastPen,
+					myAudioPlayer.setWhooshSoundMenger
+				);
+			}
+
+			function collidePlayerWithObjectByClosestPointFunc(objectScale, objectMatrix, debugPointMat, closestPointFunc, getLastPenFunc, setSoundFunc){
 				var relativeMat = mat4.create();	//TODO reuse
 	
-				//get player position in frame of buildingMatrix
+				//get player position in frame of objectMatrix
 				//note full matrix rotation is maybe not needed here. only vector output is wanted.		
 				mat4.set(playerMatrixTransposedDCRefFrame, relativeMat);
-				mat4.multiply(relativeMat, buildingMatrix);
+				mat4.multiply(relativeMat, objectMatrix);
 				
 				var relativePos = [relativeMat[3], relativeMat[7], relativeMat[11], relativeMat[15]];	//need last one?
 	
@@ -5190,40 +5201,38 @@ var iterateMechanics = (function iterateMechanics(){
 					return;	//don't bother if in other half of the world. TODO tighter early discard (compare with number other than 0.)
 				}
 
-				var bSize = 0.01*guiParams.drawShapes.buildingScale;
+				var bSize = objectScale;
 				var pSize = ( guiParams["drop spaceship"] ? settings.characterBallRad : settings.playerBallRad );
 
-				var playerInSpongeFrame = relativePos.slice(0,3);
-				var pointScaledInSpongeFrame = playerInSpongeFrame.map(x => x/bSize);	//*relativePos[3]));
+				var playerInObjectFrame = relativePos.slice(0,3);
+				var pointScaledInObjectFrame = playerInObjectFrame.map(x => x/bSize);	//*relativePos[3]));
 
-				var closestPointInSpongeFrame = mengerUtils.getClosestPoint(pointScaledInSpongeFrame,3);
-				var closestPointScaledBack = closestPointInSpongeFrame.map(x=>-x*bSize);
+				var closestPointInObjectFrame = closestPointFunc(pointScaledInObjectFrame);
+				var closestPointScaledBack = closestPointInObjectFrame.map(x=>-x*bSize);
 
-				var debugMat = debugDraw.mats[6];
-				mat4.set(buildingMatrix, debugMat);
+				mat4.set(objectMatrix, debugPointMat);
 								
-				xyzmove4mat(debugMat, closestPointScaledBack);
+				xyzmove4mat(debugPointMat, closestPointScaledBack);
 
 				//take difference between position, closest point 
 				//calculate by taking difference between input, output points in 3d, or 4D from matrices. result approx same for small distances,
 				//and 4d version would not be exact as is, because the closest point used is not accurate (is calculated for 3d flat space)
-				var displacement = pointScaledInSpongeFrame.map((xx,ii)=>xx - closestPointInSpongeFrame[ii] );
+				var displacement = pointScaledInObjectFrame.map((xx,ii)=>xx - closestPointInObjectFrame[ii] );
 				var displacementSq = displacement.reduce((accum, xx) => accum+xx*xx, 0);
 				var displacementLength = Math.sqrt(displacementSq);
 				var scaledDisplacementLen = bSize*displacementLength;
 				currentPen = pSize - scaledDisplacementLen; //note will fall over if player centre inside sponge!
 
-				var penChange = currentPen - mengerUtils.getLastPen(currentPen);
+				var penChange = currentPen - getLastPenFunc(currentPen);
 				var reactionForce = Math.max(50*currentPen + 1000*penChange, 0);
 
-
 				mat4.set(playerMatrixTransposedDCRefFrame, tmpRelativeMat);
-				mat4.multiply(tmpRelativeMat, debugMat);
-				distanceForMengerNoise = distBetween4mats(tmpRelativeMat, identMat);
+				mat4.multiply(tmpRelativeMat, debugPointMat);
+				distanceForNoise = distBetween4mats(tmpRelativeMat, identMat);
 					//TODO can this result be reused in the if statement below?
 				var soundSize = 0.002;
-				panForMengerNoise = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));
-				setSoundHelper(myAudioPlayer.setWhooshSoundMenger, distanceForMengerNoise, panForMengerNoise, spd);
+				panForNoise = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));
+				setSoundHelper(setSoundFunc, distanceForNoise, panForNoise, spd);
 
 				if (currentPen > 0 && reactionForce> 0){	//penetration
 
@@ -5234,13 +5243,13 @@ var iterateMechanics = (function iterateMechanics(){
 
 					//commented out version more similar to box collision, which seems overcomplicated -
 					//var tempMat = mat4.create();
-					//mat4.set(buildingMatrix, tempMat);
+					//mat4.set(objectMatrix, tempMat);
 					//xyzmove4mat(tempMat, [-relativePos[0],-relativePos[1],-relativePos[2]]);	//player's position in sponge frame
 					//xyzmove4mat(tempMat, reactionNormal);	//shifted by the reaction normal!
 					//mat4.multiply(relativeMatC, tempMat);
-					//mat4.set(debugMat, tempMat);	//TODO alternative version something like this. should scale by distance
+					//mat4.set(debugPointMat, tempMat);	//TODO alternative version something like this. should scale by distance
 
-					mat4.multiply(relativeMatC, debugMat);
+					mat4.multiply(relativeMatC, debugPointMat);
 
 					var relativePosC = relativeMatC.slice(12);
 					//normalise. note could just assume that length is player radius, or matches existing calculation for penetration etc, to simplify.
@@ -5251,7 +5260,6 @@ var iterateMechanics = (function iterateMechanics(){
 						playerVelVec[cc]+=forcePlayerFrame[cc];
 					}
 				}
-
 			}
 
 
