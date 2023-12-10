@@ -2348,7 +2348,9 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		mat4.identity(mMatrix);rotate4mat(mMatrix, 0, 1, duocylinderSpin);
 		mat4.multiply(mMatrix, buildingMatrix);
 		drawObjectFromBuffers(buildingBuffers, activeShaderProgram);
-	if (octoFractalBuffers.isLoaded){
+	}
+
+	if (guiParams.drawShapes.octoFractal && octoFractalBuffers.isLoaded){
 		//using same shader as above. avoid re-setting stuff. TODO avoid more.
 		var desiredProgram = shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ];
 		if (activeShaderProgram != desiredProgram){
@@ -2358,7 +2360,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.gray);
 
-		modelScale = 0.01*guiParams.drawShapes.buildingScale;
+		modelScale = 0.01*guiParams.drawShapes.octoFractalScale;
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
 		mat4.set(invertedWorldCamera, mvMatrix);
 		rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
@@ -3869,7 +3871,9 @@ var guiParams={
 		frigate:true,
 		frigateScale:5,
 		building:true,
-		buildingScale:10
+		buildingScale:10,
+		octoFractal:true,
+		octoFractalScale:20
 	},
 	'random boxes':{
 		number:maxRandBoxes,	//note ui controlled value does not affect singleBuffer
@@ -4099,6 +4103,8 @@ function init(){
 	drawShapesFolder.add(guiParams.drawShapes,"frigateScale",0.1,20.0,0.1);
 	drawShapesFolder.add(guiParams.drawShapes,"building");
 	drawShapesFolder.add(guiParams.drawShapes,"buildingScale",0.1,20.0,0.1);
+	drawShapesFolder.add(guiParams.drawShapes,"octoFractal");
+	drawShapesFolder.add(guiParams.drawShapes,"octoFractalScale",0.1,20.0,0.1);
 
 	var polytopesFolder = gui.addFolder('polytopes');
 	polytopesFolder.add(guiParams,"draw 5-cell");
@@ -5171,9 +5177,6 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 			
 			function processMengerSpongeCollision(){
-				//TODO actual collision.
-				//TODO whoosh noise for flying close.
-		
 				var relativeMat = mat4.create();	//TODO reuse
 	
 				//get player position in frame of buildingMatrix
@@ -5367,7 +5370,6 @@ var iterateMechanics = (function iterateMechanics(){
 			//todo 3 heirarchical bounding boxes or gridding system!
 			
 			//menger sponge. 
-			var bSize = 0.01*guiParams.drawShapes.buildingScale;
 			if (guiParams.drawShapes.building){
 				//test with box collision
 				
@@ -5379,7 +5381,7 @@ var iterateMechanics = (function iterateMechanics(){
 
 				if (tmpVec4[3]>0){
 					var homogenous = tmpVec4.slice(0,3).map(xx=>xx/tmpVec4[3]);
-
+					var bSize = 0.01*guiParams.drawShapes.buildingScale;
 					var scaledInput = homogenous.map(x=>x/bSize);
 
 					if (mengerUtils.isInside(scaledInput,3)){
@@ -5388,15 +5390,17 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			}
 
-			//octohedron. TODO fractal, temporarily collision with bounding octahedron.
-			mat4.multiplyVec4(transposedOctoFractalMatrix, bulletPosDCF4V, tmpVec4);
-			if (tmpVec4[3]>0){
-				var homogenous = tmpVec4.slice(0,3).map(xx=>xx/tmpVec4[3]);
+			//octohedron fractal
+			if (guiParams.drawShapes.octoFractal){
+				mat4.multiplyVec4(transposedOctoFractalMatrix, bulletPosDCF4V, tmpVec4);
+				if (tmpVec4[3]>0){
+					var homogenous = tmpVec4.slice(0,3).map(xx=>xx/tmpVec4[3]);
+					var bSize = 0.01*guiParams.drawShapes.octoFractalScale;
+					var scaledInput = homogenous.map(x=>x/bSize);
 
-				var scaledInput = homogenous.map(x=>x/bSize);
-
-				if (fractalOctahedonCollision(scaledInput, 3)){
-					detonateBullet(bullet, true, [0.3,0.3,0.3,1]);
+					if (fractalOctahedonCollision(scaledInput, 3)){
+						detonateBullet(bullet, true, [0.3,0.3,0.3,1]);
+					}
 				}
 			}
 
