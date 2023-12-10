@@ -1,6 +1,6 @@
 var debugDraw = (function(){
 
-    var nummats = 7;
+    var nummats = 8;
     var mats = [nummats];
     for (var ii=0;ii<nummats;ii++){
         mats[ii] = mat4.identity();
@@ -56,6 +56,9 @@ var debugDraw = (function(){
 
         //menger sponge
         drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[6], colorArrs.red, 0.01);
+
+        //octo fractal
+        drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[7], colorArrs.red, 0.01);
     }
     
     return {

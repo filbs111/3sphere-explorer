@@ -4995,7 +4995,8 @@ var iterateMechanics = (function iterateMechanics(){
 				processBoxCollisionsForBoxInfoAllPoints(duocylinderBoxInfo.roads);
 			}
 			processMengerSpongeCollision();	//after boxes to reuse whoosh noise (assume not close to both at same time)
-			
+			processOctoFractalCollision();
+
 			//whoosh for boxes, using result from closest point calculation done inside collision function
 			var distanceForBoxNoise = 100;
 			var panForBoxNoise = 0;
@@ -5184,6 +5185,17 @@ var iterateMechanics = (function iterateMechanics(){
 					point => mengerUtils.getClosestPoint(point, 3),
 					mengerUtils.getLastPen,
 					myAudioPlayer.setWhooshSoundMenger
+				);
+			}
+
+			function processOctoFractalCollision(){
+				collidePlayerWithObjectByClosestPointFunc(
+					0.01*guiParams.drawShapes.octoFractalScale,
+					octoFractalMatrix,
+					debugDraw.mats[7],
+					point => octoFractalUtils.getClosestPoint(point,3), 
+					octoFractalUtils.getLastPen,
+					myAudioPlayer.setWhooshSoundOctoFractal
 				);
 			}
 
