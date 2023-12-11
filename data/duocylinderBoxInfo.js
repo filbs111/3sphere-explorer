@@ -2,6 +2,7 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 	var boxInfoTowerblocks = initialiseInfo();
 	var boxInfoHyperboloids = initialiseInfo();
 	var boxInfoStonehenge = initialiseInfo();
+	var boxInfoViaducts = initialiseInfo();
 	var boxInfoRoads = initialiseInfo();
 	var currentboxInfo;
 	
@@ -65,6 +66,7 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 		return [0.9+coherentShift+Math.random()*0.05,
 				0.6+coherentShift+Math.random()*0.03,
 				0.1+coherentShift+Math.random()*0.01,1.0];
+				//TODO float32array (faster to render?)
 	}
 	
 	var stepSize= Math.PI*2/31;
@@ -76,12 +78,20 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 			addBoxData((ii+kk)*stepSize +10,(ii+kk)*stepSize,4*0.05, randColor(),Math.PI/4 + 0.2);
 		}
 	}
-	
 	//add some tower that passes through portal?
 	//currently requires 2 towers. TODO different setup for each side.
 	for (var hi=0;hi<11;hi++){
 		addBoxData(-0.1,0,hi*0.05, [0.7, 0.7, 0.7, 1.0],0);
 		addBoxData(Math.PI-0.1,0,hi*0.05, [0.7, 0.7, 0.7, 1.0],0);
+	}
+
+	currentboxInfo = boxInfoViaducts;
+	for (var ii=0;ii<31;ii++){	//doesn't quite meet up. probably exact is 10*PI
+		//copied from stonehenge but just the top parts
+		var whiteColor = [1,1,1,1];	//TODO use colorArrs.white? perhaps should be declared earlier.
+		for (var kk=0.125;kk<1;kk+=0.25){
+			addBoxData((ii+kk)*stepSize +10,(ii+kk)*stepSize,4*0.05, whiteColor ,Math.PI/4 + 0.2);
+		}
 	}
 	
 	function addBoxData(aa, bb, hh, cc, turn){
@@ -111,6 +121,7 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 		towerblocks:boxInfoTowerblocks,
 		hyperboloids:boxInfoHyperboloids,
 		stonehenge:boxInfoStonehenge,
+		viaducts:boxInfoViaducts,
 		roads:boxInfoRoads
 	};
 })();

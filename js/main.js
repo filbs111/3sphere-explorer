@@ -63,6 +63,7 @@ var hyperboloidBuffers={};
 var meshSphereBuffers={};
 var buildingBuffers={};
 var octoFractalBuffers={};
+var bridgeBuffers={};
 
 //var sshipModelScale=0.0001;
 var sshipModelScale=0.00005;
@@ -2371,6 +2372,38 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		drawObjectFromBuffers(octoFractalBuffers, activeShaderProgram);
 	}
 
+	if (bridgeBuffers.isLoaded){
+		var desiredProgram = shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ];
+		if (activeShaderProgram != desiredProgram){
+			activeShaderProgram = desiredProgram;
+			shaderSetup(activeShaderProgram);
+		}
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
+		modelScale = 0.021;	//TODO calculate correct value
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
+
+		var viaductList = duocylinderBoxInfo.viaducts.list;
+		//var correction = 2*Math.PI/3 * Math.sqrt(0.333);
+		var correction = 2*Math.PI/Math.sqrt(27);
+		var rotationCorrection = [correction,correction,correction];
+		for (var ii=0;ii<viaductList.length;++ii){
+			//var thisMat = viaductList[ii].matrix;
+			var thisMat = mat4.create(viaductList[ii].matrix);	//temp to rotate (TODO prerotate)
+			xyzrotate4mat(thisMat, rotationCorrection);
+
+			mat4.set(invertedWorldCamera, mvMatrix);
+			rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
+			mat4.multiply(mvMatrix,thisMat);
+	
+			mat4.identity(mMatrix);rotate4mat(mMatrix, 0, 1, duocylinderSpin);
+			mat4.multiply(mMatrix, thisMat);
+
+			drawObjectFromBuffers(bridgeBuffers, activeShaderProgram);
+				//TODO use drawObjectFromPreppedBuffers
+		}
+		//TODO draw with twist so segments meet up.
+	}
+
 
 	//general stuff used for all 4vec vertex format objects (currently)
 	mat4.set(invertedWorldCamera, mvMatrix);
@@ -4065,7 +4098,7 @@ function init(){
 			"grid","terrain","procTerrain",'voxTerrain','voxTerrain2','voxTerrain3','l3dt-brute','l3dt-blockstrips','none'] );
 		worldFolder.add(world, "spinRate", -2.5,2.5,0.25);
 		worldFolder.add(world, "seaActive" );
-		worldFolder.add(world, "seaLevel", -0.05,0.05,0.005);
+		worldFolder.add(world, "seaLevel", -0.04,0.04,0.002);
 		worldFolder.add(world, "seaPeakiness", 0.0,0.5,0.01);
 	});
 
