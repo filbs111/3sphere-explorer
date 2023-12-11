@@ -2372,7 +2372,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		drawObjectFromBuffers(octoFractalBuffers, activeShaderProgram);
 	}
 
-	if (bridgeBuffers.isLoaded){
+	if (guiParams.drawShapes.viaduct && bridgeBuffers.isLoaded){
 		var desiredProgram = shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ];
 		if (activeShaderProgram != desiredProgram){
 			activeShaderProgram = desiredProgram;
@@ -2381,6 +2381,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
 		modelScale = 0.021;	//TODO calculate correct value
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
+
+		prepBuffersForDrawing(bridgeBuffers, activeShaderProgram);
 
 		var viaductList = duocylinderBoxInfo.viaducts.list;
 		//var correction = 2*Math.PI/3 * Math.sqrt(0.333);
@@ -2398,8 +2400,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			mat4.identity(mMatrix);rotate4mat(mMatrix, 0, 1, duocylinderSpin);
 			mat4.multiply(mMatrix, thisMat);
 
-			drawObjectFromBuffers(bridgeBuffers, activeShaderProgram);
-				//TODO use drawObjectFromPreppedBuffers
+			drawObjectFromPreppedBuffers(bridgeBuffers, activeShaderProgram);
 		}
 		//TODO draw with twist so segments meet up.
 	}
@@ -3906,7 +3907,8 @@ var guiParams={
 		building:true,
 		buildingScale:10,
 		octoFractal:true,
-		octoFractalScale:20
+		octoFractalScale:20,
+		viaduct:true
 	},
 	'random boxes':{
 		number:maxRandBoxes,	//note ui controlled value does not affect singleBuffer
@@ -4138,6 +4140,7 @@ function init(){
 	drawShapesFolder.add(guiParams.drawShapes,"buildingScale",0.1,20.0,0.1);
 	drawShapesFolder.add(guiParams.drawShapes,"octoFractal");
 	drawShapesFolder.add(guiParams.drawShapes,"octoFractalScale",0.1,20.0,0.1);
+	drawShapesFolder.add(guiParams.drawShapes,"viaduct");
 
 	var polytopesFolder = gui.addFolder('polytopes');
 	polytopesFolder.add(guiParams,"draw 5-cell");
