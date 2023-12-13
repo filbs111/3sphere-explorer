@@ -182,6 +182,7 @@ function initShaders(shaderProgs){
 	var shaderProgWithVariationsList = {
 		coloredPerPixelDiscard:["perpixel-discard-vs", "perpixel-discard-fs", [],[],true],
 		coloredPerPixelDiscardVertexColored:["perpixel-discard-vs", "perpixel-discard-fs", ['VERTCOLOR'],['VERTCOLOR'],true],
+		coloredPerPixelDiscardVertexColoredTexmap:["perpixel-discard-vs", "perpixel-discard-fs", ['VERTCOLOR','TEXMAP'],['VERTCOLOR','TEXMAP'],true],
 		coloredPerPixelDiscardVertexColoredInstanced:["perpixel-discard-vs", "perpixel-discard-fs", ['INSTANCED','VERTCOLOR'],['VERTCOLOR'],true],
 		coloredPerPixelDiscardBendy:["perpixel-discard-vs", "perpixel-discard-fs", ['BENDY_'],[],true],
 		texmapPerPixelDiscard:["texmap-perpixel-discard-vs", "texmap-perpixel-discard-fs", [],[],true],

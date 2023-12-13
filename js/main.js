@@ -378,7 +378,9 @@ function initBuffers(){
 	loadBuffersFromObj2Or3File(frigateBuffers, "./data/frigate/frigate.obj2", loadBufferData);
 
 	loadBuffersFromObjFile(meshSphereBuffers, "./data/miscobjs/mesh-sphere.obj", loadBufferData);
-	loadBuffersFromObj2Or3File(buildingBuffers, "./data/miscobjs/menger-edgesplit.obj3", loadBufferData, 6);
+	//loadBuffersFromObj2Or3File(buildingBuffers, "./data/miscobjs/menger-edgesplit.obj3", loadBufferData, 6);
+	loadBuffersFromObj2Or3File(buildingBuffers, "./data/miscobjs/menger-texmap2.obj3", loadBufferData, 6);
+
 	loadBuffersFromObj2Or3File(octoFractalBuffers, "./data/miscobjs/fractal-octahedron4.obj3", loadBufferData, 6);
 
 
@@ -2335,10 +2337,10 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		drawObjectFromBuffers(frigateBuffers, activeShaderProgram);
 	}
 	if (guiParams.drawShapes.building && buildingBuffers.isLoaded){
-		activeShaderProgram = shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ];
+		activeShaderProgram = shaderPrograms.coloredPerPixelDiscardVertexColoredTexmap[ guiParams.display.atmosShader ];
 		shaderSetup(activeShaderProgram);
 
-		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.gray);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
 
 		modelScale = 0.01*guiParams.drawShapes.buildingScale;
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
@@ -2348,6 +2350,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 
 		mat4.identity(mMatrix);rotate4mat(mMatrix, 0, 1, duocylinderSpin);
 		mat4.multiply(mMatrix, buildingMatrix);
+
+		bind2dTextureIfRequired(bricktex);	//??
 		drawObjectFromBuffers(buildingBuffers, activeShaderProgram);
 	}
 
@@ -3730,7 +3734,7 @@ function setupScene() {
 	targetMatrix = cellMatData.d16[0];
 }
 
-var texture,diffuseTexture,
+var texture,bricktex,diffuseTexture,
 	hudTexture,hudTextureSmallCircles,hudTexturePlus,hudTextureX,hudTextureBox,
 	fontTexture,
 	sshipTexture,sshipTexture2,cannonTexture,nmapTexture,
@@ -3744,7 +3748,7 @@ function loadTmpFFTexture(id,directory){
 
 function initTexture(){
 	texture = makeTexture("img/0033.jpg",gl.RGB,gl.UNSIGNED_SHORT_5_6_5);
-	
+	bricktex = makeTexture("img/brick-tex.jpg",gl.RGB,gl.UNSIGNED_SHORT_5_6_5); 
 	//nmapTexture = makeTexture("img/images.squarespace-cdn.com.png");	//button cushion
 	//diffuseTexture = makeTexture("img/no-git/6133-diffuse.jpg",false);nmapTexture = makeTexture("img/no-git/6133-normal.jpg",false);	//metal crate
 	//diffuseTexture = makeTexture("img/no-git/4483-diffuse.jpg",false);nmapTexture = makeTexture("img/no-git/4483-normal.jpg",false);	//rust
@@ -5218,7 +5222,7 @@ var iterateMechanics = (function iterateMechanics(){
 					0.01*guiParams.drawShapes.buildingScale,
 					buildingMatrix,
 					debugDraw.mats[6],
-					point => mengerUtils.getClosestPoint(point, 3),
+					point => mengerUtils.getClosestPoint(point, 2),
 					mengerUtils.getLastPen,
 					myAudioPlayer.setWhooshSoundMenger
 				);
@@ -5440,7 +5444,7 @@ var iterateMechanics = (function iterateMechanics(){
 					var bSize = 0.01*guiParams.drawShapes.buildingScale;
 					var scaledInput = homogenous.map(x=>x/bSize);
 
-					if (mengerUtils.isInside(scaledInput,3)){
+					if (mengerUtils.isInside(scaledInput,2)){
 						detonateBullet(bullet, true, [0.3,0.3,0.3,1]);
 					}
 				}

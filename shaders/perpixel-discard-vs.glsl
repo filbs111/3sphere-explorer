@@ -4,6 +4,10 @@
 #ifdef VERTCOLOR
 	in vec3 aVertexColor;
 #endif
+#ifdef TEXMAP
+	in vec3 aTextureCoord;
+	out vec3 vTextureCoord;
+#endif
 #ifdef VEC_ATMOS_THICK
 	uniform vec3 uAtmosThickness;
 	out vec3 fog;
@@ -161,5 +165,10 @@ transformedNormal = blendWeights.x*transformedNormalA + blendWeights.y*transform
 
 		float total=integral*exp(uAtmosContrast*constTerm);
 		fog = exp(-uAtmosThickness*total/2.0);
+#endif
+
+#ifdef TEXMAP
+	float myZ = aVertexPositionNormalized.w;
+	vTextureCoord = vec3( aTextureCoord.st*myZ, myZ );
 #endif
 	}

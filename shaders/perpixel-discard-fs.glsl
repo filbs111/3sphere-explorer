@@ -28,6 +28,10 @@
 #ifdef VERTCOLOR
 	in vec3 vVertexColor;
 #endif
+#ifdef TEXMAP
+	uniform sampler2D uSampler;
+	in vec3 vTextureCoord;
+#endif
 #ifdef CUSTOM_DEPTH
 	in vec2 vZW;
 #endif
@@ -84,6 +88,12 @@ out vec4 fragColor;
 	vec3 surfaceColor = vVertexColor*uColor.xyz;
 #else
 	vec3 surfaceColor = uColor.xyz;
+#endif
+
+#ifdef TEXMAP
+	vec4 sampleColor = textureProj(uSampler, vTextureCoord);
+	//vec4 sampleColor = vec4(1.0,0.0,0.0,1.0);
+	surfaceColor = surfaceColor * sampleColor.xyz;		
 #endif
 
 		vec4 preGammaFragColor = vec4( fog*(( uPlayerLightColor*light+ uReflectorDiffColor*portalLight + uReflectorDiffColor2*portalLight2 + uReflectorDiffColor3*portalLight3 + uFogColor.xyz )*surfaceColor + uEmitColor) + (1.0-fog)*uFogColor.xyz , 1.0);
