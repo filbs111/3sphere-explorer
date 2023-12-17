@@ -22,17 +22,21 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 	
 	currentboxInfo=boxInfoTowerblocks;
 	
-	addBoxData(0,0,hh, [0.5, 0.5, 0.5, 1.0]);
-	addBoxData(oneGridSquareOffset,0,hh, [1.0, 0.4, 0.4, 1.0],0);				//red - around
-	addBoxData(0,oneGridSquareOffset,hh, [0.4, 1.0, 0.4, 1.0],0);				//green - along
-	addBoxData(0,0,oneGridSquareOffset*fudgeFact+hh, [0.4, 0.4, 1.0, 1.0],0);	//blue - up
+	var midGreyColor = new Float32Array([0.5, 0.5, 0.5, 1]);
+	var lightGreyColor = new Float32Array([0.7, 0.7, 0.7, 1]);
+	var whiteColor = new Float32Array([1,1,1,1]);	//TODO use colorArrs.white? perhaps should be declared earlier.
+
+	addBoxData(0,0,hh, midGreyColor, 0);
+	addBoxData(oneGridSquareOffset,0,hh, new Float32Array([1.0, 0.4, 0.4, 1.0]),0);				//red - around
+	addBoxData(0,oneGridSquareOffset,hh, new Float32Array([0.4, 1.0, 0.4, 1.0]),0);				//green - along
+	addBoxData(0,0,oneGridSquareOffset*fudgeFact+hh, new Float32Array([0.4, 0.4, 1.0, 1.0]),0);	//blue - up
 
 	//an array of boxes, with view to testing atmosphere shader.
 	//this is a huge number of boxes. very inefficient. testing only. if want scene like this, combine into fewer objects (eg one)
 	for (var ii=0;ii<4;ii++){
 		for (var jj=0;jj<4;jj++){
 			for (var hi=-1;hi<8;hi++){
-				addBoxData((ii+jj)*0.15 -1.5,(ii-jj)*0.15 -0.5,hi*0.05, [0.5, 0.5, 0.5, 1.0], Math.PI/4);	//45 degree twist
+				addBoxData((ii+jj)*0.15 -1.5,(ii-jj)*0.15 -0.5,hi*0.05, midGreyColor, Math.PI/4);	//45 degree twist
 			}
 		}
 	}
@@ -45,17 +49,17 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 	var stepSizeAroundRoad= Math.PI*2/aroundRoadSteps;
 	var stepSizeAlongRoad= Math.PI*2/alongRoadSteps;
 	for (var ii=0;ii<aroundRoadSteps;ii++){
-		addBoxData(ii*stepSizeAroundRoad +10,-1.7,0.05, [0.6, 0.6, 0.6, 1.0],0);
+		addBoxData(ii*stepSizeAroundRoad +10,-1.7,0.05, midGreyColor,0);
 	}
 	for (var ii=0;ii<alongRoadSteps;ii++){
-		addBoxData(Math.PI/2,ii*stepSizeAlongRoad +10,0.15, [0.6, 0.6, 0.6, 1.0],0);
+		addBoxData(Math.PI/2,ii*stepSizeAlongRoad +10,0.15, midGreyColor,0);
 	}
 	
 	currentboxInfo=boxInfoHyperboloids;
 	for (var ii=0;ii<4;ii++){
 		for (var jj=0;jj<4;jj++){
 			for (var hi=2;hi<3;hi++){
-				addBoxData((ii+jj)*0.2 ,(ii-jj)*0.2 -0.8,hi*0.05, [0.7, 0.7, 0.7, 1.0], 0);
+				addBoxData((ii+jj)*0.2 ,(ii-jj)*0.2 -0.8,hi*0.05, lightGreyColor, 0);
 			}
 		}
 	}
@@ -64,10 +68,9 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 	
 	function randColor(){
 		var coherentShift = Math.random()*0.05;
-		return [0.9+coherentShift+Math.random()*0.05,
+		return new Float32Array([0.9+coherentShift+Math.random()*0.05,
 				0.6+coherentShift+Math.random()*0.03,
-				0.1+coherentShift+Math.random()*0.01,1.0];
-				//TODO float32array (faster to render?)
+				0.1+coherentShift+Math.random()*0.01,1.0]);
 	}
 	
 	var stepSize= Math.PI*2/31;
@@ -82,12 +85,11 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 	//add some tower that passes through portal?
 	//currently requires 2 towers. TODO different setup for each side.
 	for (var hi=0;hi<11;hi++){
-		addBoxData(-0.1,0,hi*0.05, [0.7, 0.7, 0.7, 1.0],0);
-		addBoxData(Math.PI-0.1,0,hi*0.05, [0.7, 0.7, 0.7, 1.0],0);
+		addBoxData(-0.1,0,hi*0.05, lightGreyColor,0);
+		addBoxData(Math.PI-0.1,0,hi*0.05, lightGreyColor,0);
 	}
 
 	currentboxInfo = boxInfoViaducts;
-	var whiteColor = [1,1,1,1];	//TODO use colorArrs.white? perhaps should be declared earlier.
 	for (var ii=0;ii<31;ii++){	//doesn't quite meet up. probably exact is 10*PI
 		//copied from stonehenge but just the top parts
 		for (var kk=0.25;kk<1;kk+=0.5){
