@@ -3,6 +3,7 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 	var boxInfoHyperboloids = initialiseInfo();
 	var boxInfoStonehenge = initialiseInfo();
 	var boxInfoViaducts = initialiseInfo();
+	var boxInfoViaducts2 = initialiseInfo();
 	var boxInfoRoads = initialiseInfo();
 	var currentboxInfo;
 	
@@ -86,18 +87,29 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 	}
 
 	currentboxInfo = boxInfoViaducts;
+	var whiteColor = [1,1,1,1];	//TODO use colorArrs.white? perhaps should be declared earlier.
 	for (var ii=0;ii<31;ii++){	//doesn't quite meet up. probably exact is 10*PI
 		//copied from stonehenge but just the top parts
-		var whiteColor = [1,1,1,1];	//TODO use colorArrs.white? perhaps should be declared earlier.
 		for (var kk=0.25;kk<1;kk+=0.5){
 			addBoxData((ii+kk)*stepSize +10,(ii+kk)*stepSize,0 , whiteColor , Math.PI/4);
 		}
 	}
-	var rotationCorrection =[3*Math.PI/2,0,0];
-	var listToCorrect = currentboxInfo.list;	
-	for (var ii=0;ii<listToCorrect.length;++ii){
-		var thisMat = listToCorrect[ii].matrix;
-		xyzrotate4mat(thisMat, rotationCorrection);
+	adjustMatricesForBendyDrawing(currentboxInfo.list);
+
+	currentboxInfo = boxInfoViaducts2;
+	var ringRad = 0.4;
+	for (var ii=0;ii<16;ii++){
+		var angle = Math.PI*ii/8;
+		addBoxData(ringRad * Math.sin(angle),-ringRad * Math.cos(angle), 0 , whiteColor , angle);
+	}
+	adjustMatricesForBendyDrawing(currentboxInfo.list);
+
+	function adjustMatricesForBendyDrawing(list){
+		var rotationCorrection =[3*Math.PI/2,0,0];
+		for (var ii=0;ii<list.length;++ii){
+			var thisMat = list[ii].matrix;
+			xyzrotate4mat(thisMat, rotationCorrection);
+		}
 	}
 	
 	function addBoxData(aa, bb, hh, cc, turn){
@@ -128,6 +140,7 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 		hyperboloids:boxInfoHyperboloids,
 		stonehenge:boxInfoStonehenge,
 		viaducts:boxInfoViaducts,
+		viaducts2:boxInfoViaducts2,
 		roads:boxInfoRoads
 	};
 })();

@@ -2392,23 +2392,27 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		bind2dTextureIfRequired(bricktex);
 		prepBuffersForDrawing(bridgeBuffers, activeShaderProgram);
 
-		var viaductList = duocylinderBoxInfo.viaducts.list;
-		for (var ii=0;ii<viaductList.length;++ii){
-			var thisMat = viaductList[ii].matrix;
-			mat4.set(invertedWorldCamera, mvMatrixA);
-			rotate4mat(mvMatrixA, 0, 1, duocylinderSpin);
-			mat4.multiply(mvMatrixA,thisMat);
-			mat4.identity(mMatrixA);rotate4mat(mMatrixA, 0, 1, duocylinderSpin);
-			mat4.multiply(mMatrixA,thisMat);
+		drawBendyObjectsRing(duocylinderBoxInfo.viaducts.list);
+		drawBendyObjectsRing(duocylinderBoxInfo.viaducts2.list);
 
-			var otherMat = viaductList[(ii+1)%viaductList.length].matrix;
-			mat4.set(invertedWorldCamera, mvMatrixB);
-			rotate4mat(mvMatrixB, 0, 1, duocylinderSpin);
-			mat4.multiply(mvMatrixB,otherMat);
-			mat4.identity(mMatrixB);rotate4mat(mMatrixB, 0, 1, duocylinderSpin);
-			mat4.multiply(mMatrixB,otherMat);
+		function drawBendyObjectsRing(list){
+			for (var ii=0;ii<list.length;++ii){
+				var thisMat = list[ii].matrix;
+				mat4.set(invertedWorldCamera, mvMatrixA);
+				rotate4mat(mvMatrixA, 0, 1, duocylinderSpin);
+				mat4.multiply(mvMatrixA,thisMat);
+				mat4.identity(mMatrixA);rotate4mat(mMatrixA, 0, 1, duocylinderSpin);
+				mat4.multiply(mMatrixA,thisMat);
 
-			drawObjectFromPreppedBuffers(bridgeBuffers, activeShaderProgram);
+				var otherMat = list[(ii+1)%list.length].matrix;
+				mat4.set(invertedWorldCamera, mvMatrixB);
+				rotate4mat(mvMatrixB, 0, 1, duocylinderSpin);
+				mat4.multiply(mvMatrixB,otherMat);
+				mat4.identity(mMatrixB);rotate4mat(mMatrixB, 0, 1, duocylinderSpin);
+				mat4.multiply(mMatrixB,otherMat);
+
+				drawObjectFromPreppedBuffers(bridgeBuffers, activeShaderProgram);
+			}
 		}
 	}
 
