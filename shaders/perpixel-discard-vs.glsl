@@ -168,7 +168,11 @@ transformedNormal = blendWeights.x*transformedNormalA + blendWeights.y*transform
 #endif
 
 #ifdef TEXMAP
+#ifdef BENDY_
+	float myZ = aVertexPositionNormalizedA.w;
+#else
 	float myZ = aVertexPositionNormalized.w;
+#endif
 	vTextureCoord = vec3( aTextureCoord.st*myZ, myZ );
 #endif
 	}

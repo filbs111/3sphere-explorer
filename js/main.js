@@ -383,6 +383,8 @@ function initBuffers(){
 
 	loadBuffersFromObj2Or3File(octoFractalBuffers, "./data/miscobjs/fractal-octahedron4.obj3", loadBufferData, 6);
 
+	loadBuffersFromObj2Or3File(bridgeBuffers, "./data/miscobjs/bridgexmy2.obj3", loadBufferData, 6);
+
 
 	var thisMatT;
 	for (var ii=0;ii<maxRandBoxes;ii++){
@@ -2363,7 +2365,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			shaderSetup(activeShaderProgram);
 		}
 
-		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.gray);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
 
 		modelScale = 0.01*guiParams.drawShapes.octoFractalScale;
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
@@ -2377,36 +2379,44 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 	}
 
 	if (guiParams.drawShapes.viaduct && bridgeBuffers.isLoaded){
-		var desiredProgram = shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ];
+		var desiredProgram = shaderPrograms.coloredPerPixelDiscardVertexColoredTexmapBendy[ guiParams.display.atmosShader ];
+
 		if (activeShaderProgram != desiredProgram){
 			activeShaderProgram = desiredProgram;
 			shaderSetup(activeShaderProgram);
 		}
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
-		modelScale = 0.021;	//TODO calculate correct value
+		modelScale = 0.042;	//TODO calculate correct value
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
 
+		bind2dTextureIfRequired(bricktex);
 		prepBuffersForDrawing(bridgeBuffers, activeShaderProgram);
 
 		var viaductList = duocylinderBoxInfo.viaducts.list;
-		//var correction = 2*Math.PI/3 * Math.sqrt(0.333);
-		var correction = 2*Math.PI/Math.sqrt(27);
-		var rotationCorrection = [correction,correction,correction];
+		var rotationCorrection =[3*Math.PI/2,0,0];	
+
 		for (var ii=0;ii<viaductList.length;++ii){
 			//var thisMat = viaductList[ii].matrix;
 			var thisMat = mat4.create(viaductList[ii].matrix);	//temp to rotate (TODO prerotate)
 			xyzrotate4mat(thisMat, rotationCorrection);
 
-			mat4.set(invertedWorldCamera, mvMatrix);
-			rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
-			mat4.multiply(mvMatrix,thisMat);
-	
-			mat4.identity(mMatrix);rotate4mat(mMatrix, 0, 1, duocylinderSpin);
-			mat4.multiply(mMatrix, thisMat);
+			mat4.set(invertedWorldCamera, mvMatrixA);
+			rotate4mat(mvMatrixA, 0, 1, duocylinderSpin);
+			mat4.multiply(mvMatrixA,thisMat);
+			mat4.identity(mMatrixA);rotate4mat(mMatrixA, 0, 1, duocylinderSpin);
+			mat4.multiply(mMatrixA,thisMat);
+
+			var otherMat = mat4.create(viaductList[(ii+1)%viaductList.length].matrix);
+			xyzrotate4mat(otherMat, rotationCorrection);
+
+			mat4.set(invertedWorldCamera, mvMatrixB);
+			rotate4mat(mvMatrixB, 0, 1, duocylinderSpin);
+			mat4.multiply(mvMatrixB,otherMat);
+			mat4.identity(mMatrixB);rotate4mat(mMatrixB, 0, 1, duocylinderSpin);
+			mat4.multiply(mMatrixB,otherMat);
 
 			drawObjectFromPreppedBuffers(bridgeBuffers, activeShaderProgram);
 		}
-		//TODO draw with twist so segments meet up.
 	}
 
 
@@ -4104,7 +4114,7 @@ function init(){
 			"grid","terrain","procTerrain",'voxTerrain','voxTerrain2','voxTerrain3','l3dt-brute','l3dt-blockstrips','none'] );
 		worldFolder.add(world, "spinRate", -2.5,2.5,0.25);
 		worldFolder.add(world, "seaActive" );
-		worldFolder.add(world, "seaLevel", -0.04,0.04,0.002);
+		worldFolder.add(world, "seaLevel", -0.02,0.02,0.001);
 		worldFolder.add(world, "seaPeakiness", 0.0,0.5,0.01);
 	});
 

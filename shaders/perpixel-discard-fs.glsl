@@ -92,8 +92,11 @@ out vec4 fragColor;
 
 #ifdef TEXMAP
 	vec4 sampleColor = textureProj(uSampler, vTextureCoord);
+	//sampleColor = pow(sampleColor, vec4(2.2));	//guess gamma correction?
 	//vec4 sampleColor = vec4(1.0,0.0,0.0,1.0);
 	surfaceColor = surfaceColor * sampleColor.xyz;		
+
+	surfaceColor = pow(surfaceColor, vec3(2.2));	//guess gamma correction with vert colours included (expect incorrect)
 #endif
 
 		vec4 preGammaFragColor = vec4( fog*(( uPlayerLightColor*light+ uReflectorDiffColor*portalLight + uReflectorDiffColor2*portalLight2 + uReflectorDiffColor3*portalLight3 + uFogColor.xyz )*surfaceColor + uEmitColor) + (1.0-fog)*uFogColor.xyz , 1.0);

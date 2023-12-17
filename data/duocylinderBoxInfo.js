@@ -89,8 +89,8 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 	for (var ii=0;ii<31;ii++){	//doesn't quite meet up. probably exact is 10*PI
 		//copied from stonehenge but just the top parts
 		var whiteColor = [1,1,1,1];	//TODO use colorArrs.white? perhaps should be declared earlier.
-		for (var kk=0.125;kk<1;kk+=0.25){
-			addBoxData((ii+kk)*stepSize +10,(ii+kk)*stepSize,4*0.05, whiteColor ,Math.PI/4 + 0.2);
+		for (var kk=0.25;kk<1;kk+=0.5){
+			addBoxData((ii+kk)*stepSize +10,(ii+kk)*stepSize,0 , whiteColor , Math.PI/4);
 		}
 	}
 	
