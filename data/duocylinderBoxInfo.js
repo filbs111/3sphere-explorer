@@ -93,6 +93,12 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 			addBoxData((ii+kk)*stepSize +10,(ii+kk)*stepSize,0 , whiteColor , Math.PI/4);
 		}
 	}
+	var rotationCorrection =[3*Math.PI/2,0,0];
+	var listToCorrect = currentboxInfo.list;	
+	for (var ii=0;ii<listToCorrect.length;++ii){
+		var thisMat = listToCorrect[ii].matrix;
+		xyzrotate4mat(thisMat, rotationCorrection);
+	}
 	
 	function addBoxData(aa, bb, hh, cc, turn){
 		var boxMatrix = mat4.identity();

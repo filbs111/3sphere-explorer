@@ -2393,22 +2393,15 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		prepBuffersForDrawing(bridgeBuffers, activeShaderProgram);
 
 		var viaductList = duocylinderBoxInfo.viaducts.list;
-		var rotationCorrection =[3*Math.PI/2,0,0];	
-
 		for (var ii=0;ii<viaductList.length;++ii){
-			//var thisMat = viaductList[ii].matrix;
-			var thisMat = mat4.create(viaductList[ii].matrix);	//temp to rotate (TODO prerotate)
-			xyzrotate4mat(thisMat, rotationCorrection);
-
+			var thisMat = viaductList[ii].matrix;
 			mat4.set(invertedWorldCamera, mvMatrixA);
 			rotate4mat(mvMatrixA, 0, 1, duocylinderSpin);
 			mat4.multiply(mvMatrixA,thisMat);
 			mat4.identity(mMatrixA);rotate4mat(mMatrixA, 0, 1, duocylinderSpin);
 			mat4.multiply(mMatrixA,thisMat);
 
-			var otherMat = mat4.create(viaductList[(ii+1)%viaductList.length].matrix);
-			xyzrotate4mat(otherMat, rotationCorrection);
-
+			var otherMat = viaductList[(ii+1)%viaductList.length].matrix;
 			mat4.set(invertedWorldCamera, mvMatrixB);
 			rotate4mat(mvMatrixB, 0, 1, duocylinderSpin);
 			mat4.multiply(mvMatrixB,otherMat);
