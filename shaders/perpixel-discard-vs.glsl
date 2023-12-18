@@ -27,11 +27,16 @@
 	in vec4 aMMatrixB;
 	in vec4 aMMatrixC;
 	in vec4 aMMatrixD;
-	uniform mat4 uVMatrix;
 #else
 	uniform mat4 uMMatrix;
+#endif
+
+#ifdef VS_MATMULT
+	uniform mat4 uVMatrix;
+#else
 	uniform mat4 uMVMatrix;
 #endif
+
 #endif
 	uniform mat4 uPMatrix;
 	uniform vec4 uCameraWorldPos;
@@ -83,6 +88,9 @@ transformedNormal = blendWeights.x*transformedNormalA + blendWeights.y*transform
 #ifdef INSTANCED
 	//bodge together a matrix from input vectors because suspect chrome bug
 		mat4 uMMatrix = mat4( aMMatrixA, aMMatrixB, aMMatrixC, aMMatrixD );
+#endif
+
+#ifdef VS_MATMULT
 		mat4 MVMatrix = uVMatrix * uMMatrix;
 #else
 		mat4 MVMatrix = uMVMatrix;

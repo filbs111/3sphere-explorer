@@ -2392,25 +2392,17 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		bind2dTextureIfRequired(bricktex);
 		prepBuffersForDrawing(bridgeBuffers, activeShaderProgram);
 
+		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uVMatrix, false, invertedWorldCameraDuocylinderFrame);
+
 		drawBendyObjectsRing(duocylinderBoxInfo.viaducts.list);
 		drawBendyObjectsRing(duocylinderBoxInfo.viaducts2.list);
 
 		function drawBendyObjectsRing(list){
 			for (var ii=0;ii<list.length;++ii){
-				var thisMat = list[ii].matrix;
-				mat4.set(invertedWorldCamera, mvMatrixA);
-				rotate4mat(mvMatrixA, 0, 1, duocylinderSpin);
-				mat4.multiply(mvMatrixA,thisMat);
 				mat4.identity(mMatrixA);rotate4mat(mMatrixA, 0, 1, duocylinderSpin);
-				mat4.multiply(mMatrixA,thisMat);
-
-				var otherMat = list[(ii+1)%list.length].matrix;
-				mat4.set(invertedWorldCamera, mvMatrixB);
-				rotate4mat(mvMatrixB, 0, 1, duocylinderSpin);
-				mat4.multiply(mvMatrixB,otherMat);
+				mat4.multiply(mMatrixA, list[ii].matrix);
 				mat4.identity(mMatrixB);rotate4mat(mMatrixB, 0, 1, duocylinderSpin);
-				mat4.multiply(mMatrixB,otherMat);
-
+				mat4.multiply(mMatrixB, list[(ii+1)%list.length].matrix);
 				drawObjectFromPreppedBuffers(bridgeBuffers, activeShaderProgram);
 			}
 		}
@@ -3502,8 +3494,11 @@ function drawObjectFromPreppedBuffers(bufferObj, shaderProg, skipM){
 
 	if (shaderProg.uniforms.uMVMatrixA){	//bendy stuff with interpolated matrices
 		gl.uniformMatrix4fv(shaderProg.uniforms.uMVMatrixA, false, mvMatrixA);
-		gl.uniformMatrix4fv(shaderProg.uniforms.uMMatrixA, false, mMatrixA);
 		gl.uniformMatrix4fv(shaderProg.uniforms.uMVMatrixB, false, mvMatrixB);
+	}
+
+	if (shaderProg.uniforms.uMMatrixA){	//bendy stuff with interpolated matrices
+		gl.uniformMatrix4fv(shaderProg.uniforms.uMMatrixA, false, mMatrixA);
 		gl.uniformMatrix4fv(shaderProg.uniforms.uMMatrixB, false, mMatrixB);
 	}
 	
