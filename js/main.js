@@ -6,23 +6,6 @@ var shaderProgramColored,	//these are variables that are set to different shader
 
 var myDebugStr = "TEST INFO TO GO HERE";
 
-function bufferArrayData(buffer, arr, size){
-	 bufferArrayDataGeneral(buffer, new Float32Array(arr), size);
-}
-function bufferArrayDataGeneral(buffer, arr, size){
-	//console.log("size:" + size);
-	gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-	gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STATIC_DRAW);
-	buffer.itemSize = size;
-	buffer.numItems = arr.length / size;
-}
-
-function bufferArraySubDataGeneral(buffer, offs, arr){
-	gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-	gl.bufferSubData(gl.ARRAY_BUFFER, offs, arr);
-}
-
-
 var duocylinderObjects={
 	grid:{divs:4,step:Math.PI/2},
 	terrain:{divs:2,step:Math.PI},
@@ -428,38 +411,6 @@ function initBuffers(){
 	roadBoxBuffers.divs=1;	//because reusing duocylinder drawing function
 	roadBoxBuffers.step=0;	//unused
 	
-	function loadBufferData(bufferObj, sourceData){
-
-		bufferObj.vertexPositionBuffer = gl.createBuffer();
-		bufferArrayData(bufferObj.vertexPositionBuffer, sourceData.vertices, sourceData.vertices_len || 3);
-		if (sourceData.uvcoords){
-			bufferObj.vertexTextureCoordBuffer= gl.createBuffer();
-			bufferArrayData(bufferObj.vertexTextureCoordBuffer, sourceData.uvcoords, 2);
-		}
-		if (sourceData.velocities){	//for exploding objects
-			bufferObj.vertexVelocityBuffer= gl.createBuffer();
-			bufferArrayData(bufferObj.vertexVelocityBuffer, sourceData.velocities, 3);
-		}
-		if (sourceData.normals){
-			bufferObj.vertexNormalBuffer= gl.createBuffer();
-			bufferArrayData(bufferObj.vertexNormalBuffer, sourceData.normals, 3);
-		}
-		if (sourceData.tangents){
-			bufferObj.vertexTangentBuffer= gl.createBuffer();
-			bufferArrayData(bufferObj.vertexTangentBuffer, sourceData.tangents, 3);
-		}
-		if (sourceData.binormals){
-			bufferObj.vertexBinormalBuffer= gl.createBuffer();
-			bufferArrayData(bufferObj.vertexBinormalBuffer, sourceData.binormals, 3);
-		}
-		bufferObj.vertexIndexBuffer = gl.createBuffer();
-		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
-		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(sourceData.indices), gl.STATIC_DRAW);
-		bufferObj.vertexIndexBuffer.itemSize = 3;
-		bufferObj.vertexIndexBuffer.numItems = sourceData.indices.length;
-	}
-	
-	
 	randBoxBuffers.randMatrixBuffers = glBufferMatrixUniformDataForInstancedDrawing(randomMats);
 
 	randBoxBuffers.forTerrain={};
@@ -467,21 +418,10 @@ function initBuffers(){
 	Object.keys(voxTerrainData).forEach(x=>{
 		randBoxBuffers.forTerrain[x] = glBufferMatrixUniformDataForInstancedDrawing(voxTerrainData[x].surfaceParticleMats);
 	});
-	
-	function glBufferMatrixUniformDataForInstancedDrawing(sourceMatArr){
-		//make a matrix buffer for instanced drawing of random boxes
-		var numMats = sourceMatArr.length;
-		var matrixF32Arr = new Float32Array(numMats*16);
-		
-		for (var ii=0,pp=0;ii<numMats;ii++,pp+=16){
-			matrixF32Arr.set(sourceMatArr[ii], pp);
-		}
-		
-		var matA = gl.createBuffer();
-		bufferArrayDataGeneral(matA, matrixF32Arr, 16);
-		
-		return matA;
-	}
+
+	//not done inside method to create box info since gl doesn't exist yet.
+	createBuffersForInstancedDrawingFromList(duocylinderBoxInfo.viaducts);
+	createBuffersForInstancedDrawingFromList(duocylinderBoxInfo.viaducts2);
 	
 	function loadBlenderExport(meshToLoad){
 		return {
@@ -1996,7 +1936,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			gl.vertexAttribDivisor(activeShaderProgram.attributes.aMMatrixA, 1);
 			gl.vertexAttribDivisor(activeShaderProgram.attributes.aMMatrixB, 1);
 			gl.vertexAttribDivisor(activeShaderProgram.attributes.aMMatrixC, 1);
-			gl.vertexAttribDivisor(activeShaderProgram.attributes.aMMatrixD, 1)
+			gl.vertexAttribDivisor(activeShaderProgram.attributes.aMMatrixD, 1);
 			
 			gl.bindBuffer(gl.ARRAY_BUFFER, matrixBuffers);
 			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixA, 4, gl.FLOAT, false, 64, 0);	//https://community.khronos.org/t/how-to-specify-a-matrix-vertex-attribute/54102/3
@@ -2378,7 +2318,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 		drawObjectFromBuffers(octoFractalBuffers, activeShaderProgram);
 	}
 
-	if (guiParams.drawShapes.viaduct && bridgeBuffers.isLoaded){
+	if (guiParams.drawShapes.viaduct == 'individual' && bridgeBuffers.isLoaded){
 		var desiredProgram = shaderPrograms.coloredPerPixelDiscardVertexColoredTexmapBendy[ guiParams.display.atmosShader ];
 
 		if (activeShaderProgram != desiredProgram){
@@ -2405,6 +2345,54 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 				mat4.multiply(mMatrixB, list[(ii+1)%list.length].matrix);
 				drawObjectFromPreppedBuffers(bridgeBuffers, activeShaderProgram);
 			}
+		}
+	}
+
+	if (guiParams.drawShapes.viaduct == 'instanced' && bridgeBuffers.isLoaded){
+		var desiredProgram = shaderPrograms.coloredPerPixelDiscardVertexColoredTexmapBendyInstanced[ guiParams.display.atmosShader ];
+
+		if (activeShaderProgram != desiredProgram){
+			activeShaderProgram = desiredProgram;
+			shaderSetup(activeShaderProgram);
+		}
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
+		modelScale = 0.042;	//TODO calculate correct value
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
+
+		bind2dTextureIfRequired(bricktex);
+		prepBuffersForDrawing(bridgeBuffers, activeShaderProgram);
+
+		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uVMatrix, false, invertedWorldCameraDuocylinderFrame);
+
+		gl.vertexAttribDivisor(activeShaderProgram.attributes.aMMatrixA_A, 1);
+		gl.vertexAttribDivisor(activeShaderProgram.attributes.aMMatrixA_B, 1);
+		gl.vertexAttribDivisor(activeShaderProgram.attributes.aMMatrixA_C, 1);
+		gl.vertexAttribDivisor(activeShaderProgram.attributes.aMMatrixA_D, 1);
+		gl.vertexAttribDivisor(activeShaderProgram.attributes.aMMatrixB_A, 1);
+		gl.vertexAttribDivisor(activeShaderProgram.attributes.aMMatrixB_B, 1);
+		gl.vertexAttribDivisor(activeShaderProgram.attributes.aMMatrixB_C, 1);
+		gl.vertexAttribDivisor(activeShaderProgram.attributes.aMMatrixB_D, 1);
+
+		drawBendyObjectsRingInstanced(bridgeBuffers, duocylinderBoxInfo.viaducts);
+		drawBendyObjectsRingInstanced(bridgeBuffers, duocylinderBoxInfo.viaducts2);
+
+		zeroAttributeDivisors(activeShaderProgram);	//clean up
+
+		function drawBendyObjectsRingInstanced(objBufferForInstances, container){
+			gl.bindBuffer(gl.ARRAY_BUFFER, container.buffersForInstancedDrawing);
+				//TODO don't bind each time when drawing multiple - bind whole lot, draw ranges?
+
+			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixA_A, 4, gl.FLOAT, false, 64, 0);	//https://community.khronos.org/t/how-to-specify-a-matrix-vertex-attribute/54102/3
+			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixA_B, 4, gl.FLOAT, false, 64, 16);
+			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixA_C, 4, gl.FLOAT, false, 64, 32);
+			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixA_D, 4, gl.FLOAT, false, 64, 48);
+			
+			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixB_A, 4, gl.FLOAT, false, 64, 64);
+			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixB_B, 4, gl.FLOAT, false, 64, 64+16);
+			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixB_C, 4, gl.FLOAT, false, 64, 64+32);
+			gl.vertexAttribPointer(activeShaderProgram.attributes.aMMatrixB_D, 4, gl.FLOAT, false, 64, 64+48);
+
+			gl.drawElementsInstanced(gl.TRIANGLES, objBufferForInstances.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, container.list.length);
 		}
 	}
 
@@ -3914,7 +3902,7 @@ var guiParams={
 		buildingScale:10,
 		octoFractal:true,
 		octoFractalScale:20,
-		viaduct:true
+		viaduct: 'instanced'
 	},
 	'random boxes':{
 		number:maxRandBoxes,	//note ui controlled value does not affect singleBuffer
@@ -4146,7 +4134,7 @@ function init(){
 	drawShapesFolder.add(guiParams.drawShapes,"buildingScale",0.1,20.0,0.1);
 	drawShapesFolder.add(guiParams.drawShapes,"octoFractal");
 	drawShapesFolder.add(guiParams.drawShapes,"octoFractalScale",0.1,20.0,0.1);
-	drawShapesFolder.add(guiParams.drawShapes,"viaduct");
+	drawShapesFolder.add(guiParams.drawShapes,"viaduct", ['none','individual','instanced']);
 
 	var polytopesFolder = gui.addFolder('polytopes');
 	polytopesFolder.add(guiParams,"draw 5-cell");

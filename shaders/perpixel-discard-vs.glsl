@@ -16,29 +16,41 @@
 	out float fog;
 #endif
 	uniform float uAtmosContrast;
+
 #ifdef BENDY_
-	uniform mat4 uMMatrixA;
-	uniform mat4 uMMatrixB;
+	#ifdef INSTANCED
+		in vec4 aMMatrixA_A;
+		in vec4 aMMatrixA_B;
+		in vec4 aMMatrixA_C;
+		in vec4 aMMatrixA_D;
+		in vec4 aMMatrixB_A;
+		in vec4 aMMatrixB_B;
+		in vec4 aMMatrixB_C;
+		in vec4 aMMatrixB_D;
+	#else
+		uniform mat4 uMMatrixA;
+		uniform mat4 uMMatrixB;
+	#endif
 #else
-#ifdef INSTANCED
-	in vec4 aMMatrixA;
-	in vec4 aMMatrixB;
-	in vec4 aMMatrixC;
-	in vec4 aMMatrixD;
-#else
-	uniform mat4 uMMatrix;
-#endif
+	#ifdef INSTANCED
+		in vec4 aMMatrixA;
+		in vec4 aMMatrixB;
+		in vec4 aMMatrixC;
+		in vec4 aMMatrixD;
+	#else
+		uniform mat4 uMMatrix;
+	#endif
 #endif
 
 #ifdef VS_MATMULT
 	uniform mat4 uVMatrix;
 #else
-#ifdef BENDY_
-	uniform mat4 uMVMatrixA;
-	uniform mat4 uMVMatrixB;
-#else
-	uniform mat4 uMVMatrix;
-#endif
+	#ifdef BENDY_
+		uniform mat4 uMVMatrixA;
+		uniform mat4 uMVMatrixB;
+	#else
+		uniform mat4 uMVMatrix;
+	#endif
 #endif
 
 	uniform mat4 uPMatrix;
@@ -58,54 +70,58 @@
 	void main(void) {	
 
 #ifdef BENDY_
-
 //todo simpler formulation!
 
-#ifdef VS_MATMULT
-	mat4 MVMatrixA = uVMatrix * uMMatrixA;
-	mat4 MVMatrixB = uVMatrix * uMMatrixB;
-#else
-	mat4 MVMatrixA = uMVMatrixA;
-	mat4 MVMatrixB = uMVMatrixB;
-#endif
+	#ifdef INSTANCED
+		mat4 uMMatrixA = mat4( aMMatrixA_A, aMMatrixA_B, aMMatrixA_C, aMMatrixA_D );
+		mat4 uMMatrixB = mat4( aMMatrixB_A, aMMatrixB_B, aMMatrixB_C, aMMatrixB_D );
+	#endif
 
-vec4 scaledCoord = vec4( uModelScale*aVertexPosition, 1.0);
-vec4 xyFlatCoord = normalize(scaledCoord * vec4(1.0,1.0,0.0,1.0));
-//vec4 zFlatCoord = scaledCoord * vec4(0.0,0.0,1.0,1.0);	//TODO simply maths by using fact that transformedCoord-flatCoord = ?
+	#ifdef VS_MATMULT
+		mat4 MVMatrixA = uVMatrix * uMMatrixA;
+		mat4 MVMatrixB = uVMatrix * uMMatrixB;
+	#else
+		mat4 MVMatrixA = uMVMatrixA;
+		mat4 MVMatrixB = uMVMatrixB;
+	#endif
 
-vec2 blendWeights = 0.5*(1.0 + aVertexPosition.z*vec2(1.0,-1.0));
+	vec4 scaledCoord = vec4( uModelScale*aVertexPosition, 1.0);
+	vec4 xyFlatCoord = normalize(scaledCoord * vec4(1.0,1.0,0.0,1.0));
+	//vec4 zFlatCoord = scaledCoord * vec4(0.0,0.0,1.0,1.0);	//TODO simply maths by using fact that transformedCoord-flatCoord = ?
 
-vec4 transformedCoordEndA = MVMatrixA * xyFlatCoord;
-vec4 transformedCoordEndB = MVMatrixB * xyFlatCoord;
-vec4 avgCoord1 = blendWeights.x*transformedCoordEndA + blendWeights.y*transformedCoordEndB;
+	vec2 blendWeights = 0.5*(1.0 + aVertexPosition.z*vec2(1.0,-1.0));
 
-vec4 aVertexPositionNormalizedA = normalize(vec4(uModelScale*(aVertexPosition-vec3(0.0,0.0,1.0)), 1.0));
-vec4 aVertexPositionNormalizedB = normalize(vec4(uModelScale*(aVertexPosition+vec3(0.0,0.0,1.0)), 1.0));
-vec4 transformedCoordA = MVMatrixA * aVertexPositionNormalizedA;
-vec4 transformedCoordB = MVMatrixB * aVertexPositionNormalizedB;
-vec4 avgCoord2 = blendWeights.x*transformedCoordA + blendWeights.y*transformedCoordB;
+	vec4 transformedCoordEndA = MVMatrixA * xyFlatCoord;
+	vec4 transformedCoordEndB = MVMatrixB * xyFlatCoord;
+	vec4 avgCoord1 = blendWeights.x*transformedCoordEndA + blendWeights.y*transformedCoordEndB;
 
-float weighting = aVertexPosition.z*aVertexPosition.z;
+	vec4 aVertexPositionNormalizedA = normalize(vec4(uModelScale*(aVertexPosition-vec3(0.0,0.0,1.0)), 1.0));
+	vec4 aVertexPositionNormalizedB = normalize(vec4(uModelScale*(aVertexPosition+vec3(0.0,0.0,1.0)), 1.0));
+	vec4 transformedCoordA = MVMatrixA * aVertexPositionNormalizedA;
+	vec4 transformedCoordB = MVMatrixB * aVertexPositionNormalizedB;
+	vec4 avgCoord2 = blendWeights.x*transformedCoordA + blendWeights.y*transformedCoordB;
 
-//transformedCoord = normalize(0.5*(avgCoord1*(1.0-weighting) + avgCoord2*(1.0+weighting)));	//guess, but seems bit wrong at ends
-transformedCoord = normalize(0.5*(avgCoord1*(3.0-weighting) + avgCoord2*(3.0+weighting)));	//seems about right. 
+	float weighting = aVertexPosition.z*aVertexPosition.z;
 
-vec4 transformedNormalA = MVMatrixA * vec4(aVertexNormal,0.0);
-vec4 transformedNormalB = MVMatrixB * vec4(aVertexNormal,0.0);
-transformedNormal = blendWeights.x*transformedNormalA + blendWeights.y*transformedNormalB;	//approx. TODO use equivalent logic as vertex position
+	//transformedCoord = normalize(0.5*(avgCoord1*(1.0-weighting) + avgCoord2*(1.0+weighting)));	//guess, but seems bit wrong at ends
+	transformedCoord = normalize(0.5*(avgCoord1*(3.0-weighting) + avgCoord2*(3.0+weighting)));	//seems about right. 
+
+	vec4 transformedNormalA = MVMatrixA * vec4(aVertexNormal,0.0);
+	vec4 transformedNormalB = MVMatrixB * vec4(aVertexNormal,0.0);
+	transformedNormal = blendWeights.x*transformedNormalA + blendWeights.y*transformedNormalB;	//approx. TODO use equivalent logic as vertex position
 
 #else
 		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
-#ifdef INSTANCED
-	//bodge together a matrix from input vectors because suspect chrome bug
-		mat4 uMMatrix = mat4( aMMatrixA, aMMatrixB, aMMatrixC, aMMatrixD );
-#endif
+	#ifdef INSTANCED
+		//bodge together a matrix from input vectors because suspect chrome bug
+			mat4 uMMatrix = mat4( aMMatrixA, aMMatrixB, aMMatrixC, aMMatrixD );
+	#endif
 
-#ifdef VS_MATMULT
-		mat4 MVMatrix = uVMatrix * uMMatrix;
-#else
-		mat4 MVMatrix = uMVMatrix;
-#endif
+	#ifdef VS_MATMULT
+			mat4 MVMatrix = uVMatrix * uMMatrix;
+	#else
+			mat4 MVMatrix = uMVMatrix;
+	#endif
 
 		transformedCoord = MVMatrix * aVertexPositionNormalized;
 		transformedNormal = MVMatrix * vec4(aVertexNormal,0.0);

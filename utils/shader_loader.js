@@ -184,6 +184,7 @@ function initShaders(shaderProgs){
 		coloredPerPixelDiscardVertexColored:["perpixel-discard-vs", "perpixel-discard-fs", ['VERTCOLOR'],['VERTCOLOR'],true],
 		coloredPerPixelDiscardVertexColoredTexmap:["perpixel-discard-vs", "perpixel-discard-fs", ['VERTCOLOR','TEXMAP'],['VERTCOLOR','TEXMAP'],true],
 		coloredPerPixelDiscardVertexColoredTexmapBendy:["perpixel-discard-vs", "perpixel-discard-fs", ['VS_MATMULT','VERTCOLOR','TEXMAP','BENDY_'],['VERTCOLOR','TEXMAP'],true],
+		coloredPerPixelDiscardVertexColoredTexmapBendyInstanced:["perpixel-discard-vs", "perpixel-discard-fs", ['INSTANCED','VS_MATMULT','VERTCOLOR','TEXMAP','BENDY_'],['VERTCOLOR','TEXMAP'],true],
 		coloredPerPixelDiscardVertexColoredInstanced:["perpixel-discard-vs", "perpixel-discard-fs", ['INSTANCED','VS_MATMULT','VERTCOLOR'],['VERTCOLOR'],true],
 		coloredPerPixelDiscardBendy:["perpixel-discard-vs", "perpixel-discard-fs", ['BENDY_'],[],true],
 		texmapPerPixelDiscard:["texmap-perpixel-discard-vs", "texmap-perpixel-discard-fs", [],[],true],
