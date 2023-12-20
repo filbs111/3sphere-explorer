@@ -2982,7 +2982,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 			
 			for (var ii=0;ii<portals.length;ii++){
 				if (frustumCull(portalInCameraArr[ii],reflectorInfoArr[ii].rad)){
-					drawPortalCubemap(pMatrix, portalInCameraArr[ii], frameTime, reflectorInfoArr[ii],ii);
+					drawPortalCubemapAtRuntime(pMatrix, portalInCameraArr[ii], frameTime, reflectorInfoArr[ii],ii);
 
 					if (reverseCamera){
 						gl.cullFace(gl.FRONT);
@@ -6395,8 +6395,38 @@ var randomNormalised3vec = (function generate3vecRandomiser(){
 
 //TODO pass in relevant args (or move to inside of some IIFE with relevant globals...)
 
-function drawPortalCubemap(pMatrix, portalInCamera, frameTime, reflInfo, portalNum){
+//TODO explicitly say which world is in.
 
+function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo, portalNum){
+	if (guiParams.reflector.cmFacesUpdated>0){
+		var cubemapLevel = guiParams.reflector.cubemapDownsize == "auto" ? 
+		(portalInCamera[15]>0.8 ? 0:(portalInCamera[15]>0.5? 1:2))	:	//todo calculate angular resolution of cubemap in final camera,  
+				//dependent on distance, FOV, blur, screen resolution etc, and choose appropriate detail level
+				//currently just manually, roughly tuned for 1080p, current settings.
+		guiParams.reflector.cubemapDownsize ;
+
+		setCubemapTexLevel(cubemapLevel);	//set texture#1
+
+		gl.cullFace(gl.BACK);	//because might have set to front for mirror reversing/landing camera.
+		mat4.set(cmapPMatrix, pMatrix);
+			//note though pMatrix is actually global. (TODO don't do that, pass in )
+
+		drawPortalCubemap(
+			cubemapViews[cubemapLevel], 
+			frameTime, reflInfo, portalNum,
+			guiParams.reflector.cmFacesUpdated,
+			guiParams.display.drawTransparentStuff
+			);
+	}
+}
+
+function drawCentredCubemap(){
+	//for drawing at load time (or when worlds updated/portals moved).
+	//TODO generate mips, render to dedicated image for each portal side (so not overwritten)
+	//...
+}
+
+function drawPortalCubemap(cubemapView, frameTime, reflInfo, portalNum, numFacesToUpdate, shouldDrawTransparentStuff){
 	//draw cubemap views
 	//mat4.identity(worldCamera);	//TODO use correct matrices
 	
@@ -6406,107 +6436,90 @@ function drawPortalCubemap(pMatrix, portalInCamera, frameTime, reflInfo, portalN
 	var otherPortalSide = guiParams.reflector.isPortal ? portalsForWorld[offsetCameraContainer.world][portalNum].otherps : 
 	portalsForWorld[offsetCameraContainer.world][portalNum];
 
-	var otherPortalMat = otherPortalSide.matrix;
 	var worldInPortalInfo = guiSettingsForWorld[otherPortalSide.world];
 
 	frustumCull = squareFrustumCull;
-	if (guiParams.reflector.cmFacesUpdated>0){
-		var cubemapLevel = guiParams.reflector.cubemapDownsize == "auto" ? 
-			(portalInCamera[15]>0.8 ? 0:(portalInCamera[15]>0.5? 1:2))	:	//todo calculate angular resolution of cubemap in final camera,  
-					//dependent on distance, FOV, blur, screen resolution etc, and choose appropriate detail level
-					//currently just manually, roughly tuned for 1080p, current settings.
-			guiParams.reflector.cubemapDownsize ;
+	
+	var wSettingsArr = [];	//TODO is this always same?
 
-		setCubemapTexLevel(cubemapLevel);	//set texture#1
-		var cubemapView = cubemapViews[cubemapLevel];
-		
-		var wSettingsArr = [];	//TODO is this always same?
-		
-		gl.cullFace(gl.BACK);	//because might have set to front for mirror reversing/landing camera.
-		var numFacesToUpdate = guiParams.reflector.cmFacesUpdated;
-		mat4.set(cmapPMatrix, pMatrix);
+	var centreShift = guiParams.reflector.forceZeroPosition ? [0,0,0]: reflInfo.cubeViewShiftAdjusted;
+		//for testing whether drawing from centre is acceptable approximation for distant portals.
+		//if is, can use static cubemap, (+mips)
 
-		//todo this transformation once, not repeat in following loop
-		mat4.set(otherPortalMat, worldCamera);
+	var shiftedOtherPortalMat = mat4.create(otherPortalSide.matrix);
+	xyzmove4mat(shiftedOtherPortalMat, centreShift);
 
-		var centreShift = guiParams.reflector.forceZeroPosition ? [0,0,0]: reflInfo.cubeViewShiftAdjusted;
-			//for testing whether drawing from centre is acceptable approximation for distant portals.
-			//if is, can use static cubemap, (+mips)
-
-		xyzmove4mat(worldCamera, centreShift);
-
-		if (worldInPortalInfo.duocylinderModel == 'l3dt-blockstrips'){
-			//TODO revise this - does it take enough inputs? (now worlds have separate spins)
-			updateTerrain2QuadtreeForCampos(worldCamera.slice(12), guiSettingsForWorld[offsetCameraContainer.world].spin);
-		}
-
-		for (var ii=0;ii<numFacesToUpdate;ii++){	//only using currently to check perf impact. could use more "properly" and cycle/alternate.
-			var framebuffer = guiParams.display.drawTransparentStuff ? cubemapView.intermediateFramebuffers[ii] : cubemapView.framebuffers[ii];
-			//var framebuffer = cubemapView.framebuffers[ii];
-			gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-			gl.viewport(0, 0, framebuffer.width, framebuffer.height);
-			mat4.set(otherPortalMat, worldCamera);
-			xyzmove4mat(worldCamera, centreShift);
-			rotateCameraForFace(ii);
-			
-			wSettingsArr.push( drawWorldScene(frameTime, true, null, portalNum) );
-		}
-		
-		if (guiParams.display.drawTransparentStuff){
-			for (var ii=0;ii<numFacesToUpdate;ii++){
-				var framebuffer = cubemapView.framebuffers[ii];
-				gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-				gl.viewport(0, 0, framebuffer.width, framebuffer.height);
-				mat4.set(otherPortalMat, worldCamera);
-				xyzmove4mat(worldCamera, centreShift);	
-				rotateCameraForFace(ii);
-				
-				var activeProg = shaderPrograms.fullscreenTexturedWithDepthmap;
-				gl.useProgram(activeProg);
-				enableDisableAttributes(activeProg);
-
-				bind2dTextureIfRequired(cubemapView.intermediateTextures[ii]);
-				bind2dTextureIfRequired(cubemapView.intermediateDepthTextures[ii],gl.TEXTURE2);
-				
-				gl.uniform1i(activeProg.uniforms.uSampler, 0);
-				gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);	
-				
-				gl.depthFunc(gl.ALWAYS);
-				drawObjectFromBuffers(fsBuffers, activeProg);
-				gl.depthFunc(gl.LESS);
-				gl.cullFace(gl.BACK);
-				drawWorldScene2(frameTime, wSettingsArr[ii], cubemapView.intermediateDepthTextures[ii]);	//depth aware drawing stuff like sea
-					//note currently depth is not correct, probably responsible for inconsistent rendering across cubemap edges.
-				
-			}
-		}
-		
-		
-		function rotateCameraForFace(ii){
-			switch(ii){
-				case 0:
-					xyzrotate4mat(worldCamera, [0,-Math.PI/2,0]);	//right from default view
-					break;
-				case 1:
-					xyzrotate4mat(worldCamera, [0,Math.PI/2,0]);	//left from default view
-					break;
-				case 2:
-					xyzrotate4mat(worldCamera, [Math.PI/2,0,0]);	//top from default
-					xyzrotate4mat(worldCamera, [0,0,Math.PI]);
-					break;
-				case 3:
-					xyzrotate4mat(worldCamera, [-Math.PI/2,0,0]);
-					xyzrotate4mat(worldCamera, [0,0,Math.PI]);
-					break;
-				case 4:
-					xyzrotate4mat(worldCamera, [0,Math.PI,0]);
-					break;
-				case 5:
-					break;
-			}
-		}
-		
+	if (worldInPortalInfo.duocylinderModel == 'l3dt-blockstrips'){
+		//TODO revise this - does it take enough inputs? (now worlds have separate spins)
+		updateTerrain2QuadtreeForCampos(shiftedOtherPortalMat.slice(12), guiSettingsForWorld[offsetCameraContainer.world].spin);
 	}
+	
+	var cmapFaceBuffers = shouldDrawTransparentStuff ? cubemapView.intermediateFramebuffers : cubemapView.framebuffers;
+
+	for (var ii=0;ii<numFacesToUpdate;ii++){	//only using currently to check perf impact. could use more "properly" and cycle/alternate.
+		var framebuffer = cmapFaceBuffers[ii];
+		gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+		gl.viewport(0, 0, framebuffer.width, framebuffer.height);
+		mat4.set(shiftedOtherPortalMat, worldCamera);
+		rotateCameraForFace(ii);
+		
+		wSettingsArr.push( drawWorldScene(frameTime, true, null, portalNum) );
+	}
+	
+	if (!shouldDrawTransparentStuff){
+		return;
+	}
+	
+	for (var ii=0;ii<numFacesToUpdate;ii++){
+		var framebuffer = cubemapView.framebuffers[ii];
+		gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+		gl.viewport(0, 0, framebuffer.width, framebuffer.height);
+		mat4.set(shiftedOtherPortalMat, worldCamera);
+		rotateCameraForFace(ii);
+		
+		var activeProg = shaderPrograms.fullscreenTexturedWithDepthmap;
+		gl.useProgram(activeProg);
+		enableDisableAttributes(activeProg);
+
+		bind2dTextureIfRequired(cubemapView.intermediateTextures[ii]);
+		bind2dTextureIfRequired(cubemapView.intermediateDepthTextures[ii],gl.TEXTURE2);
+		
+		gl.uniform1i(activeProg.uniforms.uSampler, 0);
+		gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);	
+		
+		gl.depthFunc(gl.ALWAYS);
+		drawObjectFromBuffers(fsBuffers, activeProg);
+		gl.depthFunc(gl.LESS);
+		gl.cullFace(gl.BACK);
+		drawWorldScene2(frameTime, wSettingsArr[ii], cubemapView.intermediateDepthTextures[ii]);	//depth aware drawing stuff like sea
+			//note currently depth is not correct, probably responsible for inconsistent rendering across cubemap edges.
+	}
+	
+	
+	function rotateCameraForFace(ii){
+		switch(ii){
+			case 0:
+				xyzrotate4mat(worldCamera, [0,-Math.PI/2,0]);	//right from default view
+				break;
+			case 1:
+				xyzrotate4mat(worldCamera, [0,Math.PI/2,0]);	//left from default view
+				break;
+			case 2:
+				xyzrotate4mat(worldCamera, [Math.PI/2,0,0]);	//top from default
+				xyzrotate4mat(worldCamera, [0,0,Math.PI]);
+				break;
+			case 3:
+				xyzrotate4mat(worldCamera, [-Math.PI/2,0,0]);
+				xyzrotate4mat(worldCamera, [0,0,Math.PI]);
+				break;
+			case 4:
+				xyzrotate4mat(worldCamera, [0,Math.PI,0]);
+				break;
+			case 5:
+				break;
+		}
+	}
+		
 }
 
 
