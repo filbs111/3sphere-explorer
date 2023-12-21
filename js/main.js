@@ -6411,9 +6411,25 @@ function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo
 		mat4.set(cmapPMatrix, pMatrix);
 			//note though pMatrix is actually global. (TODO don't do that, pass in )
 
+		var otherPortalSide = guiParams.reflector.isPortal ? portalsForWorld[offsetCameraContainer.world][portalNum].otherps : 
+			portalsForWorld[offsetCameraContainer.world][portalNum];
+
+		//make a copy and shift matrix
+		var cameraContainer = {
+			world: otherPortalSide.world,
+			matrix: mat4.create(otherPortalSide.matrix)
+		}
+		var centreShift = guiParams.reflector.forceZeroPosition ? [0,0,0]: reflInfo.cubeViewShiftAdjusted;
+		//for testing whether drawing from centre is acceptable approximation for distant portals.
+		//if is, can use static cubemap, (+mips)
+		xyzmove4mat(cameraContainer.matrix, centreShift);
+
 		drawPortalCubemap(
 			cubemapViews[cubemapLevel], 
-			frameTime, reflInfo, portalNum,
+			frameTime,
+			cameraContainer,
+			//getWorldSceneSettings(true, portalNum),
+			portalNum,
 			guiParams.reflector.cmFacesUpdated,
 			guiParams.display.drawTransparentStuff
 			);
@@ -6426,32 +6442,25 @@ function drawCentredCubemap(){
 	//...
 }
 
-function drawPortalCubemap(cubemapView, frameTime, reflInfo, portalNum, numFacesToUpdate, shouldDrawTransparentStuff){
-	//draw cubemap views
-	//mat4.identity(worldCamera);	//TODO use correct matrices
-	
+function drawPortalCubemap(
+	cubemapView, frameTime, cameraContainer, 
+	//wSettings, 
+	portalNum, 
+	numFacesToUpdate, shouldDrawTransparentStuff){
 	//TODO move pMatrix etc to only recalc on screen resize
 	//make a pmatrix for hemiphere perspective projection method.
 
-	var otherPortalSide = guiParams.reflector.isPortal ? portalsForWorld[offsetCameraContainer.world][portalNum].otherps : 
-	portalsForWorld[offsetCameraContainer.world][portalNum];
-
-	var worldInPortalInfo = guiSettingsForWorld[otherPortalSide.world];
+	var worldInPortalInfo = guiSettingsForWorld[cameraContainer.world];
 
 	frustumCull = squareFrustumCull;
 	
 	var wSettingsArr = [];	//TODO is this always same?
 
-	var centreShift = guiParams.reflector.forceZeroPosition ? [0,0,0]: reflInfo.cubeViewShiftAdjusted;
-		//for testing whether drawing from centre is acceptable approximation for distant portals.
-		//if is, can use static cubemap, (+mips)
-
-	var shiftedOtherPortalMat = mat4.create(otherPortalSide.matrix);
-	xyzmove4mat(shiftedOtherPortalMat, centreShift);
-
 	if (worldInPortalInfo.duocylinderModel == 'l3dt-blockstrips'){
 		//TODO revise this - does it take enough inputs? (now worlds have separate spins)
-		updateTerrain2QuadtreeForCampos(shiftedOtherPortalMat.slice(12), guiSettingsForWorld[offsetCameraContainer.world].spin);
+		//TODO check this - seems wrong - expect should depend on spin of cameraContainer.world 
+		// ( camera on other side of portal from player's camera, rather than the world player's camera is in - offsetCameraContainer.world
+		updateTerrain2QuadtreeForCampos(cameraContainer.matrix.slice(12), guiSettingsForWorld[offsetCameraContainer.world].spin);
 	}
 	
 	var cmapFaceBuffers = shouldDrawTransparentStuff ? cubemapView.intermediateFramebuffers : cubemapView.framebuffers;
@@ -6460,7 +6469,7 @@ function drawPortalCubemap(cubemapView, frameTime, reflInfo, portalNum, numFaces
 		var framebuffer = cmapFaceBuffers[ii];
 		gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
 		gl.viewport(0, 0, framebuffer.width, framebuffer.height);
-		mat4.set(shiftedOtherPortalMat, worldCamera);
+		mat4.set(cameraContainer.matrix, worldCamera);
 		rotateCameraForFace(ii);
 		
 		wSettingsArr.push( drawWorldScene(frameTime, true, null, portalNum) );
@@ -6474,7 +6483,7 @@ function drawPortalCubemap(cubemapView, frameTime, reflInfo, portalNum, numFaces
 		var framebuffer = cubemapView.framebuffers[ii];
 		gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
 		gl.viewport(0, 0, framebuffer.width, framebuffer.height);
-		mat4.set(shiftedOtherPortalMat, worldCamera);
+		mat4.set(cameraContainer.matrix, worldCamera);
 		rotateCameraForFace(ii);
 		
 		var activeProg = shaderPrograms.fullscreenTexturedWithDepthmap;
