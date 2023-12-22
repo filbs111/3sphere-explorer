@@ -974,7 +974,15 @@ function drawScene(frameTime){
 
 			var viewSettings = {buf: initialOutView.framebuffer, width, height};
 			var savedCamera = mat4.create(worldCamera);	//TODO don't instantiate!
-			var wSettings = drawWorldScene(frameTime, false, viewSettings);
+
+			if (!guiParams["drop spaceship"]){
+				mat4.set(playerCameraInterp,sshipMatrix);	//copy current player 4-rotation matrix to the spaceship object
+			}else{
+				mat4.set(sshipMatrixNoInterp, sshipMatrix);		
+			}
+
+			var wSettings = getWorldSceneSettings(false);
+			drawWorldScene(frameTime, false, viewSettings, wSettings);
 			mat4.set(savedCamera, worldCamera);	//set worldCamera back to savedCamera (might have been changed due to rendering portal cubemaps within drawWorldScene)
 
 			if (guiParams.display.drawTransparentStuff){
@@ -1675,15 +1683,8 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 
 
 
-function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
+function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
-	if (!guiParams["drop spaceship"]){
-		mat4.set(playerCameraInterp,sshipMatrix);	//copy current player 4-rotation matrix to the spaceship object
-	}else{
-		mat4.set(sshipMatrixNoInterp, sshipMatrix);		
-	}
-
-	var wSettings = getWorldSceneSettings(isCubemapView, portalNum);
 	({worldA,worldInfo, localVecFogColor, infoForPortals, sshipDrawMatrices} = wSettings);
 		
 	if (!isCubemapView && worldInfo.duocylinderModel == "l3dt-blockstrips"){
@@ -3080,9 +3081,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, portalNum) {
 
 		drawObjectFromBuffers(meshToDraw, shaderProgram, true, false);
 	}
-	
-
-	return wSettings;
 }
 
 function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using rgba, depth buffer images from previous rendering
@@ -6428,7 +6426,6 @@ function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo
 			cubemapViews[cubemapLevel], 
 			frameTime,
 			cameraContainer,
-			//getWorldSceneSettings(true, portalNum),
 			portalNum,
 			guiParams.reflector.cmFacesUpdated,
 			guiParams.display.drawTransparentStuff
@@ -6454,7 +6451,14 @@ function drawPortalCubemap(
 
 	frustumCull = squareFrustumCull;
 	
-	var wSettingsArr = [];	//TODO is this always same?
+	var wSettingsArr = new Array(numFacesToUpdate);
+	//create wSettings array up front - perhaps less efficient than during drawWorldScene calls, but separates things,
+	// should consider how to make more efficient - result is mostly independent of rotation (bar reflectorPosTransformed)
+	for (var ii=0;ii<numFacesToUpdate;ii++){
+		mat4.set(cameraContainer.matrix, worldCamera);
+		rotateCameraForFace(ii);
+		wSettingsArr[ii] = getWorldSceneSettings(true, portalNum);
+	}
 
 	if (worldInPortalInfo.duocylinderModel == 'l3dt-blockstrips'){
 		//TODO revise this - does it take enough inputs? (now worlds have separate spins)
@@ -6471,8 +6475,7 @@ function drawPortalCubemap(
 		gl.viewport(0, 0, framebuffer.width, framebuffer.height);
 		mat4.set(cameraContainer.matrix, worldCamera);
 		rotateCameraForFace(ii);
-		
-		wSettingsArr.push( drawWorldScene(frameTime, true, null, portalNum) );
+		drawWorldScene(frameTime, true, null, wSettingsArr[ii]);
 	}
 	
 	if (!shouldDrawTransparentStuff){
