@@ -6461,10 +6461,7 @@ function drawPortalCubemap(
 	}
 
 	if (worldInPortalInfo.duocylinderModel == 'l3dt-blockstrips'){
-		//TODO revise this - does it take enough inputs? (now worlds have separate spins)
-		//TODO check this - seems wrong - expect should depend on spin of cameraContainer.world 
-		// ( camera on other side of portal from player's camera, rather than the world player's camera is in - offsetCameraContainer.world
-		updateTerrain2QuadtreeForCampos(cameraContainer.matrix.slice(12), guiSettingsForWorld[offsetCameraContainer.world].spin);
+		updateTerrain2QuadtreeForCampos(cameraContainer.matrix.slice(12), worldInPortalInfo.spin);
 	}
 	
 	var cmapFaceBuffers = shouldDrawTransparentStuff ? cubemapView.intermediateFramebuffers : cubemapView.framebuffers;
