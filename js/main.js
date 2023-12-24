@@ -1535,68 +1535,72 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 	}
 	var worldA;
 
-	return function getWorldSceneSettings(worldLookingIntoPortal, isCubemapView, portalNum){
-		//worldLookingIntoPortal is well named when rendering a cubemap 
-		// otherwise, it's just the world that the player camera is in
-		// TODO tidy - separate functions getWorldSceneSettingsForPortalDraw, ... 
-
+	function getWorldSettingsForNonPortalView(currentWorld){
+		//used when drawing final camera view, and when drawing reflections (not portal view)
 		var psides=[];
 		var otherWorlds=[];
-		
-
-		if (isCubemapView && guiParams.reflector.isPortal){
-
-			var oldWorldPs = portalsForWorld[worldLookingIntoPortal][portalNum];
-
-			var relevantPs = oldWorldPs.otherps;
-
-			returnObj.worldA = worldA = relevantPs.world;
-			
-			//worldB = worldLookingIntoPortal;	//the world looking from, so relevant to the cast by the portal that are looking through, onto the world that
-					//can be seen beyond the portal. this is likely the most visible portal light
-
-			//one of the below is previous worldB. the other is for the second portal in the world beyond the current portal.
-
-			var portalsForWorldA = portalsForWorld[worldA];
-
-			var otherWorldPsArr=[];
-
-			for (var ii=0;ii<portalsForWorldA.length;ii++){
-				otherWorldPsArr.push(portalsForWorldA[ii].otherps);
-				psides.push(portalsForWorldA[ii]);
-			}
-
-			//make sure the 0th is what was worldB (until pass both into shaders, necessary to ensure correct discarding
-				//or spaceship pix when crossing portal)
-
-			var oldWorldPsIdx = -1;	//should not happen!!
-			for (var ii=0;ii<portalsForWorldA.length;ii++){
-				if (otherWorldPsArr[ii] == oldWorldPs){
-					oldWorldPsIdx = ii;
-				}
-			}
-			if (oldWorldPsIdx==-1){
-				console.log("ERROR!!!!! oldWorldPsIdx==-1");
-			} else {
-				//swap so oldWorldIdx is in slot 0. note redundant if oldWorldIdx=0
-				var tmp = otherWorldPsArr[0];
-				otherWorldPsArr[0] = otherWorldPsArr[oldWorldPsIdx];
-				otherWorldPsArr[oldWorldPsIdx] = tmp;
-				tmp = psides[0];
-				psides[0] = psides[oldWorldPsIdx];
-				psides[oldWorldPsIdx] = tmp;
-			}
-			otherWorlds = otherWorldPsArr.map(ps => ps.world);
-
-		}else{
-			var portalsForOffsetCamWorld = portalsForWorld[worldLookingIntoPortal];
-			for (var ii=0;ii<portalsForOffsetCamWorld.length;ii++){
-				var relevantPs = portalsForOffsetCamWorld[ii];
-				otherWorlds.push(relevantPs.otherps.world);
-				psides.push(relevantPs);
-			}
-			returnObj.worldA = worldA = worldLookingIntoPortal;
+		var portalsForOffsetCamWorld = portalsForWorld[currentWorld];
+		for (var ii=0;ii<portalsForOffsetCamWorld.length;ii++){
+			var relevantPs = portalsForOffsetCamWorld[ii];
+			otherWorlds.push(relevantPs.otherps.world);
+			psides.push(relevantPs);
 		}
+		return {worldA: currentWorld, psides, otherWorlds};
+	}
+
+	function getWorldSettingsForThroughPortalView(portal){
+		var psides=[];
+		var otherWorlds=[];
+
+		var relevantPs = portal;
+		var oldWorldPs = portal.otherps;
+
+		worldA = relevantPs.world;
+	
+		var portalsForWorldA = portalsForWorld[worldA];
+
+		var otherWorldPsArr=[];
+
+		for (var ii=0;ii<portalsForWorldA.length;ii++){
+			otherWorldPsArr.push(portalsForWorldA[ii].otherps);
+			psides.push(portalsForWorldA[ii]);
+		}
+
+		//make sure the 0th is what was worldB (until pass both into shaders, necessary to ensure correct discarding
+			//or spaceship pix when crossing portal)
+
+		var oldWorldPsIdx = -1;	//should not happen!!
+		for (var ii=0;ii<portalsForWorldA.length;ii++){
+			if (otherWorldPsArr[ii] == oldWorldPs){
+				oldWorldPsIdx = ii;
+			}
+		}
+		if (oldWorldPsIdx==-1){
+			console.log("ERROR!!!!! oldWorldPsIdx==-1");
+		} else {
+			//swap so oldWorldIdx is in slot 0. note redundant if oldWorldIdx=0
+			var tmp = otherWorldPsArr[0];
+			otherWorldPsArr[0] = otherWorldPsArr[oldWorldPsIdx];
+			otherWorldPsArr[oldWorldPsIdx] = tmp;
+			tmp = psides[0];
+			psides[0] = psides[oldWorldPsIdx];
+			psides[oldWorldPsIdx] = tmp;
+		}
+		otherWorlds = otherWorldPsArr.map(ps => ps.world);
+
+		return {worldA, psides, otherWorlds};
+	}
+
+	return function getWorldSceneSettings(worldLookingIntoPortal, isCubemapView, portalNum){
+		var psides=[];
+		var otherWorlds=[];
+
+		//TODO separate functions to call for the 2 use cases.
+		({worldA, psides, otherWorlds} = isCubemapView && guiParams.reflector.isPortal?
+			getWorldSettingsForThroughPortalView(portalsForWorld[worldLookingIntoPortal][portalNum].otherps):
+			getWorldSettingsForNonPortalView(worldLookingIntoPortal));
+
+		returnObj.worldA = worldA;
 
 		var pmats = psides.map(x=>x.matrix);
 		var pmatrads = psides.map(x=>x.shared.radius);
