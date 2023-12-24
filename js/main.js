@@ -981,7 +981,7 @@ function drawScene(frameTime){
 				mat4.set(sshipMatrixNoInterp, sshipMatrix);		
 			}
 
-			var wSettings = getWorldSceneSettings(offsetCameraContainer.world, false);
+			var wSettings = getWorldSceneSettings.forNonPortalView(offsetCameraContainer.world);
 			drawWorldScene(frameTime, false, viewSettings, wSettings);
 			mat4.set(savedCamera, worldCamera);	//set worldCamera back to savedCamera (might have been changed due to rendering portal cubemaps within drawWorldScene)
 
@@ -1545,7 +1545,7 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 			otherWorlds.push(relevantPs.otherps.world);
 			psides.push(relevantPs);
 		}
-		return {worldA: currentWorld, psides, otherWorlds};
+		return generalGetWorldSceneSettings(currentWorld, psides, otherWorlds);
 	}
 
 	function getWorldSettingsForThroughPortalView(portal){
@@ -1588,18 +1588,10 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 		}
 		otherWorlds = otherWorldPsArr.map(ps => ps.world);
 
-		return {worldA, psides, otherWorlds};
+		return generalGetWorldSceneSettings(worldA, psides, otherWorlds);
 	}
 
-	return function getWorldSceneSettings(worldLookingIntoPortal, isCubemapView, portalNum){
-		var psides=[];
-		var otherWorlds=[];
-
-		//TODO separate functions to call for the 2 use cases.
-		({worldA, psides, otherWorlds} = isCubemapView && guiParams.reflector.isPortal?
-			getWorldSettingsForThroughPortalView(portalsForWorld[worldLookingIntoPortal][portalNum].otherps):
-			getWorldSettingsForNonPortalView(worldLookingIntoPortal));
-
+	function generalGetWorldSceneSettings(worldA, psides, otherWorlds){
 		returnObj.worldA = worldA;
 
 		var pmats = psides.map(x=>x.matrix);
@@ -1685,8 +1677,12 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 
 		return {...returnObj}	//shallow clone
 	}
-})();
 
+	return {
+		forPortalView: getWorldSettingsForThroughPortalView,
+		forNonPortalView: getWorldSettingsForNonPortalView
+	};
+})();
 
 
 function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
@@ -6440,7 +6436,7 @@ function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo
 			cubemapViews[cubemapLevel], 
 			frameTime,
 			cameraContainer,
-			portalNum,
+			otherPortalSide,
 			guiParams.reflector.cmFacesUpdated,
 			guiParams.display.drawTransparentStuff
 			);
@@ -6475,7 +6471,7 @@ function drawCentredCubemap(world, portal){
 
 function drawPortalCubemap(
 	cubemapView, frameTime, cameraContainer, 
-	portalNum, 
+	portal, 
 	numFacesToUpdate, shouldDrawTransparentStuff){
 	//TODO move pMatrix etc to only recalc on screen resize
 	//make a pmatrix for hemiphere perspective projection method.
@@ -6490,7 +6486,7 @@ function drawPortalCubemap(
 	for (var ii=0;ii<numFacesToUpdate;ii++){
 		mat4.set(cameraContainer.matrix, worldCamera);
 		rotateCameraForFace(ii);
-		wSettingsArr[ii] = getWorldSceneSettings(offsetCameraContainer.world, true, portalNum);
+		wSettingsArr[ii] = getWorldSceneSettings.forPortalView(portal);
 	}
 
 	if (worldInPortalInfo.duocylinderModel == 'l3dt-blockstrips'){
