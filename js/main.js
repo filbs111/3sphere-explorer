@@ -6403,9 +6403,17 @@ var randomNormalised3vec = (function generate3vecRandomiser(){
 
 //TODO pass in relevant args (or move to inside of some IIFE with relevant globals...)
 
-//TODO explicitly say which world is in.
-
 function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo, portalNum){
+
+	if (guiParams.reflector.forceZeroPosition){
+		var otherPortalSide = guiParams.reflector.isPortal ? portalsForWorld[offsetCameraContainer.world][portalNum].otherps : 
+			portalsForWorld[offsetCameraContainer.world][portalNum];
+
+		//TODO prerender using this method
+		drawCentredCubemap(otherPortalSide);
+		return;
+	}
+
 	if (guiParams.reflector.cmFacesUpdated>0){
 		var cubemapLevel = guiParams.reflector.cubemapDownsize == "auto" ? 
 		(portalInCamera[15]>0.8 ? 0:(portalInCamera[15]>0.5? 1:2))	:	//todo calculate angular resolution of cubemap in final camera,  
@@ -6427,7 +6435,7 @@ function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo
 			world: otherPortalSide.world,
 			matrix: mat4.create(otherPortalSide.matrix)
 		}
-		var centreShift = guiParams.reflector.forceZeroPosition ? [0,0,0]: reflInfo.cubeViewShiftAdjusted;
+		var centreShift = reflInfo.cubeViewShiftAdjusted;
 		//for testing whether drawing from centre is acceptable approximation for distant portals.
 		//if is, can use static cubemap, (+mips)
 		xyzmove4mat(cameraContainer.matrix, centreShift);
@@ -6446,7 +6454,7 @@ function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo
 /*
 * params: world that portal camera is in, portal number for the portalsides in that world.
 */
-function drawCentredCubemap(world, portal){
+function drawCentredCubemap(portal){
 	//for drawing at load time (or when worlds updated/portals moved).
 	//TODO generate mips, render to dedicated image for each portal side (so not overwritten)
 	//...
@@ -6456,12 +6464,10 @@ function drawCentredCubemap(world, portal){
 	gl.cullFace(gl.BACK);
 	mat4.set(cmapPMatrix, pMatrix);
 
-	var cameraContainer = portalsForWorld[world][portal];
-
 	drawPortalCubemap(
 		fixedCubemapTestView, 
 		0,		//time
-		cameraContainer,
+		portal,
 		portal,
 		6,
 		false
