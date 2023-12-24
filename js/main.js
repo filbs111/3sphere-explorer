@@ -6410,7 +6410,11 @@ var randomNormalised3vec = (function generate3vecRandomiser(){
 
 function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo, portalNum){
 
-	if (guiParams.reflector.forceZeroPosition){
+	//criteria to determine if portal is sufficiently far away.
+	//TODO use portal size
+	var isFarEnoughAwayForApproximation = portalInCamera[15] < 0.9;	//IIRC portalInCamera[15] = 1 when close to it.
+
+	if (isFarEnoughAwayForApproximation || guiParams.reflector.forceZeroPosition){
 		var otherPortalSide = guiParams.reflector.isPortal ? portalsForWorld[offsetCameraContainer.world][portalNum].otherps : 
 			portalsForWorld[offsetCameraContainer.world][portalNum];
 
