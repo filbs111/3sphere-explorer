@@ -981,7 +981,7 @@ function drawScene(frameTime){
 				mat4.set(sshipMatrixNoInterp, sshipMatrix);		
 			}
 
-			var wSettings = getWorldSceneSettings(false);
+			var wSettings = getWorldSceneSettings(offsetCameraContainer.world, false);
 			drawWorldScene(frameTime, false, viewSettings, wSettings);
 			mat4.set(savedCamera, worldCamera);	//set worldCamera back to savedCamera (might have been changed due to rendering portal cubemaps within drawWorldScene)
 
@@ -1535,7 +1535,10 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 	}
 	var worldA;
 
-	return function getWorldSceneSettings(isCubemapView, portalNum){
+	return function getWorldSceneSettings(worldLookingIntoPortal, isCubemapView, portalNum){
+		//worldLookingIntoPortal is well named when rendering a cubemap 
+		// otherwise, it's just the world that the player camera is in
+		// TODO tidy - separate functions getWorldSceneSettingsForPortalDraw, ... 
 
 		var psides=[];
 		var otherWorlds=[];
@@ -1543,13 +1546,13 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 
 		if (isCubemapView && guiParams.reflector.isPortal){
 
-			var oldWorldPs = portalsForWorld[offsetCameraContainer.world][portalNum];
+			var oldWorldPs = portalsForWorld[worldLookingIntoPortal][portalNum];
 
 			var relevantPs = oldWorldPs.otherps;
 
 			returnObj.worldA = worldA = relevantPs.world;
 			
-			//worldB = offsetCameraContainer.world;	//the world looking from, so relevant to the cast by the portal that are looking through, onto the world that
+			//worldB = worldLookingIntoPortal;	//the world looking from, so relevant to the cast by the portal that are looking through, onto the world that
 					//can be seen beyond the portal. this is likely the most visible portal light
 
 			//one of the below is previous worldB. the other is for the second portal in the world beyond the current portal.
@@ -1565,7 +1568,6 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 
 			//make sure the 0th is what was worldB (until pass both into shaders, necessary to ensure correct discarding
 				//or spaceship pix when crossing portal)
-			var oldWorldB = offsetCameraContainer.world;
 
 			var oldWorldPsIdx = -1;	//should not happen!!
 			for (var ii=0;ii<portalsForWorldA.length;ii++){
@@ -1587,13 +1589,13 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 			otherWorlds = otherWorldPsArr.map(ps => ps.world);
 
 		}else{
-			var portalsForOffsetCamWorld = portalsForWorld[offsetCameraContainer.world];
+			var portalsForOffsetCamWorld = portalsForWorld[worldLookingIntoPortal];
 			for (var ii=0;ii<portalsForOffsetCamWorld.length;ii++){
 				var relevantPs = portalsForOffsetCamWorld[ii];
 				otherWorlds.push(relevantPs.otherps.world);
 				psides.push(relevantPs);
 			}
-			returnObj.worldA = worldA = offsetCameraContainer.world;	// = relevantPs.world
+			returnObj.worldA = worldA = worldLookingIntoPortal;
 		}
 
 		var pmats = psides.map(x=>x.matrix);
@@ -3572,7 +3574,7 @@ function setMatrixUniforms(shaderProgram) {
 	setupShaderAtmos(shaderProgram);
 }
 
-var cubemapViews;
+var cubemapViews, fixedCubemapTestView;
 //cube map code from http://www.humus.name/cubemapviewer.js (slightly modified)
 
 function power_of_2(n) {
@@ -3593,25 +3595,33 @@ function initCubemapFramebuffers(){
 	console.log({manualCubemapSize, cubemapSize});
 
 	var numLevels = 4;
-	var viewsArr = new Array(numLevels);
+	var cubemapViews = new Array(numLevels);
 	for (var ii=0;ii<numLevels;ii++){
-		viewsArr[ii]=initCubemapFramebuffer({}, cubemapSize >> ii);
+		cubemapViews[ii]=initCubemapFramebuffer(cubemapSize >> ii);
 	}
-	return viewsArr;
+
+	var fixedCubemapTestView=initCubemapFramebuffer(512);	//TODO one for each portal, don't create intermediate buffers (only need one cubemap)
+
+	return {cubemapViews, fixedCubemapTestView};
 }
 
-var setCubemapTexLevel = (function generateGetCubemapTexLevelFunc(){
-	var currentLevel;
-	return function(newLevel){
-		if (newLevel!=currentLevel){
+var setCubemapTexLevel = function(level){
+	setCubemapTex(cubemapViews[level].cubemapTexture);
+}
+
+var setCubemapTex = (function generateGetCubemapTexFunc(){
+	var currentTex;
+	return function(newTex){
+		if (newTex!=currentTex){
 			gl.activeTexture(gl.TEXTURE1);	//use texture 1 always for cubemap
-			gl.bindTexture(gl.TEXTURE_CUBE_MAP, cubemapViews[newLevel].cubemapTexture);
-			currentLevel=newLevel;
+			gl.bindTexture(gl.TEXTURE_CUBE_MAP, newTex);
+			currentTex=newTex;
 		}
 	}
 })();
 
-function initCubemapFramebuffer(view, cubemapSize){
+function initCubemapFramebuffer(cubemapSize){
+	var view = {};
 
 	//for rendering to separate 2d textures, prior to cubemap
 	var intermediateFramebuffers = [];
@@ -4305,7 +4315,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	initTextureFramebuffer(rttFisheyeView2);
 	initShaders(shaderPrograms);initShaders=null;
 	initTexture();
-	cubemapViews = initCubemapFramebuffers();
+	({cubemapViews, fixedCubemapTestView} = initCubemapFramebuffers());
 	initBuffers();
 	getLocationsForShadersUsingPromises(
 		()=>{
@@ -6433,15 +6443,34 @@ function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo
 	}
 }
 
-function drawCentredCubemap(){
+/*
+* params: world that portal camera is in, portal number for the portalsides in that world.
+*/
+function drawCentredCubemap(world, portal){
 	//for drawing at load time (or when worlds updated/portals moved).
 	//TODO generate mips, render to dedicated image for each portal side (so not overwritten)
 	//...
+
+	setCubemapTex(fixedCubemapTestView.cubemapTexture);
+
+	gl.cullFace(gl.BACK);
+	mat4.set(cmapPMatrix, pMatrix);
+
+	var cameraContainer = portalsForWorld[world][portal];
+
+	drawPortalCubemap(
+		fixedCubemapTestView, 
+		0,		//time
+		cameraContainer,
+		portal,
+		6,
+		false
+		);
+
 }
 
 function drawPortalCubemap(
 	cubemapView, frameTime, cameraContainer, 
-	//wSettings, 
 	portalNum, 
 	numFacesToUpdate, shouldDrawTransparentStuff){
 	//TODO move pMatrix etc to only recalc on screen resize
@@ -6457,7 +6486,7 @@ function drawPortalCubemap(
 	for (var ii=0;ii<numFacesToUpdate;ii++){
 		mat4.set(cameraContainer.matrix, worldCamera);
 		rotateCameraForFace(ii);
-		wSettingsArr[ii] = getWorldSceneSettings(true, portalNum);
+		wSettingsArr[ii] = getWorldSceneSettings(offsetCameraContainer.world, true, portalNum);
 	}
 
 	if (worldInPortalInfo.duocylinderModel == 'l3dt-blockstrips'){
