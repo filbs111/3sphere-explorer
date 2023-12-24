@@ -3989,7 +3989,7 @@ var guiParams={
 		mappingType:'vertex projection',
 		isPortal:true,
 		drawFrame:false,
-		forceZeroPosition:false,
+		forceApproximation:false,
 		test1:false
 	},
 	debug:{
@@ -4234,7 +4234,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	reflectorFolder.add(guiParams.reflector, "isPortal");
 	reflectorFolder.add(guiParams.reflector, "drawFrame");
 	reflectorFolder.add(guiParams.reflector, "test1");
-	reflectorFolder.add(guiParams.reflector, "forceZeroPosition");
+	reflectorFolder.add(guiParams.reflector, "forceApproximation");
 
 	window.addEventListener("keydown",function(evt){
 		//console.log("key pressed : " + evt.keyCode);
@@ -6410,15 +6410,21 @@ var randomNormalised3vec = (function generate3vecRandomiser(){
 
 function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo, portalNum){
 
-	//criteria to determine if portal is sufficiently far away.
-	//TODO use portal size
-	var isFarEnoughAwayForApproximation = portalInCamera[15] < 0.9;	//IIRC portalInCamera[15] = 1 when close to it.
+	var otherPortalSide = guiParams.reflector.isPortal ? portalsForWorld[offsetCameraContainer.world][portalNum].otherps : 
+	portalsForWorld[offsetCameraContainer.world][portalNum];
 
-	if (isFarEnoughAwayForApproximation || guiParams.reflector.forceZeroPosition){
-		var otherPortalSide = guiParams.reflector.isPortal ? portalsForWorld[offsetCameraContainer.world][portalNum].otherps : 
-			portalsForWorld[offsetCameraContainer.world][portalNum];
+	//determine if portal is sufficiently far away.
+	//set criteria to size of portal on screen. seems half sensible.
+	//uses z distance, which determines size for rectilinear camera view, so can swith approximation on/off
+	// as rotate view (for same distance from camera, z-distance is smaller, so appears larger, away from centre.
+	// fisheye view reduces this effect, but is not accounted for here. TODO if using fisheye, take into account here.
+	var transitionNumber = 5; //larger pushes switching to approximation further out.
+	var isFarEnoughAwayInZ = portalInCamera[14] < -transitionNumber*otherPortalSide.shared.radius;
+	var isOnOtherSideOfWorld = portalInCamera[15] <0;
+		//IIRC portalInCamera[15] = w = 1 when close to it, portalInCamera[14] = z is -ve in front, +ve behind camera.
+	var isFarEnoughAwayForApproximation = isFarEnoughAwayInZ || isOnOtherSideOfWorld;
 
-		//TODO prerender using this method
+	if (isFarEnoughAwayForApproximation || guiParams.reflector.forceApproximation){	
 		drawCentredCubemap(otherPortalSide);
 		return;
 	}
@@ -6435,9 +6441,6 @@ function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo
 		gl.cullFace(gl.BACK);	//because might have set to front for mirror reversing/landing camera.
 		mat4.set(cmapPMatrix, pMatrix);
 			//note though pMatrix is actually global. (TODO don't do that, pass in )
-
-		var otherPortalSide = guiParams.reflector.isPortal ? portalsForWorld[offsetCameraContainer.world][portalNum].otherps : 
-			portalsForWorld[offsetCameraContainer.world][portalNum];
 
 		//make a copy and shift matrix
 		var cameraContainer = {
