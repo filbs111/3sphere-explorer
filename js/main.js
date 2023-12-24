@@ -3574,7 +3574,7 @@ function setMatrixUniforms(shaderProgram) {
 	setupShaderAtmos(shaderProgram);
 }
 
-var cubemapViews, fixedCubemapTestView;
+var cubemapViews;
 //cube map code from http://www.humus.name/cubemapviewer.js (slightly modified)
 
 function power_of_2(n) {
@@ -3600,9 +3600,14 @@ function initCubemapFramebuffers(){
 		cubemapViews[ii]=initCubemapFramebuffer(cubemapSize >> ii);
 	}
 
-	var fixedCubemapTestView=initCubemapFramebuffer(512);	//TODO one for each portal, don't create intermediate buffers (only need one cubemap)
+	for (var world=0;world<portalsForWorld.length; world++){
+		var portalsForThisWorld = portalsForWorld[world];
+		for (var pp = 0; pp<portalsForThisWorld.length;pp++){
+			portalsForThisWorld[pp].prerenderedView = initCubemapFramebuffer(512);
+		}
+	}
 
-	return {cubemapViews, fixedCubemapTestView};
+	return cubemapViews;
 }
 
 var setCubemapTexLevel = function(level){
@@ -4315,7 +4320,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	initTextureFramebuffer(rttFisheyeView2);
 	initShaders(shaderPrograms);initShaders=null;
 	initTexture();
-	({cubemapViews, fixedCubemapTestView} = initCubemapFramebuffers());
+	cubemapViews = initCubemapFramebuffers();
 	initBuffers();
 	getLocationsForShadersUsingPromises(
 		()=>{
@@ -6459,13 +6464,19 @@ function drawCentredCubemap(portal){
 	//TODO generate mips, render to dedicated image for each portal side (so not overwritten)
 	//...
 
-	setCubemapTex(fixedCubemapTestView.cubemapTexture);
+	var viewToDraw = portal.prerenderedView;
+	setCubemapTex(viewToDraw.cubemapTexture);
+
+	if (viewToDraw.haveDrawn){
+		return;
+	}
+	viewToDraw.haveDrawn=true;
 
 	gl.cullFace(gl.BACK);
 	mat4.set(cmapPMatrix, pMatrix);
 
 	drawPortalCubemap(
-		fixedCubemapTestView, 
+		viewToDraw, 
 		0,		//time
 		portal,
 		portal,
