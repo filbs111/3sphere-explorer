@@ -2266,7 +2266,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		//console.log("num drawn: " + numDrawn);
 	}
 	
-	if (guiParams.drawShapes.frigate){
+	if (guiParams.drawShapes.frigate && frigateBuffers.isLoaded){
 		activeShaderProgram = shaderProgramTexmap;
 		shaderSetup(activeShaderProgram, frigateTexture);
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
