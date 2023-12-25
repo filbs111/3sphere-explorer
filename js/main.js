@@ -3603,7 +3603,7 @@ function initCubemapFramebuffers(){
 	for (var world=0;world<portalsForWorld.length; world++){
 		var portalsForThisWorld = portalsForWorld[world];
 		for (var pp = 0; pp<portalsForThisWorld.length;pp++){
-			portalsForThisWorld[pp].prerenderedView = initCubemapFramebuffer(512);
+			portalsForThisWorld[pp].prerenderedView = initCubemapFramebuffer(256, true);
 		}
 	}
 
@@ -3625,7 +3625,7 @@ var setCubemapTex = (function generateGetCubemapTexFunc(){
 	}
 })();
 
-function initCubemapFramebuffer(cubemapSize){
+function initCubemapFramebuffer(cubemapSize, withMips){
 	var view = {};
 
 	//for rendering to separate 2d textures, prior to cubemap
@@ -3642,11 +3642,11 @@ function initCubemapFramebuffer(cubemapSize){
 	
 	view.cubemapTexture = gl.createTexture();
 	
-	gl.activeTexture(gl.TEXTURE1);	//use texture 1 always for cubemap
+	setCubemapTex(view.cubemapTexture); //use texture 1 always for cubemap
 	gl.bindTexture(gl.TEXTURE_CUBE_MAP, view.cubemapTexture);
 	gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 	gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-	gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+	gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, withMips? gl.LINEAR_MIPMAP_LINEAR: gl.LINEAR);
 	gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
 	var faces = [gl.TEXTURE_CUBE_MAP_POSITIVE_X,
@@ -6491,6 +6491,11 @@ function drawCentredCubemap(portal){
 		false
 		);
 
+	//setCubemapTex(viewToDraw.cubemapTexture);	//likely already set, but at some point will render portals within portals.
+	//above doesn't work, possibly because texture1 is used elsewhere (terrain_utils)
+	gl.activeTexture(gl.TEXTURE1);	//use texture 1 always for cubemap
+	gl.bindTexture(gl.TEXTURE_CUBE_MAP, viewToDraw.cubemapTexture);
+	gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
 }
 
 function drawPortalCubemap(
