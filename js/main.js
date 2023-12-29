@@ -1,5 +1,5 @@
 var shaderPrograms={};
-
+var debugPortalInfo = {};
 var shaderProgramColored,	//these are variables that are set to different shaders during running, but could just as well go inside shaderPrograms.
 	shaderProgramColoredBendy,
 	shaderProgramTexmap;	//but keeping separate for now so know that all shaderPrograms.something are unchanging
@@ -2964,7 +2964,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 			
 			// TODO don't draw the portal that are looking through.
 			for (var ii=0;ii<portals.length;ii++){
-				if (frustumCull(portalInCameraArr[ii],infoForPortals[ii].rad)){		//<-- should this be 1 or ii?
+
+				if (frustumCull(portalInCameraArr[ii], portals[ii].shared.radius)){		//<-- should this be 1 or ii?
 							//TODO is infoForPortals similar to portals arr, or mixed up?
 
 					var portalRad = 1.02*portals[ii].shared.radius;
@@ -2973,11 +2974,69 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 					var pColor = worldColors[portals[ii].otherps.world];
 					
+					if (!guiParams.reflector.pipDraw){
+						
 					gl.uniform3f(activeShaderProgram.uniforms.uModelScale, portalRad,portalRad,portalRad);		
 					uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.black);
 					gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, pColor[0], pColor[1], pColor[2]);
 					mat4.set(portalInCameraArr[ii], mvMatrix);mat4.set(portalMatArr[ii], mMatrix);
 					drawObjectFromBuffers(placeholderPortalMesh, activeShaderProgram);
+					
+					}else{
+						//problems: draws at wrong size, if haven't drawn that portal view before, draws black.
+					//wrong size - guess from reflectorInfoArr. is this (re) calculated?
+					//what is minimum?
+
+					var otherPortalSide = guiParams.reflector.isPortal ? portals[ii].otherps : 
+						portals[ii];
+
+					var currentTex = getCurrentTex();
+					drawCentredCubemap(otherPortalSide, true);
+
+					//code copy pasted from below. TODO figure out what wanted, dedupe...
+					// if (reverseCamera){
+					// 	gl.cullFace(gl.FRONT);
+					// }
+	
+					// //set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
+					// gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
+					// gl.viewport( 0,0, viewSettings.width, viewSettings.height );
+					// mat4.set(nonCmapPMatrix, pMatrix);	
+					// frustumCull = nonCmapCullFunc;
+	
+					// mat4.set(savedWorldCamera, worldCamera);
+					// localVecFogColor=savedFogColor;
+
+					var returnObj = {};
+					calcReflectionInfo(portalInCameraArr[ii], returnObj, portalRad);
+
+					debugPortalInfo = {returnObj, ii, portals, reflectorInfoArr, infoForPortals};
+
+					//var returnObj = reflectorInfoArr[ii];	//override...
+						// this causes thing to be drawn in the right place, but wrong size!
+
+					//suspect issue is at ~ line 824 
+					//reflectorInfoArr[ii].rad = guiParams.reflector.draw!="none" ? portalsForThisWorldX[ii].shared.radius : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
+
+					//var savedRefInfoRad = reflectorInfoArr[ii].rad;
+						//this is a hideous hack. TODO stop doing shit like this!
+						//note unclear whether the other variables in reflectorInfoArr are correct/relevant here - 
+						//suspect not, since looks off. TODO attempt fresh calcReflectionInfo, compare with what 
+						// using here (position seems right already - eg position) 
+
+					//reflectorInfoArr[ii].rad = guiParams.reflector.draw!="none" ? portals[ii].shared.radius : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
+					returnObj.rad = guiParams.reflector.draw!="none" ? portals[ii].shared.radius : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
+
+					//mat4.set(savedWorldCamera, worldCamera);
+
+					//drawPortal(activeReflectorShader, portalMatArr[ii], meshToDraw, reflectorInfoArr[ii], portalInCameraArr[ii]);
+					drawPortal(activeReflectorShader, portalMatArr[ii], meshToDraw, returnObj, portalInCameraArr[ii]);
+					
+					//reflectorInfoArr[ii].rad = savedRefInfoRad;
+					
+//					setCubemapTex(currentTex);	//maybe unnecessary
+
+					}
 				}
 			}
 			
@@ -3614,16 +3673,20 @@ var setCubemapTexLevel = function(level){
 	setCubemapTex(cubemapViews[level].cubemapTexture);
 }
 
-var setCubemapTex = (function generateGetCubemapTexFunc(){
+var setCubemapTex, getCurrentTex;
+({setCubemapTex, getCurrentTex} = (function generateGetCubemapTexFunc(){
 	var currentTex;
-	return function(newTex){
-		if (newTex!=currentTex){
-			gl.activeTexture(gl.TEXTURE1);	//use texture 1 always for cubemap
-			gl.bindTexture(gl.TEXTURE_CUBE_MAP, newTex);
-			currentTex=newTex;
-		}
+	return {
+		setCubemapTex: function(newTex){
+			if (newTex!=currentTex){
+				gl.activeTexture(gl.TEXTURE1);	//use texture 1 always for cubemap
+				gl.bindTexture(gl.TEXTURE_CUBE_MAP, newTex);
+				currentTex=newTex;
+			}
+		},
+		getCurrentTex: function(){return currentTex;}
 	}
-})();
+})());
 
 function initCubemapFramebuffer(cubemapSize, withMips){
 	var view = {};
@@ -3990,7 +4053,8 @@ var guiParams={
 		isPortal:true,
 		drawFrame:false,
 		forceApproximation:false,
-		test1:false
+		test1:false,
+		pipDraw: false
 	},
 	debug:{
 		closestPoint:false,
@@ -4235,6 +4299,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	reflectorFolder.add(guiParams.reflector, "drawFrame");
 	reflectorFolder.add(guiParams.reflector, "test1");
 	reflectorFolder.add(guiParams.reflector, "forceApproximation");
+	reflectorFolder.add(guiParams.reflector, "pipDraw");
 
 	window.addEventListener("keydown",function(evt){
 		//console.log("key pressed : " + evt.keyCode);
@@ -6465,16 +6530,16 @@ function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo
 
 /*
 * params: world that portal camera is in, portal number for the portalsides in that world.
+* avoidRendering is so don't mess things up when drawing a portal in a portal 
+* (should reset various things if wish to support that.)
 */
-function drawCentredCubemap(portal){
+function drawCentredCubemap(portal, avoidRendering){
 	//for drawing at load time (or when worlds updated/portals moved).
-	//TODO generate mips, render to dedicated image for each portal side (so not overwritten)
-	//...
 
 	var viewToDraw = portal.prerenderedView;
 	setCubemapTex(viewToDraw.cubemapTexture);
 
-	if (viewToDraw.haveDrawn){
+	if (viewToDraw.haveDrawn || avoidRendering){
 		return;
 	}
 	viewToDraw.haveDrawn=true;
@@ -6531,6 +6596,9 @@ function drawPortalCubemap(
 		mat4.set(cameraContainer.matrix, worldCamera);
 		rotateCameraForFace(ii);
 		drawWorldScene(frameTime, true, null, wSettingsArr[ii]);
+
+		setCubemapTex(cubemapView.cubemapTexture);	//reset. only requried if draw portals within portals. TODO avoid?
+				//TODO - is this messing up drawing of portals in portals???
 	}
 	
 	if (!shouldDrawTransparentStuff){
