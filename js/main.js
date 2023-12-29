@@ -2956,39 +2956,50 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 			//draw simple fog coloured spheres, so pop-in less jarring.
 			//TODO draw properly, maybe can make more efficient since view of one portal through another doesn't change much
 
-			activeShaderProgram = shaderProgramColored;
-			gl.useProgram(activeShaderProgram);
-			performShaderSetup(activeShaderProgram, wSettings);	//?? appears to not help
-
-			var placeholderPortalMesh = sphereBuffersHiRes;
-			
 			// TODO don't draw the portal that are looking through.
 			for (var ii=0;ii<portals.length;ii++){
 
-				if (frustumCull(portalInCameraArr[ii], portals[ii].shared.radius)){		//<-- should this be 1 or ii?
-							//TODO is infoForPortals similar to portals arr, or mixed up?
+				var portalRad = 1.02*portals[ii].shared.radius;
 
-					var portalRad = 1.02*portals[ii].shared.radius;
-					//if don't scale up a bit, invisible because within discard radius!
-					//TODO a shader without discard - should also be emmissive, not lit by world...
-
+				//TODO remove this - perhaps just remove calls to it (don't draw portal at all),
+				// and prerender several iterations of each portal (ie portal in portal in portal ... is invisible,
+				// but practically doesn't matter since < pixel size)
+				function drawPlaceholderPortal(){
+					activeShaderProgram = shaderProgramColored;
+					gl.useProgram(activeShaderProgram);
+					performShaderSetup(activeShaderProgram, wSettings);	//?? appears to not help
+		
+					var placeholderPortalMesh = sphereBuffersHiRes;
+					
 					var pColor = worldColors[portals[ii].otherps.world];
 					
-					if (!guiParams.reflector.pipDraw){
-						
 					gl.uniform3f(activeShaderProgram.uniforms.uModelScale, portalRad,portalRad,portalRad);		
 					uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.black);
 					gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, pColor[0], pColor[1], pColor[2]);
 					mat4.set(portalInCameraArr[ii], mvMatrix);mat4.set(portalMatArr[ii], mMatrix);
 					drawObjectFromBuffers(placeholderPortalMesh, activeShaderProgram);
-					
+				}
+
+				if (frustumCull(portalInCameraArr[ii], portals[ii].shared.radius)){		//<-- should this be 1 or ii?
+							//TODO is infoForPortals similar to portals arr, or mixed up?
+
+					//if don't scale up a bit, invisible because within discard radius!
+					//TODO a shader without discard - should also be emmissive, not lit by world...
+
+					if (!guiParams.reflector.pipDraw){
+						drawPlaceholderPortal();
 					}else{
+
 						//problems: draws at wrong size, if haven't drawn that portal view before, draws black.
 					//wrong size - guess from reflectorInfoArr. is this (re) calculated?
 					//what is minimum?
 
 					var otherPortalSide = guiParams.reflector.isPortal ? portals[ii].otherps : 
 						portals[ii];
+
+					if (!otherPortalSide.prerenderedView.haveDrawn){
+						drawPlaceholderPortal();
+					}else{
 
 					var currentTex = getCurrentTex();
 					drawCentredCubemap(otherPortalSide, true);
