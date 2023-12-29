@@ -3917,6 +3917,8 @@ function makeTexture(src, imgformat=gl.RGBA, imgtype=gl.UNSIGNED_BYTE, yFlip = t
 		//gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
 		gl.generateMipmap(gl.TEXTURE_2D);
 		bind2dTextureIfRequired(null);	//AFAIK this is just good practice to unwanted side effect bugs
+
+		havePrerenderedCentredCubemaps=false;	//hack, results in some unnecessary redrawing (not all images affect all cubemaps)
 	};	
 	texture.image.src = src;
 	return texture;
