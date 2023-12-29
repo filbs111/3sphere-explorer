@@ -4026,7 +4026,7 @@ var guiParams={
 		voxNmapTest:false,	//just show normal map. more efficient pix shader than standard. for performance check
 		terrainMapProject:false,
 		texBias:0.0,
-		zPrepass:true,	//currently applies only to 4vec objects (eg terrain), and only affect overdraw for that object. 
+		zPrepass:false,	//currently applies only to 4vec objects (eg terrain), and only affect overdraw for that object. 
 		perPixelLighting:true,
 		atmosShader:"atmos",
 		atmosThickness:0.2,
