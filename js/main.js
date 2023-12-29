@@ -1666,11 +1666,6 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 			}
 		}
 		
-		//return zeroth entries of infoForPortal on root object.
-		//TODO calling code should extract from infoForPortals
-		returnObj.reflectorPosTransformed = returnObj.infoForPortals[0].reflectorPosTransformed;
-		returnObj.localVecReflectorDiffColor = returnObj.infoForPortals[0].localVecReflectorDiffColor;
-
 		//return returnObj;		//causes bug currently because other properties are added to this object after it is returned and assigned to 
 								//wSettings, which are particular to the (cubemap) view, eg light position in camera frame.
 								//TODO handle those specific variables separately, to avoid allocation of new objects.
