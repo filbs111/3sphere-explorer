@@ -1,5 +1,6 @@
 var shaderPrograms={};
 var debugPortalInfo = {};
+var havePrerenderedCentredCubemaps=false;
 var shaderProgramColored,	//these are variables that are set to different shaders during running, but could just as well go inside shaderPrograms.
 	shaderProgramColoredBendy,
 	shaderProgramTexmap;	//but keeping separate for now so know that all shaderPrograms.something are unchanging
@@ -794,6 +795,25 @@ function drawScene(frameTime){
 		//console.log("ruled out portal camera traversal");
 		xyzmove4mat(inputMatrix, offsetVec);
 	}
+
+
+	//TODO put this elsewhere - assumes some stuff is in scope though!
+	//TODO defer to later (if large number of worlds/portals to make rendering, storing all impractical)
+	//TODO render portal view for viewing from another portal - eg if looking through portal A then B, render view from portal B far side, for camera position in portal B
+	// correct for viewing from centre of portal A. (only useful if portal A is within portal B's accurate draw range)
+	if (!havePrerenderedCentredCubemaps){
+		for (var iter=0;iter<2;iter++){
+			for (var worldIdx =0; worldIdx< portalsForWorld.length;worldIdx++){
+				var portalsInfo = portalsForWorld[worldIdx];
+				for (var portalIdx = 0; portalIdx < portalsInfo.length ; portalIdx++ ){
+					var portal = portalsInfo[portalIdx];
+					drawCentredCubemap(portal, true);
+				}
+			}
+		}
+		havePrerenderedCentredCubemaps=true;
+	}
+
 
 
 	var portalsForThisWorldX = portalsForWorld[offsetCameraContainer.world];
@@ -2988,7 +3008,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 					}else{
 
 					var currentTex = getCurrentTex();
-					drawCentredCubemap(otherPortalSide, true);
+					drawCentredCubemap(otherPortalSide);
 
 					//TODO don't calculate these here, since for portal in portal, done for every cubemap face portal in portal is seen in.
 					//there is already reflectorInfoArr, but not currently suitable due to jumbling of portalInCameraArr, portalMatArr relative to this (in order to 
@@ -6501,13 +6521,13 @@ function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo
 * avoidRendering is so don't mess things up when drawing a portal in a portal 
 * (should reset various things if wish to support that.)
 */
-function drawCentredCubemap(portal, avoidRendering){
+function drawCentredCubemap(portal, forceRendering){
 	//for drawing at load time (or when worlds updated/portals moved).
 
 	var viewToDraw = portal.prerenderedView;
 	setCubemapTex(viewToDraw.cubemapTexture);
 
-	if (viewToDraw.haveDrawn || avoidRendering){
+	if (viewToDraw.haveDrawn && (!forceRendering) ){
 		return;
 	}
 	viewToDraw.haveDrawn=true;
