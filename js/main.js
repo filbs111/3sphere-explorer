@@ -2980,19 +2980,13 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 					drawObjectFromBuffers(placeholderPortalMesh, activeShaderProgram);
 				}
 
-				if (frustumCull(portalInCameraArr[ii], portals[ii].shared.radius)){		//<-- should this be 1 or ii?
-							//TODO is infoForPortals similar to portals arr, or mixed up?
-
+				if (frustumCull(portalInCameraArr[ii], portals[ii].shared.radius)){
 					//if don't scale up a bit, invisible because within discard radius!
 					//TODO a shader without discard - should also be emmissive, not lit by world...
 
 					if (!guiParams.reflector.pipDraw){
 						drawPlaceholderPortal();
 					}else{
-
-						//problems: draws at wrong size, if haven't drawn that portal view before, draws black.
-					//wrong size - guess from reflectorInfoArr. is this (re) calculated?
-					//what is minimum?
 
 					var otherPortalSide = guiParams.reflector.isPortal ? portals[ii].otherps : 
 						portals[ii];
@@ -3004,47 +2998,20 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 					var currentTex = getCurrentTex();
 					drawCentredCubemap(otherPortalSide, true);
 
-					//code copy pasted from below. TODO figure out what wanted, dedupe...
-					// if (reverseCamera){
-					// 	gl.cullFace(gl.FRONT);
-					// }
-	
-					// //set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
-					// gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
-					// gl.viewport( 0,0, viewSettings.width, viewSettings.height );
-					// mat4.set(nonCmapPMatrix, pMatrix);	
-					// frustumCull = nonCmapCullFunc;
-	
-					// mat4.set(savedWorldCamera, worldCamera);
-					// localVecFogColor=savedFogColor;
-
+					//TODO don't calculate these here, since for portal in portal, done for every cubemap face portal in portal is seen in.
+					//there is already reflectorInfoArr, but not currently suitable due to jumbling of portalInCameraArr, portalMatArr relative to this (in order to 
+					// put the portal that want to discard pixels for first - if fix that, can avoid calculation here, just use reflectorInfoArr[ii]
 					var returnObj = {};
-					calcReflectionInfo(portalInCameraArr[ii], returnObj, portalRad);
+					var transposed = mat4.create(portalInCameraArr[ii]);
+					mat4.transpose(transposed);
+					calcReflectionInfo(transposed, returnObj, portalRad);
 
 					debugPortalInfo = {returnObj, ii, portals, reflectorInfoArr, infoForPortals};
 
-					//var returnObj = reflectorInfoArr[ii];	//override...
-						// this causes thing to be drawn in the right place, but wrong size!
-
-					//suspect issue is at ~ line 824 
-					//reflectorInfoArr[ii].rad = guiParams.reflector.draw!="none" ? portalsForThisWorldX[ii].shared.radius : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
-
-					//var savedRefInfoRad = reflectorInfoArr[ii].rad;
-						//this is a hideous hack. TODO stop doing shit like this!
-						//note unclear whether the other variables in reflectorInfoArr are correct/relevant here - 
-						//suspect not, since looks off. TODO attempt fresh calcReflectionInfo, compare with what 
-						// using here (position seems right already - eg position) 
-
-					//reflectorInfoArr[ii].rad = guiParams.reflector.draw!="none" ? portals[ii].shared.radius : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
 					returnObj.rad = guiParams.reflector.draw!="none" ? portals[ii].shared.radius : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
 
-					//mat4.set(savedWorldCamera, worldCamera);
-
-					//drawPortal(activeReflectorShader, portalMatArr[ii], meshToDraw, reflectorInfoArr[ii], portalInCameraArr[ii]);
 					drawPortal(activeReflectorShader, portalMatArr[ii], meshToDraw, returnObj, portalInCameraArr[ii]);
-					
-					//reflectorInfoArr[ii].rad = savedRefInfoRad;
-					
+										
 //					setCubemapTex(currentTex);	//maybe unnecessary
 
 					}
