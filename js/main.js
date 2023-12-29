@@ -2979,10 +2979,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 					//if don't scale up a bit, invisible because within discard radius!
 					//TODO a shader without discard - should also be emmissive, not lit by world...
 
-					if (!guiParams.reflector.pipDraw){
-						drawPlaceholderPortal();
-					}else{
-
+					
 					var otherPortalSide = guiParams.reflector.isPortal ? portals[ii].otherps : 
 						portals[ii];
 
@@ -4026,8 +4023,7 @@ var guiParams={
 		isPortal:true,
 		drawFrame:false,
 		forceApproximation:false,
-		test1:false,
-		pipDraw: false
+		test1:false
 	},
 	debug:{
 		closestPoint:false,
@@ -4272,7 +4268,6 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	reflectorFolder.add(guiParams.reflector, "drawFrame");
 	reflectorFolder.add(guiParams.reflector, "test1");
 	reflectorFolder.add(guiParams.reflector, "forceApproximation");
-	reflectorFolder.add(guiParams.reflector, "pipDraw");
 
 	window.addEventListener("keydown",function(evt){
 		//console.log("key pressed : " + evt.keyCode);
