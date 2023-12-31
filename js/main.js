@@ -4022,12 +4022,6 @@ var guiParams={
 		scale:0.03
 	},
 	"targeting":"off",
-	//fogColor0:'#b2dede',
-	//fogColor0:'#b451c5',
-	fogColor0:'#dca985',
-	fogColor1:'#5cd5e6',
-	fogColor2:'#55ee66',
-	//fogColor0:'#bbbbbb',
 	playerLight:'#808080',
 	control:{
 		onRails:false,
