@@ -3272,19 +3272,19 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 	//thrusters
 	//TODO pass amount of thrust to shader for strength of effect.
 	if (guiParams["player model"] == "spaceship" && thrusterBuffers.isLoaded && currentThrustInput[2]>0){
+		
+		//NOTE this shader is inefficient since does world/portal lighting calculation, but has zero effect.
+		var activeShaderProgram = shaderPrograms.coloredPerPixelDiscardVertexColoredEmit[ guiParams.display.atmosShader ];
+		shaderSetup(activeShaderProgram);
+		
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", new Float32Array([0.2,1,1.5,1]));
+		modelScale = sshipModelScale;
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
+				
 		//elsewhere using drawSsshipRotatedMat, but to avoid possible side effects, just make another mat.
 		var rotatedMatrix2 = mat4.create();
+
 		for (var drawMat of sshipDrawMatrices){
-
-			//TODO appropriate shader (emmissive, little/no other lighting )
-			var activeShaderProgram = shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ];
-			shaderSetup(activeShaderProgram);
-			
-			uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
-
-			modelScale = sshipModelScale;
-			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
-			
 			//copy matrix stuff for when drawing main spaceship body
 			mat4.set(invertedWorldCamera, mvMatrix);
 			

@@ -182,6 +182,8 @@ function initShaders(shaderProgs){
 	var shaderProgWithVariationsList = {
 		coloredPerPixelDiscard:["perpixel-discard-vs", "perpixel-discard-fs", [],[],true],
 		coloredPerPixelDiscardVertexColored:["perpixel-discard-vs", "perpixel-discard-fs", ['VERTCOLOR'],['VERTCOLOR'],true],
+		coloredPerPixelDiscardVertexColoredEmit:["perpixel-discard-vs", "perpixel-discard-emit-fs", ['VERTCOLOR'],['VERTCOLOR'],true],
+			//^^ note perpixel lighting is irrelevant because no effect of lights
 		coloredPerPixelDiscardVertexColoredTexmap:["perpixel-discard-vs", "perpixel-discard-fs", ['VERTCOLOR','TEXMAP'],['VERTCOLOR','TEXMAP'],true],
 		coloredPerPixelDiscardVertexColoredTexmapBendy:["perpixel-discard-vs", "perpixel-discard-fs", ['VS_MATMULT','VERTCOLOR','TEXMAP','BENDY_'],['VERTCOLOR','TEXMAP'],true],
 		coloredPerPixelDiscardVertexColoredTexmapBendyInstanced:["perpixel-discard-vs", "perpixel-discard-fs", ['INSTANCED','VS_MATMULT','VERTCOLOR','TEXMAP','BENDY_'],['VERTCOLOR','TEXMAP'],true],
