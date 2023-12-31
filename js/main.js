@@ -2845,32 +2845,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 			gl.uniform4f(activeShaderProgram.uniforms.uOtherLightAmounts, 0,0,0,0);	//no thruster/gun light used here currently
 
 			drawObjectFromPreppedBuffers(gunBuffers, activeShaderProgram);
-		}
-
-
-		//thrusters
-		//TODO put in transparent drawing, use appropriate shader (not lit by other lights)
-		//TODO pass amount of thrust to shader for strength of effect.
-		if (thrusterBuffers.isLoaded && currentThrustInput[2]>0){
-			var desiredProgram = shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ];
-			if (activeShaderProgram != desiredProgram){
-				activeShaderProgram = desiredProgram;
-				shaderSetup(activeShaderProgram);
-			}
-			uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
-
-			modelScale = sshipModelScale;
-			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
-			
-			//copy matrix stuff for when drawing main spaceship body
-			mat4.set(invertedWorldCamera, mvMatrix);
-			mat4.multiply(mvMatrix,rotatedMatrix);
-			mat4.set(rotatedMatrix, mMatrix);
-
-			drawObjectFromBuffers(thrusterBuffers, activeShaderProgram);
-		}
-
-		
+		}		
 	}
 	
 	//draw "light" object
@@ -3294,8 +3269,34 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 		}
 	}
 
-	
-	
+	//thrusters
+	//TODO pass amount of thrust to shader for strength of effect.
+	if (guiParams["player model"] == "spaceship" && thrusterBuffers.isLoaded && currentThrustInput[2]>0){
+		//elsewhere using drawSsshipRotatedMat, but to avoid possible side effects, just make another mat.
+		var rotatedMatrix2 = mat4.create();
+		for (var drawMat of sshipDrawMatrices){
+
+			//TODO appropriate shader (emmissive, little/no other lighting )
+			var activeShaderProgram = shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ];
+			shaderSetup(activeShaderProgram);
+			
+			uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
+
+			modelScale = sshipModelScale;
+			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
+			
+			//copy matrix stuff for when drawing main spaceship body
+			mat4.set(invertedWorldCamera, mvMatrix);
+			
+			mat4.set(drawMat,rotatedMatrix2);
+			xyzrotate4mat(rotatedMatrix2, [-Math.PI/2,0,0]); 
+
+			mat4.multiply(mvMatrix,rotatedMatrix2);
+			mat4.set(rotatedMatrix2, mMatrix);
+
+			drawObjectFromBuffers(thrusterBuffers, activeShaderProgram);
+		}
+	}
 	
 	
 	
