@@ -48,6 +48,7 @@ var meshSphereBuffers={};
 var buildingBuffers={};
 var octoFractalBuffers={};
 var bridgeBuffers={};
+var thrusterBuffers={};
 
 //var sshipModelScale=0.0001;
 var sshipModelScale=0.00005;
@@ -369,6 +370,7 @@ function initBuffers(){
 
 	loadBuffersFromObj2Or3File(bridgeBuffers, "./data/miscobjs/bridgexmy2.obj3", loadBufferData, 6);
 
+	loadBuffersFromObj2Or3File(thrusterBuffers, "./data/miscobjs/thrusters-with-normals-and-vcolor.obj3", loadBufferData, 6);
 
 	var thisMatT;
 	for (var ii=0;ii<maxRandBoxes;ii++){
@@ -2844,6 +2846,30 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 			drawObjectFromPreppedBuffers(gunBuffers, activeShaderProgram);
 		}
+
+
+		//thrusters
+		//TODO put in transparent drawing, use appropriate shader (not lit by other lights)
+		//TODO pass amount of thrust to shader for strength of effect.
+		if (thrusterBuffers.isLoaded && currentThrustInput[2]>0){
+			var desiredProgram = shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ];
+			if (activeShaderProgram != desiredProgram){
+				activeShaderProgram = desiredProgram;
+				shaderSetup(activeShaderProgram);
+			}
+			uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
+
+			modelScale = sshipModelScale;
+			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
+			
+			//copy matrix stuff for when drawing main spaceship body
+			mat4.set(invertedWorldCamera, mvMatrix);
+			mat4.multiply(mvMatrix,rotatedMatrix);
+			mat4.set(rotatedMatrix, mMatrix);
+
+			drawObjectFromBuffers(thrusterBuffers, activeShaderProgram);
+		}
+
 		
 	}
 	
