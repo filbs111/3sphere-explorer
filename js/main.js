@@ -3663,8 +3663,9 @@ function power_of_2(n) {
 function initCubemapFramebuffers(){
 	const urlParams = new URLSearchParams(window.location.search);
 	var manualCubemapSize = Number(urlParams.get('cms'));
-	var cubemapSize = power_of_2(manualCubemapSize) ? manualCubemapSize : 512;
+	var cubemapSize = power_of_2(manualCubemapSize) ? manualCubemapSize : 1024;
 										//512 decent for 1080p end result. 1024 bit better. my machine handles 4096, but no point
+										//TODO maybe drop max res if using other method for close to portal rendering.
 	cubemapSize = Math.min(cubemapSize, 4096);	//disallow really big, because causes awful perf.
 	cubemapSize = Math.max(cubemapSize, 64);	//disallow very small.
 	
@@ -6495,7 +6496,15 @@ function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo
 	// as rotate view (for same distance from camera, z-distance is smaller, so appears larger, away from centre.
 	// fisheye view reduces this effect, but is not accounted for here. TODO if using fisheye, take into account here.
 	var transitionNumber = 5; //larger pushes switching to approximation further out.
-	var isFarEnoughAwayInZ = portalInCamera[14] < -transitionNumber*otherPortalSide.shared.radius;
+
+	var invSizeInScreen =  -portalInCamera[14] / transitionNumber*otherPortalSide.shared.radius;
+		//approx, works for distant objects. note using inverse since portalInCamera[14] could be 0
+		// TODO work out size of cubemap pixels
+		// something more like (distance of reflected camera (inside portal) to portal surface)
+		//							----------------------------------------
+		//							(distance from camera to portal surface)
+
+	var isFarEnoughAwayInZ = invSizeInScreen > 1;
 	var isOnOtherSideOfWorld = portalInCamera[15] <0;
 		//IIRC portalInCamera[15] = w = 1 when close to it, portalInCamera[14] = z is -ve in front, +ve behind camera.
 	var isFarEnoughAwayForApproximation = isFarEnoughAwayInZ || isOnOtherSideOfWorld;
@@ -6507,9 +6516,9 @@ function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo
 
 	if (guiParams.reflector.cmFacesUpdated>0){
 		var cubemapLevel = guiParams.reflector.cubemapDownsize == "auto" ? 
-		(portalInCamera[15]>0.8 ? 0:(portalInCamera[15]>0.5? 1:2))	:	//todo calculate angular resolution of cubemap in final camera,  
+		(invSizeInScreen< 0.125 ? 0:( invSizeInScreen< 0.25 ? 1:2))	:
+				//todo calculate angular resolution of cubemap in final camera,  
 				//dependent on distance, FOV, blur, screen resolution etc, and choose appropriate detail level
-				//currently just manually, roughly tuned for 1080p, current settings.
 		guiParams.reflector.cubemapDownsize ;
 
 		setCubemapTexLevel(cubemapLevel);	//set texture#1
