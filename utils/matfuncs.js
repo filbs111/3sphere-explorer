@@ -372,3 +372,9 @@ function halfAngleBetween4Vecs(vec1, vec2){
 	}
 	return Math.atan2(Math.sqrt(difflensq), Math.sqrt(sumlensq));
 }
+
+function logMatInTable(mat){
+	var matArr = Array.from(mat);
+	var toLog = [...Array(4).keys()].map(ii => matArr.slice(ii*4, ii*4+4));
+	console.table(toLog);
+}
