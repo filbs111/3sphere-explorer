@@ -157,10 +157,11 @@ function genShaderVariants(name, vs_id, fs_id, vs_defines=[], fs_defines=[], use
 function initShaders(shaderProgs){
 	var initShaderTimeStart = performance.now();
 	var shaderProgNoVariationsList = {
-		fullscreenTextured:["fullscreen-vs", "fullscreen-fs"],
+		fullscreenTextured:["fullscreen-vs", "fullscreen-fs"],	//NOTE this actually makes multiple samples. should it?
 		fullscreenTexturedShowAlphaChan:["fullscreen-vs", "fullscreen-fs-showalpha"],
 		fullscreenTexturedWithDepthmap:["fullscreen-vs", "fullscreen-with-depthmap-fs"],
 		fullscreenTexturedFisheye:["fullscreen-vs", "fullscreen-fs-fisheye"],
+		fullscreenTexturedAnaglyph:["fullscreen-vs", "fullscreen-fs-anaglyph"],
 		fullscreenBennyBoxLite:["fullscreen-vs", "fullscreen-fs-bennybox-lite"],
 		fullscreenBennyBox:["fullscreen-vs", "fullscreen-fs-bennybox"],		//https://www.youtube.com/watch?v=Z9bYzpwVINA
 		fullscreenBlur:["fullscreen-vs", "fullscreen-fs-blur"],

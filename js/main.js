@@ -823,31 +823,93 @@ function drawScene(frameTime){
 		reflectorInfoArr[ii].rad = guiParams.reflector.draw!="none" ? portalsForThisWorldX[ii].shared.radius : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
 	}
 
-	if (guiParams.display.stereo3d == "off"){
-		drawSceneToScreen(offsetPlayerCamera, {left:0,top:0,width:gl.viewportWidth,height:gl.viewportHeight});
-	}else{
-		//basic left/right shifted cameras
-		//no centre of perspective shift (rotate cameras inward by eyeTurnIn is not ideal)
-		//TODO shift x-hairs when using turn in or persp shift (eye x-hairs appear to be at screen depth)
+	switch(guiParams.display.stereo3d ) {
+		case 'anaglyph':
+			//note this draws to an intermediate buffer that is twice screen size (containing left, right eyes.)
+			//and then draws from both of these to the screen.
+			//this could be done in fewer steps, and combined with other steps (eg fisheye mapping), with additive
+			//rendering to draw straight to screen with weights for left, right eyes (eg left = mostly red, some negative
+			//green to offset red-> green cross-talk etc.
+			// for now just do simple/inefficient way, then decide if worth improving.
+			setRttSize(rttAnaglyphIntermediateView, gl.viewportWidth*2,gl.viewportHeight);	//TODO is squarer better?
+			drawStereoPair(
+				{left:0,top:0,width:gl.viewportWidth,height:gl.viewportHeight},
+				{left:gl.viewportWidth,top:0,width:gl.viewportWidth,height:gl.viewportHeight},
+
+				//{left:0,top:0,width:gl.viewportWidth/2,height:gl.viewportHeight/2},
+				//{left:gl.viewportWidth/2,top:gl.viewportHeight/2,width:gl.viewportWidth/2,height:gl.viewportHeight/2},
+
+				rttAnaglyphIntermediateView.framebuffer 
+			);
+			// map to final screen.
+			//this copypasted from end of drawSceneToScreen()
+
+			gl.bindFramebuffer(gl.FRAMEBUFFER, null);	//draw to screen (null)
+			gl.viewport(0, 0, gl.viewportWidth,gl.viewportHeight);
+			bind2dTextureIfRequired(rttAnaglyphIntermediateView.texture);
+			activeProg = shaderPrograms.fullscreenTexturedAnaglyph;
+			gl.useProgram(activeProg);
+			enableDisableAttributes(activeProg);
+			gl.cullFace(gl.BACK);
+			gl.uniform1i(activeProg.uniforms.uSampler, 0);		
+			gl.depthFunc(gl.ALWAYS);		
+			drawObjectFromBuffers(fsBuffers, activeProg);
+			gl.depthFunc(gl.LESS);
+
+			break;
+		case 'top-bottom':
+			//basic left/right shifted cameras
+			//no centre of perspective shift (rotate cameras inward by eyeTurnIn is not ideal)
+			//TODO shift x-hairs when using turn in or persp shift (eye x-hairs appear to be at screen depth)
+			drawStereoPair(
+				{left:0,top:gl.viewportHeight/2,width:gl.viewportWidth,height:gl.viewportHeight/2},
+				{left:0,top:0,width:gl.viewportWidth,height:gl.viewportHeight/2},
+				null
+			);
+			break;
+		case 'sbs':
+			drawStereoPair(
+				{left:0,top:0,width:gl.viewportWidth/2,height:gl.viewportHeight},
+				{left:gl.viewportWidth/2,top:0,width:gl.viewportWidth/2,height:gl.viewportHeight},
+				null
+			);
+			break;
+		case 'sbs-cross':
+			drawStereoPair(
+				{left:gl.viewportWidth/2,top:0,width:gl.viewportWidth/2,height:gl.viewportHeight},
+				{left:0,top:0,width:gl.viewportWidth/2,height:gl.viewportHeight},
+				null
+			);
+			break;
+		case 'off':
+		default:
+			drawSceneToScreen(
+				offsetPlayerCamera, 
+				{left:0,top:0,width:gl.viewportWidth,height:gl.viewportHeight}, 
+				null);
+	} 
+
+	function drawStereoPair(viewportL, viewportR, outputFb){
 		var savedCam = newIdMatWithQuats();
 		setMat4FromToWithQuats(offsetPlayerCamera, savedCam);
 
 		var savedWorld = offsetCameraContainer.world;
-		moveMatHandlingPortal(offsetCameraContainer, [-guiParams.display.eyeSepWorld,0,0]);
-		xyzrotate4mat(offsetPlayerCamera, [0,guiParams.display.eyeTurnIn,0]);
-		drawSceneToScreen(offsetPlayerCamera, {left:0,top:0,width:gl.viewportWidth,height:gl.viewportHeight/2});
+		moveMatHandlingPortal(offsetCameraContainer, [guiParams.display.eyeSepWorld,0,0]);
+		xyzrotate4mat(offsetPlayerCamera, [0,-guiParams.display.eyeTurnIn,0]);
+		drawSceneToScreen(offsetPlayerCamera, viewportL, outputFb);
 
 		setMat4FromToWithQuats(savedCam, offsetPlayerCamera);
 		offsetCameraContainer.world = savedWorld;
-		moveMatHandlingPortal(offsetCameraContainer, [guiParams.display.eyeSepWorld,0,0]);
-		xyzrotate4mat(offsetPlayerCamera, [0,-guiParams.display.eyeTurnIn,0]);
-		drawSceneToScreen(offsetPlayerCamera, {left:0,top:gl.viewportHeight/2,width:gl.viewportWidth,height:gl.viewportHeight/2});
+		moveMatHandlingPortal(offsetCameraContainer, [-guiParams.display.eyeSepWorld,0,0]);
+		xyzrotate4mat(offsetPlayerCamera, [0,guiParams.display.eyeTurnIn,0]);
+		drawSceneToScreen(offsetPlayerCamera, viewportR, outputFb);
 		//note inefficient currently, since does full screen full render for each eye view.
 		// for top/down split, intermediate render targets could be half screen size
 		// some rendering could be shared between eyes - eg portal cubemaps.
 	}
 
-	function drawSceneToScreen(cameraForScene, viewP){
+
+	function drawSceneToScreen(cameraForScene, viewP, sceneFinalOutputFramebuf){
 		
 	mat4.set(cameraForScene, worldCamera);
 
@@ -890,8 +952,8 @@ function drawScene(frameTime){
 	}
 
 	//setup for drawing to screen
-	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-	gl.viewport(viewP.left, viewP.top, viewP.width, viewP.height);
+	//gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+	//gl.viewport(viewP.left, viewP.top, viewP.width, viewP.height);
 	mat4.set(nonCmapPMatrix, pMatrix);
 														
 	frustumCull = nonCmapCullFunc;
@@ -1075,8 +1137,9 @@ function drawScene(frameTime){
 		}
 		
 		//draw quad to screen using drawn texture
-		gl.bindFramebuffer(gl.FRAMEBUFFER, null);	//draw to screen.
+		gl.bindFramebuffer(gl.FRAMEBUFFER, sceneFinalOutputFramebuf);	//draw to screen (null), or intermediate view in case of anaglyph
 		gl.viewport(viewP.left, viewP.top, viewP.width, viewP.height);	//TODO check whether necessary to keep setting this
+		
 		bind2dTextureIfRequired(sceneDrawingOutputView.texture);	
 		
 		//draw the simple quad object to the screen
@@ -1278,7 +1341,7 @@ function drawScene(frameTime){
 			//note could flip quad y to make above simpler (but will use different method anyway)
 	}
 
-	}
+	}	//end of function drawSceneToScreen
 
 
 	heapPerfMon.sample();
@@ -4258,7 +4321,7 @@ function init(){
 	displayFolder.add(guiParams.display, "cameraFov", 60,165,5);
 	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.005);
 	displayFolder.add(guiParams.display, "flipReverseCamera");
-	displayFolder.add(guiParams.display, "stereo3d", ["off","top-bottom"]);
+	displayFolder.add(guiParams.display, "stereo3d", ["off","sbs","sbs-cross","top-bottom","anaglyph"]);
 	displayFolder.add(guiParams.display, "eyeSepWorld", -0.001,0.001,0.0001);
 	displayFolder.add(guiParams.display, "eyeTurnIn", -0.01,0.01,0.0005);
 	displayFolder.add(guiParams.display, "showHud");
@@ -4395,6 +4458,8 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	initTextureFramebuffer(rttView);
 	initTextureFramebuffer(rttStageOneView, true);
 	initTextureFramebuffer(rttFisheyeView2);
+	initTextureFramebuffer(rttAnaglyphIntermediateView);
+
 	initShaders(shaderPrograms);initShaders=null;
 	initTexture();
 	cubemapViews = initCubemapFramebuffers();
@@ -6195,6 +6260,7 @@ var rttFisheyeRectRenderOutput2={};
 var rttView={};
 var rttStageOneView={};
 var rttFisheyeView2={};
+var rttAnaglyphIntermediateView={};
 
 function texImage2DWithLogs(mssg, target, level, internalformat, width, height, border, format, type, offsetOrSource){
 	console.log({"mssg":"called texImage2D "+mssg, "parameters":{target, level, internalformat, width, height, border, format, type, offsetOrSource}});
