@@ -825,6 +825,7 @@ function drawScene(frameTime){
 
 	switch(guiParams.display.stereo3d ) {
 		case 'anaglyph':
+		case 'anaglyph-green/magenta':
 			//note this draws to an intermediate buffer that is twice screen size (containing left, right eyes.)
 			//and then draws from both of these to the screen.
 			//this could be done in fewer steps, and combined with other steps (eg fisheye mapping), with additive
@@ -847,7 +848,10 @@ function drawScene(frameTime){
 			gl.bindFramebuffer(gl.FRAMEBUFFER, null);	//draw to screen (null)
 			gl.viewport(0, 0, gl.viewportWidth,gl.viewportHeight);
 			bind2dTextureIfRequired(rttAnaglyphIntermediateView.texture);
-			activeProg = shaderPrograms.fullscreenTexturedAnaglyph;
+
+			activeProg = guiParams.display.stereo3d == 'anaglyph'?
+				shaderPrograms.fullscreenTexturedAnaglyph:
+				shaderPrograms.fullscreenTexturedAnaglyphGm;
 			gl.useProgram(activeProg);
 			enableDisableAttributes(activeProg);
 			gl.cullFace(gl.BACK);
@@ -4321,7 +4325,7 @@ function init(){
 	displayFolder.add(guiParams.display, "cameraFov", 60,165,5);
 	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.005);
 	displayFolder.add(guiParams.display, "flipReverseCamera");
-	displayFolder.add(guiParams.display, "stereo3d", ["off","sbs","sbs-cross","top-bottom","anaglyph"]);
+	displayFolder.add(guiParams.display, "stereo3d", ["off","sbs","sbs-cross","top-bottom","anaglyph","anaglyph-green/magenta"]);
 	displayFolder.add(guiParams.display, "eyeSepWorld", -0.001,0.001,0.0001);
 	displayFolder.add(guiParams.display, "eyeTurnIn", -0.01,0.01,0.0005);
 	displayFolder.add(guiParams.display, "showHud");
