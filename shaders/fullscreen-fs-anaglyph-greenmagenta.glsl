@@ -10,10 +10,21 @@ out vec4 fragColor;
 //TODO just generalise anaglyph shader, pass in different uniforms.
 
 vec3 mapColour(vec3 inputColor){
-  //simple grayscale. TODO conserve colour  
-  vec3 gammaed = pow(inputColor, vec3(2.2));
-  float grayScale = dot(vec3(0.3,0.6,0.1), gammaed);
-  return vec3(grayScale);
+  //vec3 premapped = inputColor * vec3(2.0) - vec3(0.5);  //make more extreme image to get ghosting?
+  
+  vec3 strengths = pow(inputColor, vec3(2.2));   
+  //vec3 strengths = pow(inputColor, vec3(1.0));    //not sure if gamma should be applied! 
+  
+  vec3 stretchVec = vec3(1.0,2.0,1.0);
+  vec3 projectionVec = vec3(-1.0,2.0,-1.0);     //??
+
+  vec3 adjustedStrengths = strengths*stretchVec;   //guess. not sure why this looks OK.
+                //TODO what is this for (see that not currently used!)
+  vec3 normalisedProjDirVec = normalize(projectionVec);
+
+  float dotProd = dot(adjustedStrengths,normalisedProjDirVec);
+  vec3 projected = adjustedStrengths - dotProd*normalisedProjDirVec;
+  return projected/stretchVec;
 }
 
 void main(void) {
