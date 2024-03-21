@@ -83,26 +83,27 @@ void main(void) {
     SE.a=1.0;
     SW.a=1.0;
 
-    vec4 total = 2.0*mid + sampleWeightNE*NE + sampleWeightNW*NW + sampleWeightSE*SE + sampleWeightSW*SW;
-    //vec4 total = sampleWeightNE*NE + sampleWeightNW*NW + sampleWeightSE*SE + sampleWeightSW*SW;
+    //ungamma
+    vec4 midug = pow(mid,vec4(2.2));
+    vec4 NWug = pow(NW,vec4(2.2));
+    vec4 NEug = pow(NE,vec4(2.2));
+    vec4 SWug = pow(SW,vec4(2.2));
+    vec4 SEug = pow(SE,vec4(2.2));
+
+    //TODO untonemap, then average, then re-tonemap
+
+    vec4 total = 2.0*midug + sampleWeightNE*NEug + sampleWeightNW*NWug + sampleWeightSE*SEug + sampleWeightSW*SWug;
     vec4 avg = vec4(total.rgb/total.a , 1.0);
 
     //avg.rgb = vec3(blurAmount, 1.0-blurAmount, 1.0-blurAmount);
     //avg.rg = vec2(blurAmount, 1.0-blurAmount);
     
-	//reinhart
-	// note should do this before applying gamma!!
-	//todo check not already doing reinhard mapping when rendering objects...
-	//hack -undo gamma, tone map, redo gamma...
-	
-	avg.xyz = pow(avg.xyz,vec3(2.2));
-	
-	float multiplier = 1.5;	//something - default 1 would mean no bright parts of image. 
-	avg.xyz = avg.xyz * vec3(multiplier);
-	avg.xyz = avg.xyz/(vec3(1.0)+avg.xyz);
-	
-	avg.xyz = pow(avg.xyz,vec3(0.455));
 
+//	avg.xyz = avg.xyz/(vec3(1.0)+avg.xyz);  //tone mapping
+        //TODO use tone mapping to help blur/bloom. 
+        //store exp(-brightness) might make summing contiributions better (can do by multiplying)
+
+	avg.xyz = pow(avg.xyz,vec3(0.455));
 	
     fragColor = avg;
 }
