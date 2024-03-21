@@ -90,7 +90,14 @@ void main(void) {
     vec4 SWug = pow(SW,vec4(2.2));
     vec4 SEug = pow(SE,vec4(2.2));
 
-    //TODO untonemap, then average, then re-tonemap
+    //untonemap - note has problem if colour maxed out, so add small amount
+    //note has little impact at the moment, but take into account if use bright lighting, have bloom fx
+    vec3 onePointSomething = vec3(1.001);
+    midug.xyz = midug.xyz/(onePointSomething-midug.xyz);
+    NWug.xyz = NWug.xyz/(onePointSomething-NWug.xyz);
+    NEug.xyz = NEug.xyz/(onePointSomething-NEug.xyz);
+    SWug.xyz = SWug.xyz/(onePointSomething-SWug.xyz);
+    SEug.xyz = SEug.xyz/(onePointSomething-SEug.xyz);
 
     vec4 total = 2.0*midug + sampleWeightNE*NEug + sampleWeightNW*NWug + sampleWeightSE*SEug + sampleWeightSW*SWug;
     vec4 avg = vec4(total.rgb/total.a , 1.0);
@@ -98,10 +105,9 @@ void main(void) {
     //avg.rgb = vec3(blurAmount, 1.0-blurAmount, 1.0-blurAmount);
     //avg.rg = vec2(blurAmount, 1.0-blurAmount);
     
-
-//	avg.xyz = avg.xyz/(vec3(1.0)+avg.xyz);  //tone mapping
-        //TODO use tone mapping to help blur/bloom. 
-        //store exp(-brightness) might make summing contiributions better (can do by multiplying)
+	avg.xyz = avg.xyz/(vec3(1.0)+avg.xyz);  //tone mapping
+    
+        //TODO maybe store exp(-brightness). might make summing contiributions better (can do by multiplying)
 
 	avg.xyz = pow(avg.xyz,vec3(0.455));
 	
