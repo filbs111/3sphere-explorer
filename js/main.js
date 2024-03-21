@@ -3893,12 +3893,13 @@ var texture,bricktex,diffuseTexture,
 
 function loadTmpFFTexture(id,directory){
 	directory = directory || 'img/';
-	diffuseTexture = makeTexture(directory+id+"/"+id+"-diffuse.jpg",gl.RGB,gl.UNSIGNED_SHORT_5_6_5,false);
-	nmapTexture = makeTexture(directory+id+"/"+id+"-normal.jpg",gl.RGB,gl.UNSIGNED_SHORT_5_6_5,false);
+	diffuseTexture = makeTextureCompressed(directory+id+"/"+id+"-diffuse.jpg");
+	nmapTexture = makeTextureCompressed(directory+id+"/"+id+"-normal.jpg");
+		//NOTE DXT1 not great for normal maps!
 }
 
 function initTexture(){
-	texture = makeTexture("img/0033.jpg",gl.RGB,gl.UNSIGNED_SHORT_5_6_5);
+	texture = makeTextureCompressed("img/0033.jpg");
 	bricktex = makeTexture("img/brick-tex.jpg",gl.RGB,gl.UNSIGNED_SHORT_5_6_5); 
 	//nmapTexture = makeTexture("img/images.squarespace-cdn.com.png");	//button cushion
 	//diffuseTexture = makeTexture("img/no-git/6133-diffuse.jpg",false);nmapTexture = makeTexture("img/no-git/6133-normal.jpg",false);	//metal crate
@@ -3920,7 +3921,7 @@ function initTexture(){
 
 		//TODO grayscale image? TODO confirm linear
 
-	duocylinderObjects.grid.tex = makeTexture("img/grid-omni.png",gl.RGB,gl.UNSIGNED_SHORT_5_6_5);
+	duocylinderObjects.grid.tex = makeTextureCompressed("img/grid-omni.png");
 	duocylinderObjects.terrain.tex = makeTexture("data/terrain/turbulent-seamless.png",gl.RGB,gl.UNSIGNED_SHORT_5_6_5);
 	//duocylinderObjects.procTerrain.tex = texture;
 	//duocylinderObjects.procTerrain.tex = makeTexture("img/14131-diffuse.jpg");  //sand
@@ -3938,7 +3939,7 @@ function initTexture(){
 	
 	
 	//duocylinderObjects.sea.tex = null;
-	duocylinderObjects.sea.tex = makeTexture("img/4141.jpg",gl.RGB,gl.UNSIGNED_SHORT_5_6_5);
+	duocylinderObjects.sea.tex = makeTextureCompressed("img/4141.jpg");
 	//duocylinderObjects.sea.tex = makeTexture("img/ash_uvgrid01.jpg");
 	duocylinderObjects.sea.isSea=true;
 	
