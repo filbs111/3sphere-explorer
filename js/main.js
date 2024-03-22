@@ -1040,8 +1040,7 @@ function drawScene(frameTime){
 
 			sceneDrawingOutputView = outView;
 
-		} else if (guiParams.display.renderViaTexture == "blur" || guiParams.display.renderViaTexture == "blur-b" 
-			|| guiParams.display.renderViaTexture == "blur-b-use-alpha"){
+		} else if (["blur",  "blur-b", "blur-b-use-alpha", "blur-big"].includes( guiParams.display.renderViaTexture )){
 			initialRectilinearRender( gl.viewportWidth, gl.viewportHeight, rttStageOneView, rttFisheyeView2);
 		} else{
 			initialRectilinearRender( gl.viewportWidth, gl.viewportHeight, rttStageOneView, rttView);
@@ -1108,8 +1107,7 @@ function drawScene(frameTime){
 		
 		var activeProg;
 		
-		if (guiParams.display.renderViaTexture == "blur" || guiParams.display.renderViaTexture == "blur-b"
-			|| guiParams.display.renderViaTexture == "blur-b-use-alpha"){
+		if (["blur",  "blur-b", "blur-b-use-alpha", "blur-big"].includes( guiParams.display.renderViaTexture )){
 					//TODO depth aware blur. for now, simple
 			//draw scene to penultimate screen (before FXAA)
 			gl.bindFramebuffer(gl.FRAMEBUFFER, rttView.framebuffer);
@@ -1121,7 +1119,8 @@ function drawScene(frameTime){
 
 			activeProg = guiParams.display.renderViaTexture == "blur" ? shaderPrograms.fullscreenBlur:
 				guiParams.display.renderViaTexture == "blur-b" ? shaderPrograms.fullscreenBlurB :
-				shaderPrograms.fullscreenBlurBUseAlpha;
+				guiParams.display.renderViaTexture == "blur-b-use-alpha" ? shaderPrograms.fullscreenBlurBUseAlpha
+																		:shaderPrograms.fullscreenBlurBig;
 			gl.useProgram(activeProg);
 			enableDisableAttributes(activeProg);
 			gl.cullFace(gl.BACK);
@@ -4290,7 +4289,7 @@ function init(){
 	displayFolder.add(guiParams.display, "eyeTurnIn", -0.01,0.01,0.0005);
 	displayFolder.add(guiParams.display, "showHud");
 	displayFolder.add(guiParams.display, "fisheyeEnabled");
-	displayFolder.add(guiParams.display, "renderViaTexture", ['basic','blur','blur-b','blur-b-use-alpha']);
+	displayFolder.add(guiParams.display, "renderViaTexture", ['basic','blur','blur-b','blur-b-use-alpha','blur-big']);
 	displayFolder.add(guiParams.display, "renderLastStage", ['simpleCopy','fxaa','fxaaSimple','showAlpha']);
 	displayFolder.add(guiParams.display, "drawTransparentStuff");
 	displayFolder.add(guiParams.display, "voxNmapTest");
