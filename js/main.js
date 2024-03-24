@@ -2384,16 +2384,20 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	activeShaderProgram = shaderProgramTexmap;
 	shaderSetup(activeShaderProgram, diffuseTexture);	//TODO different texture.
 	modelScale = 0.005*guiParams.drawShapes.frigateScale;	//TODO different
-	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
 	mat4.set(invertedWorldCamera, mvMatrix);
 	rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
 	mat4.multiply(mvMatrix,turretBaseMatrix);
-	rotate4mat(mvMatrix, 2, 0, turretSpin);
 
 	mat4.identity(mMatrix);rotate4mat(mMatrix, 0, 1, duocylinderSpin);
 	mat4.multiply(mMatrix, turretBaseMatrix);
+
+	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale/4,modelScale);	//base plate
+	drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
+
+	rotate4mat(mvMatrix, 2, 0, turretSpin);
 	rotate4mat(mMatrix, 2, 0, turretSpin);
 
+	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale/2,modelScale,modelScale/2);
 	drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
 
 	
