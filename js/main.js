@@ -1125,7 +1125,7 @@ function drawScene(frameTime){
 		if (guiParams.display.renderViaTexture == "2-pass-blur"){
 			//possibly TODO rotating screen, so always sampling vertical or horizontal for both passes
 			//but that would want intermediate buffer to have dimensions transposed.
-			activeProg = shaderPrograms.fullscreenBlurBig;	//shaderPrograms.fullScreenBlur1d;
+			activeProg = shaderPrograms.fullscreenBlur1d;
 			gl.useProgram(activeProg);
 			enableDisableAttributes(activeProg);
 			var savedView = sceneDrawingOutputView;	//TODO better names for these things!
