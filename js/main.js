@@ -2364,6 +2364,41 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		mat4.multiply(mMatrix, frigateMatrix);
 		drawObjectFromBuffers(frigateBuffers, activeShaderProgram);
 	}
+
+
+
+	//use a cube for turret base plate
+	//TODO generalise this code for rotation to draw etc.
+
+	//just constant rotation rate
+	//var turretSpin = (frameTime/1000 )%(2*Math.PI);
+
+	//rotate to point towards player. TODO check matrix is player, not the camera!
+	var playerInTurretBaseFrame = mat4.create(playerCamera);
+	mat4.transpose(playerInTurretBaseFrame);
+	mat4.multiply(playerInTurretBaseFrame, turretBaseMatrix)
+
+	//var turretSpin = Math.atan2(playerInTurretBaseFrame[12],playerInTurretBaseFrame[13]);
+	var turretSpin = Math.atan2(playerInTurretBaseFrame[3],playerInTurretBaseFrame[11]);
+
+	activeShaderProgram = shaderProgramTexmap;
+	shaderSetup(activeShaderProgram, diffuseTexture);	//TODO different texture.
+	modelScale = 0.005*guiParams.drawShapes.frigateScale;	//TODO different
+	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
+	mat4.set(invertedWorldCamera, mvMatrix);
+	rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
+	mat4.multiply(mvMatrix,turretBaseMatrix);
+	rotate4mat(mvMatrix, 2, 0, turretSpin);
+
+	mat4.identity(mMatrix);rotate4mat(mMatrix, 0, 1, duocylinderSpin);
+	mat4.multiply(mMatrix, turretBaseMatrix);
+	rotate4mat(mMatrix, 2, 0, turretSpin);
+
+	drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
+
+	
+
+
 	if (guiParams.drawShapes.building && buildingBuffers.isLoaded){
 		activeShaderProgram = shaderPrograms.coloredPerPixelDiscardVertexColoredTexmap[ guiParams.display.atmosShader ];
 		shaderSetup(activeShaderProgram);
@@ -4140,6 +4175,11 @@ xyzrotate4mat(octoFractalMatrix,[0,0,Math.PI/2]);
 xyzmove4mat(octoFractalMatrix,[0,.76,0]);
 var transposedOctoFractalMatrix = mat4.create(octoFractalMatrix);
 mat4.transpose(transposedOctoFractalMatrix);
+
+var turretBaseMatrix=mat4.identity();
+xyzrotate4mat(turretBaseMatrix,[0,0,0.5]);	//TODO put in xy map position.
+xyzmove4mat(turretBaseMatrix,[0,.78,0]);
+
 
 var pillarMatrices=[];
 /*
