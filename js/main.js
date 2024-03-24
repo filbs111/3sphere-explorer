@@ -1040,7 +1040,7 @@ function drawScene(frameTime){
 
 			sceneDrawingOutputView = outView;
 
-		} else if (["blur",  "blur-b", "blur-b-use-alpha", "blur-big"].includes( guiParams.display.renderViaTexture )){
+		} else if (["blur",  "blur-b", "blur-b-use-alpha", "blur-big", "2-pass-blur"].includes( guiParams.display.renderViaTexture )){
 			initialRectilinearRender( gl.viewportWidth, gl.viewportHeight, rttStageOneView, rttFisheyeView2);
 		} else{
 			initialRectilinearRender( gl.viewportWidth, gl.viewportHeight, rttStageOneView, rttView);
@@ -1108,36 +1108,60 @@ function drawScene(frameTime){
 		var activeProg;
 		
 		if (["blur",  "blur-b", "blur-b-use-alpha", "blur-big"].includes( guiParams.display.renderViaTexture )){
-					//TODO depth aware blur. for now, simple
-			//draw scene to penultimate screen (before FXAA)
-			gl.bindFramebuffer(gl.FRAMEBUFFER, rttView.framebuffer);
-			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
-			setRttSize( rttView, gl.viewportWidth, gl.viewportHeight );
-
-			bind2dTextureIfRequired(sceneDrawingOutputView.texture);	
-			bind2dTextureIfRequired(sceneDrawingOutputView.depthTexture,gl.TEXTURE2);
-
+			
 			activeProg = guiParams.display.renderViaTexture == "blur" ? shaderPrograms.fullscreenBlur:
 				guiParams.display.renderViaTexture == "blur-b" ? shaderPrograms.fullscreenBlurB :
 				guiParams.display.renderViaTexture == "blur-b-use-alpha" ? shaderPrograms.fullscreenBlurBUseAlpha
 																		:shaderPrograms.fullscreenBlurBig;
 			gl.useProgram(activeProg);
 			enableDisableAttributes(activeProg);
+
+			var blurScale = guiParams.display.renderViaTexture == "blur-big"? 1 : 2.5;
+			drawBlur(activeProg, sceneDrawingOutputView, rttView, [blurScale/gl.viewportWidth , blurScale/gl.viewportHeight]);
+				//TODO blur constant angle - currently blurs constant pixels, so behaviour depends on display resolution.
+		}
+
+		//second pass blur iff appropriate
+		if (guiParams.display.renderViaTexture == "2-pass-blur"){
+			//possibly TODO rotating screen, so always sampling vertical or horizontal for both passes
+			//but that would want intermediate buffer to have dimensions transposed.
+			activeProg = shaderPrograms.fullscreenBlurBig;	//shaderPrograms.fullScreenBlur1d;
+			gl.useProgram(activeProg);
+			enableDisableAttributes(activeProg);
+			var savedView = sceneDrawingOutputView;	//TODO better names for these things!
+			//drawBlur(activeProg, sceneDrawingOutputView, rttView, [1/gl.viewportWidth , 1/gl.viewportHeight]);
+
+			//2-pass blur abusing big blur (many samples redundant, but should have same effect)
+			drawBlur(activeProg, sceneDrawingOutputView, rttView, [1/gl.viewportWidth , 0]);
+			drawBlur(activeProg, rttView, savedView, [0 , 1/gl.viewportHeight]);
+				//note hacky use of uInvSizeVec to convey the step vector for samples.
+		}
+
+
+		function drawBlur(shaderProg, fromView, destinationView, uInvSizeVec){
+			//TODO depth aware blur. for now, simple
+			//draw scene to penultimate screen (before FXAA)
+			gl.bindFramebuffer(gl.FRAMEBUFFER, destinationView.framebuffer);
+			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
+			setRttSize( destinationView, gl.viewportWidth, gl.viewportHeight );
+
+			bind2dTextureIfRequired(fromView.texture);	
+			bind2dTextureIfRequired(fromView.depthTexture,gl.TEXTURE2);	//note many blurs don't actually use this.
+			
 			gl.cullFace(gl.BACK);
 			
-			var blurScale = 2.5;
-			gl.uniform2f(activeProg.uniforms.uInvSize, blurScale/gl.viewportWidth , blurScale/gl.viewportHeight);
-				//TODO blur constant angle - currently blurs constant pixels, so behaviour depends on display resolution.
-			
-			gl.uniform1i(activeProg.uniforms.uSampler, 0);
-			gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);
+			gl.uniform2fv(shaderProg.uniforms.uInvSize, uInvSizeVec);
+				
+			gl.uniform1i(shaderProg.uniforms.uSampler, 0);
+			gl.uniform1i(shaderProg.uniforms.uSamplerDepthmap, 2);
 
 			gl.depthFunc(gl.ALWAYS);
-			drawObjectFromBuffers(fsBuffers, activeProg);
+			drawObjectFromBuffers(fsBuffers, shaderProg);
 			//gl.depthFunc(gl.LESS);
 
-			sceneDrawingOutputView = rttView;
+			sceneDrawingOutputView = destinationView;
 		}
+
 		
 		//draw quad to screen using drawn texture
 		gl.bindFramebuffer(gl.FRAMEBUFFER, sceneFinalOutputFramebuf);	//draw to screen (null), or intermediate view in case of anaglyph
@@ -4333,7 +4357,7 @@ function init(){
 	displayFolder.add(guiParams.display, "eyeTurnIn", -0.01,0.01,0.0005);
 	displayFolder.add(guiParams.display, "showHud");
 	displayFolder.add(guiParams.display, "fisheyeEnabled");
-	displayFolder.add(guiParams.display, "renderViaTexture", ['basic','blur','blur-b','blur-b-use-alpha','blur-big']);
+	displayFolder.add(guiParams.display, "renderViaTexture", ['basic','blur','blur-b','blur-b-use-alpha','blur-big','2-pass-blur']);
 	displayFolder.add(guiParams.display, "renderLastStage", ['simpleCopy','fxaa','fxaaSimple','showAlpha']);
 	displayFolder.add(guiParams.display, "drawTransparentStuff");
 	displayFolder.add(guiParams.display, "voxNmapTest");

@@ -16,7 +16,7 @@ constant big inefficient gaussian blur to be gold standard for comparison with f
 
 void main(void) {
 
-    float decayFactor = 2.5;    //bigger=tighter, negligible blur impact on regular things, around very bright stuff.
+    float decayFactor = .8;    //bigger=tighter, negligible blur impact on regular things, around very bright stuff.
 
     vec4 totals = vec4(0.0);
 
