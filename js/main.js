@@ -2398,12 +2398,16 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	//var turretSpin = (frameTime/1000 )%(2*Math.PI);
 
 	//rotate to point towards player. TODO check matrix is player, not the camera!
+	// NOTE this just serves to get the player position in the frame of the turret. Full 4x4 matrix rotation is not necessary,
+	// only need the player position to be multiplied by the (inverse of the) turret matrix
 	var playerInTurretBaseFrame = mat4.create(playerCamera);
 	mat4.transpose(playerInTurretBaseFrame);
-	mat4.multiply(playerInTurretBaseFrame, turretBaseMatrix)
+	mat4.multiply(playerInTurretBaseFrame, turretBaseMatrix);
 
 	//var turretSpin = Math.atan2(playerInTurretBaseFrame[12],playerInTurretBaseFrame[13]);
 	var turretSpin = Math.atan2(playerInTurretBaseFrame[3],playerInTurretBaseFrame[11]);
+	var sidewaysLength = Math.sqrt(playerInTurretBaseFrame[3]*playerInTurretBaseFrame[3] + playerInTurretBaseFrame[11]*playerInTurretBaseFrame[11]);
+	var turretElev = Math.atan2(playerInTurretBaseFrame[7], sidewaysLength);
 
 	activeShaderProgram = shaderProgramTexmap;
 	shaderSetup(activeShaderProgram, diffuseTexture);	//TODO different texture.
@@ -2424,7 +2428,11 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale/2,modelScale,modelScale/2);
 	drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
 
+	rotate4mat(mvMatrix, 1, 2, -turretElev);
+	rotate4mat(mMatrix, 1, 2, -turretElev);
 	
+	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale/8,modelScale/8,modelScale*2);	//gun
+	drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
 
 
 	if (guiParams.drawShapes.building && buildingBuffers.isLoaded){
