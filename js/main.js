@@ -592,211 +592,24 @@ function drawScene(frameTime){
 	
 	smoothGuiParams.update();
 
+	//TODO split out screen rendering into function. if stereo3d is enabled, call twice.
+	//initially can just check breaking out releant code to function works.
+	//then can draw same thing twice
+	//then can get camera matrices shifted sideways.
+	//also should, for fisheye view, reduce size of intermediate buffer (rectilinear projection)
+	
+	
 	offsetCameraContainer.world = playerContainer.world;
 	
-	setMat4FromToWithQuats(playerCameraInterp, offsetPlayerCamera);	
-	//mat4.set(playerCamera, offsetPlayerCamera);	
-	
-	offsetCam.setType(guiParams.display.cameraType);
-
-	moveMatHandlingPortal(offsetCameraContainer, offsetCam.getVec())
-	
-
-	/*
-	* to replace moveCamInSteps without steps. might also use for eg bullets.
-	*/
-	function moveMatHandlingPortal(matContainer, offsetVec){
-		//NOTE fails if input vec = 0. TODO make more robust!
-		if (offsetVec[0]==0 && offsetVec[1]==0 && offsetVec[2]==0){return;}
-
-		var inputMatrix = matContainer.matrix;
-		var inputWorld = matContainer.world;
-
-		//inputMatrix = offsetPlayerCamera , inputWorld = sshipWorld
-		// for initial use case (which is initially just at player spaceship position)
-		//offsetVec is in frame of inputMatrix.
+	if (guiParams.display.cameraAttachedTo == "player vehicle"){
+		setMat4FromToWithQuats(playerCameraInterp, offsetPlayerCamera);	
+		//mat4.set(playerCamera, offsetPlayerCamera);	
 		
-		//for each portal, find whether line from position contained in inputMatrix, to position contained in 
-		//inputMatrix once moved by offsetVec, crosses the portal.
-		//this can be done by 1st checking that both start, end point are on same half of world as portal in question.
-		//this is not strictly required, but is is assumed that offsetVec is short, and making this assumption makes 
-		//thinking about problem easier, avoids edge cases.
-		//then consider straight line in projective flat space - if the projected straight line crosses the projected
-		//portal sphere, calculate how far along, move that distance, move through portal, move rest of distance.
-		
-		//calculate the start and end position
-		var startPos = inputMatrix.slice(12);
-
-		var tmp4mat = newIdMatWithQuats();
-		setMat4FromToWithQuats(inputMatrix, tmp4mat);
-		xyzmove4mat(tmp4mat,offsetVec);
-
-		var endPos = tmp4mat.slice(12);
-
-
-		var portalsForThisWorld = portalsForWorld[inputWorld];
-
-		for (var pp=0;pp<portalsForThisWorld.length;pp++){
-			var portal = portalsForThisWorld[pp];
-			var portalMat = portal.matrix;
-
-			//???
-			var portalMatT = mat4.create(portalMat);
-			mat4.transpose(portalMatT);
-
-			var startPosInPortalSpace = vec4.create();
-			mat4.multiplyVec4(portalMatT, startPos, startPosInPortalSpace);
-			var endPosInPortalSpace = vec4.create();
-			mat4.multiplyVec4(portalMatT, endPos, endPosInPortalSpace);
-				//TODO do without transpose/ new matrix creation.
-
-			if (startPosInPortalSpace[3]<0.5 || endPosInPortalSpace[3]<0.5){
-				//TODO consider cutoff value
-				continue;
-			}
-
-			//only used if pass tests, uses all 4 components
-			//TODO move later (after projection) - initially here because easier to reason about.
-			var startDotEnd = 0;
-			for (var ii=0;ii<4;ii++){
-				startDotEnd += startPosInPortalSpace[ii]*endPosInPortalSpace[ii];
-			}
-
-			//project
-			var difference = new Array(3);
-			var differenceSq = 0;
-			var differenceDotStart = 0;
-			var differenceDotEnd = 0;
-
-			var startPosInPortalSpaceProj = vec4.create();
-			var endPosInPortalSpaceProj = vec4.create();
-
-			for (var ii=0;ii<3;ii++){
-				startPosInPortalSpaceProj[ii] = startPosInPortalSpace[ii]/startPosInPortalSpace[3];
-				endPosInPortalSpaceProj[ii]=endPosInPortalSpace[ii]/endPosInPortalSpace[3];
-				difference[ii] = endPosInPortalSpaceProj[ii] - startPosInPortalSpaceProj[ii];
-				differenceSq+= difference[ii]*difference[ii];
-
-				//difference = d
-				//movement unit vector is d / sqrt(d.d) = d/sqrt(dsq)
-				//start component in movement direction
-				// is start.d / sqrt(d.d)
-				// and remaining part is then start - start.d/sqrt(dsq)
-
-				differenceDotStart += difference[ii]*startPosInPortalSpaceProj[ii];
-				differenceDotEnd += difference[ii]*endPosInPortalSpaceProj[ii];
-			}
-
-			if (differenceSq<=0){
-				alert("differenceSq<=0 . should not be possible!");
-				continue;	//if camera not moved. AFAIK impossible
-			}
-			
-			//collide this line with sphere.
-			//basically a 2d problem crossing circle.
-
-			var closestApproachVec = new Array(3);
-			var closestApproachSq = 0;
-			var startComponentInMovementDirection = new Array(3);
-			var endComponentInMovementDirection = new Array(3);
-			//var differenceMag = Math.sqrt(differenceSq);
-			//var normalisedDifference = difference.map(x=>x/differenceMag);
-
-			var scimdDotMd = 0;
-			var ecimdDotMd = 0;
-
-			var scimdSq = 0;
-
-			for (var ii=0;ii<3;ii++){
-				startComponentInMovementDirection[ii] = differenceDotStart*difference[ii]/differenceSq;
-				endComponentInMovementDirection[ii] = differenceDotEnd*difference[ii]/differenceSq;
-
-				closestApproachVec[ii] = startPosInPortalSpaceProj[ii]-startComponentInMovementDirection[ii];
-				closestApproachSq+= closestApproachVec[ii]*closestApproachVec[ii];
-
-				scimdDotMd += startComponentInMovementDirection[ii]*difference[ii];
-				ecimdDotMd += endComponentInMovementDirection[ii]*difference[ii];
-
-				scimdSq += startComponentInMovementDirection[ii]*startComponentInMovementDirection[ii];
-			}
-			var rad = portal.shared.radius;
-
-			var otherTriangleSideSq = rad*rad-closestApproachSq;
-
-			if (otherTriangleSideSq<0){
-			//	console.log("impossible!! rad = " + rad + ", closestApproachSq = " + closestApproachSq);
-				continue; //collision impossible
-			}
-
-			if (scimdDotMd>0){
-				continue;	//not moving towards portal.
-			}
-
-			var thresh = otherTriangleSideSq*differenceSq;
-
-			if ((scimdDotMd*scimdDotMd) < thresh ){
-				alert("(scimdDotMd*scimdDotMd)/differenceSq < otherTriangleSideSq  ! unexpected - seems already within portal!")
-				continue;
-			}
-			if (ecimdDotMd < 0 && (ecimdDotMd*ecimdDotMd) > thresh){
-				//not moved across boundary
-				continue;
-			}
-
-			var otherTriangleSide = Math.sqrt(otherTriangleSideSq);
-
-			//can calculate point on projected sphere that will hit.
-			//likely this can be simplified!
-			var collisionPoint = [];
-			var collisionPointSq=1;	//this can be simplified since comes from portal radius.
-			var factor = otherTriangleSide/Math.sqrt(scimdSq);
-			for (var ii=0;ii<3;ii++){
-				collisionPoint[ii] = closestApproachVec[ii] + factor * startComponentInMovementDirection[ii];
-				collisionPointSq+=collisionPoint[ii]*collisionPoint[ii];
-			}
-			collisionPoint[3]=1;
-			//then find the angle between start point and this.
-			//and the angle between start and finish points
-			//then move by appropriate fraction
-			
-			var halfAngleStartToEnd = halfAngleBetween4Vecs(startPosInPortalSpace, endPosInPortalSpace);
-				//note don't have to be in portal space. could use startPos, endPos, not create extra Proj vectors, but want either for next calc...
-			
-			//unproject/normalise the collision point
-			var collisionPointLen = Math.sqrt(collisionPointSq);
-			for (var ii=0;ii<4;ii++){
-				collisionPoint[ii]/=collisionPointLen;
-			}
-
-			var halfAngleToCollisionPoint = halfAngleBetween4Vecs(startPosInPortalSpace, collisionPoint)
-
-			//here can't know will pass portal test, so for quick hack, just move a bit more
-			// this might not work for grazing collision, and is noticeable (especially for cockpit camera)
-			//TODO explicitly move through portal?
-			halfAngleToCollisionPoint+=0.0002;
-
-			var fractionToCollision =halfAngleToCollisionPoint/halfAngleStartToEnd;
-
-			//console.log({angleToCollisionPoint, angleStartToEnd, fractionToCollision});	//expect 0 to 1
-
-			xyzmove4mat(inputMatrix,offsetVec.map(elem => elem*fractionToCollision));
-
-			var currentWorld = matContainer.world;
-
-			portalTestMultiPortal(matContainer,0);
-
-			var newWorld = matContainer.world;
-
-			if (newWorld == currentWorld){console.log("worlds same, though expected portal transition!");}
-
-			var remainingFraction = 1- fractionToCollision;
-			xyzmove4mat(inputMatrix,offsetVec.map(elem => elem*remainingFraction));
-
-			return;
-		}
-		//console.log("ruled out portal camera traversal");
-		xyzmove4mat(inputMatrix, offsetVec);
+		offsetCam.setType(guiParams.display.cameraType);
+		moveMatHandlingPortal(offsetCameraContainer, offsetCam.getVec())
 	}
+
+	
 
 
 	//TODO put this elsewhere - assumes some stuff is in scope though!
@@ -2429,6 +2242,15 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	
 	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale/8,modelScale/8,modelScale*2);	//gun
 	drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
+
+	if (guiParams.display.cameraAttachedTo == "turret"){
+		setMat4FromToWithQuats(turretBaseMatrix, offsetPlayerCamera);		
+		rotate4mat(offsetPlayerCamera, 2, 0, turretSpin + Math.PI);
+		rotate4mat(offsetPlayerCamera, 1, 2, turretElev);
+
+		//offsetCam.setType(guiParams.display.cameraType);		//NOTE won't work yet because rotate4mat ignores quats.
+		//moveMatHandlingPortal(offsetCameraContainer, offsetCam.getVec());
+	}
 
 
 	if (guiParams.drawShapes.building && buildingBuffers.isLoaded){
@@ -4126,6 +3948,7 @@ var guiParams={
 	},
 	display:{
 		cameraType:"far 3rd person",
+		cameraAttachedTo:"player vehicle",
 		cameraFov:125,
 		uVarOne:-0.01,
 		flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
@@ -4206,7 +4029,7 @@ xyzmove4mat(octoFractalMatrix,[0,.76,0]);
 var transposedOctoFractalMatrix = mat4.create(octoFractalMatrix);
 mat4.transpose(transposedOctoFractalMatrix);
 
-var turretBaseMatrix=mat4.identity();
+var turretBaseMatrix=newIdMatWithQuats();
 xyzrotate4mat(turretBaseMatrix,[0,0,0.5]);	//TODO put in xy map position.
 xyzmove4mat(turretBaseMatrix,[0,.78,0]);
 
@@ -4349,6 +4172,7 @@ function init(){
 	
 	var displayFolder = gui.addFolder('display');	//control and movement
 	displayFolder.add(guiParams.display, "cameraType", ["cockpit", "near 3rd person", "mid 3rd person", "far 3rd person", "really far 3rd person", "side","none"]);
+	displayFolder.add(guiParams.display, "cameraAttachedTo", ["player vehicle", "turret","none"]);	//"none" acts like drop camera
 	displayFolder.add(guiParams.display, "cameraFov", 60,165,5);
 	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.005);
 	displayFolder.add(guiParams.display, "flipReverseCamera");
@@ -6822,3 +6646,202 @@ var uniform4fvSetter = (function(){
 		storeAndResetStats
 	};
 })();
+
+
+
+/*
+* to replace moveCamInSteps without steps. might also use for eg bullets.
+*/
+function moveMatHandlingPortal(matContainer, offsetVec){
+	//NOTE fails if input vec = 0. TODO make more robust!
+	if (offsetVec[0]==0 && offsetVec[1]==0 && offsetVec[2]==0){return;}
+
+	var inputMatrix = matContainer.matrix;
+	var inputWorld = matContainer.world;
+
+	//inputMatrix = offsetPlayerCamera , inputWorld = sshipWorld
+	// for initial use case (which is initially just at player spaceship position)
+	//offsetVec is in frame of inputMatrix.
+	
+	//for each portal, find whether line from position contained in inputMatrix, to position contained in 
+	//inputMatrix once moved by offsetVec, crosses the portal.
+	//this can be done by 1st checking that both start, end point are on same half of world as portal in question.
+	//this is not strictly required, but is is assumed that offsetVec is short, and making this assumption makes 
+	//thinking about problem easier, avoids edge cases.
+	//then consider straight line in projective flat space - if the projected straight line crosses the projected
+	//portal sphere, calculate how far along, move that distance, move through portal, move rest of distance.
+	
+	//calculate the start and end position
+	var startPos = inputMatrix.slice(12);
+
+	var tmp4mat = newIdMatWithQuats();
+	setMat4FromToWithQuats(inputMatrix, tmp4mat);
+	xyzmove4mat(tmp4mat,offsetVec);
+
+	var endPos = tmp4mat.slice(12);
+
+	var portalsForThisWorld = portalsForWorld[inputWorld];
+
+	for (var pp=0;pp<portalsForThisWorld.length;pp++){
+		var portal = portalsForThisWorld[pp];
+		var portalMat = portal.matrix;
+
+		//???
+		var portalMatT = mat4.create(portalMat);
+		mat4.transpose(portalMatT);
+
+		var startPosInPortalSpace = vec4.create();
+		mat4.multiplyVec4(portalMatT, startPos, startPosInPortalSpace);
+		var endPosInPortalSpace = vec4.create();
+		mat4.multiplyVec4(portalMatT, endPos, endPosInPortalSpace);
+			//TODO do without transpose/ new matrix creation.
+
+		if (startPosInPortalSpace[3]<0.5 || endPosInPortalSpace[3]<0.5){
+			//TODO consider cutoff value
+			continue;
+		}
+
+		//only used if pass tests, uses all 4 components
+		//TODO move later (after projection) - initially here because easier to reason about.
+		var startDotEnd = 0;
+		for (var ii=0;ii<4;ii++){
+			startDotEnd += startPosInPortalSpace[ii]*endPosInPortalSpace[ii];
+		}
+
+		//project
+		var difference = new Array(3);
+		var differenceSq = 0;
+		var differenceDotStart = 0;
+		var differenceDotEnd = 0;
+
+		var startPosInPortalSpaceProj = vec4.create();
+		var endPosInPortalSpaceProj = vec4.create();
+
+		for (var ii=0;ii<3;ii++){
+			startPosInPortalSpaceProj[ii] = startPosInPortalSpace[ii]/startPosInPortalSpace[3];
+			endPosInPortalSpaceProj[ii]=endPosInPortalSpace[ii]/endPosInPortalSpace[3];
+			difference[ii] = endPosInPortalSpaceProj[ii] - startPosInPortalSpaceProj[ii];
+			differenceSq+= difference[ii]*difference[ii];
+
+			//difference = d
+			//movement unit vector is d / sqrt(d.d) = d/sqrt(dsq)
+			//start component in movement direction
+			// is start.d / sqrt(d.d)
+			// and remaining part is then start - start.d/sqrt(dsq)
+
+			differenceDotStart += difference[ii]*startPosInPortalSpaceProj[ii];
+			differenceDotEnd += difference[ii]*endPosInPortalSpaceProj[ii];
+		}
+
+		if (differenceSq<=0){
+			alert("differenceSq<=0 . should not be possible!");
+			continue;	//if camera not moved. AFAIK impossible
+		}
+		
+		//collide this line with sphere.
+		//basically a 2d problem crossing circle.
+
+		var closestApproachVec = new Array(3);
+		var closestApproachSq = 0;
+		var startComponentInMovementDirection = new Array(3);
+		var endComponentInMovementDirection = new Array(3);
+		//var differenceMag = Math.sqrt(differenceSq);
+		//var normalisedDifference = difference.map(x=>x/differenceMag);
+
+		var scimdDotMd = 0;
+		var ecimdDotMd = 0;
+
+		var scimdSq = 0;
+
+		for (var ii=0;ii<3;ii++){
+			startComponentInMovementDirection[ii] = differenceDotStart*difference[ii]/differenceSq;
+			endComponentInMovementDirection[ii] = differenceDotEnd*difference[ii]/differenceSq;
+
+			closestApproachVec[ii] = startPosInPortalSpaceProj[ii]-startComponentInMovementDirection[ii];
+			closestApproachSq+= closestApproachVec[ii]*closestApproachVec[ii];
+
+			scimdDotMd += startComponentInMovementDirection[ii]*difference[ii];
+			ecimdDotMd += endComponentInMovementDirection[ii]*difference[ii];
+
+			scimdSq += startComponentInMovementDirection[ii]*startComponentInMovementDirection[ii];
+		}
+		var rad = portal.shared.radius;
+
+		var otherTriangleSideSq = rad*rad-closestApproachSq;
+
+		if (otherTriangleSideSq<0){
+		//	console.log("impossible!! rad = " + rad + ", closestApproachSq = " + closestApproachSq);
+			continue; //collision impossible
+		}
+
+		if (scimdDotMd>0){
+			continue;	//not moving towards portal.
+		}
+
+		var thresh = otherTriangleSideSq*differenceSq;
+
+		if ((scimdDotMd*scimdDotMd) < thresh ){
+			alert("(scimdDotMd*scimdDotMd)/differenceSq < otherTriangleSideSq  ! unexpected - seems already within portal!");
+				//TODO does this break anything? make obvious when happens without alert (freezes game)
+				//TODO ability to slow mo/step physics
+			continue;
+		}
+		if (ecimdDotMd < 0 && (ecimdDotMd*ecimdDotMd) > thresh){
+			//not moved across boundary
+			continue;
+		}
+
+		var otherTriangleSide = Math.sqrt(otherTriangleSideSq);
+
+		//can calculate point on projected sphere that will hit.
+		//likely this can be simplified!
+		var collisionPoint = [];
+		var collisionPointSq=1;	//this can be simplified since comes from portal radius.
+		var factor = otherTriangleSide/Math.sqrt(scimdSq);
+		for (var ii=0;ii<3;ii++){
+			collisionPoint[ii] = closestApproachVec[ii] + factor * startComponentInMovementDirection[ii];
+			collisionPointSq+=collisionPoint[ii]*collisionPoint[ii];
+		}
+		collisionPoint[3]=1;
+		//then find the angle between start point and this.
+		//and the angle between start and finish points
+		//then move by appropriate fraction
+		
+		var halfAngleStartToEnd = halfAngleBetween4Vecs(startPosInPortalSpace, endPosInPortalSpace);
+			//note don't have to be in portal space. could use startPos, endPos, not create extra Proj vectors, but want either for next calc...
+		
+		//unproject/normalise the collision point
+		var collisionPointLen = Math.sqrt(collisionPointSq);
+		for (var ii=0;ii<4;ii++){
+			collisionPoint[ii]/=collisionPointLen;
+		}
+
+		var halfAngleToCollisionPoint = halfAngleBetween4Vecs(startPosInPortalSpace, collisionPoint)
+
+		//here can't know will pass portal test, so for quick hack, just move a bit more
+		// this might not work for grazing collision, and is noticeable (especially for cockpit camera)
+		//TODO explicitly move through portal?
+		halfAngleToCollisionPoint+=0.0002;
+
+		var fractionToCollision =halfAngleToCollisionPoint/halfAngleStartToEnd;
+
+		//console.log({angleToCollisionPoint, angleStartToEnd, fractionToCollision});	//expect 0 to 1
+
+		xyzmove4mat(inputMatrix,offsetVec.map(elem => elem*fractionToCollision));
+
+		var currentWorld = matContainer.world;
+
+		portalTestMultiPortal(matContainer,0);
+
+		var newWorld = matContainer.world;
+
+		if (newWorld == currentWorld){console.log("worlds same, though expected portal transition!");}
+
+		var remainingFraction = 1- fractionToCollision;
+		xyzmove4mat(inputMatrix,offsetVec.map(elem => elem*remainingFraction));
+
+		return;
+	}
+	//console.log("ruled out portal camera traversal");
+	xyzmove4mat(inputMatrix, offsetVec);
+}
