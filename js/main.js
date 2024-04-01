@@ -1062,11 +1062,7 @@ function drawScene(frameTime){
 			var viewSettings = {buf: initialOutView.framebuffer, width, height};
 			var savedCamera = mat4.create(worldCamera);	//TODO don't instantiate!
 
-			if (!guiParams["drop spaceship"]){
-				mat4.set(playerCameraInterp,sshipMatrix);	//copy current player 4-rotation matrix to the spaceship object
-			}else{
-				mat4.set(sshipMatrixNoInterp, sshipMatrix);		
-			}
+			mat4.set(playerCameraInterp,sshipMatrix);	//copy current player 4-rotation matrix to the spaceship object
 
 			var wSettings = getWorldSceneSettings.forNonPortalView(offsetCameraContainer.world);
 			drawWorldScene(frameTime, false, viewSettings, wSettings);
@@ -1193,7 +1189,7 @@ function drawScene(frameTime){
 		gl.depthFunc(gl.LESS);
 	
 	
-	if (!guiParams["drop spaceship"] && guiParams.display.showHud){	//only draw hud if haven't dropped spaceship
+	if (guiParams.display.showHud){
 		
 		//draw target box ?
 		//var activeShaderProgram = shaderPrograms.colored;
@@ -4115,7 +4111,6 @@ var guiParams={
 	"draw 120-cell":false,
 	"draw 600-cell":false,
 	"player model":"spaceship",
-	"drop spaceship":false,
 	target:{
 		type:"none",
 		scale:0.03
@@ -4189,7 +4184,6 @@ smoothGuiParams.add("8-cell scale", guiParams, "8-cell scale");
 
 var settings = {
 	playerBallRad:0.003,
-	characterBallRad:0.001
 }
 
 var worldColors=[];
@@ -4236,7 +4230,6 @@ for (var ii=0,ang=0,angstep=2*Math.PI/25;ii<25;ii++,ang+=angstep){	//number of r
 
 var sshipMatrix=mat4.create();mat4.identity(sshipMatrix);
 var sshipMatrixNoInterp=mat4.create();mat4.identity(sshipMatrixNoInterp);
-var sshipMatDCFrame=mat4.create();
 var targetMatrix=mat4.create();mat4.identity(targetMatrix);
 var targetWorldFrame=[];
 var targetingResultOne=[];
@@ -4340,7 +4333,6 @@ function init(){
 	polytopesFolder.add(guiParams,"draw 120-cell");
 	polytopesFolder.add(guiParams,"draw 600-cell");
 	gui.add(guiParams,"player model", ["spaceship","plane","ball"]);
-	gui.add(guiParams, "drop spaceship",false);
 	
 	var targetFolder = gui.addFolder('target');
 	targetFolder.add(guiParams.target, "type",["none", "sphere","box"]);
@@ -5038,7 +5030,7 @@ var iterateMechanics = (function iterateMechanics(){
 				
 				//distanceForTerrainNoise = getHeightAboveTerrainFor4VecPos(playerPos);	//TODO actual distance using surface normal (IIRC this is simple vertical height above terrain)
 
-				processTerrainCollisionForBall(playerCentreBallData, guiParams["drop spaceship"] ? settings.characterBallRad : settings.playerBallRad, true);
+				processTerrainCollisionForBall(playerCentreBallData, settings.playerBallRad, true);
 				/*
 				for (var legnum=0;legnum<landingLegData.length;legnum++){
 					var landingLeg = landingLegData[legnum];
@@ -5156,7 +5148,7 @@ var iterateMechanics = (function iterateMechanics(){
 				
 				var signedDistanceForVox = (voxCollisionCentralLevel<0) ? distanceForVox: -distanceForVox;	//this is a bodge. better to use gradient/value, or direction and signed distance, from modified test2VoxABC().
 				
-				var penetration = ( guiParams["drop spaceship"] ? settings.characterBallRad : settings.playerBallRad ) - signedDistanceForVox;
+				var penetration = settings.playerBallRad - signedDistanceForVox;
 				var penetrationChange = penetration - lastVoxPenetration;	//todo cap this.
 				lastVoxPenetration = penetration;
 				//if (penetration>0){
@@ -5238,7 +5230,7 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			
 			function processBoxCollisionsForBoxInfoAllPoints(boxInfo){
-				processBoxCollisionsForBoxInfo(boxInfo, playerCentreBallData, ( guiParams["drop spaceship"] ? settings.characterBallRad : settings.playerBallRad ), true, true);
+				processBoxCollisionsForBoxInfo(boxInfo, playerCentreBallData, settings.playerBallRad, true, true);
 						
 				for (var legnum=0;legnum<landingLegData.length;legnum++){
 				//	processBoxCollisionsForBoxInfo(boxInfo, landingLegData[legnum], 0.001, false);	//disable to debug easier using only playerCentreBallData collision
@@ -5438,7 +5430,7 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 
 				var bSize = objectScale;
-				var pSize = ( guiParams["drop spaceship"] ? settings.characterBallRad : settings.playerBallRad );
+				var pSize = settings.playerBallRad;
 
 				var playerInObjectFrame = relativePos.slice(0,3);
 				var pointScaledInObjectFrame = playerInObjectFrame.map(x => x/bSize);	//*relativePos[3]));
@@ -5983,15 +5975,8 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 		}
 		
-		if (!guiParams["drop spaceship"]){
-			mat4.set(playerCamera,sshipMatrixNoInterp);	//todo store gun matrices in player frame instead
-			sshipWorld = playerContainer.world;
-			mat4.set(sshipMatrixNoInterp, sshipMatDCFrame);
-			rotate4matCols(sshipMatDCFrame, 0, 1, guiSettingsForWorld[sshipWorld].spin);	//get matrix in frame of duocylinder.
-		}else{
-			mat4.set(sshipMatDCFrame,sshipMatrixNoInterp);
-			rotate4matCols(sshipMatrixNoInterp, 0, 1, -guiSettingsForWorld[playerContainer.world].spin);	//get matrix in frame of duocylinder.
-		}
+		mat4.set(playerCamera,sshipMatrixNoInterp);	//todo store gun matrices in player frame instead
+		sshipWorld = playerContainer.world;
 		updateGunTargeting(sshipMatrixNoInterp);
 
 		//rotate remainder of time for aesthetic. (TODO ensure doesn't cock up frustum culling, hud etc)
