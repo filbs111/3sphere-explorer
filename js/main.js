@@ -2245,11 +2245,11 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 	if (guiParams.display.cameraAttachedTo == "turret"){
 		setMat4FromToWithQuats(turretBaseMatrix, offsetPlayerCamera);		
-		rotate4mat(offsetPlayerCamera, 2, 0, turretSpin + Math.PI);
-		rotate4mat(offsetPlayerCamera, 1, 2, turretElev);
+		xyzrotate4mat(offsetPlayerCamera, [0,turretSpin + Math.PI,0]);
+		xyzrotate4mat(offsetPlayerCamera, [turretElev,0,0]);
 
-		//offsetCam.setType(guiParams.display.cameraType);		//NOTE won't work yet because rotate4mat ignores quats.
-		//moveMatHandlingPortal(offsetCameraContainer, offsetCam.getVec());
+		offsetCam.setType(guiParams.display.cameraType);
+		moveMatHandlingPortal(offsetCameraContainer, offsetCam.getVec());
 	}
 
 
