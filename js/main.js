@@ -3809,8 +3809,8 @@ function initTexture(){
 
 		//TODO grayscale image? TODO confirm linear
 
-	duocylinderObjects.grid.tex = makeTextureCompressed("img/grid-omni.png");
-	duocylinderObjects.terrain.tex = makeTexture("data/terrain/turbulent-seamless.png",gl.RGB,gl.UNSIGNED_SHORT_5_6_5);
+	duocylinderObjects.grid.tex = makeTextureCompressed("img/grid-omni.webp");
+	duocylinderObjects.terrain.tex = makeTexture("data/terrain/turbulent-seamless.webp",gl.RGB,gl.UNSIGNED_SHORT_5_6_5);
 	//duocylinderObjects.procTerrain.tex = texture;
 	//duocylinderObjects.procTerrain.tex = makeTexture("img/14131-diffuse.jpg");  //sand
 	duocylinderObjects.procTerrain.tex = nmapTexture;
@@ -3838,7 +3838,7 @@ function initTexture(){
 	su57texture = makeTexture("data/miscobjs/t50/TexCombo4.png");
 	su57texture2 = makeTexture("data/miscobjs/t50/black.png");	//TODO add thruster texture
 
-	frigateTexture = makeTexture("data/frigate/frigate-tex.png");
+	frigateTexture = makeTexture("data/frigate/frigate-tex.webp");
 
 	randBoxBuffers.tex=texture;
 	towerBoxBuffers.tex=nmapTexture;towerBoxBuffers.texB=diffuseTexture;
@@ -3863,7 +3863,7 @@ function initTexture(){
 	//for l3dt/cdlod terrain
 	terrain2Texture = makeTexture("img/14206/14206-diffuse.jpg",gl.RGB,gl.UNSIGNED_SHORT_5_6_5);
 	terrain2TextureB = makeTexture("img/3.png",gl.RGB,gl.UNSIGNED_SHORT_5_6_5);
-	terrain2TextureNormals = makeTexture("img/normals1024.png",gl.RGB,gl.UNSIGNED_SHORT_5_6_5);	//TODO format better suited for normal maps
+	terrain2TextureNormals = makeTexture("img/normals1024.webp",gl.RGB,gl.UNSIGNED_SHORT_5_6_5);	//TODO format better suited for normal maps
 		//TODO auto generate normal map from heightmap data
 }
 
