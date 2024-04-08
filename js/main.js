@@ -364,7 +364,7 @@ function initBuffers(){
 
 	loadBuffersFromObjFile(meshSphereBuffers, "./data/miscobjs/mesh-sphere.obj", loadBufferData);
 	//loadBuffersFromObj2Or3File(buildingBuffers, "./data/miscobjs/menger-edgesplit.obj3", loadBufferData, 6);
-	loadBuffersFromObj2Or3File(buildingBuffers, "./data/miscobjs/menger-texmap2.obj3", loadBufferData, 6);
+	loadBuffersFromObj5File(buildingBuffers, "./data/miscobjs/menger-texmap2.obj5", loadBufferData, 6);
 
 	loadBuffersFromObj2Or3File(octoFractalBuffers, "./data/miscobjs/fractal-octahedron4.obj3", loadBufferData, 6);
 

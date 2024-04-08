@@ -1,19 +1,22 @@
 //loading .obj data and similar from files eg .obj, instead of generating json data from.obj files offline
 
 function loadBuffersFromObjFile(bufferObj, location, cb, expectedVertLength=3){
-    loadBuffersFromFile(bufferObj, location, cb, expectedVertLength, loadBuffersFromObjFileResponse);
+    loadBuffersFromFile(bufferObj, location, cb, false, expectedVertLength, loadBuffersFromObjFileResponse);
 }
 function loadBuffersFromObj2Or3File(bufferObj, location, cb, expectedVertLength=3){
-    loadBuffersFromFile(bufferObj, location, cb, expectedVertLength, loadBuffersFromObj2Or3FileResponse);
+    loadBuffersFromFile(bufferObj, location, cb, false, expectedVertLength, loadBuffersFromObj2Or3Or5FileResponse);
 }
-function loadBuffersFromFile(bufferObj, location, cb, expectedVertLength, loaderFunc){
+function loadBuffersFromObj5File(bufferObj, location, cb, expectedVertLength=3){
+    loadBuffersFromFile(bufferObj, location, cb, true, expectedVertLength, loadBuffersFromObj2Or3Or5FileResponse);
+}
+function loadBuffersFromFile(bufferObj, location, cb, indexDataIsDiffs, expectedVertLength, loaderFunc){
     var oReq = new XMLHttpRequest();
-    oReq.addEventListener("load", x => loaderFunc(bufferObj, x.target.response, cb, expectedVertLength));
+    oReq.addEventListener("load", x => loaderFunc(bufferObj, x.target.response, cb, expectedVertLength, indexDataIsDiffs));
     oReq.open("GET", location);
     oReq.send();
 }
 
-function loadBuffersFromObjFileResponse(bufferObj, response, cb, expectedVertLength){
+function loadBuffersFromObjFileResponse(bufferObj, response, cb, expectedVertLength, indexDataIsDiffs){
     //console.log(response);
     var lines = response.split("\n");
     console.log(lines.length);
@@ -78,7 +81,6 @@ function loadBuffersFromObjFileResponse(bufferObj, response, cb, expectedVertLen
     }
 
     //produce in format returned by loadBlenderExport()
-
     var sourceData = {
         vertices: [].concat.apply([],newVerts.map(x=>verts[x[0]])),
         vertices_len: expectedVertLength,   //not required if is 3 (normal)
@@ -96,7 +98,7 @@ function loadBuffersFromObjFileResponse(bufferObj, response, cb, expectedVertLen
     bufferObj.isLoaded = true;  //should check this before drawing using these buffers (or set some initial dummy data)
 }
 
-function loadBuffersFromObj2Or3FileResponse(bufferObj, response, cb, expectedVertLength){
+function loadBuffersFromObj2Or3Or5FileResponse(bufferObj, response, cb, expectedVertLength, indexDataIsDiffs){
     //console.log(response);
     var lines = response.split("\n");
     console.log(lines.length);
@@ -162,6 +164,14 @@ function loadBuffersFromObj2Or3FileResponse(bufferObj, response, cb, expectedVer
 
     for (var face of faces){
         newFaces.push(face.map(x=>parseInt(x)));    //using zero-indexed attributes.
+    }
+
+    if (indexDataIsDiffs){
+        var currentIdx = 0;
+        newFaces = newFaces.map(f => {
+            currentIdx += f[0];
+            return [currentIdx, f[1]+currentIdx, f[2]+currentIdx];
+        });
     }
 
     var sourceData = {
