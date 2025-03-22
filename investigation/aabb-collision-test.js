@@ -1,5 +1,5 @@
 
-const NUM_CIRCLES = 2000;
+const NUM_CIRCLES = 1_000;
 const MAX_OBJ_SIZE = 0.2;
 
 console.log("hello world");
@@ -45,23 +45,12 @@ console.timeEnd("simple circles 2");
 console.time("aabb");
 for (var ii=0;ii<NUM_CIRCLES;ii++){
     for (var jj=0;jj<NUM_CIRCLES;jj++){ //doubles up collision checks (i vs j, j vs i), but unimportant
-        collisionCountAABB+= collisionTestAABB(circles[ii],circles[jj]) ? 1:0;
+        var circle1 = circles[ii];
+        var circle2 = circles[jj];
+        collisionCountAABB+= collisionTestAABB(circle1, circle2) && collisionTestSimple2(circle1, circle2) ? 1:0;
     }
 }
 console.timeEnd("aabb");
-
-
-
-for (var ii=0;ii<NUM_CIRCLES;ii++){
-    for (var jj=0;jj<NUM_CIRCLES;jj++){ //doubles up collision checks (i vs j, j vs i), but unimportant
-        var result1 = collisionTestSimple2(circles[ii],circles[jj]);
-        var result2 = collisionTestAABB(circles[ii],circles[jj]);
-        if (result1!=result2){
-            //console.log({result1, result2, ii,jj,circle1:circles[ii], circle2:circles[jj]});
-            console.log(JSON.stringify({result1, result2, ii,jj,circle1:circles[ii], circle2:circles[jj]}));
-        }
-    }
-}
 
 
 console.log("total collision tests: " + NUM_CIRCLES*NUM_CIRCLES);
@@ -73,7 +62,6 @@ console.log("collisions detected AABB: " + collisionCountAABB);
 function randomCircle(){
     var xyz = [0,0,0].map(unused => Math.random()-0.5);
     //normalise
-    //var lensq = Math.hypot.apply(xyz, null);    //slow. better to use map, reduce? or just explicit?
     var lensq = xyz[0]*xyz[0] + xyz[1]*xyz[1] + xyz[2]*xyz[2];
     var len = Math.sqrt(lensq);
     if (len == 0){    //unlikely but should catch this!
@@ -94,12 +82,19 @@ function randomCircle(){
     var centreOfCircle = xyz.map(component => component*cosAng);
     var projectedCircleRad = rad*cosAng;
     var circleAABBSize = [1-xyz[0]*xyz[0] , 1-xyz[1]*xyz[1], 1-xyz[2]*xyz[2] ]
-        .map(Math.sqrt) //??
-        //.map(xx => Math.sqrt(xx)) //??
+        .map(Math.sqrt)
         .map(component => component*projectedCircleRad);
     var AABB = centreOfCircle.map((component,ii) => [component - circleAABBSize[ii], component + circleAABBSize[ii]]);
 
-    //suspect AABB is too small and will miss things. 
+    //find out whether the circle surrounds one of the axes.
+    for (var ii=0;ii<3;ii++){
+        if (xyz[ii] > cosAng){
+            AABB[ii][1]=1;
+        }
+        if (xyz[ii] <-cosAng){
+            AABB[ii][0]=-1;
+        }
+    }
 
     return {
         position: xyz,
@@ -144,7 +139,15 @@ function collisionTestAABB(circle1, circle2){    //faster still, avoids cos call
         intersection = intersection && thisAxisIntersects;
     }
 
-    return intersection && collisionTestSimple2(circle1, circle2);
-
-    //return intersection;
+    return intersection;
 }
+
+
+//TODO
+/*
+measure time to generate data for circles (probably pretty quick so could do at runtime for moving objects OK)
+morton encoding = faster due to more likely to discard on 1st check?
+3-sphere version
+BVH
+sphere trees simpler? how speed compares?
+*/
