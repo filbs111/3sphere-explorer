@@ -1,5 +1,5 @@
 
-const NUM_CIRCLES = 1_000;
+const NUM_CIRCLES = 2000;
 const MAX_OBJ_SIZE = 0.2;
 
 console.log("hello world");
@@ -17,6 +17,7 @@ var collisionCountSimple = 0;
 var collisionCountSimple1 = 0;
 var collisionCountSimple2 = 0;
 var collisionCountAABB = 0;
+var collisionCountMorton = 0;
 
 console.time("simple circles");
 for (var ii=0;ii<NUM_CIRCLES;ii++){
@@ -52,12 +53,28 @@ for (var ii=0;ii<NUM_CIRCLES;ii++){
 }
 console.timeEnd("aabb");
 
+console.time("aabb morton");
+for (var ii=0;ii<NUM_CIRCLES;ii++){
+    for (var jj=0;jj<NUM_CIRCLES;jj++){ //doubles up collision checks (i vs j, j vs i), but unimportant
+        var circle1 = circles[ii];
+        var circle2 = circles[jj];
+        collisionCountMorton+= 
+            collisionTestMorton(circle1, circle2) && 
+            collisionTestAABB(circle1, circle2) && 
+            collisionTestSimple2(circle1, circle2) ? 1:0;
+    }
+}
+console.timeEnd("aabb morton");
+
 
 console.log("total collision tests: " + NUM_CIRCLES*NUM_CIRCLES);
 console.log("collisions detected: " + collisionCountSimple);
 console.log("collisions detected 1: " + collisionCountSimple1);
 console.log("collisions detected 2: " + collisionCountSimple2);
 console.log("collisions detected AABB: " + collisionCountAABB);
+console.log("collisions detected morton: " + collisionCountMorton);
+
+//console.log(circles);
 
 function randomCircle(){
     var xyz = [0,0,0].map(unused => Math.random()-0.5);
@@ -96,17 +113,72 @@ function randomCircle(){
         }
     }
 
+    var aabbCornerMin = AABB.map(component => component[0]);
+    var aabbCornerMax = AABB.map(component => component[1]);
+    
     return {
         position: xyz,
         angRad,
         sinAng: Math.sin(angRad),
         cosAng,
-        AABB
+        AABB,
+        morton: [aabbCornerMin,aabbCornerMax].map(morton3),
     }
 }
 
 function dotProduct(first, second){
     return first[0]*second[0] + first[1]*second[1] + first[2]*second[2];
+}
+
+function morton3(threevec){
+    //might be slow and crap! 
+    //TODO round up or down the response to this?
+    var bitarrays = threevec.map(xx => {
+
+        var intnum = (xx+1)*512;
+        intnum = Math.min(intnum, 1023);  //because could be 1024 before this? 
+
+        var bits = [...Array(10)].map((x,i)=>intnum>>i&1);
+            //least to most significant 10 bits
+
+        return bits
+    } ); //map 0 to 2 to 0 to 2^32
+
+    //console.log(bitarrays);
+
+    var morton 
+        = (bitarrays[0][9] << 29)
+        + (bitarrays[1][9] << 28)
+        + (bitarrays[2][9] << 27)
+        + (bitarrays[0][8] << 26)
+        + (bitarrays[1][8] << 25)
+        + (bitarrays[2][8] << 24)
+        + (bitarrays[0][7] << 23)
+        + (bitarrays[1][7] << 22)
+        + (bitarrays[2][7] << 21)
+        + (bitarrays[0][6] << 20)
+        + (bitarrays[1][6] << 19)
+        + (bitarrays[2][6] << 18)
+        + (bitarrays[0][5] << 17)
+        + (bitarrays[1][5] << 16)
+        + (bitarrays[2][5] << 15)
+        + (bitarrays[0][4] << 14)
+        + (bitarrays[1][4] << 13)
+        + (bitarrays[2][4] << 12)
+        + (bitarrays[0][3] << 11)
+        + (bitarrays[1][3] << 10)
+        + (bitarrays[2][3] << 9)
+        + (bitarrays[0][2] << 8)
+        + (bitarrays[1][2] << 7)
+        + (bitarrays[2][2] << 6)
+        + (bitarrays[0][1] << 5)
+        + (bitarrays[1][1] << 4)
+        + (bitarrays[2][1] << 3)
+        + (bitarrays[0][0] << 2)
+        + (bitarrays[1][0] << 1)
+        + (bitarrays[2][0]);
+
+    return morton;
 }
 
 function collisionTestSimple(circle1, circle2){
@@ -142,12 +214,16 @@ function collisionTestAABB(circle1, circle2){    //faster still, avoids cos call
     return intersection;
 }
 
+function collisionTestMorton(circle1, circle2){
+    return circle1.morton[0] <= circle2.morton[1] && circle2.morton[0] <= circle1.morton[1];
+}
+
 
 //TODO
 /*
 measure time to generate data for circles (probably pretty quick so could do at runtime for moving objects OK)
-morton encoding = faster due to more likely to discard on 1st check?
 3-sphere version
 BVH
-sphere trees simpler? how speed compares?
+    for AABBs
+    sphere trees simpler? faster?
 */
