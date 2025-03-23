@@ -1,5 +1,6 @@
 
-const NUM_CIRCLES = 1000;
+const NUM_CIRCLES = 10000;
+const FIRST_CIRCLE_COUNT = 10;  //must not be greater than NUM_CIRCLES
 const MAX_OBJ_SIZE = 0.01;
 
 console.log("hello world");
@@ -34,7 +35,7 @@ var collisionCountBvh = 0;
 var collisionCountBvhPossibilities = 0;
 
 console.time("simple circles");
-for (var ii=0;ii<NUM_CIRCLES;ii++){
+for (var ii=0;ii<FIRST_CIRCLE_COUNT;ii++){
     for (var jj=0;jj<NUM_CIRCLES;jj++){ //doubles up collision checks (i vs j, j vs i), but unimportant
         collisionCountSimple+= collisionTestSimple(circles[ii],circles[jj]) ? 1:0;
     }
@@ -42,7 +43,7 @@ for (var ii=0;ii<NUM_CIRCLES;ii++){
 console.timeEnd("simple circles");
 
 console.time("simple circles 1");
-for (var ii=0;ii<NUM_CIRCLES;ii++){
+for (var ii=0;ii<FIRST_CIRCLE_COUNT;ii++){
     for (var jj=0;jj<NUM_CIRCLES;jj++){ //doubles up collision checks (i vs j, j vs i), but unimportant
         collisionCountSimple1+= collisionTestSimple1(circles[ii],circles[jj]) ? 1:0;
     }
@@ -50,7 +51,7 @@ for (var ii=0;ii<NUM_CIRCLES;ii++){
 console.timeEnd("simple circles 1");
 
 console.time("simple circles 2");
-for (var ii=0;ii<NUM_CIRCLES;ii++){
+for (var ii=0;ii<FIRST_CIRCLE_COUNT;ii++){
     for (var jj=0;jj<NUM_CIRCLES;jj++){ //doubles up collision checks (i vs j, j vs i), but unimportant
         collisionCountSimple2+= collisionTestSimple2(circles[ii],circles[jj]) ? 1:0;
     }
@@ -58,7 +59,7 @@ for (var ii=0;ii<NUM_CIRCLES;ii++){
 console.timeEnd("simple circles 2");
 
 console.time("aabb");
-for (var ii=0;ii<NUM_CIRCLES;ii++){
+for (var ii=0;ii<FIRST_CIRCLE_COUNT;ii++){
     for (var jj=0;jj<NUM_CIRCLES;jj++){ //doubles up collision checks (i vs j, j vs i), but unimportant
         var circle1 = circles[ii];
         var circle2 = circles[jj];
@@ -68,7 +69,7 @@ for (var ii=0;ii<NUM_CIRCLES;ii++){
 console.timeEnd("aabb");
 
 console.time("aabb morton");
-for (var ii=0;ii<NUM_CIRCLES;ii++){
+for (var ii=0;ii<FIRST_CIRCLE_COUNT;ii++){
     for (var jj=0;jj<NUM_CIRCLES;jj++){ //doubles up collision checks (i vs j, j vs i), but unimportant
         var circle1 = circles[ii];
         var circle2 = circles[jj];
@@ -84,7 +85,7 @@ console.timeEnd("aabb morton");
 console.time("bvh");
 var countBvhFuncCalls=0;
 
-for (var ii=0;ii<NUM_CIRCLES;ii++){
+for (var ii=0;ii<FIRST_CIRCLE_COUNT;ii++){
     var circle1 = circles[ii];
     var possibles = collisionTestBvh(circle1, bvh);
 
@@ -99,7 +100,7 @@ console.timeEnd("bvh");
 
 
 
-console.log("total collision tests: " + NUM_CIRCLES*NUM_CIRCLES);
+console.log("total collision tests: " + FIRST_CIRCLE_COUNT*NUM_CIRCLES);
 console.log("collisions detected: " + collisionCountSimple);
 console.log("collisions detected 1: " + collisionCountSimple1);
 console.log("collisions detected 2: " + collisionCountSimple2);
