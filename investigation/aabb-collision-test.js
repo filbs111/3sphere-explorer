@@ -362,9 +362,18 @@ to construct tree top down (or could do bottom up if decide up front, just group
 sort by morton of the centre of each AABB (imagine consuming from either end - to minimise total overlap given have same num on each side, makes sense
     if think about it! https://www.youtube.com/watch?v=LAxHQZ8RjQ4)
 
+NOTE on speed - 
+BVH can be faster or slower than just brute force simple circle-circle in test here
 
-why is BVH slower than just testing all circles separately?
-is sort failing?
-does the BVH look ok? 
-is the code too javascripty - better to use typedarrays?
+the current BVH test checks each single object's bounding box vs the BVH tree. A more efficient way to find colliding object pairs would be to check 
+tree vs tree, but single object vs tree is chosen to represent initial use case - player object vs static level geometry, and needs no dynamic BVH.
+
+The BVH tree might be better chosen. Currently using morton ordering, which is quick to create. There are many ways of building trees, but don't expect 
+big improvement.
+
+The BVH tree code might be significantly optimised. Might try typed arrays, make more c-like code rather than creating loads of objects, walk the tree instead 
+returning new array to the level above, etc.
+
+The BVH test might make sense over simple brute force circle test for ray test, where check a BVH for eg the trajectory of a bullet - might build out of 
+many short sections or a line.
 */
