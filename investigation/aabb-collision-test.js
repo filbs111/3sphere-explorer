@@ -1,5 +1,5 @@
 
-const NUM_CIRCLES = 2000;
+const NUM_CIRCLES = 1000;
 const MAX_OBJ_SIZE = 0.2;
 
 console.log("hello world");
@@ -13,11 +13,26 @@ for (var ii=0;ii<NUM_CIRCLES;ii++){
     circles.push(randomCircle());
 }
 
+//construct tree
+//many ways to do this. 
+//order by morton code. then just create a binary tree by pairing successively
+//maybe no need for explicit links between layers, but complicated by non power of 2- how to handle only 1 item?
+
+circles.sort(circle => circle.centreMorton);
+
+//test array to groups
+//console.log(arrayToGroups([1,2,3,4,5,6],2));
+
+
+var bvh = generateBvh(circles, 2);
+
 var collisionCountSimple = 0;
 var collisionCountSimple1 = 0;
 var collisionCountSimple2 = 0;
 var collisionCountAABB = 0;
 var collisionCountMorton = 0;
+var collisionCountBvhMorton = 0;
+var collisionCountBvhMortonPossibilities = 0;
 
 console.time("simple circles");
 for (var ii=0;ii<NUM_CIRCLES;ii++){
@@ -67,12 +82,33 @@ for (var ii=0;ii<NUM_CIRCLES;ii++){
 console.timeEnd("aabb morton");
 
 
+console.time("bvh morton");
+for (var ii=0;ii<NUM_CIRCLES;ii++){
+    var circle1 = circles[ii];
+    var possibles = collisionTestBvh(circle1, bvh);
+
+    collisionCountBvhMortonPossibilities+=possibles.length;
+
+    possibles.forEach(possibility => {
+        //collisionCountBvhMorton += collisionTestMorton(circle1, possibility) ? 1:0;   //this can be any other test. TODO include inside collisionTestBvh for leaf node?
+        collisionCountBvhMorton += collisionTestSimple2(circle1, possibility) ? 1:0;   //TODO is morton test applied at leaf node already?
+
+    });
+}
+console.timeEnd("bvh morton");
+
+
+
 console.log("total collision tests: " + NUM_CIRCLES*NUM_CIRCLES);
 console.log("collisions detected: " + collisionCountSimple);
 console.log("collisions detected 1: " + collisionCountSimple1);
 console.log("collisions detected 2: " + collisionCountSimple2);
 console.log("collisions detected AABB: " + collisionCountAABB);
 console.log("collisions detected morton: " + collisionCountMorton);
+
+console.log("possibilities processed bvh morton: " + collisionCountBvhMortonPossibilities);
+console.log("collisions detected BVH morton: " + collisionCountBvhMorton);
+
 
 //console.log(circles);
 
@@ -120,6 +156,7 @@ function randomCircle(){
         cosAng,
         AABB,
         morton: AABB.map(morton3),
+        centreMorton: morton3(xyz)
     }
 }
 
@@ -178,6 +215,78 @@ function morton3(threevec){
     return morton;
 }
 
+
+function generateBvh(items, groupSize){
+
+    if (items.length < 2){  //TODO why is length ever 0?
+        //console.log("returning because items of length: " + items.length);
+        //console.log(items);
+        return items[0];
+    }
+
+    var groups = arrayToGroups(items, groupSize);
+    //console.log("NUM GROUPS:" + groups.length);
+
+    var nextLayerUp = groups.map(group => {
+        //find min, max AABB of group.
+        // var AABB = [0,1,2].map(
+        //     ii => [
+        //         Math.min( group.map(item => item.AABB[0][ii] )),
+        //         Math.max( group.map(item => item.AABB[1][ii] ))
+        //     ]);
+
+        //console.log(JSON.stringify(group));
+
+        var minAABBPoints = [0,1,2].map( component => group.map(item => item.AABB[0][component]));
+        var minAABB = minAABBPoints.map( minAABBPointsForComponent => Math.min.apply(null, minAABBPointsForComponent));
+
+        var maxAABBPoints = [0,1,2].map( component => group.map(item => item.AABB[1][component]));
+        var maxAABB = maxAABBPoints.map( maxAABBPointsForComponent => Math.max.apply(null, maxAABBPointsForComponent));
+
+        // console.log({
+        //     minAABBPoints,
+        //     minAABB,
+        //     maxAABBPoints,
+        //     maxAABB
+        // });
+
+        var morton = [
+            Math.min.apply(null, group.map(item => item.morton[0])),
+            Math.max.apply(null, group.map(item => item.morton[1]))
+        ];
+
+        var toReturn = {
+            group,
+            AABB: [minAABB, maxAABB],
+            morton
+        };
+        //console.log("toReturn");
+        //console.log(toReturn);
+        return toReturn;
+
+        // return {
+        //     group,
+        //     AABB: [minAABB, maxAABB],
+        //     morton
+        // }
+    });
+
+    //console.log(nextLayerUp);
+
+    return generateBvh(nextLayerUp, 2);
+} 
+
+function arrayToGroups(initialArray, groupSize){
+    https://stackoverflow.com/a/44996257
+    //altered to take arbitrary group size instead of hard coded to 2.
+    return initialArray.reduce(function(result, value, index, array) {
+        if (index % groupSize === 0)
+          result.push(array.slice(index, index + groupSize));
+        return result;
+      }, []);
+}
+
+
 function collisionTestSimple(circle1, circle2){
     var totalAngRad = circle1.angRad + circle2.angRad;
     var dotProd = dotProduct(circle1.position, circle2.position);
@@ -215,6 +324,37 @@ function collisionTestMorton(circle1, circle2){
     return circle1.morton[0] <= circle2.morton[1] && circle2.morton[0] <= circle1.morton[1];
 }
 
+//TOOD 2 versions of this - one using just min, max morton values, one using AABB. which is faster?
+//this returns possible colliding bvh nodes in the group.
+function collisionTestBvh(circle1, bvh){
+    
+
+    if (!bvh.group){ //is a leaf node
+        //console.log("returning because bvh has no group");
+        //console.log(bvh);
+
+        return bvh;
+    }
+
+    //console.log("proceeding because bvh has groups");
+
+    var filteredGroup =  bvh.group.filter(
+            item =>
+            collisionTestMorton(circle1, item)
+        );
+    
+    //console.log("filteredGroup : " + filteredGroup);
+    
+    return filteredGroup.map(group2 => collisionTestBvh(circle1, group2)).flat();
+
+
+    // return bvh.group.filter(
+    //     item =>
+    //     collisionTestMorton(circle1, item)
+    // )
+    // .flat();
+}
+
 
 //TODO
 /*
@@ -223,4 +363,11 @@ measure time to generate data for circles (probably pretty quick so could do at 
 BVH
     for AABBs
     sphere trees simpler? faster?
+
+morton
+store centre, 2 corners
+
+to construct tree top down (or could do bottom up if decide up front, just group in 2s then the result in 2s etc? just sort by morton centre and use as tree in situ?)
+sort by morton of the centre of each AABB (imagine consuming from either end - to minimise total overlap given have same num on each side, makes sense
+    if think about it! https://www.youtube.com/watch?v=LAxHQZ8RjQ4)
 */
