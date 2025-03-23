@@ -101,28 +101,25 @@ function randomCircle(){
     var circleAABBSize = [1-xyz[0]*xyz[0] , 1-xyz[1]*xyz[1], 1-xyz[2]*xyz[2] ]
         .map(Math.sqrt)
         .map(component => component*projectedCircleRad);
-    var AABB = centreOfCircle.map((component,ii) => [component - circleAABBSize[ii], component + circleAABBSize[ii]]);
+    var AABB = [-1,1].map(sign => centreOfCircle.map((component,ii) => component + sign*circleAABBSize[ii] ));
 
     //find out whether the circle surrounds one of the axes.
     for (var ii=0;ii<3;ii++){
         if (xyz[ii] > cosAng){
-            AABB[ii][1]=1;
+            AABB[1][ii]=1;
         }
         if (xyz[ii] <-cosAng){
-            AABB[ii][0]=-1;
+            AABB[0][ii]=-1;
         }
     }
 
-    var aabbCornerMin = AABB.map(component => component[0]);
-    var aabbCornerMax = AABB.map(component => component[1]);
-    
     return {
         position: xyz,
         angRad,
         sinAng: Math.sin(angRad),
         cosAng,
         AABB,
-        morton: [aabbCornerMin,aabbCornerMax].map(morton3),
+        morton: AABB.map(morton3),
     }
 }
 
@@ -207,7 +204,7 @@ function collisionTestAABB(circle1, circle2){    //faster still, avoids cos call
     var intersection = true;
     for (var ii=0;ii<3;ii++){
             //leftmost of each span left of the rightmost of the other
-        var thisAxisIntersects = circle1.AABB[ii][0] < circle2.AABB[ii][1] && circle2.AABB[ii][0] < circle1.AABB[ii][1];
+        var thisAxisIntersects = circle1.AABB[0][ii] < circle2.AABB[1][ii] && circle2.AABB[0][ii] < circle1.AABB[1][ii];
         intersection = intersection && thisAxisIntersects;
     }
 
