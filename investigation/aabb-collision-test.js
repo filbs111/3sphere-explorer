@@ -1,6 +1,6 @@
 
 const NUM_CIRCLES = 1000;
-const MAX_OBJ_SIZE = 0.2;
+const MAX_OBJ_SIZE = 0.01;
 
 console.log("hello world");
 //3D AABB collision testing for circular regions on a sphere
@@ -23,16 +23,15 @@ circles.sort(circle => circle.centreMorton);
 //test array to groups
 //console.log(arrayToGroups([1,2,3,4,5,6],2));
 
-
-var bvh = generateBvh(circles, 2);
+var bvh = generateBvh(circles, 16);  //larger group size seems to be faster, might not hold if optimise bvh tree traversal.
 
 var collisionCountSimple = 0;
 var collisionCountSimple1 = 0;
 var collisionCountSimple2 = 0;
 var collisionCountAABB = 0;
 var collisionCountMorton = 0;
-var collisionCountBvhMorton = 0;
-var collisionCountBvhMortonPossibilities = 0;
+var collisionCountBvh = 0;
+var collisionCountBvhPossibilities = 0;
 
 console.time("simple circles");
 for (var ii=0;ii<NUM_CIRCLES;ii++){
@@ -82,20 +81,21 @@ for (var ii=0;ii<NUM_CIRCLES;ii++){
 console.timeEnd("aabb morton");
 
 
-console.time("bvh morton");
+console.time("bvh");
+var countBvhFuncCalls=0;
+
 for (var ii=0;ii<NUM_CIRCLES;ii++){
     var circle1 = circles[ii];
     var possibles = collisionTestBvh(circle1, bvh);
 
-    collisionCountBvhMortonPossibilities+=possibles.length;
+    collisionCountBvhPossibilities+=possibles.length;
 
     possibles.forEach(possibility => {
-        //collisionCountBvhMorton += collisionTestMorton(circle1, possibility) ? 1:0;   //this can be any other test. TODO include inside collisionTestBvh for leaf node?
-        collisionCountBvhMorton += collisionTestSimple2(circle1, possibility) ? 1:0;   //TODO is morton test applied at leaf node already?
-
+        collisionCountBvh += collisionTestSimple2(circle1, possibility) ? 1:0;   
+            //TODO is AABB test applied at leaf node? perhaps shouldn't - circle test faster anyway 
     });
 }
-console.timeEnd("bvh morton");
+console.timeEnd("bvh");
 
 
 
@@ -106,9 +106,10 @@ console.log("collisions detected 2: " + collisionCountSimple2);
 console.log("collisions detected AABB: " + collisionCountAABB);
 console.log("collisions detected morton: " + collisionCountMorton);
 
-console.log("possibilities processed bvh morton: " + collisionCountBvhMortonPossibilities);
-console.log("collisions detected BVH morton: " + collisionCountBvhMorton);
+console.log("possibilities processed bvh: " + collisionCountBvhPossibilities);
+console.log("collisions detected BVH: " + collisionCountBvh);
 
+console.log(countBvhFuncCalls);
 
 //console.log(circles);
 
@@ -273,8 +274,8 @@ function generateBvh(items, groupSize){
 
     //console.log(nextLayerUp);
 
-    return generateBvh(nextLayerUp, 2);
-} 
+    return generateBvh(nextLayerUp, groupSize);
+}
 
 function arrayToGroups(initialArray, groupSize){
     https://stackoverflow.com/a/44996257
@@ -328,6 +329,7 @@ function collisionTestMorton(circle1, circle2){
 //this returns possible colliding bvh nodes in the group.
 function collisionTestBvh(circle1, bvh){
     
+    countBvhFuncCalls+=1;
 
     if (!bvh.group){ //is a leaf node
         //console.log("returning because bvh has no group");
@@ -336,23 +338,12 @@ function collisionTestBvh(circle1, bvh){
         return bvh;
     }
 
-    //console.log("proceeding because bvh has groups");
-
     var filteredGroup =  bvh.group.filter(
             item =>
-            collisionTestMorton(circle1, item)
+            collisionTestAABB(circle1, item)
         );
     
-    //console.log("filteredGroup : " + filteredGroup);
-    
     return filteredGroup.map(group2 => collisionTestBvh(circle1, group2)).flat();
-
-
-    // return bvh.group.filter(
-    //     item =>
-    //     collisionTestMorton(circle1, item)
-    // )
-    // .flat();
 }
 
 
@@ -370,4 +361,10 @@ store centre, 2 corners
 to construct tree top down (or could do bottom up if decide up front, just group in 2s then the result in 2s etc? just sort by morton centre and use as tree in situ?)
 sort by morton of the centre of each AABB (imagine consuming from either end - to minimise total overlap given have same num on each side, makes sense
     if think about it! https://www.youtube.com/watch?v=LAxHQZ8RjQ4)
+
+
+why is BVH slower than just testing all circles separately?
+is sort failing?
+does the BVH look ok? 
+is the code too javascripty - better to use typedarrays?
 */
