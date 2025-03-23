@@ -18,12 +18,12 @@ for (var ii=0;ii<NUM_CIRCLES;ii++){
 //order by morton code. then just create a binary tree by pairing successively
 //maybe no need for explicit links between layers, but complicated by non power of 2- how to handle only 1 item?
 
-circles.sort(circle => circle.centreMorton);
+circles.sort((circleA, circleB) => circleB.centreMorton - circleA.centreMorton);
 
 //test array to groups
 //console.log(arrayToGroups([1,2,3,4,5,6],2));
 
-var bvh = generateBvh(circles, 16);  //larger group size seems to be faster, might not hold if optimise bvh tree traversal.
+var bvh = generateBvh(circles, 8);  //can tune group size. smallest 2 for binary tree. larger numbers for shallower trees
 
 var collisionCountSimple = 0;
 var collisionCountSimple1 = 0;
