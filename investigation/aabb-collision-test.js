@@ -1,5 +1,5 @@
 
-const NUM_CIRCLES = 2000;
+const NUM_CIRCLES = 1000;
 const FIRST_CIRCLE_COUNT = 10;  //must not be greater than NUM_CIRCLES
 const MAX_OBJ_SIZE = 0.01;
 var temp3vec = [...new Array(3)];
@@ -11,6 +11,8 @@ console.log("hello world");
 //compare with basic circle test (suspect similar speed)
 //use AABBs to generate 
 
+//var randFunctionToUse = Math.random;  //uniform
+var randFunctionToUse = randomCantorMember; //cantor set -maybe more representative of real data because clustered
 doCirclesOnSphereTest();
 doSpheresOn3SphereTest();
 
@@ -18,7 +20,7 @@ function doCirclesOnSphereTest(){
     //generate circles at random positions on sphere with random radius
     var circles = [];
     for (var ii=0;ii<NUM_CIRCLES;ii++){
-        circles.push(randomCircle());
+        circles.push(randomCircle(randFunctionToUse));
     }
 
     //construct tree
@@ -116,7 +118,7 @@ function doCirclesOnSphereTest(){
 function doSpheresOn3SphereTest(){
     var items = [];
     for (var ii=0;ii<NUM_CIRCLES;ii++){
-        items.push(randomSphere());
+        items.push(randomSphere(randFunctionToUse));
     }
 
     items.sort(mortonSort);
@@ -205,8 +207,8 @@ function doSpheresOn3SphereTest(){
 
 
 
-function randomCircle(){
-    var position = temp3vec.map(unused => Math.random()-0.5);
+function randomCircle(randFunc){
+    var position = temp3vec.map(unused => randFunc()-0.5);
     //normalise
     var len = Math.hypot.apply(null, position);
     if (len == 0){    //unlikely but should catch this!
@@ -251,10 +253,8 @@ function randomCircle(){
         positionMorton: morton3(position)
     }
 }
-
-
-function randomSphere(){
-    var position = temp4vec.map(unused => Math.random()-0.5);
+function randomSphere(randFunc){
+    var position = temp4vec.map(unused => randFunc()-0.5);
     //normalise
     var len = Math.hypot.apply(null, position);
     if (len == 0){    //unlikely but should catch this!
@@ -299,6 +299,26 @@ function randomSphere(){
         positionMorton: morton4(position)
     }
 }
+
+function randomCantorMember(){
+    return randomCantorMemberForIterations(20);
+}
+//thanks to bing AI for this one! prompt: "random member of cantor set in javascript"
+function randomCantorMemberForIterations(iterations) {
+    let number = 0;
+    let scale = 1;
+
+    for (let i = 0; i < iterations; i++) {
+        scale /= 3;
+        let digit = Math.floor(Math.random() * 2);
+        number += digit * scale;
+    }
+
+    return number;
+}
+
+
+
 
 function mortonSort(itemA, itemB){
     return itemB.positionMorton - itemA.positionMorton;
