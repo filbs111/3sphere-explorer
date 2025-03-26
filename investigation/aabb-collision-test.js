@@ -386,8 +386,8 @@ function morton4(fourvec){
     //might be slow and crap! 
     var bitarrays = fourvec.map(xx => {
 
-        var intnum = (xx+1)*128;
-        intnum = Math.min(intnum, 127);  //because could be 128 before this? 
+        var intnum = (xx+1)*256;
+        intnum = Math.min(intnum, 255);  //because could be 256 before this? 
 
         var bits = [...Array(8)].map((x,i)=>intnum>>i&1);
             //least to most significant 8 bits
@@ -429,7 +429,8 @@ function morton4(fourvec){
         + (bitarrays[2][0] << 1)
         + (bitarrays[3][0]);
 
-    return morton;
+    //return morton;
+    return morton^ 0x80000000;
 }
 
 function generateBvh(items, tempVec, groupSize){
