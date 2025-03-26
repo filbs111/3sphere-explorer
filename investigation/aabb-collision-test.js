@@ -601,7 +601,7 @@ function collisionTestAABBGeneral(item1, item2, numAxes){
     var intersection = true;
     for (var ii=0;ii<numAxes;ii++){
             //leftmost of each span left of the rightmost of the other
-        var thisAxisIntersects = item1.AABB[0][ii] < item2.AABB[1][ii] && item1.AABB[0][ii] < item2.AABB[1][ii];
+        var thisAxisIntersects = item1.AABB[0][ii] < item2.AABB[1][ii] && item2.AABB[0][ii] < item1.AABB[1][ii];
         intersection = intersection && thisAxisIntersects;
     }
     return intersection;
