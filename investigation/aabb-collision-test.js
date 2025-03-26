@@ -390,7 +390,7 @@ function dotProduct4(first, second){
 
 function hilbert3(threevec){
     var intCoords = threevec.map(xx => {
-        var intnum = (xx+0.5)*1024;    //map -0.5 to 0.5 to 0 to 1024
+        var intnum = (xx+1)*512;    //map -1 to 1 to 0 to 1024
         intnum = Math.min(intnum, 1023);
         return intnum;
     });
@@ -450,7 +450,7 @@ function morton3(threevec){
 
 function hilbert4(fourvec){
     var intCoords = fourvec.map(xx => {
-        var intnum = (xx+0.5)*256;    //map -0.5 to 0.5 to 0 to 255
+        var intnum = (xx+1)*128;    //map -1 to 1 to 0 to 255
         intnum = Math.min(intnum, 255);  //because could be 256 before this?
         return intnum;
     });
@@ -461,7 +461,7 @@ function morton4(fourvec){
     //might be slow and crap! 
     var bitarrays = fourvec.map(xx => {
 
-        var intnum = (xx+1)*256;
+        var intnum = (xx+1)*128;
         intnum = Math.min(intnum, 255);  //because could be 256 before this? 
 
         var bits = [...Array(8)].map((x,i)=>intnum>>i&1);
