@@ -1,6 +1,6 @@
 
-const NUM_CIRCLES = 1000;
-const FIRST_CIRCLE_COUNT = 10;  //must not be greater than NUM_CIRCLES
+const NUM_CIRCLES = 8000;
+const FIRST_CIRCLE_COUNT = 20;  //must not be greater than NUM_CIRCLES
 const MAX_OBJ_SIZE = 0.01;
 var temp3vec = [...new Array(3)];
 var temp4vec = [...new Array(4)];
@@ -122,9 +122,11 @@ function doSpheresOn3SphereTest(){
     }
 
     items.sort(mortonSort);
+    var bvh = generateBvh(items, temp4vec, 16);
 
-    var bvh = generateBvh(items, temp4vec, 16); 
-
+    items.sort(hilbertSort);
+    var bvhHilbert = generateBvh(items, temp4vec, 16);
+    
     var collisionCountSimple = 0;
     var collisionCountSimple1 = 0;
     var collisionCountSimple2 = 0;
@@ -132,6 +134,10 @@ function doSpheresOn3SphereTest(){
     var collisionCountMorton = 0;
     var collisionCountBvh = 0;
     var collisionCountBvhPossibilities = 0;
+    var collisionCountBvh = 0;
+    var collisionCountBvhPossibilities = 0;
+    var collisionCountBvhHilbert = 0;
+    var collisionCountBvhHilbertPossibilities = 0;
 
     console.time("simple spheres");
     for (var ii=0;ii<FIRST_CIRCLE_COUNT;ii++){
@@ -193,6 +199,20 @@ function doSpheresOn3SphereTest(){
     }
     console.timeEnd("bvh for spheres");
 
+    console.time("bvh hilbert for spheres");
+    for (var ii=0;ii<FIRST_CIRCLE_COUNT;ii++){
+        var sphere1 = items[ii];
+        var possibles = collisionTestBvhForSpheres(sphere1, bvhHilbert);
+
+        collisionCountBvhHilbertPossibilities+=possibles.length;
+
+        possibles.forEach(possibility => {
+            collisionCountBvhHilbert += collisionTestSimpleSpheres2(sphere1, possibility) ? 1:0;   
+        });
+    }
+    console.timeEnd("bvh hilbert for spheres");
+
+
     console.log("total collision tests: " + FIRST_CIRCLE_COUNT*NUM_CIRCLES);
     console.log("collisions detected: " + collisionCountSimple);
     console.log("collisions detected 1: " + collisionCountSimple1);
@@ -202,6 +222,8 @@ function doSpheresOn3SphereTest(){
 
     console.log("possibilities processed bvh: " + collisionCountBvhPossibilities);
     console.log("collisions detected BVH: " + collisionCountBvh);
+    console.log("possibilities processed bvh Hilbert: " + collisionCountBvhHilbertPossibilities);
+    console.log("collisions detected BVH Hilbert: " + collisionCountBvhHilbert);
     console.log(countBvhFuncCalls);
 }
 
@@ -296,7 +318,8 @@ function randomSphere(randFunc){
         cosAng,
         AABB,
         morton: AABB.map(morton4),
-        positionMorton: morton4(position)
+        positionMorton: morton4(position),
+        positionHilbert: hilbert4(position)
     }
 }
 
@@ -322,6 +345,9 @@ function randomCantorMemberForIterations(iterations) {
 
 function mortonSort(itemA, itemB){
     return itemB.positionMorton - itemA.positionMorton;
+}
+function hilbertSort(itemA, itemB){
+    return itemB.positionHilbert - itemA.positionHilbert;
 }
 
 function dotProduct(first, second){
@@ -380,6 +406,15 @@ function morton3(threevec){
         + (bitarrays[2][0]);
 
     return morton;
+}
+
+function hilbert4(fourvec){
+    var intCoords = fourvec.map(xx => {
+        var intnum = (xx+0.5)*256;    //map -0.5 to 0.5 to 0 to 255
+        intnum = Math.min(intnum, 255);  //because could be 256 before this?
+        return intnum;
+    });
+    return hilbertIndex(intCoords, 8);
 }
 
 function morton4(fourvec){
@@ -611,3 +646,67 @@ returning new array to the level above, etc.
 The BVH test might make sense over simple brute force circle test for ray test, where check a BVH for eg the trajectory of a bullet - might build out of 
 many short sections or a line.
 */
+
+
+
+
+//ported from found code
+function HilbertIndexTransposed(hilbertAxes, bits){
+    var X = hilbertAxes.slice();
+    var n = hilbertAxes.length; // n: Number of dimensions
+    var M = 1 << (bits - 1), P, Q, t;
+    var i;
+    // Inverse undo
+    for (Q = M; Q > 1; Q >>= 1)
+    {
+        P = Q - 1;
+        for (i = 0; i < n; i++)
+            if ((X[i] & Q) != 0)
+                X[0] ^= P; // invert
+            else
+            {
+                t = (X[0] ^ X[i]) & P;
+                X[0] ^= t;
+                X[i] ^= t;
+            }
+    } // exchange
+    // Gray encode
+    for (i = 1; i < n; i++)
+        X[i] ^= X[i - 1];
+    t = 0;
+    for (Q = M; Q > 1; Q >>= 1)
+        if ((X[n - 1] & Q)!=0)
+            t ^= Q - 1;
+    for (i = 0; i < n; i++)
+        X[i] ^= t;
+
+    return X;
+}
+
+//extract an integer
+function hilbertIndex(hilbertAxes, numBits){
+    //addition for convenience. perhaps can speed up by comboing this with HilbertIndexTransposed
+    //this is just intended to be readable!
+    var transposedResult = HilbertIndexTransposed(hilbertAxes, numBits);
+    //console.log(transposedResult);
+    var regularResult = 0;
+    var numDimensions = hilbertAxes.length;
+
+    //this works - different order to above attempt. TODO rewrite to avoid creating separatedBits array?
+    var separatedBits = [...new Array(numBits)].map(_ => []);
+    for (var bitnum=0;bitnum<numBits; bitnum++){
+        var nextBits = transposedResult.map(component => component & 1);
+        transposedResult = transposedResult.map(component => component>>1);
+        separatedBits.push(nextBits);
+    }
+    for (var bitnum=0;bitnum<numBits; bitnum++){
+        var nextBits = separatedBits.pop();
+        for (var dd=0;dd<numDimensions;dd++){
+            regularResult<<=1;
+            regularResult+=nextBits[dd];
+        }
+    }
+
+    //return regularResult;
+    return regularResult ^ 0x80000000;  // shift so instead 0 0 to 2^31-1 then wrapping around, starts at -2^31
+}
