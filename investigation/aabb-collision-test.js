@@ -35,6 +35,9 @@ function doCirclesOnSphereTest(){
 
     var bvh = generateBvh(circles, temp3vec, 8);  //can tune group size. smallest 2 for binary tree. larger numbers for shallower trees
 
+    circles.sort(hilbertSort);
+    var bvhHilbert = generateBvh(circles, temp4vec, 8);
+
     var collisionCountSimple = 0;
     var collisionCountSimple1 = 0;
     var collisionCountSimple2 = 0;
@@ -42,6 +45,8 @@ function doCirclesOnSphereTest(){
     var collisionCountMorton = 0;
     var collisionCountBvh = 0;
     var collisionCountBvhPossibilities = 0;
+    var collisionCountBvhHilbert = 0;
+    var collisionCountBvhHilbertPossibilities = 0;
 
     console.time("simple circles");
     for (var ii=0;ii<FIRST_CIRCLE_COUNT;ii++){
@@ -89,6 +94,7 @@ function doCirclesOnSphereTest(){
     }
     console.timeEnd("morton");
 
+    countBvhFuncCalls=0;
     console.time("bvh");
     for (var ii=0;ii<FIRST_CIRCLE_COUNT;ii++){
         var circle1 = circles[ii];
@@ -103,6 +109,23 @@ function doCirclesOnSphereTest(){
     }
     console.timeEnd("bvh");
 
+    var countBvhFuncCalls1= countBvhFuncCalls;
+    countBvhFuncCalls=0;
+
+    console.time("bvh Hilbert");
+    for (var ii=0;ii<FIRST_CIRCLE_COUNT;ii++){
+        var circle1 = circles[ii];
+        var possibles = collisionTestBvh(circle1, bvhHilbert);
+
+        collisionCountBvhHilbertPossibilities+=possibles.length;
+
+        possibles.forEach(possibility => {
+            collisionCountBvhHilbert += collisionTestSimple2(circle1, possibility) ? 1:0;   
+                //TODO is AABB test applied at leaf node? perhaps shouldn't - circle test faster anyway 
+        });
+    }
+    console.timeEnd("bvh Hilbert");
+
     console.log("total collision tests: " + FIRST_CIRCLE_COUNT*NUM_CIRCLES);
     console.log("collisions detected: " + collisionCountSimple);
     console.log("collisions detected 1: " + collisionCountSimple1);
@@ -112,6 +135,9 @@ function doCirclesOnSphereTest(){
 
     console.log("possibilities processed bvh: " + collisionCountBvhPossibilities);
     console.log("collisions detected BVH: " + collisionCountBvh);
+    console.log(countBvhFuncCalls1);
+    console.log("possibilities processed bvh Hilbert: " + collisionCountBvhHilbertPossibilities);
+    console.log("collisions detected BVH Hilbert: " + collisionCountBvhHilbert);
     console.log(countBvhFuncCalls);
 }
 
@@ -199,6 +225,9 @@ function doSpheresOn3SphereTest(){
     }
     console.timeEnd("bvh for spheres");
 
+    var countBvhFuncCalls1= countBvhFuncCalls;
+    countBvhFuncCalls=0;
+
     console.time("bvh hilbert for spheres");
     for (var ii=0;ii<FIRST_CIRCLE_COUNT;ii++){
         var sphere1 = items[ii];
@@ -222,6 +251,7 @@ function doSpheresOn3SphereTest(){
 
     console.log("possibilities processed bvh: " + collisionCountBvhPossibilities);
     console.log("collisions detected BVH: " + collisionCountBvh);
+    console.log(countBvhFuncCalls1);
     console.log("possibilities processed bvh Hilbert: " + collisionCountBvhHilbertPossibilities);
     console.log("collisions detected BVH Hilbert: " + collisionCountBvhHilbert);
     console.log(countBvhFuncCalls);
@@ -272,7 +302,8 @@ function randomCircle(randFunc){
         cosAng,
         AABB,
         morton: AABB.map(morton3),
-        positionMorton: morton3(position)
+        positionMorton: morton3(position),
+        positionHilbert: hilbert3(position)
     }
 }
 function randomSphere(randFunc){
@@ -355,6 +386,15 @@ function dotProduct(first, second){
 }
 function dotProduct4(first, second){
     return first[0]*second[0] + first[1]*second[1] + first[2]*second[2] + first[3]*second[3];
+}
+
+function hilbert3(threevec){
+    var intCoords = threevec.map(xx => {
+        var intnum = (xx+0.5)*1024;    //map -0.5 to 0.5 to 0 to 1024
+        intnum = Math.min(intnum, 1023);
+        return intnum;
+    });
+    return hilbertIndex(intCoords, 10);
 }
 
 function morton3(threevec){
