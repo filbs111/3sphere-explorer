@@ -38,6 +38,8 @@ function doCirclesOnSphereTest(){
     circles.sort(hilbertSort);
     var bvhHilbert = generateBvh(circles, temp4vec, 8);
 
+    var bvhCones = generateConeBvh(circles);
+
     var collisionCountSimple = 0;
     var collisionCountSimple1 = 0;
     var collisionCountSimple2 = 0;
@@ -47,6 +49,7 @@ function doCirclesOnSphereTest(){
     var collisionCountBvhPossibilities = 0;
     var collisionCountBvhHilbert = 0;
     var collisionCountBvhHilbertPossibilities = 0;
+    var collisionCountCones = 0;
 
     console.time("simple circles");
     for (var ii=0;ii<FIRST_CIRCLE_COUNT;ii++){
@@ -126,6 +129,13 @@ function doCirclesOnSphereTest(){
     }
     console.timeEnd("bvh Hilbert");
 
+    console.time("bvh cones");
+    for (var ii=0;ii<FIRST_CIRCLE_COUNT;ii++){
+        var circle1 = circles[ii];
+        collisionCountCones+= collisionTestBvhCones(circle1, bvhCones).length;
+    }
+    console.timeEnd("bvh cones");
+
     console.log("total collision tests: " + FIRST_CIRCLE_COUNT*NUM_CIRCLES);
     console.log("collisions detected: " + collisionCountSimple);
     console.log("collisions detected 1: " + collisionCountSimple1);
@@ -139,6 +149,7 @@ function doCirclesOnSphereTest(){
     console.log("possibilities processed bvh Hilbert: " + collisionCountBvhHilbertPossibilities);
     console.log("collisions detected BVH Hilbert: " + collisionCountBvhHilbert);
     console.log(countBvhFuncCalls);
+    console.log("collisions detected BVH cones: " + collisionCountCones);
 }
 
 function doSpheresOn3SphereTest(){
@@ -508,6 +519,72 @@ function morton4(fourvec){
     return morton^ 0x80000000;
 }
 
+
+function generateConeBvh(items){
+    //just binary tree for now since can find circle surrounding 2 circles easily
+    //TODO more levels, and optimise eg bin tree by surrounding only leaf nodes (requries code for minimum bounding circle/sphere for >2)
+    //as is, is comparable to AABB also binary, but AABB works better for ~8 children per node. 
+    // doing similar for cone tree and tightening to only circle leaf nodes might make it faster than AABB...
+
+    //assume input sorted appropriately - hope Hilbert to work.
+    
+    //same logic as AABB tree building...
+    //TODO generalise logic/function? 
+    //note could build this at same time as the AABB BVH but want to do bin tree for now. 
+    if (items.length < 2){
+        return items[0];
+    }
+
+    var groups = arrayToGroups(items, 2);
+
+    var nextLayerUp = groups.map(group => {
+        
+        //assuming a bin tree so group should be of length 1.
+        
+        //find centre and cos, sin for the new cone.
+        //if rad in angle of circle1 is ang1, of circle2 is ang2, between is angBetween, is 
+        // (ang1+ang2+between)/2 -ang1   along rotation from 1 to 2.
+        // = (ang2-ang1+between)/2       ""
+        
+        //the angular radius of the bounding circle is (ang1+ang2+between)
+        
+        //calculate this jankily. TODO find efficient, neat formulation (compound angle formula etc)
+
+        //console.log(group.length);
+        if (group.length<2){
+            return group[0];    //??should this happen?
+        }
+
+        var c1 = group[0];
+        var c2 = group[1];
+        var posDotProd = dotProduct(c1.position, c2.position);
+        var safePosDotProd = Math.min(1,Math.max(-1, posDotProd));
+        var angleBetween = Math.acos(safePosDotProd);
+        var angRad = (angleBetween+c1.angRad+c2.angRad)/2;
+
+        var toRotateFrom1To2 = (angleBetween+c2.angRad-c1.angRad)/2;
+        var perpToC1 = c2.position.map((component,ii) => component - safePosDotProd*c1.position[ii]);
+        //normalise it (TODO cover possibility that len=0)
+        var len = Math.hypot.apply(null, perpToC1);
+        perpToC1 = perpToC1.map(component => component/len);
+
+        var position = c1.position.map((component, ii) => component*Math.cos(toRotateFrom1To2) + perpToC1[ii]*Math.sin(toRotateFrom1To2));
+
+        var toReturn = {
+            group,
+            position,
+            angRad, //TODO don't keep this if can eliminate from calculation by compound angle etc.
+            cosAng: Math.cos(angRad),
+            sinAng: Math.sin(angRad)
+        };
+        return toReturn;
+    });
+
+
+    return generateConeBvh(nextLayerUp);
+}
+
+
 function generateBvh(items, tempVec, groupSize){
 
     if (items.length < 2){  //TODO why is length ever 0?
@@ -616,6 +693,19 @@ function collisionTestAABBSpheres(sphere1, sphere2){    //faster still, avoids c
 function collisionTestMorton(circle1, circle2){
     return circle1.morton[0] <= circle2.morton[1] && circle2.morton[0] <= circle1.morton[1];
 }
+
+
+function collisionTestBvhCones(circle1, bvh){
+    if (!bvh.group){ //is a leaf node
+        return bvh;
+    }
+    var filteredGroup =  bvh.group.filter(
+        item =>
+        collisionTestSimple2(circle1, item)
+    );
+    return filteredGroup.map(group2 => collisionTestBvhCones(circle1, group2)).flat();
+}
+
 
 //TOOD 2 versions of this - one using just min, max morton values, one using AABB. which is faster?
 //this returns possible colliding bvh nodes in the group.
