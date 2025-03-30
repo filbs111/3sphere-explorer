@@ -3181,7 +3181,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 			mat4.multiply(mvMatrix,singleExplosion.matrix);
 			
 			//var radius = singleExplosion.life*0.0002;
-			var radius = (120-singleExplosion.life)*singleExplosion.size;	// increased from 100 so has initial size
+			var radius = (200-singleExplosion.life)*singleExplosion.size;	// increased from 100 so has initial size
 			//var radius = 0.01;
 			var opac = 0.01*singleExplosion.life;
 			
@@ -5544,12 +5544,9 @@ var iterateMechanics = (function iterateMechanics(){
 			var teapotScale = guiParams.drawShapes["teapot scale"];	//TODO don't keep reading this value? 
 			var projectedPosInObjFrame = [relativeMat[3],relativeMat[7],relativeMat[11]].map(val => val/(teapotScale*relativeMat[15]));
 			// create some bullet AABB (TODO something better!). note size here is in object frame...
-			var aabbHalfSize = 0.001;
-			var bulletAABB = [
-				projectedPosInObjFrame.map(cc => cc-aabbHalfSize),
-				projectedPosInObjFrame.map(cc => cc+aabbHalfSize)
-			];
-			if (bvhOverlapTest(bulletAABB, teapotBvh)){
+			var aabbHalfSize = 0.01;
+			
+			if (bvhSphereOverlapTest(projectedPosInObjFrame, aabbHalfSize, teapotBvh)){
 				detonateBullet(bullet);
 			}
 

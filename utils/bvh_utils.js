@@ -30,8 +30,34 @@ function createBvhFrom3dObjectData(sourceData){
 
         //TODO calculate centre position so can morton/hilbert order for grouping into tree...
 
+
+        //calculate triangle normal.
+        var vec1 = [
+            triVerts[1][0] - triVerts[0][0],
+            triVerts[1][1] - triVerts[0][1],
+            triVerts[1][2] - triVerts[0][2],
+        ];
+        var vec2 = [
+            triVerts[2][0] - triVerts[0][0],
+            triVerts[2][1] - triVerts[0][1],
+            triVerts[2][2] - triVerts[0][2],
+        ];
+        //cross product
+        var crossp = [
+            vec1[1]*vec2[2] - vec1[2]*vec2[1],
+            vec1[2]*vec2[0] - vec1[0]*vec2[2],
+            vec1[0]*vec2[1] - vec1[1]*vec2[0],
+        ];
+        //normalise it
+        var len = Math.hypot.apply(null, crossp);
+        var normal = crossp.map(cc => cc/len);
+
+        var distFromOrigin = dotProduct(triVerts[0], normal);
+
         return {
             triangleIndices: tri,
+            normal,
+            distFromOrigin,
             AABB: [minAABB, maxAABB] 
         }
     });
@@ -42,12 +68,18 @@ function createBvhFrom3dObjectData(sourceData){
     }
 }
 
-function bvhOverlapTest(testAABB, bvh){
+function bvhSphereOverlapTest(spherePos, sphereRad, bvh){
+
+    var testAABB = [
+        spherePos.map(cc => cc-sphereRad),
+        spherePos.map(cc => cc+sphereRad)
+    ];
+
     //TODO generalise this to take 2 bvhs or items with aabbs? 
     //currently bvh is just an array of triangles with AABBS
     for (var ii=0;ii< bvh.tris.length; ii++){
         if (aabbsOverlap(testAABB, bvh.tris[ii].AABB)){
-            return true;
+            return pointDistanceToTrianglePlane(spherePos, bvh.tris[ii]) < sphereRad;
         }
     }
     return false;
@@ -63,6 +95,16 @@ function aabbsOverlap(aabb1, aabb2){
     return intersection;
 }
 
+//not a full collision test with triangle, but better than just checking for point in bounding box.
+function pointDistanceToTrianglePlane(point, triangle){
+    //TODO precalculate triangle normal, 
+    var distFromPlane = dotProduct(point, triangle.normal) - triangle.distFromOrigin;
+    return Math.abs(distFromPlane);
+}
+
+function dotProduct(first, second){
+    return first[0]*second[0] + first[1]*second[1] + first[2]*second[2];
+}
 
 function arrayToGroups(initialArray, groupSize){
     https://stackoverflow.com/a/44996257
