@@ -37,6 +37,7 @@ var tetraFrameBuffers={};
 var tetraFrameSubdivBuffers={};		
 var dodecaFrameBuffers={};	
 var teapotBuffers={};
+var teapotBvh;
 var pillarBuffers={};
 var sshipBuffers={};
 var gunBuffers={};
@@ -352,6 +353,11 @@ function initBuffers(){
 	loadBufferData(tetraFrameSubdivBuffers, tetraFrameSubdivObject);
 	loadBufferData(dodecaFrameBuffers, dodecaFrameBlenderObject);
 	loadBufferData(teapotBuffers, teapotObject);
+
+	//generate bounding volume heirarchy for teapot triangles.
+	teapotBvh = createBvhFrom3dObjectData(teapotObject);
+	console.log("teapot bvh: " + JSON.stringify(teapotBvh));
+
 	loadBufferData(icoballBuffers, icoballObj);
 	loadBufferData(hyperboloidBuffers, hyperboloidData);
 	
@@ -3895,8 +3901,8 @@ var guiParams={
 		'y=w=0':false,
 		'z=w=0':false
 		},
-		teapot:false,
-		"teapot scale":0.7,
+		teapot:true,
+		"teapot scale":0.5,
 		pillars:false,
 		bendyPillars:false,
 		towers:false,
@@ -5529,6 +5535,25 @@ var iterateMechanics = (function iterateMechanics(){
 					}
 				}
 			}
+
+			//collision with teapot.
+			//transform bullet into teapot frame (similar logic to boxes etc), applying scale factor.
+			//TODO simplify this - doesn't need full matrix rotation to just pull out a column/row!
+			mat4.set(bulletMatrixTransposed, relativeMat);
+			mat4.multiply(relativeMat, teapotMatrix);
+			var teapotScale = guiParams.drawShapes["teapot scale"];	//TODO don't keep reading this value? 
+			var projectedPosInObjFrame = [relativeMat[3],relativeMat[7],relativeMat[11]].map(val => val/(teapotScale*relativeMat[15]));
+			// create some bullet AABB (TODO something better!). note size here is in object frame...
+			var aabbHalfSize = 0.001;
+			var bulletAABB = [
+				projectedPosInObjFrame.map(cc => cc-aabbHalfSize),
+				projectedPosInObjFrame.map(cc => cc+aabbHalfSize)
+			];
+			if (bvhOverlapTest(bulletAABB, teapotBvh)){
+				detonateBullet(bullet);
+			}
+
+
 			
 			var cellIdxForBullet = getGridId.forPoint(bulletPos);
 			
