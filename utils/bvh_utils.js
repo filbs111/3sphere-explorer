@@ -40,10 +40,22 @@ function createBvhFrom3dObjectData(sourceData){
         var normal = normalise(crossp);
         var distFromOrigin = dotProduct(triVerts[0], normal);
 
+        //edge normals
+        var edgeData = edgeVecs.map((edgeVec, ii) => {
+            var crossp = crossProduct(edgeVec, normal);
+            var edgeNormal = normalise(crossp);
+            var edgeDistFromOrigin = dotProduct(triVerts[ii], edgeNormal);
+            return {
+                normal: edgeNormal,
+                distFromOrigin: edgeDistFromOrigin
+            };
+        });
+
         return {
             triangleIndices: tri,
             normal,
             distFromOrigin,
+            edgeData,
             AABB: [minAABB, maxAABB] 
         }
     });
@@ -65,7 +77,22 @@ function bvhSphereOverlapTest(spherePos, sphereRad, bvh){
     //currently bvh is just an array of triangles with AABBS
     for (var ii=0;ii< bvh.tris.length; ii++){
         if (aabbsOverlap(testAABB, bvh.tris[ii].AABB)){
-            return pointDistanceToTrianglePlane(spherePos, bvh.tris[ii]) < sphereRad;
+            //check for distance from triangle plane. 
+            //with just this, result is passable so far (teapot object, shots)
+            if (Math.abs(pointSignedDistanceFromPlane(spherePos, bvh.tris[ii])) > sphereRad){
+                return false;
+            }
+            //check that within edge planes too.
+            //with this is like point collision with triangular prism minkowski sum
+            for (var ee=0;ee<3;ee++){
+                if (pointSignedDistanceFromPlane(spherePos, bvh.tris[ii].edgeData[ee]) > sphereRad){
+                    return false;
+                }
+            }
+            return true;
+            //TODO correct distance from triangle for sphere - minkowski sum should have rounded edges and corners
+            // can do with Separating Axis Test for edges, points
+            // without this might suspect may observe player object bumping on edges,points when sliding on object surface.
         }
     }
     return false;
@@ -81,11 +108,8 @@ function aabbsOverlap(aabb1, aabb2){
     return intersection;
 }
 
-//not a full collision test with triangle, but better than just checking for point in bounding box.
-function pointDistanceToTrianglePlane(point, triangle){
-    //TODO precalculate triangle normal, 
-    var distFromPlane = dotProduct(point, triangle.normal) - triangle.distFromOrigin;
-    return Math.abs(distFromPlane);
+function pointSignedDistanceFromPlane(point, plane){
+    return dotProduct(point, plane.normal) - plane.distFromOrigin;
 }
 
 function dotProduct(first, second){
