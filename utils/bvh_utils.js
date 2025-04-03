@@ -30,28 +30,14 @@ function createBvhFrom3dObjectData(sourceData){
 
         //TODO calculate centre position so can morton/hilbert order for grouping into tree...
 
-
         //calculate triangle normal.
-        var vec1 = [
-            triVerts[1][0] - triVerts[0][0],
-            triVerts[1][1] - triVerts[0][1],
-            triVerts[1][2] - triVerts[0][2],
+        var edgeVecs = [
+            vectorDifference(triVerts[1], triVerts[0]),
+            vectorDifference(triVerts[2], triVerts[1]),
+            vectorDifference(triVerts[0], triVerts[2])
         ];
-        var vec2 = [
-            triVerts[2][0] - triVerts[0][0],
-            triVerts[2][1] - triVerts[0][1],
-            triVerts[2][2] - triVerts[0][2],
-        ];
-        //cross product
-        var crossp = [
-            vec1[1]*vec2[2] - vec1[2]*vec2[1],
-            vec1[2]*vec2[0] - vec1[0]*vec2[2],
-            vec1[0]*vec2[1] - vec1[1]*vec2[0],
-        ];
-        //normalise it
-        var len = Math.hypot.apply(null, crossp);
-        var normal = crossp.map(cc => cc/len);
-
+        var crossp = crossProduct(edgeVecs[0], edgeVecs[1]);
+        var normal = normalise(crossp);
         var distFromOrigin = dotProduct(triVerts[0], normal);
 
         return {
@@ -104,6 +90,27 @@ function pointDistanceToTrianglePlane(point, triangle){
 
 function dotProduct(first, second){
     return first[0]*second[0] + first[1]*second[1] + first[2]*second[2];
+}
+
+function crossProduct(vec1, vec2){
+    return [
+        vec1[1]*vec2[2] - vec1[2]*vec2[1],
+        vec1[2]*vec2[0] - vec1[0]*vec2[2],
+        vec1[0]*vec2[1] - vec1[1]*vec2[0],
+    ];
+}
+
+function normalise(inputVector){
+    var len = Math.hypot.apply(null, inputVector);
+    return inputVector.map(cc => cc/len);
+}
+
+function vectorDifference(vec1, vec2){
+    return [
+        vec1[0] - vec2[0],
+        vec1[1] - vec2[1],
+        vec1[2] - vec2[2],
+    ];
 }
 
 function arrayToGroups(initialArray, groupSize){
