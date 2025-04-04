@@ -4022,6 +4022,8 @@ var playerLight;
 var muzzleFlashAmounts=[0,0,0,0];
 var teapotMatrix=mat4.identity();
 xyzmove4mat(teapotMatrix,[0,0,-1]);
+var teapotMatTransposed = mat4.create(teapotMatrix); mat4.transpose(teapotMatTransposed);
+
 var frigateMatrix=mat4.identity();
 xyzmove4mat(frigateMatrix,[0,.7854,0]);
 var buildingMatrix=mat4.identity();
@@ -5538,11 +5540,10 @@ var iterateMechanics = (function iterateMechanics(){
 
 			//collision with teapot.
 			//transform bullet into teapot frame (similar logic to boxes etc), applying scale factor.
-			//TODO simplify this - doesn't need full matrix rotation to just pull out a column/row!
-			mat4.set(bulletMatrixTransposed, relativeMat);
-			mat4.multiply(relativeMat, teapotMatrix);
+			var bulletPosVec = vec4.create(bulletPos);
+			mat4.multiplyVec4(teapotMatTransposed, bulletPosVec, bulletPosVec);
 			var teapotScale = guiParams.drawShapes["teapot scale"];	//TODO don't keep reading this value? 
-			var projectedPosInObjFrame = [relativeMat[3],relativeMat[7],relativeMat[11]].map(val => val/(teapotScale*relativeMat[15]));
+			var projectedPosInObjFrame = bulletPosVec.slice(0,3).map(val => val/(teapotScale*bulletPosVec[3]));
 			// create some bullet AABB (TODO something better!). note size here is in object frame...
 			var aabbHalfSize = 0.01;
 			
