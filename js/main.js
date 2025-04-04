@@ -5410,6 +5410,8 @@ var iterateMechanics = (function iterateMechanics(){
 			var bulletVel=bullet.vel;
 			xyzmove4mat(bulletMatrix,scalarvectorprod(bulletMoveAmount,bulletVel));
 			
+			var newBulletPos = bulletMatrix.slice(12);	//already copying bulletpos before moved.
+
 			mat4.set(invTargetMat,relativeMat);
 			mat4.multiply(relativeMat, bulletMatrix);
 			
@@ -5542,12 +5544,15 @@ var iterateMechanics = (function iterateMechanics(){
 			//transform bullet into teapot frame (similar logic to boxes etc), applying scale factor.
 			var bulletPosVec = vec4.create(bulletPos);
 			mat4.multiplyVec4(teapotMatTransposed, bulletPosVec, bulletPosVec);
+			var bulletPosEndVec = vec4.create(newBulletPos);
+			mat4.multiplyVec4(teapotMatTransposed, bulletPosEndVec, bulletPosEndVec);
+
 			var teapotScale = guiParams.drawShapes["teapot scale"];	//TODO don't keep reading this value? 
 			var projectedPosInObjFrame = bulletPosVec.slice(0,3).map(val => val/(teapotScale*bulletPosVec[3]));
-			// create some bullet AABB (TODO something better!). note size here is in object frame...
-			var aabbHalfSize = 0.01;
-			
-			if (bvhSphereOverlapTest(projectedPosInObjFrame, aabbHalfSize, teapotBvh)){
+			var projectedPosEndInObjFrame = bulletPosEndVec.slice(0,3).map(val => val/(teapotScale*bulletPosEndVec[3]));
+
+			//if (bvhSphereOverlapTest(projectedPosInObjFrame, 0.01, teapotBvh)){
+			if (bvhRayOverlapTest(projectedPosInObjFrame, projectedPosEndInObjFrame, teapotBvh)){
 				detonateBullet(bullet);
 			}
 

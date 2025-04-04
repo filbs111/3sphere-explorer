@@ -66,6 +66,16 @@ function createBvhFrom3dObjectData(sourceData){
     }
 }
 
+function bvhRayOverlapTest(rayStart, rayEnd, bvh){
+    var rayAABB = [rayStart, rayEnd];
+    for (var ii=0;ii< bvh.tris.length; ii++){
+        if (aabbsOverlap(rayAABB, bvh.tris[ii].AABB)){
+            return true;    //TODO check ray collision with triangle? (without, works surprisingly fine for teapot!)
+        }
+    }
+    return false;
+}
+
 function bvhSphereOverlapTest(spherePos, sphereRad, bvh){
 
     var testAABB = [
