@@ -67,7 +67,11 @@ function createBvhFrom3dObjectData(sourceData){
 }
 
 function bvhRayOverlapTest(rayStart, rayEnd, bvh){
-    var rayAABB = [rayStart, rayEnd];
+    var tempVec3 = [...new Array(3)];
+    var rayAABB = [Math.min, Math.max].map(minmaxfunc => {
+        return tempVec3.map( (unused,ii) => {return minmaxfunc(rayStart[ii], rayEnd[ii]);});
+    });
+    console.log(rayAABB);
     for (var ii=0;ii< bvh.tris.length; ii++){
         if (aabbsOverlap(rayAABB, bvh.tris[ii].AABB)){
             return true;    //TODO check ray collision with triangle? (without, works surprisingly fine for teapot!)
