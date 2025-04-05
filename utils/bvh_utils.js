@@ -73,8 +73,14 @@ function bvhRayOverlapTest(rayStart, rayEnd, bvh){
     });
     console.log(rayAABB);
     for (var ii=0;ii< bvh.tris.length; ii++){
-        if (aabbsOverlap(rayAABB, bvh.tris[ii].AABB)){
-            return true;    //TODO check ray collision with triangle? (without, works surprisingly fine for teapot!)
+        var thisTri = bvh.tris[ii];
+        if (aabbsOverlap(rayAABB, thisTri.AABB)){
+            startDistFromPlane = dotProduct(thisTri.normal, rayStart) - thisTri.distFromOrigin;
+            endDistFromPlane = dotProduct(thisTri.normal, rayEnd) - thisTri.distFromOrigin;
+
+            if (startDistFromPlane>0 && endDistFromPlane<=0){
+                return true;   //crosses plane test (in one direction. if want both ways could xor conditions)
+            }
         }
     }
     return false;
