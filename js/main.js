@@ -5574,6 +5574,13 @@ var iterateMechanics = (function iterateMechanics(){
 				var bulletPosEndVec = vec4.create(newBulletPos);
 				mat4.multiplyVec4(teapotMatTransposed, bulletPosEndVec, bulletPosEndVec);
 
+				//reject if bullet start or end is in other hemisphere to object checking collision with.
+				//NOTE this is a stopgap measure - when using world BVH, or long ray collision with world object bounds,
+				// won't be necessary to do this.
+				if (bulletPosVec[3]<=0 || bulletPosEndVec[3]<=0){
+					return;
+				}
+
 				var projectedPosInObjFrame = bulletPosVec.slice(0,3).map(val => val/(teapotScale*bulletPosVec[3]));
 				var projectedPosEndInObjFrame = bulletPosEndVec.slice(0,3).map(val => val/(teapotScale*bulletPosEndVec[3]));
 
