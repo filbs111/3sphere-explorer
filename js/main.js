@@ -1695,8 +1695,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		gl.uniform1f(activeShaderProgram.uniforms.uVertexMove, 0.01*Math.abs(Math.cos((Math.PI/1000)*(frameTime % 2000 ))) + boxSize);
 		
 		mat4.set(invertedWorldCamera, mvMatrix);
-		mat4.multiply(mvMatrix,teapotMatrix);
-		mat4.set(teapotMatrix, mMatrix);
+		mat4.multiply(mvMatrix,explodingBoxMatrix);
+		mat4.set(explodingBoxMatrix, mMatrix);
 		
 		//gl.activeTexture(gl.TEXTURE0);
 		bind2dTextureIfRequired(texture);
@@ -2487,10 +2487,13 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 		modelScale = guiParams.drawShapes["teapot scale"];
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
-		mat4.set(invertedWorldCamera, mvMatrix);
-		mat4.multiply(mvMatrix,teapotMatrix);
-		mat4.set(teapotMatrix, mMatrix);	
-		drawObjectFromBuffers(teapotBuffers, activeShaderProgram);
+
+		teapotMatrices.mats.forEach(teapotMatrix => {
+			mat4.set(invertedWorldCamera, mvMatrix);
+			mat4.multiply(mvMatrix,teapotMatrix);
+			mat4.set(teapotMatrix, mMatrix);	
+			drawObjectFromBuffers(teapotBuffers, activeShaderProgram);
+		});
 	}
 	
 	if (guiParams.drawShapes.hyperboloid){
@@ -4020,9 +4023,28 @@ var worldColorsPlain=[];
 var playerLightUnscaled;
 var playerLight;
 var muzzleFlashAmounts=[0,0,0,0];
-var teapotMatrix=mat4.identity();
-xyzmove4mat(teapotMatrix,[0,0,-1]);
-var teapotMatTransposed = mat4.create(teapotMatrix); mat4.transpose(teapotMatTransposed);
+
+var teapotMatrices = (() => {
+	var mats = [...new Array(2)].map(x => mat4.identity());
+	
+	xyzmove4mat(mats[0],[0,0,-1]);
+
+	xyzmove4mat(mats[1],[0,0,-1]);
+	xyzmove4mat(mats[1],[0,1,0]);
+
+	var transposedMats = mats.map(mm => {
+		var copy = mat4.create(mm);
+		mat4.transpose(copy);
+		return copy;
+	})
+
+	return {
+		mats,
+		transposedMats
+	}
+})();
+var explodingBoxMatrix = teapotMatrices.mats[0];
+
 
 var frigateMatrix=mat4.identity();
 xyzmove4mat(frigateMatrix,[0,.7854,0]);
@@ -4040,6 +4062,9 @@ mat4.transpose(transposedOctoFractalMatrix);
 var turretBaseMatrix=newIdMatWithQuats();
 xyzrotate4mat(turretBaseMatrix,[0,0,0.5]);	//TODO put in xy map position.
 xyzmove4mat(turretBaseMatrix,[0,.78,0]);
+
+
+
 
 
 var pillarMatrices=[];
@@ -4578,7 +4603,7 @@ var iterateMechanics = (function iterateMechanics(){
 		//TODO general func to set everything or at least calculate settings object. (so don't repeat so much code here and above for explosions)
 		//teapot/exploding box visually represents ticking sound (coincidence that exploding box has same tempo! TODO properly synchronise)
 		mat4.set(invertedPlayerCamera,tmpRelativeMat);
-		mat4.multiply(tmpRelativeMat, teapotMatrix);				
+		mat4.multiply(tmpRelativeMat, explodingBoxMatrix);
 		var distance = distBetween4mats(tmpRelativeMat, identMat);		
 		var soundSize = 0.02;	//closest distance can get to sound, where volume is 1
 		var vol = soundSize/Math.hypot(distance, soundSize);
@@ -5541,23 +5566,24 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 
 			//collision with teapot.
-			//transform bullet into teapot frame (similar logic to boxes etc), applying scale factor.
-			var bulletPosVec = vec4.create(bulletPos);
-			mat4.multiplyVec4(teapotMatTransposed, bulletPosVec, bulletPosVec);
-			var bulletPosEndVec = vec4.create(newBulletPos);
-			mat4.multiplyVec4(teapotMatTransposed, bulletPosEndVec, bulletPosEndVec);
-
 			var teapotScale = guiParams.drawShapes["teapot scale"];	//TODO don't keep reading this value? 
-			var projectedPosInObjFrame = bulletPosVec.slice(0,3).map(val => val/(teapotScale*bulletPosVec[3]));
-			var projectedPosEndInObjFrame = bulletPosEndVec.slice(0,3).map(val => val/(teapotScale*bulletPosEndVec[3]));
+			//transform bullet into teapot frame (similar logic to boxes etc), applying scale factor.
+			teapotMatrices.transposedMats.forEach(teapotMatTransposed => {
+				var bulletPosVec = vec4.create(bulletPos);
+				mat4.multiplyVec4(teapotMatTransposed, bulletPosVec, bulletPosVec);
+				var bulletPosEndVec = vec4.create(newBulletPos);
+				mat4.multiplyVec4(teapotMatTransposed, bulletPosEndVec, bulletPosEndVec);
 
-			//if (bvhSphereOverlapTest(projectedPosInObjFrame, 0.01, teapotBvh)){
-			if (bvhRayOverlapTest(projectedPosInObjFrame, projectedPosEndInObjFrame, teapotBvh)){
-				detonateBullet(bullet);
-			}
+				var projectedPosInObjFrame = bulletPosVec.slice(0,3).map(val => val/(teapotScale*bulletPosVec[3]));
+				var projectedPosEndInObjFrame = bulletPosEndVec.slice(0,3).map(val => val/(teapotScale*bulletPosEndVec[3]));
 
-
+				//if (bvhSphereOverlapTest(projectedPosInObjFrame, 0.01, teapotBvh)){
+				if (bvhRayOverlapTest(projectedPosInObjFrame, projectedPosEndInObjFrame, teapotBvh)){
+					detonateBullet(bullet);
+				}
+			});
 			
+
 			var cellIdxForBullet = getGridId.forPoint(bulletPos);
 			
 			//tetrahedron. (16-cell and 600-cell)
