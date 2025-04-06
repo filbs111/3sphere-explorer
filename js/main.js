@@ -3994,7 +3994,7 @@ var guiParams={
 		test1:false
 	},
 	debug:{
-		closestPoint:false,
+		closestPoint:true,
 		buoys:false,
 		nmapUseShader2:true,
 		showSpeedOverlay:false,
@@ -5069,6 +5069,7 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 			processMengerSpongeCollision();	//after boxes to reuse whoosh noise (assume not close to both at same time)
 			processOctoFractalCollision();
+			processTriangleObjectCollision();
 
 			//whoosh for boxes, using result from closest point calculation done inside collision function
 			var distanceForBoxNoise = 100;
@@ -5346,6 +5347,34 @@ var iterateMechanics = (function iterateMechanics(){
 					}
 				}
 			}
+
+			
+			function processTriangleObjectCollision(){
+				//TODO use collide by closest point function collidePlayerWithObjectByClosestPointFunc ?
+				//TODO multiple objects (currently only 1st teapot.)
+				var teapotScale = guiParams.drawShapes["teapot scale"];
+
+				var playerPosVec = vec4.create(playerPos);
+				mat4.multiplyVec4(teapotMatrices.transposedMats[0], playerPosVec, playerPosVec);
+				
+				if (playerPosVec[3]<=0){
+					return;
+				}
+
+				var projectedPosInObjFrame = playerPosVec.slice(0,3).map(val => val/(teapotScale*playerPosVec[3]));
+				var closestPointInObjectFrame = closestPointBvh(projectedPosInObjFrame, teapotBvh);
+				
+				//draw object - position at teapot, then move by 
+				mat4.set(teapotMatrices.mats[0], debugDraw.mats[8]);
+
+				var positionInProjectedSpace = closestPointInObjectFrame.map(val => val*teapotScale);
+				var veclen = Math.hypot.apply(null, positionInProjectedSpace);
+				var correction = -Math.atan(veclen)/veclen;
+				var angleToMove = positionInProjectedSpace.map(val => val*correction);
+
+				xyzmove4mat(debugDraw.mats[8], angleToMove);	//draw x on closest vertex
+			}
+
 
 
 			rotatePlayer(scalarvectorprod(timeStep * rotateSpeed,playerAngVelVec));

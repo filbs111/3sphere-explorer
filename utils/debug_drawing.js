@@ -1,6 +1,6 @@
 var debugDraw = (function(){
 
-    var nummats = 8;
+    var nummats = 9;
     var mats = [nummats];
     for (var ii=0;ii<nummats;ii++){
         mats[ii] = mat4.identity();
@@ -59,6 +59,9 @@ var debugDraw = (function(){
 
         //octo fractal
         drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[7], colorArrs.red, 0.01);
+
+        //triangle objs
+        drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[8], colorArrs.red, 0.01);
     }
     
     return {

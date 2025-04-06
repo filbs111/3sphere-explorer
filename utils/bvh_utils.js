@@ -156,6 +156,35 @@ function collisionTestBvh(aabb, bvh){
     return filteredGroup.map(group2 => collisionTestBvh(aabb, group2)).flat();
 }
 
+function closestPointBvh(fromPoint, bvh){
+    //want to find point in frame of object and vector from point to fromPoint (and its length)
+    // for sphere collision, and flypast audio (with doppler shift, distance falloff)
+    //actually collision detection is simpler - can already skip anything outside collison sphere size
+
+    //brute force can just look at every triangle.
+    //faster version can a range of possible min max distance based on the aabb
+    //then can skip over anything that's outside of that range. may wish to explore bvh tree closest first.
+    //expect not urgent optimisation - only doing it for player object for now.
+
+    //closest in 3d projected space is likely good enough for smaller objects 
+    // can check how close matches precise 4d version.
+
+    //basic version- just find closest vertex in object frame (won't be correct if closest point is an edge or face)
+    var closestsq = Number.MAX_VALUE;
+    var closest;
+    var verts = bvh.verts;
+    for (var ii=0;ii<verts.length;ii++){
+        var vert = verts[ii];
+        var diff = vectorDifference(fromPoint, vert);
+        var difflensq = diff.reduce( (cumul, current) => cumul+current*current, 0);
+        if (difflensq< closestsq){
+            closest = vert;
+            closestsq = difflensq;
+        }
+    }
+    return closest;
+}
+
 //currently unused. TODO use for player sphere collision with level?
 // function bvhSphereOverlapTest(spherePos, sphereRad, bvh){
 
