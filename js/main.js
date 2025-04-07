@@ -5373,6 +5373,18 @@ var iterateMechanics = (function iterateMechanics(){
 				var angleToMove = positionInProjectedSpace.map(val => val*correction);
 
 				xyzmove4mat(debugDraw.mats[8], angleToMove);	//draw x on closest vertex
+
+
+				//sound. 
+				//TODO efficient distance calculation without matrix mult
+				mat4.set(playerMatrixTransposed, tmpRelativeMat);
+				mat4.multiply(tmpRelativeMat, debugDraw.mats[8]);
+				distanceForNoise = distBetween4mats(tmpRelativeMat, identMat);
+				var soundSize = 0.002;
+				panForNoise = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));
+				
+				//note spd (speed) in is in duocylinder frame, but teapot currently does not rotate with it.
+				setSoundHelper(myAudioPlayer.setWhooshSoundTriangleMesh, distanceForNoise, panForNoise, spd);
 			}
 
 

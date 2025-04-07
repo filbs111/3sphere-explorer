@@ -133,12 +133,15 @@ var myAudioPlayer = (function(){
 	var whooshSoundBoxInstance;
 	var whooshSoundMengerInstance;
 	var whooshSoundOctoFractalInstance;
+	var whooshSoundTriangleMeshInstance;
+
 	var playWhooshSound= function(){
 		console.log("attempting to play whoosh sound");
 		whooshSoundInstance=whooshSound.play(0,0,true);
 		whooshSoundBoxInstance=whooshSound.play(0,0,true);
 		whooshSoundMengerInstance=whooshSound.play(0,0,true);
 		whooshSoundOctoFractalInstance=whooshSound.play(0,0,true);
+		whooshSoundTriangleMeshInstance=whooshSound.play(0,0,true);
 	}
 	whooshSound = new MySound('audio/blowtorch_50k.mp3', playWhooshSound);
 	
@@ -177,6 +180,9 @@ var myAudioPlayer = (function(){
 		},
 		setWhooshSoundOctoFractal: function(settings){
 			if (whooshSoundOctoFractalInstance){whooshSoundOctoFractalInstance.setAll(settings);}
+		},
+		setWhooshSoundTriangleMesh: function(settings){
+			if (whooshSoundTriangleMeshInstance){whooshSoundTriangleMeshInstance.setAll(settings);}
 		},
 		setJetSound: function(settings){
 			if (jetSoundInstance){jetSoundInstance.setAll(settings);}
