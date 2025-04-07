@@ -2002,8 +2002,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		}
 	
 		if (Object.keys(voxTerrainData).includes(worldInfo.duocylinderModel)){
-			drawTriAxisCrossForMatrixColorAndScale(closestPointTestMat, colorArrs.magenta, 0.02);
-			drawTriAxisCrossForMatrixColorAndScale(voxCollisionDebugMat, colorArrs.blue, 0.01);
+			debugDraw.drawTriAxisCrossForMatrixColorAndScale(closestPointTestMat, colorArrs.magenta, 0.02);
+			debugDraw.drawTriAxisCrossForMatrixColorAndScale(voxCollisionDebugMat, colorArrs.blue, 0.01);
 		}
 	}
 	

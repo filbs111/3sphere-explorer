@@ -66,6 +66,7 @@ var debugDraw = (function(){
     
     return {
         mats,
-        drawDebugStuff
+        drawDebugStuff,
+        drawTriAxisCrossForMatrixColorAndScale
     }
 })();
