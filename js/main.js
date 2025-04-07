@@ -1913,7 +1913,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quadBuffers2D.vertexIndexBuffer);
 		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uPMatrix, false, pMatrix);
 		
-		mat4.set(invertedWorldCameraDuocylinderFrame, mvMatrix);
+		mat4.set(invertedWorldCamera, mvMatrix);
 		//normally in drawObjectFromPreppedBuffers
 		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uMVMatrix, false, mvMatrix);
 		
@@ -5627,7 +5627,7 @@ var iterateMechanics = (function iterateMechanics(){
 
 				//if (bvhSphereOverlapTest(projectedPosInObjFrame, 0.01, teapotBvh)){
 				if (bvhRayOverlapTest(projectedPosInObjFrame, projectedPosEndInObjFrame, teapotBvh)){
-					detonateBullet(bullet);
+					detonateBullet(bullet, false, [0.3,0.3,0.8]);
 				}
 			});
 			
@@ -5830,9 +5830,12 @@ var iterateMechanics = (function iterateMechanics(){
 				new Explosion(bullet, 0.0001, [1,0.5,0.25], false, true);
 				explosionParticles.makeExplosion(matrix.slice(12), frameTime, color,0);
 			}else{
+				explosionParticles.makeExplosion(matrix.slice(12), frameTime, color,0);
+					//TODO include velocity for explosion particles due to duocylinder rotation.
+					//should see slower particles fall to ground, but won't look good yet because particles disappear quickly, abruptly.
+
 				rotate4matCols(matrix, 0, 1, guiSettingsForWorld[bullet.world].spin);	//get bullet matrix in frame of duocylinder. might be duplicating work from elsewhere.
 				new Explosion(bullet, 0.0001, [0.2,0.4,0.6],true, true);	//different colour for debugging
-				explosionParticles.makeExplosion(matrix.slice(12), frameTime, color,0);
 			}
 
 			matPool.destroy(matrix);

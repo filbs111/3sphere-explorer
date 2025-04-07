@@ -34,7 +34,7 @@ var explosionParticleArrs = (function(numworlds){
         this.nextBlock = (this.nextBlock+1)%numBlocks;
         
         var mat = matForPos(posn);
-        var time_angle = time*0.0005;	//this will change depending on shader cycle time. 
+        var time_angle = time*0.0005;	//matches number in shader simple-moving-billboard-vs.glsl
         var ct = Math.cos(time_angle);
         var st = Math.sin(time_angle);
         
