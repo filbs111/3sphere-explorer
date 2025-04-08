@@ -123,7 +123,7 @@ function bvhRayOverlapTest(rayStart, rayEnd, bvh){
     });
     
     var possibles = collisionTestBvh(rayAABB, bvh.tris);
-    
+
     for (var ii=0;ii< possibles.length; ii++){
         var thisTri = possibles[ii];
         if (aabbsOverlap(rayAABB, thisTri.AABB)){
@@ -182,6 +182,24 @@ function closestPointBvh(fromPoint, bvh){
             closestsq = difflensq;
         }
     }
+
+    //hack to get all triangles from bvh
+    var matchAllAABB = [Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY].map(xx=>[xx,xx,xx]);
+    var allTris = collisionTestBvh(matchAllAABB, bvh.tris);
+
+    //check each triangle.
+    //temporary - just check each triangle's centre position
+    allTris.forEach(tri => {
+        var triPoints = tri.triangleIndices.map(pp => verts[pp]);
+        var averagePoint = triPoints.reduce( (cumul, pp) => cumul.map((xx,ii) => xx+pp[ii]),[0,0,0]).map(xx => xx/3);
+        var diff = vectorDifference(fromPoint, averagePoint);
+        var difflensq = diff.reduce( (cumul, current) => cumul+current*current, 0);
+        if (difflensq< closestsq){
+            closest = averagePoint;
+            closestsq = difflensq;
+        }
+    });
+
     return closest;
 }
 
