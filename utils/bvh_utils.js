@@ -156,6 +156,7 @@ function collisionTestBvh(aabb, bvh){
     return filteredGroup.map(group2 => collisionTestBvh(aabb, group2)).flat();
 }
 
+var triObjClosestPointType=0; //0=vert, 1=edge, 2=face
 function closestPointBvh(fromPoint, bvh){
     //want to find point in frame of object and vector from point to fromPoint (and its length)
     // for sphere collision, and flypast audio (with doppler shift, distance falloff)
@@ -171,17 +172,17 @@ function closestPointBvh(fromPoint, bvh){
 
     //basic version- just find closest vertex in object frame (won't be correct if closest point is an edge or face)
     var closestsq = Number.MAX_VALUE;
-    var closest;
+    //var closest;
     var verts = bvh.verts;
-    for (var ii=0;ii<verts.length;ii++){
-        var vert = verts[ii];
-        var diff = vectorDifference(fromPoint, vert);
-        var difflensq = diff.reduce( (cumul, current) => cumul+current*current, 0);
-        if (difflensq< closestsq){
-            closest = vert;
-            closestsq = difflensq;
-        }
-    }
+    // for (var ii=0;ii<verts.length;ii++){
+    //     var vert = verts[ii];
+    //     var diff = vectorDifference(fromPoint, vert);
+    //     var difflensq = diff.reduce( (cumul, current) => cumul+current*current, 0);
+    //     if (difflensq< closestsq){
+    //         closest = vert;
+    //         closestsq = difflensq;
+    //     }
+    // }
 
     //hack to get all triangles from bvh
     var matchAllAABB = [Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY].map(xx=>[xx,xx,xx]);
@@ -189,18 +190,101 @@ function closestPointBvh(fromPoint, bvh){
 
     //check each triangle.
     //temporary - just check each triangle's centre position
+    // allTris.forEach(tri => {
+    //     var triPoints = tri.triangleIndices.map(pp => verts[pp]);
+    //     var averagePoint = triPoints.reduce( (cumul, pp) => cumul.map((xx,ii) => xx+pp[ii]),[0,0,0]).map(xx => xx/3);
+    //     var diff = vectorDifference(fromPoint, averagePoint);
+    //     var difflensq = diff.reduce( (cumul, current) => cumul+current*current, 0);
+    //     if (difflensq< closestsq){
+    //         closest = averagePoint;
+    //         closestsq = difflensq;
+    //     }
+    // });
+
+
+    var chosenVectorToClosestPoint;
+
+    //for each triangle, test dist from edges, face
+    // can do this by separating axis test
     allTris.forEach(tri => {
+        var greatestSeparation = Number.NEGATIVE_INFINITY;
+        var chosenPointTypeThisFace = -1;
+        //var greatestSeparationSq = 0;
+        var vectorToClosestPoint;
         var triPoints = tri.triangleIndices.map(pp => verts[pp]);
-        var averagePoint = triPoints.reduce( (cumul, pp) => cumul.map((xx,ii) => xx+pp[ii]),[0,0,0]).map(xx => xx/3);
-        var diff = vectorDifference(fromPoint, averagePoint);
-        var difflensq = diff.reduce( (cumul, current) => cumul+current*current, 0);
-        if (difflensq< closestsq){
-            closest = averagePoint;
-            closestsq = difflensq;
+        //SAT test for verts? 
+        //each corner can only be closest point on the triangle if the other points are behind this point in the 
+        //direction from the corner in question to the fromPoint.
+        // eg tri (a,b,c), fromPoint p . if (f->a).(a->b)>0 and (f->a).(a->c)>0, then a is closest point, etc
+        // maybe could make more efficient using logic like that.
+        //for now simple SAT test.
+
+        triPoints.forEach(pp => {
+            var vecToCorner = vectorDifference(pp, fromPoint);
+            var vecToCornerLenSq = dotProduct(vecToCorner, vecToCorner);
+            var vecToCornerLen = Math.sqrt(vecToCornerLenSq);
+            //loop over all points, find minimum in this direction (for point in question this calc can is unnecessary, but do 
+            // for all 3 points for simplicity)
+            var dotProds = triPoints.map(qq=> dotProduct(vecToCorner, qq) );
+            var leastDotProd = Math.min.apply(null, dotProds);
+            var leastDistance = leastDotProd-dotProduct(vecToCorner, fromPoint);
+            //AFAICT this can only be the greatest separating axis (and outside triangle) if that's between 0 and vecToCorner^2
+            //but can just find the greatest separation without checking.
+            
+            var absoluteDistance = leastDistance /vecToCornerLen;
+            if (absoluteDistance>greatestSeparation){
+                greatestSeparation=absoluteDistance;
+                vectorToClosestPoint = vecToCorner;
+                chosenPointTypeThisFace = 0;
+            }
+
+            //var absoluteDistanceSq = leastDistance*leastDistance /vecToCornerLenSq;   //TODO use this to avoid sqrt
+            // if (leastDistance> 0 && absoluteDistanceSq>greatestSeparationSq){
+            //     greatestSeparationSq=absoluteDistanceSq;
+            //     vectorToClosestPoint = vecToCorner;
+            // }
+        });
+
+        //edges and normal
+        var distToPlane = dotProduct(tri.normal, fromPoint) - tri.distFromOrigin;
+        var vecToPlane = tri.normal.map(xx=> -xx*distToPlane);
+
+        //plane separation.
+        //TODO skip this if outside any edge?
+        if (Math.abs(distToPlane)>greatestSeparation){  //TODO is abs necessary if always outside objects?
+            greatestSeparation = Math.abs(distToPlane);
+            vectorToClosestPoint = vecToPlane;
+            chosenPointTypeThisFace = 2;
+        }
+
+        //check 3 edges - if dot prod of point with edge direction >0 then check dist from edge.
+        for (var ee=0;ee<3;ee++){
+            //distance from this edge. is pythagoras of dist from plane and dist in edge direction.
+            var edgeData = tri.edgeData[ee];
+            //var firstPointOnEdge = triPoints[ee];
+            var distInEdgeDir = dotProduct(edgeData.normal, fromPoint) - edgeData.distFromOrigin;
+            if (distInEdgeDir>0){
+                var totalDistSq = distInEdgeDir*distInEdgeDir + distToPlane*distToPlane;
+                var vecInEdgeDir = edgeData.normal.map(xx=> xx*distInEdgeDir);
+                if (totalDistSq>greatestSeparation*greatestSeparation){
+                    greatestSeparation = Math.sqrt(totalDistSq);    //TODO avoid sqrt, keep as square?
+                    vectorToClosestPoint = vectorDifference(vecToPlane, vecInEdgeDir);
+                    chosenPointTypeThisFace = 1;
+                }
+            }
+        }
+
+        //TODO avoid squaring here.
+        if (greatestSeparation*greatestSeparation < closestsq){
+            chosenVectorToClosestPoint = vectorToClosestPoint;
+            closestsq = greatestSeparation*greatestSeparation;
+            triObjClosestPointType = chosenPointTypeThisFace;
         }
     });
 
-    return closest;
+    var closestPoint = vectorSum(fromPoint, chosenVectorToClosestPoint);
+
+    return closestPoint;
 }
 
 //currently unused. TODO use for player sphere collision with level?
@@ -265,6 +349,14 @@ function crossProduct(vec1, vec2){
 function normalise(inputVector){
     var len = Math.hypot.apply(null, inputVector);
     return inputVector.map(cc => cc/len);
+}
+
+function vectorSum(vec1, vec2){
+    return [
+        vec1[0] + vec2[0],
+        vec1[1] + vec2[1],
+        vec1[2] + vec2[2],
+    ];
 }
 
 function vectorDifference(vec1, vec2){

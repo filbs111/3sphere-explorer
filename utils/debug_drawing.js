@@ -61,7 +61,8 @@ var debugDraw = (function(){
         drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[7], colorArrs.red, 0.01);
 
         //triangle objs
-        drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[8], colorArrs.red, 0.01);
+        drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[8], 
+            [colorArrs.red,colorArrs.green,colorArrs.blue][triObjClosestPointType], 0.01);
     }
     
     return {
