@@ -4478,7 +4478,8 @@ var iterateMechanics = (function iterateMechanics(){
 	var lastPlayerAngMove = [0,0,0];	//for interpolation
 	
 	var currentPen=0;	//for bodgy box collision (todo use collision points array)
-		
+	var currentTriangleObjectPlayerPen=0;
+
 	var bulletMatrixTransposed = mat4.create();	//TODO? instead of transposing matrices describing possible colliding objects orientation.
 	var bulletMatrixTransposedDCRefFrame=mat4.create();		//alternatively might store transposed other objects orientation permanently		
 
@@ -5047,7 +5048,7 @@ var iterateMechanics = (function iterateMechanics(){
 			var playerMatrixTransposed = mat4.create(playerCamera);	//instead of transposing matrices describing possible colliding objects orientation.
 																//alternatively might store transposed other objects orientation permanently
 			mat4.transpose(playerMatrixTransposed);
-			var playerMatrixTransposedDCRefFrame=playerMatrixTransposed;	//in frame of duocylinder
+			var playerMatrixTransposedDCRefFrame=mat4.create(playerMatrixTransposed);	//in frame of duocylinder
 					//not using create, because playerMatrixTransposed is not subsequently used
 			rotate4mat(playerMatrixTransposedDCRefFrame, 0, 1, dcSpin);
 			
@@ -5385,8 +5386,34 @@ var iterateMechanics = (function iterateMechanics(){
 				
 				//note spd (speed) in is in duocylinder frame, but teapot currently does not rotate with it.
 				setSoundHelper(myAudioPlayer.setWhooshSoundTriangleMesh, distanceForNoise, panForNoise, spd);
-			}
 
+
+				//player collision - apply reaction force due to penetration, with some smoothing (like spring/damper)
+				//cribbed from collidePlayerWithObjectByClosestPointFunc
+				var lastTriangleObjPen = currentTriangleObjectPlayerPen;
+				currentTriangleObjectPlayerPen = settings.playerBallRad - distanceForNoise;
+				var penChange = currentTriangleObjectPlayerPen - lastTriangleObjPen;
+				var reactionForce = Math.max(50*currentTriangleObjectPlayerPen + 1000*penChange, 0);
+
+				if (Math.random()<0.01){
+					console.log({
+						currentTriangleObjectPlayerPen,
+						reactionForce
+					});
+				}
+				
+				if (currentTriangleObjectPlayerPen > 0 && reactionForce> 0){
+						//different to collidePlayerWithObjectByClosestPointFunc, which takes places in duocylinder spun space.
+					var relativePosC = tmpRelativeMat.slice(12);
+					//normalise. note could just assume that length is player radius, or matches existing calculation for penetration etc, to simplify.
+					var relativePosCLength = Math.sqrt(1-relativePosC[3]*relativePosC[3]);	//assume matrix SO4
+					var relativePosCNormalised = relativePosC.map(x=>x/relativePosCLength);
+					var forcePlayerFrame = relativePosCNormalised.map(elem => elem*reactionForce);
+					for (var cc=0;cc<3;cc++){
+						playerVelVec[cc]+=forcePlayerFrame[cc];
+					}
+				}
+			}
 
 
 			rotatePlayer(scalarvectorprod(timeStep * rotateSpeed,playerAngVelVec));
