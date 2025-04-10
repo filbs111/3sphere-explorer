@@ -74,7 +74,7 @@ function createBvhFrom3dObjectData(sourceData){
 
     return {
         verts,   //suspect only require vertex data.
-        tris: generateBvh(trisWithAABB, 4)
+        tris: generateBvh(trisWithAABB, 16)
     }
 
     function generateBvh(items, groupSize){
@@ -157,7 +157,23 @@ function collisionTestBvh(aabb, bvh){
 }
 
 var triObjClosestPointType=0; //0=vert, 1=edge, 2=face
-function closestPointBvh(fromPoint, bvh){
+
+function closestPointBvhBruteForce(fromPoint, bvh){
+    var matchAllAABB = [Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY].map(xx=>[xx,xx,xx]);
+    var allTris = collisionTestBvh(matchAllAABB, bvh.tris);
+    return closestPointForTris(fromPoint, bvh.verts, allTris);    //tris returned from bvh func
+}
+
+function closestPointBvhEfficient(fromPoint, bvh){
+    var possibles = collisionTestPossibleClosest(fromPoint, bvh.tris, Number.POSITIVE_INFINITY);
+    if (Math.random()<0.01){
+        console.log(possibles.length);
+    }
+    return closestPointForTris(fromPoint, bvh.verts, possibles); 
+}
+
+
+function closestPointForTris(fromPoint, verts, tris){
     //want to find point in frame of object and vector from point to fromPoint (and its length)
     // for sphere collision, and flypast audio (with doppler shift, distance falloff)
     //actually collision detection is simpler - can already skip anything outside collison sphere size
@@ -170,43 +186,13 @@ function closestPointBvh(fromPoint, bvh){
     //closest in 3d projected space is likely good enough for smaller objects 
     // can check how close matches precise 4d version.
 
-    //basic version- just find closest vertex in object frame (won't be correct if closest point is an edge or face)
     var closestsq = Number.MAX_VALUE;
-    //var closest;
-    var verts = bvh.verts;
-    // for (var ii=0;ii<verts.length;ii++){
-    //     var vert = verts[ii];
-    //     var diff = vectorDifference(fromPoint, vert);
-    //     var difflensq = diff.reduce( (cumul, current) => cumul+current*current, 0);
-    //     if (difflensq< closestsq){
-    //         closest = vert;
-    //         closestsq = difflensq;
-    //     }
-    // }
-
-    //hack to get all triangles from bvh
-    var matchAllAABB = [Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY].map(xx=>[xx,xx,xx]);
-    var allTris = collisionTestBvh(matchAllAABB, bvh.tris);
-
-    //check each triangle.
-    //temporary - just check each triangle's centre position
-    // allTris.forEach(tri => {
-    //     var triPoints = tri.triangleIndices.map(pp => verts[pp]);
-    //     var averagePoint = triPoints.reduce( (cumul, pp) => cumul.map((xx,ii) => xx+pp[ii]),[0,0,0]).map(xx => xx/3);
-    //     var diff = vectorDifference(fromPoint, averagePoint);
-    //     var difflensq = diff.reduce( (cumul, current) => cumul+current*current, 0);
-    //     if (difflensq< closestsq){
-    //         closest = averagePoint;
-    //         closestsq = difflensq;
-    //     }
-    // });
-
     var closestPointType = 0;
     var chosenVectorToClosestPoint=[0,0,0]; //expect to be set! but hit bug with vectorSum if don't initialise?
 
     //for each triangle, test dist from edges, face
     // can do this by separating axis test
-    allTris.forEach(tri => {
+    tris.forEach(tri => {
         
         var greatestSeparation = Number.NEGATIVE_INFINITY;
         var chosenPointTypeThisFace = -1;
@@ -289,6 +275,47 @@ function closestPointBvh(fromPoint, bvh){
         closestPoint,
         closestPointType
     };
+}
+
+function collisionTestPossibleClosest(fromPoint, bvh, lowestAccepted){
+    if (!bvh.group){ //is a leaf node
+        return bvh;
+        //NOTE IIIRC could check AABB is possibly closest here too (same as check below)
+    }
+
+    //get range of distances for the AABBs at this level.
+    //find the AABB with the lowest value of its greatest possible distance
+    //then filter any where the minimum possible distance is greater than this.
+
+    var minMaxVals = bvh.group.map(item => aabbMinMaxDistanceFromPoint(fromPoint, item.AABB));
+    var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
+
+    lowestMax = Math.min(lowestMax, lowestAccepted);    //TODO rule out groups earlier using lowestAccepted?
+
+    var filteredGroup = bvh.group.filter(
+        (item, ii) =>
+        minMaxVals[ii][0]<lowestMax
+    );
+
+    return filteredGroup.map(group2 => collisionTestPossibleClosest(fromPoint, group2,lowestMax)).flat();
+}
+
+function aabbMinMaxDistanceFromPoint(fromPoint, aabb){
+    var greatestPossibleSq=0;
+    var lowestPossibleSq=0;
+
+    for (var cc=0;cc<3;cc++){
+        var aabbRangeRelativeToPoint = [fromPoint[cc]-aabb[0][cc] , fromPoint[cc]-aabb[1][cc]]; 
+        var absAabbRangeRelativeToPoint = aabbRangeRelativeToPoint.map(xx => Math.abs(xx));
+        var greatestPossibleThisComponent = Math.max( absAabbRangeRelativeToPoint[0], absAabbRangeRelativeToPoint[1]);
+        var lowestPossibleThisComponent = Math.min( absAabbRangeRelativeToPoint[0], absAabbRangeRelativeToPoint[1]);
+        if (aabbRangeRelativeToPoint[0]*aabbRangeRelativeToPoint[1]<0){
+            lowestPossibleThisComponent=0;
+        }
+        greatestPossibleSq+=greatestPossibleThisComponent*greatestPossibleThisComponent;
+        lowestPossibleSq+=lowestPossibleThisComponent*lowestPossibleThisComponent;
+    }
+    return [lowestPossibleSq, greatestPossibleSq];
 }
 
 //currently unused. TODO use for player sphere collision with level?

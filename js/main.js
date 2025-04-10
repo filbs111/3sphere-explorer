@@ -5374,7 +5374,9 @@ var iterateMechanics = (function iterateMechanics(){
 
 					var projectedPosInObjFrame = playerPosVec.slice(0,3).map(val => val/(teapotScale*playerPosVec[3]));
 
-					var closestPointResult = closestPointBvh(projectedPosInObjFrame, teapotBvh);
+					//var closestPointResult = closestPointBvhBruteForce(projectedPosInObjFrame, teapotBvh);
+					var closestPointResult = closestPointBvhEfficient(projectedPosInObjFrame, teapotBvh);
+
 					var closestPointInObjectFrame = closestPointResult.closestPoint;
 					
 					//get distance from player.
@@ -5407,10 +5409,6 @@ var iterateMechanics = (function iterateMechanics(){
 						xyzmove4mat(debugDraw.mats[8], angleToMove);	//draw x on closest vertex
 					}
 				};
-
-				if (Math.random()<0.01){
-					console.log({distanceResults});
-				}
 
 				//TODO handle possibility that returned early and debugDraw.mats[8] is not set.
 
