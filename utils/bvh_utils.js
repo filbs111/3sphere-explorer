@@ -201,12 +201,13 @@ function closestPointBvh(fromPoint, bvh){
     //     }
     // });
 
-
-    var chosenVectorToClosestPoint;
+    var closestPointType = 0;
+    var chosenVectorToClosestPoint=[0,0,0]; //expect to be set! but hit bug with vectorSum if don't initialise?
 
     //for each triangle, test dist from edges, face
     // can do this by separating axis test
     allTris.forEach(tri => {
+        
         var greatestSeparation = Number.NEGATIVE_INFINITY;
         var chosenPointTypeThisFace = -1;
         //var greatestSeparationSq = 0;
@@ -278,13 +279,16 @@ function closestPointBvh(fromPoint, bvh){
         if (greatestSeparation*greatestSeparation < closestsq){
             chosenVectorToClosestPoint = vectorToClosestPoint;
             closestsq = greatestSeparation*greatestSeparation;
-            triObjClosestPointType = chosenPointTypeThisFace;
+            closestPointType = chosenPointTypeThisFace;
         }
     });
 
     var closestPoint = vectorSum(fromPoint, chosenVectorToClosestPoint);
 
-    return closestPoint;
+    return {
+        closestPoint,
+        closestPointType
+    };
 }
 
 //currently unused. TODO use for player sphere collision with level?

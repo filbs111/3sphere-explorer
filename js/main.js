@@ -5355,25 +5355,64 @@ var iterateMechanics = (function iterateMechanics(){
 				//TODO multiple objects (currently only 1st teapot.)
 				var teapotScale = guiParams.drawShapes["teapot scale"];
 
-				var playerPosVec = vec4.create(playerPos);
-				mat4.multiplyVec4(teapotMatrices.transposedMats[0], playerPosVec, playerPosVec);
-				
-				if (playerPosVec[3]<=0){
-					return;
+				var closestRoughSqDistanceFound = Number.POSITIVE_INFINITY;
+
+				var distanceResults=[];
+
+				//for (var tt=0;tt<teapotMatrices.transposedMats.length;tt++){
+				for (var tt=0;tt<2;tt++){	//this is hugely slower than tt =0 or tt=1 !
+					var transposedObjMat = teapotMatrices.transposedMats[tt];
+					var objMat = teapotMatrices.mats[tt];
+
+					var playerPosVec = vec4.create(playerPos);
+					mat4.multiplyVec4(transposedObjMat, playerPosVec, playerPosVec);
+					
+					if (playerPosVec[3]<=0.5){	//TODO tighter bounding sphere.
+						continue;			//NOTE somehow when testing 2 teapots per frame is VERY SLOW! 
+					}						//perhaps mechanics step just becomes too slow to keep up. 
+										    //TODO optimise closest point finding using bvh...
+
+					var projectedPosInObjFrame = playerPosVec.slice(0,3).map(val => val/(teapotScale*playerPosVec[3]));
+
+					var closestPointResult = closestPointBvh(projectedPosInObjFrame, teapotBvh);
+					var closestPointInObjectFrame = closestPointResult.closestPoint;
+					
+					//get distance from player.
+					//TODO return from above, or combine with closestPointBvh / use world level bvh?
+
+					var vectorToPlayerInObjectSpace = vectorDifference(projectedPosInObjFrame, closestPointInObjectFrame);
+					var roughDistanceSqFromPlayer = dotProduct(vectorToPlayerInObjectSpace,vectorToPlayerInObjectSpace)
+										*teapotScale*teapotScale;	//multiplying by scale with view to using multiple scales
+
+					distanceResults.push(roughDistanceSqFromPlayer);
+
+					//TODO only do this once found closest point, object (otherwise doing unnecessary matrix calcs unless
+					//first object has closest point.)
+					if (roughDistanceSqFromPlayer<closestRoughSqDistanceFound){
+						triObjClosestPointType = closestPointResult.closestPointType;
+
+						closestRoughSqDistanceFound = roughDistanceSqFromPlayer;
+
+						var positionInProjectedSpace = closestPointInObjectFrame.map(val => val*teapotScale);					
+						//var veclen = Math.hypot.apply(null, positionInProjectedSpace);
+						var veclen = Math.sqrt(positionInProjectedSpace.reduce((accum, xx)=>accum+xx*xx, 0));
+						var scalarAngleDifference = Math.atan(veclen);
+
+
+						var correction = -scalarAngleDifference/veclen;
+						var angleToMove = positionInProjectedSpace.map(val => val*correction);
+
+						//draw object - position at teapot, then move by vec to point in object space.
+						mat4.set(objMat, debugDraw.mats[8]);
+						xyzmove4mat(debugDraw.mats[8], angleToMove);	//draw x on closest vertex
+					}
+				};
+
+				if (Math.random()<0.01){
+					console.log({distanceResults});
 				}
 
-				var projectedPosInObjFrame = playerPosVec.slice(0,3).map(val => val/(teapotScale*playerPosVec[3]));
-				var closestPointInObjectFrame = closestPointBvh(projectedPosInObjFrame, teapotBvh);
-				
-				//draw object - position at teapot, then move by 
-				mat4.set(teapotMatrices.mats[0], debugDraw.mats[8]);
-
-				var positionInProjectedSpace = closestPointInObjectFrame.map(val => val*teapotScale);
-				var veclen = Math.hypot.apply(null, positionInProjectedSpace);
-				var correction = -Math.atan(veclen)/veclen;
-				var angleToMove = positionInProjectedSpace.map(val => val*correction);
-
-				xyzmove4mat(debugDraw.mats[8], angleToMove);	//draw x on closest vertex
+				//TODO handle possibility that returned early and debugDraw.mats[8] is not set.
 
 
 				//sound. 
@@ -5394,13 +5433,6 @@ var iterateMechanics = (function iterateMechanics(){
 				currentTriangleObjectPlayerPen = settings.playerBallRad - distanceForNoise;
 				var penChange = currentTriangleObjectPlayerPen - lastTriangleObjPen;
 				var reactionForce = Math.max(50*currentTriangleObjectPlayerPen + 1000*penChange, 0);
-
-				if (Math.random()<0.01){
-					console.log({
-						currentTriangleObjectPlayerPen,
-						reactionForce
-					});
-				}
 				
 				if (currentTriangleObjectPlayerPen > 0 && reactionForce> 0){
 						//different to collidePlayerWithObjectByClosestPointFunc, which takes places in duocylinder spun space.
