@@ -2488,7 +2488,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		modelScale = guiParams.drawShapes["teapot scale"];
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
 
-		teapotMatrices.mats.forEach(teapotMatrix => {
+		teapotMatrices.forEach(tpMat => {
+			var teapotMatrix=tpMat.mat;
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix,teapotMatrix);
 			mat4.set(teapotMatrix, mMatrix);	
@@ -4032,18 +4033,17 @@ var teapotMatrices = (() => {
 	xyzmove4mat(mats[1],[0,0,-1]);
 	xyzmove4mat(mats[1],[0,1,0]);
 
-	var transposedMats = mats.map(mm => {
-		var copy = mat4.create(mm);
+	return mats.map(mat=>{
+		var copy = mat4.create(mat);
 		mat4.transpose(copy);
-		return copy;
+		return {
+			mat,
+			transposedMat:copy
+		}
 	})
-
-	return {
-		mats,
-		transposedMats
-	}
 })();
-var explodingBoxMatrix = teapotMatrices.mats[0];
+
+var explodingBoxMatrix = teapotMatrices[0].mat;
 
 
 var frigateMatrix=mat4.identity();
@@ -5361,8 +5361,9 @@ var iterateMechanics = (function iterateMechanics(){
 
 				//for (var tt=0;tt<teapotMatrices.transposedMats.length;tt++){
 				for (var tt=0;tt<2;tt++){	//this is hugely slower than tt =0 or tt=1 !
-					var transposedObjMat = teapotMatrices.transposedMats[tt];
-					var objMat = teapotMatrices.mats[tt];
+					var tpMat = teapotMatrices[tt];
+					var transposedObjMat = tpMat.transposedMat;
+					var objMat = tpMat.mat;
 
 					var playerPosVec = vec4.create(playerPos);
 					mat4.multiplyVec4(transposedObjMat, playerPosVec, playerPosVec);
@@ -5666,7 +5667,8 @@ var iterateMechanics = (function iterateMechanics(){
 			//collision with teapot.
 			var teapotScale = guiParams.drawShapes["teapot scale"];	//TODO don't keep reading this value? 
 			//transform bullet into teapot frame (similar logic to boxes etc), applying scale factor.
-			teapotMatrices.transposedMats.forEach(teapotMatTransposed => {
+			teapotMatrices.forEach(tpMat => {
+				var teapotMatTransposed = tpMat.transposedMat;
 				var bulletPosVec = vec4.create(bulletPos);
 				mat4.multiplyVec4(teapotMatTransposed, bulletPosVec, bulletPosVec);
 				var bulletPosEndVec = vec4.create(newBulletPos);
