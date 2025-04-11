@@ -165,7 +165,8 @@ function closestPointBvhBruteForce(fromPoint, bvh){
 }
 
 function closestPointBvhEfficient(fromPoint, bvh){
-    var possibles = collisionTestPossibleClosest(fromPoint, bvh.tris, Number.POSITIVE_INFINITY);
+    //var possibles = collisionTestPossibleClosest(fromPoint, bvh.tris, Number.POSITIVE_INFINITY);
+    var possibles = collisionTestPossibleClosest2(fromPoint, [bvh.tris], Number.POSITIVE_INFINITY);
     if (Math.random()<0.01){
         console.log(possibles.length);
     }
@@ -299,6 +300,40 @@ function collisionTestPossibleClosest(fromPoint, bvh, lowestAccepted){
 
     return filteredGroup.map(group2 => collisionTestPossibleClosest(fromPoint, group2,lowestMax)).flat();
 }
+
+function collisionTestPossibleClosest2(fromPoint, bvhGroup, lowestAccepted){
+
+    var minMaxVals = bvhGroup.map(item => aabbMinMaxDistanceFromPoint(fromPoint, item.AABB));
+    var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
+
+    //IIRC in practice, all leaves are at same depth.
+    //if want to have leaves at multiple depths should split out leaves, recurse with non-leaves
+
+    //get range of distances for the AABBs at this level.
+    //find the AABB with the lowest value of its greatest possible distance
+    //then filter any where the minimum possible distance is greater than this.
+    lowestMax = Math.min(lowestMax, lowestAccepted);    //TODO rule out groups earlier using lowestAccepted?
+
+    var filtered = bvhGroup.filter(
+        (item, ii) =>
+        minMaxVals[ii][0]<lowestMax
+    );
+
+    var leafNodes = filtered.filter(xx => !xx.group);
+    var nonLeafNodes = filtered.filter(xx => xx.group);
+
+    if (nonLeafNodes.length == 0){
+        return leafNodes;
+    }
+
+    //since 1st bvh in the group didn't have a subgroup, assume they all don't, so should recurse.
+    var fromNextLevel = collisionTestPossibleClosest2(fromPoint, nonLeafNodes.map(nn=>nn.group).flat(), lowestAccepted);
+        //TODO update lowestAccepted?
+
+    return [fromNextLevel, leafNodes].flat();   //TODO keep in separate arrays to make filtering easier, reduce garbage.
+}
+
+
 
 function aabbMinMaxDistanceFromPoint(fromPoint, aabb){
     var greatestPossibleSq=0;
