@@ -2488,7 +2488,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		modelScale = guiParams.drawShapes["teapot scale"];
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
 
-		teapotMatrices.forEach(tpMat => {
+		teapotMatricesForWorld[worldA].forEach(tpMat => {
 			var teapotMatrix=tpMat.mat;
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix,teapotMatrix);
@@ -4043,6 +4043,8 @@ var teapotMatrices = (() => {
 	})
 })();
 
+var teapotMatricesForWorld=[teapotMatrices,[],[],[]];
+
 var explodingBoxMatrix = teapotMatrices[0].mat;
 
 
@@ -5360,8 +5362,8 @@ var iterateMechanics = (function iterateMechanics(){
 				var distanceResults=[];
 
 				//for (var tt=0;tt<teapotMatrices.transposedMats.length;tt++){
-				for (var tt=0;tt<2;tt++){	//this is hugely slower than tt =0 or tt=1 !
-					var tpMat = teapotMatrices[tt];
+				teapotMatricesForWorld[playerContainer.world].forEach(tpMat =>
+				{
 					var transposedObjMat = tpMat.transposedMat;
 					var objMat = tpMat.mat;
 
@@ -5369,7 +5371,7 @@ var iterateMechanics = (function iterateMechanics(){
 					mat4.multiplyVec4(transposedObjMat, playerPosVec, playerPosVec);
 					
 					if (playerPosVec[3]<=0.5){	//TODO tighter bounding sphere.
-						continue;			//NOTE somehow when testing 2 teapots per frame is VERY SLOW! 
+						return;			//NOTE somehow when testing 2 teapots per frame is VERY SLOW! 
 					}						//perhaps mechanics step just becomes too slow to keep up. 
 										    //TODO optimise closest point finding using bvh...
 
@@ -5409,7 +5411,7 @@ var iterateMechanics = (function iterateMechanics(){
 						mat4.set(objMat, debugDraw.mats[8]);
 						xyzmove4mat(debugDraw.mats[8], angleToMove);	//draw x on closest vertex
 					}
-				};
+				});
 
 				//TODO handle possibility that returned early and debugDraw.mats[8] is not set.
 
@@ -5667,7 +5669,7 @@ var iterateMechanics = (function iterateMechanics(){
 			//collision with teapot.
 			var teapotScale = guiParams.drawShapes["teapot scale"];	//TODO don't keep reading this value? 
 			//transform bullet into teapot frame (similar logic to boxes etc), applying scale factor.
-			teapotMatrices.forEach(tpMat => {
+			teapotMatricesForWorld[bullet.world].forEach(tpMat => {
 				var teapotMatTransposed = tpMat.transposedMat;
 				var bulletPosVec = vec4.create(bulletPos);
 				mat4.multiplyVec4(teapotMatTransposed, bulletPosVec, bulletPosVec);
