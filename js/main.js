@@ -30,6 +30,7 @@ var stonehengeBoxBuffers={};
 var towerBoxBuffers={};
 var explodingCubeBuffers={};
 var cubeFrameBuffers={};
+var cubeFrameBvh={}
 var cubeFrameSubdivBuffers={};
 var octoFrameBuffers={};
 var octoFrameSubdivBuffers={};		
@@ -356,7 +357,23 @@ function initBuffers(){
 
 	//generate bounding volume heirarchy for teapot triangles.
 	teapotBvh = createBvhFrom3dObjectData(teapotObject);
-	console.log("teapot bvh: " + JSON.stringify(teapotBvh));
+	cubeFrameBvh = createBvhFrom3dObjectData(cubeFrameBlenderObject);
+
+	//now bvhs ready, create the following which references them.
+	bvhObjsForWorld[0]=someObjectMatrices.map(someMat => {return {
+		mat:someMat.mat, 
+		transposedMat: someMat.transposedMat, 
+		bvh:teapotBvh,
+		scale:0.4
+	};}),
+	bvhObjsForWorld[1]=someObjectMatrices.map(someMat => {return {
+		mat:someMat.mat, 
+		transposedMat: someMat.transposedMat, 
+		bvh:cubeFrameBvh,
+		scale:0.4
+	};});
+	//TODO array for each object type? include direct reference to rendering info (instead of matching bvh later)
+
 
 	loadBufferData(icoballBuffers, icoballObj);
 	loadBufferData(hyperboloidBuffers, hyperboloidData);
@@ -2481,21 +2498,32 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	}
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
 
-	if (guiParams.drawShapes.teapot){
-		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.teapot);
-		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0.1,0.3);	//some emission
 
-		modelScale = guiParams.drawShapes["teapot scale"];
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
+	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.teapot);
+	gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0.1,0.3);	//some emission
 
-		teapotMatricesForWorld[worldA].forEach(tpMat => {
-			var teapotMatrix=tpMat.mat;
+	bvhObjsForWorld[worldA]
+		.filter(objInfo=> objInfo.bvh == teapotBvh)	//TODO prefilter
+		.forEach(objInfo => {
+			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, objInfo.scale,objInfo.scale,objInfo.scale);
 			mat4.set(invertedWorldCamera, mvMatrix);
-			mat4.multiply(mvMatrix,teapotMatrix);
-			mat4.set(teapotMatrix, mMatrix);	
+			mat4.multiply(mvMatrix,objInfo.mat);
+			mat4.set(objInfo.mat, mMatrix);	
 			drawObjectFromBuffers(teapotBuffers, activeShaderProgram);
 		});
-	}
+
+	//TODO use correct shader so have texture
+	bvhObjsForWorld[worldA]
+		.filter(objInfo=> objInfo.bvh == cubeFrameBvh)	//TODO prefilter
+		.forEach(objInfo => {
+			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, objInfo.scale,objInfo.scale,objInfo.scale);
+			mat4.set(invertedWorldCamera, mvMatrix);
+			mat4.multiply(mvMatrix,objInfo.mat);
+			mat4.set(objInfo.mat, mMatrix);	
+			drawObjectFromBuffers(cubeFrameBuffers, activeShaderProgram);
+		});
+
+
 	
 	if (guiParams.drawShapes.hyperboloid){
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.gray);
@@ -3905,8 +3933,6 @@ var guiParams={
 		'y=w=0':false,
 		'z=w=0':false
 		},
-		teapot:true,
-		"teapot scale":0.5,
 		pillars:false,
 		bendyPillars:false,
 		towers:false,
@@ -4025,7 +4051,7 @@ var playerLightUnscaled;
 var playerLight;
 var muzzleFlashAmounts=[0,0,0,0];
 
-var teapotMatrices = (() => {
+var someObjectMatrices = (() => {
 	var mats = [...new Array(2)].map(x => mat4.identity());
 	
 	xyzmove4mat(mats[0],[0,0,-1]);
@@ -4043,9 +4069,9 @@ var teapotMatrices = (() => {
 	})
 })();
 
-var teapotMatricesForWorld=[teapotMatrices,[],[],[]];
+var bvhObjsForWorld=guiParams.worlds.map(xx=>[]);	//will create once bvhs created
 
-var explodingBoxMatrix = teapotMatrices[0].mat;
+var explodingBoxMatrix = someObjectMatrices[0].mat;
 
 
 var frigateMatrix=mat4.identity();
@@ -4159,8 +4185,6 @@ function init(){
 		"instanced speckles"
 	]);
 	randBoxesFolder.add(guiParams["random boxes"],"numToMove", 0,maxRandBoxes,8);
-	drawShapesFolder.add(guiParams.drawShapes,"teapot");
-	drawShapesFolder.add(guiParams.drawShapes,"teapot scale",0.05,2.0,0.05);
 	drawShapesFolder.add(guiParams.drawShapes,"pillars");
 	drawShapesFolder.add(guiParams.drawShapes,"bendyPillars");
 	drawShapesFolder.add(guiParams.drawShapes,"towers");
@@ -5353,32 +5377,32 @@ var iterateMechanics = (function iterateMechanics(){
 
 			
 			function processTriangleObjectCollision(){
-				//TODO use collide by closest point function collidePlayerWithObjectByClosestPointFunc ?
-				//TODO multiple objects (currently only 1st teapot.)
-				var teapotScale = guiParams.drawShapes["teapot scale"];
-
 				var closestRoughSqDistanceFound = Number.POSITIVE_INFINITY;
-
 				var distanceResults=[];
 
-				//for (var tt=0;tt<teapotMatrices.transposedMats.length;tt++){
-				teapotMatricesForWorld[playerContainer.world].forEach(tpMat =>
+				bvhObjsForWorld[playerContainer.world].forEach(objInfo =>
 				{
-					var transposedObjMat = tpMat.transposedMat;
-					var objMat = tpMat.mat;
+					var transposedObjMat = objInfo.transposedMat;
+					var objMat = objInfo.mat;
+					var objBvh = objInfo.bvh;
+
+					if (objBvh != teapotBvh){
+						//return;	//??
+					}
+
+					var objScale = objInfo.scale;
 
 					var playerPosVec = vec4.create(playerPos);
 					mat4.multiplyVec4(transposedObjMat, playerPosVec, playerPosVec);
 					
 					if (playerPosVec[3]<=0.5){	//TODO tighter bounding sphere.
-						return;			//NOTE somehow when testing 2 teapots per frame is VERY SLOW! 
-					}						//perhaps mechanics step just becomes too slow to keep up. 
-										    //TODO optimise closest point finding using bvh...
+						return;
+					}						
 
-					var projectedPosInObjFrame = playerPosVec.slice(0,3).map(val => val/(teapotScale*playerPosVec[3]));
+					var projectedPosInObjFrame = playerPosVec.slice(0,3).map(val => val/(objScale*playerPosVec[3]));
 
-					//var closestPointResult = closestPointBvhBruteForce(projectedPosInObjFrame, teapotBvh);
-					var closestPointResult = closestPointBvhEfficient(projectedPosInObjFrame, teapotBvh);
+					//var closestPointResult = closestPointBvhBruteForce(projectedPosInObjFrame, objBvh);
+					var closestPointResult = closestPointBvhEfficient(projectedPosInObjFrame, objBvh);
 
 					var closestPointInObjectFrame = closestPointResult.closestPoint;
 					
@@ -5387,7 +5411,7 @@ var iterateMechanics = (function iterateMechanics(){
 
 					var vectorToPlayerInObjectSpace = vectorDifference(projectedPosInObjFrame, closestPointInObjectFrame);
 					var roughDistanceSqFromPlayer = dotProduct(vectorToPlayerInObjectSpace,vectorToPlayerInObjectSpace)
-										*teapotScale*teapotScale;	//multiplying by scale with view to using multiple scales
+										*objScale*objScale;	//multiplying by scale with view to using multiple scales
 
 					distanceResults.push(roughDistanceSqFromPlayer);
 
@@ -5398,7 +5422,7 @@ var iterateMechanics = (function iterateMechanics(){
 
 						closestRoughSqDistanceFound = roughDistanceSqFromPlayer;
 
-						var positionInProjectedSpace = closestPointInObjectFrame.map(val => val*teapotScale);					
+						var positionInProjectedSpace = closestPointInObjectFrame.map(val => val*objScale);					
 						//var veclen = Math.hypot.apply(null, positionInProjectedSpace);
 						var veclen = Math.sqrt(positionInProjectedSpace.reduce((accum, xx)=>accum+xx*xx, 0));
 						var scalarAngleDifference = Math.atan(veclen);
@@ -5407,7 +5431,7 @@ var iterateMechanics = (function iterateMechanics(){
 						var correction = -scalarAngleDifference/veclen;
 						var angleToMove = positionInProjectedSpace.map(val => val*correction);
 
-						//draw object - position at teapot, then move by vec to point in object space.
+						//draw object - position at object centre, then move by vec to point in object space.
 						mat4.set(objMat, debugDraw.mats[8]);
 						xyzmove4mat(debugDraw.mats[8], angleToMove);	//draw x on closest vertex
 					}
@@ -5424,7 +5448,7 @@ var iterateMechanics = (function iterateMechanics(){
 				var soundSize = 0.002;
 				panForNoise = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));
 				
-				//note spd (speed) in is in duocylinder frame, but teapot currently does not rotate with it.
+				//note spd (speed) in is in duocylinder frame, but object currently does not rotate with it.
 				setSoundHelper(myAudioPlayer.setWhooshSoundTriangleMesh, distanceForNoise, panForNoise, spd);
 
 
@@ -5666,15 +5690,13 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			}
 
-			//collision with teapot.
-			var teapotScale = guiParams.drawShapes["teapot scale"];	//TODO don't keep reading this value? 
-			//transform bullet into teapot frame (similar logic to boxes etc), applying scale factor.
-			teapotMatricesForWorld[bullet.world].forEach(tpMat => {
-				var teapotMatTransposed = tpMat.transposedMat;
+			//collision with bvh objects
+			//transform bullet into object frame (similar logic to boxes etc), applying scale factor.
+			bvhObjsForWorld[bullet.world].forEach(objInfo => {
 				var bulletPosVec = vec4.create(bulletPos);
-				mat4.multiplyVec4(teapotMatTransposed, bulletPosVec, bulletPosVec);
+				mat4.multiplyVec4(objInfo.transposedMat, bulletPosVec, bulletPosVec);
 				var bulletPosEndVec = vec4.create(newBulletPos);
-				mat4.multiplyVec4(teapotMatTransposed, bulletPosEndVec, bulletPosEndVec);
+				mat4.multiplyVec4(objInfo.transposedMat, bulletPosEndVec, bulletPosEndVec);
 
 				//reject if bullet start or end is in other hemisphere to object checking collision with.
 				//NOTE this is a stopgap measure - when using world BVH, or long ray collision with world object bounds,
@@ -5683,11 +5705,15 @@ var iterateMechanics = (function iterateMechanics(){
 					return;
 				}
 
-				var projectedPosInObjFrame = bulletPosVec.slice(0,3).map(val => val/(teapotScale*bulletPosVec[3]));
-				var projectedPosEndInObjFrame = bulletPosEndVec.slice(0,3).map(val => val/(teapotScale*bulletPosEndVec[3]));
+				var projectedPosInObjFrame = bulletPosVec.slice(0,3).map(val => val/(objInfo.scale*bulletPosVec[3]));
+				var projectedPosEndInObjFrame = bulletPosEndVec.slice(0,3).map(val => val/(objInfo.scale*bulletPosEndVec[3]));
 
-				//if (bvhSphereOverlapTest(projectedPosInObjFrame, 0.01, teapotBvh)){
-				if (bvhRayOverlapTest(projectedPosInObjFrame, projectedPosEndInObjFrame, teapotBvh)){
+				if (objInfo.bvh != teapotBvh){
+					//return; // think problem with other bvh!
+				}
+
+				//if (bvhSphereOverlapTest(projectedPosInObjFrame, 0.01, objInfo.bvh)){
+				if (bvhRayOverlapTest(projectedPosInObjFrame, projectedPosEndInObjFrame, objInfo.bvh)){
 					detonateBullet(bullet, false, [0.3,0.3,0.8]);
 				}
 			});
