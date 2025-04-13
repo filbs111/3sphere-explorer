@@ -132,7 +132,21 @@ function bvhRayOverlapTest(rayStart, rayEnd, bvh){
             endDistFromPlane = dotProduct(thisTri.normal, rayEnd) - thisTri.distFromOrigin;
 
             if (startDistFromPlane>0 && endDistFromPlane<=0){
-                return true;   //crosses plane test (in one direction. if want both ways could xor conditions)
+                //crosses plane test (in one direction. if want both ways could xor conditions)
+
+                //confirm is within triangle
+                //option 1) find collision point on the plane, then use edge normals to check is inside each edge. 
+                //option 2) check winding direction around edge - ray direction crossed with vector to line - +ve or -ve?
+                // pick option 1 because simple, getting point on plane maybe useful later.
+                var pointOnPlane = [];
+                var total = startDistFromPlane-endDistFromPlane;
+                for (var cc=0;cc<3;cc++){
+                    pointOnPlane[cc]=(startDistFromPlane*rayEnd[cc]-endDistFromPlane*rayStart[cc])/total;
+                }
+                var withinTri = thisTri.edgeData.reduce( (accum, edge) =>
+                    accum && dotProduct(pointOnPlane, edge.normal)<=edge.distFromOrigin, true);
+
+                if(withinTri){return true;}
             }
         }
     }
