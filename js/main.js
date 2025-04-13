@@ -38,10 +38,12 @@ var tetraFrameBuffers={};
 var tetraFrameSubdivBuffers={};		
 var dodecaFrameBuffers={};	
 var teapotBuffers={};
-var teapotBvh;
+var teapotBvh={};
 var pillarBuffers={};
+var pillarBvh={}
 var sshipBuffers={};
 var gunBuffers={};
+var gunBvh={};
 var su57Buffers={};
 var frigateBuffers={};
 var icoballBuffers={};
@@ -356,8 +358,36 @@ function initBuffers(){
 	loadBufferData(teapotBuffers, teapotObject);
 
 	//generate bounding volume heirarchy for teapot triangles.
-	teapotBvh = createBvhFrom3dObjectData(teapotObject);
-	cubeFrameBvh = createBvhFrom3dObjectData(cubeFrameBlenderObject);
+	createBvhFrom3dObjectData(teapotObject, teapotBvh);
+	createBvhFrom3dObjectData(cubeFrameBlenderObject, cubeFrameBvh);
+
+	loadBufferData(icoballBuffers, icoballObj);
+	loadBufferData(hyperboloidBuffers, hyperboloidData);
+	
+	loadBuffersFromObj2Or3File(pillarBuffers, "./data/pillar/pillar.obj2", (bufferObj, sourceData) =>{
+		loadBufferData(bufferObj, sourceData);
+		createBvhFrom3dObjectData(sourceData, pillarBvh);
+	});
+	loadBuffersFromObj2Or3File(sshipBuffers, "./data/spaceship/sship-pointyc-tidy1-uv3-2020b-cockpit1b-yz-2020-10-04.obj2", loadBufferData);
+
+	loadBuffersFromObj2Or3File(gunBuffers, "./data/cannon/cannon-pointz-yz.obj2", (bufferObj, sourceData) => {
+		loadBufferData(bufferObj, sourceData);
+		createBvhFrom3dObjectData(sourceData, gunBvh);
+	});
+
+	loadBuffersFromObj2Or3File(su57Buffers, "./data/miscobjs/t50/su57yz-4a.obj2", loadBufferData);
+	loadBuffersFromObj2Or3File(frigateBuffers, "./data/frigate/frigate.obj2", loadBufferData);
+
+	loadBuffersFromObjFile(meshSphereBuffers, "./data/miscobjs/mesh-sphere.obj", loadBufferData);
+	loadBuffersFromObj5File(buildingBuffers, "./data/miscobjs/menger-texmap2.obj5", loadBufferData, 6);
+
+	loadBuffersFromObj2Or3File(octoFractalBuffers, "./data/miscobjs/fractal-octahedron4.obj3", loadBufferData, 6);
+
+	loadBuffersFromObj2Or3File(bridgeBuffers, "./data/miscobjs/bridgexmy2.obj3", loadBufferData, 6);
+
+	loadBuffersFromObj2Or3File(thrusterBuffers, "./data/miscobjs/thrusters-with-normals-and-vcolor.obj3", loadBufferData, 6);
+
+
 
 	//now bvhs ready, create the following which references them.
 	bvhObjsForWorld[0]=someObjectMatrices.map(someMat => {return {
@@ -372,28 +402,23 @@ function initBuffers(){
 		bvh:cubeFrameBvh,
 		scale:0.4
 	};});
+	bvhObjsForWorld[2]=someObjectMatrices.map(someMat => {return {
+		mat:someMat.mat, 
+		transposedMat: someMat.transposedMat, 
+		bvh:pillarBvh,
+		scale:0.2
+	};});
+	bvhObjsForWorld[3]=someObjectMatrices.map(someMat => {return {
+		mat:someMat.mat, 
+		transposedMat: someMat.transposedMat, 
+		bvh:gunBvh,
+		scale:0.1
+	};});
 	//TODO array for each object type? include direct reference to rendering info (instead of matching bvh later)
 
 
-	loadBufferData(icoballBuffers, icoballObj);
-	loadBufferData(hyperboloidBuffers, hyperboloidData);
-	
-	loadBuffersFromObj2Or3File(pillarBuffers, "./data/pillar/pillar.obj2", loadBufferData);
-	loadBuffersFromObj2Or3File(sshipBuffers, "./data/spaceship/sship-pointyc-tidy1-uv3-2020b-cockpit1b-yz-2020-10-04.obj2", loadBufferData);
 
-	loadBuffersFromObj2Or3File(gunBuffers, "./data/cannon/cannon-pointz-yz.obj2", loadBufferData);
-	loadBuffersFromObj2Or3File(su57Buffers, "./data/miscobjs/t50/su57yz-4a.obj2", loadBufferData);
-	loadBuffersFromObj2Or3File(frigateBuffers, "./data/frigate/frigate.obj2", loadBufferData);
 
-	loadBuffersFromObjFile(meshSphereBuffers, "./data/miscobjs/mesh-sphere.obj", loadBufferData);
-	//loadBuffersFromObj2Or3File(buildingBuffers, "./data/miscobjs/menger-edgesplit.obj3", loadBufferData, 6);
-	loadBuffersFromObj5File(buildingBuffers, "./data/miscobjs/menger-texmap2.obj5", loadBufferData, 6);
-
-	loadBuffersFromObj2Or3File(octoFractalBuffers, "./data/miscobjs/fractal-octahedron4.obj3", loadBufferData, 6);
-
-	loadBuffersFromObj2Or3File(bridgeBuffers, "./data/miscobjs/bridgexmy2.obj3", loadBufferData, 6);
-
-	loadBuffersFromObj2Or3File(thrusterBuffers, "./data/miscobjs/thrusters-with-normals-and-vcolor.obj3", loadBufferData, 6);
 
 	var thisMatT;
 	for (var ii=0;ii<maxRandBoxes;ii++){
@@ -2499,7 +2524,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
 
 
-	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.teapot);
+	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.gray);
 	gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0.1,0.3);	//some emission
 
 	bvhObjsForWorld[worldA]
@@ -2522,7 +2547,24 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 			mat4.set(objInfo.mat, mMatrix);	
 			drawObjectFromBuffers(cubeFrameBuffers, activeShaderProgram);
 		});
-
+	bvhObjsForWorld[worldA]
+		.filter(objInfo=> objInfo.bvh == pillarBvh)	//TODO prefilter
+		.forEach(objInfo => {
+			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, objInfo.scale,objInfo.scale,objInfo.scale);
+			mat4.set(invertedWorldCamera, mvMatrix);
+			mat4.multiply(mvMatrix,objInfo.mat);
+			mat4.set(objInfo.mat, mMatrix);	
+			drawObjectFromBuffers(pillarBuffers, activeShaderProgram);
+		});
+	bvhObjsForWorld[worldA]
+		.filter(objInfo=> objInfo.bvh == gunBvh)	//TODO prefilter
+		.forEach(objInfo => {
+			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, objInfo.scale,objInfo.scale,objInfo.scale);
+			mat4.set(invertedWorldCamera, mvMatrix);
+			mat4.multiply(mvMatrix,objInfo.mat);
+			mat4.set(objInfo.mat, mMatrix);	
+			drawObjectFromBuffers(gunBuffers, activeShaderProgram);
+		});
 
 	
 	if (guiParams.drawShapes.hyperboloid){
@@ -4057,7 +4099,7 @@ var someObjectMatrices = (() => {
 	xyzmove4mat(mats[0],[0,0,-1]);
 
 	xyzmove4mat(mats[1],[0,0,-1]);
-	xyzmove4mat(mats[1],[0,1,0]);
+	xyzmove4mat(mats[1],[0,0.8,0]);
 
 	return mats.map(mat=>{
 		var copy = mat4.create(mat);

@@ -9,7 +9,8 @@
 // for sphere test not really correct in projected space. 
 // for small objects this might not matter much, but for world level BVH this should be accounted for.
 
-function createBvhFrom3dObjectData(sourceData){
+function createBvhFrom3dObjectData(sourceData, bvhToPopulate){
+
     //take in triangle mesh data.
     //produce bounding volume heirarchy
 
@@ -72,10 +73,10 @@ function createBvhFrom3dObjectData(sourceData){
 
     trisWithAABB.sort((a,b) => a.centreMorton - b.centreMorton);  //sort by morton code.
 
-    return {
-        verts,   //suspect only require vertex data.
-        tris: generateBvh(trisWithAABB, 16)
-    }
+    bvhToPopulate.verts = verts;    //suspect only require vertex data.
+    bvhToPopulate.tris = generateBvh(trisWithAABB, 16)
+    bvhToPopulate.isLoaded = true;
+    return;
 
     function generateBvh(items, groupSize){
         console.log({items});
@@ -167,9 +168,6 @@ function closestPointBvhBruteForce(fromPoint, bvh){
 function closestPointBvhEfficient(fromPoint, bvh){
     //var possibles = collisionTestPossibleClosest(fromPoint, bvh.tris, Number.POSITIVE_INFINITY);
     var possibles = collisionTestPossibleClosest2(fromPoint, [bvh.tris], Number.POSITIVE_INFINITY);
-    if (Math.random()<0.01){
-        console.log(possibles.length);
-    }
     return closestPointForTris(fromPoint, bvh.verts, possibles); 
 }
 
