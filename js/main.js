@@ -408,13 +408,13 @@ function initBuffers(){
 		bvh:teapotBvh,
 		scale:0.4
 	};}),
-	bvhObjsForWorld[1]=[someObjectMatrices[0]].map(someMat => {return {
+	bvhObjsForWorld[1]=[someObjectMatrices[2]].map(someMat => {return {
 		mat:someMat.mat, 
 		transposedMat: someMat.transposedMat, 
 		//bvh:cubeFrameBvh,
 		//scale:0.4
 		bvh:lucyBvh,
-		scale:0.01
+		scale:0.005
 	};});
 	bvhObjsForWorld[2]=someObjectMatrices.map(someMat => {return {
 		mat:someMat.mat, 
@@ -4144,12 +4144,15 @@ var playerLight;
 var muzzleFlashAmounts=[0,0,0,0];
 
 var someObjectMatrices = (() => {
-	var mats = [...new Array(2)].map(x => mat4.identity());
+	var mats = [...new Array(3)].map(x => mat4.identity());
 	
 	xyzmove4mat(mats[0],[0,0,-1]);
 
 	xyzmove4mat(mats[1],[0,0,-1]);
 	xyzmove4mat(mats[1],[0,0.8,0]);
+
+	xyzmove4mat(mats[2],[0,0,0.5]);
+	xyzmove4mat(mats[2],[0,0.4,0]);
 
 	return mats.map(mat=>{
 		var copy = mat4.create(mat);
