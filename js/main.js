@@ -52,6 +52,8 @@ var icoballBuffers={};
 var hyperboloidBuffers={};
 var meshSphereBuffers={};
 var buildingBuffers={};
+var lucyBuffers={};
+var lucyBvh={};
 var octoFractalBuffers={};
 var bridgeBuffers={};
 var thrusterBuffers={};
@@ -386,6 +388,10 @@ function initBuffers(){
 
 	loadBuffersFromObjFile(meshSphereBuffers, "./data/miscobjs/mesh-sphere.obj", loadBufferData);
 	loadBuffersFromObj5File(buildingBuffers, "./data/miscobjs/menger-texmap2.obj5", loadBufferData, 6);
+	loadBuffersFromObj5File(lucyBuffers, "./data/miscobjs/lucy-withvertcolor.obj5", (bufferObj, sourceData) => {
+		loadBufferData(bufferObj, sourceData);
+		createBvhFrom3dObjectData(sourceData, lucyBvh, 6);
+	}, 6);
 
 	loadBuffersFromObj2Or3File(octoFractalBuffers, "./data/miscobjs/fractal-octahedron4.obj3", loadBufferData, 6);
 
@@ -402,11 +408,13 @@ function initBuffers(){
 		bvh:teapotBvh,
 		scale:0.4
 	};}),
-	bvhObjsForWorld[1]=someObjectMatrices.map(someMat => {return {
+	bvhObjsForWorld[1]=[someObjectMatrices[0]].map(someMat => {return {
 		mat:someMat.mat, 
 		transposedMat: someMat.transposedMat, 
-		bvh:cubeFrameBvh,
-		scale:0.4
+		//bvh:cubeFrameBvh,
+		//scale:0.4
+		bvh:lucyBvh,
+		scale:0.01
 	};});
 	bvhObjsForWorld[2]=someObjectMatrices.map(someMat => {return {
 		mat:someMat.mat, 
@@ -2377,6 +2385,23 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		drawObjectFromBuffers(octoFractalBuffers, activeShaderProgram);
 	}
 
+
+	var lucys = bvhObjsForWorld[worldA].filter(objInfo=> objInfo.bvh == lucyBvh);	//TODO prefilter
+	if (lucys.length >0){
+		var desiredProgram = shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ];
+		if (activeShaderProgram != desiredProgram){
+			activeShaderProgram = desiredProgram;
+			shaderSetup(activeShaderProgram);
+		}
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
+		drawArrayOfModels2(
+			lucys,
+			lucyBuffers,
+			activeShaderProgram);
+	}
+
+
+
 	if (guiParams.drawShapes.viaduct == 'individual' && bridgeBuffers.isLoaded){
 		var desiredProgram = shaderPrograms.coloredPerPixelDiscardVertexColoredTexmapBendy[ guiParams.display.atmosShader ];
 
@@ -2565,7 +2590,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.gray);
 		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0.1,0.3);	//some emission
 		drawArrayOfModels2(
-			bvhObjsForWorld[worldA].filter(objInfo=> objInfo.bvh == teapotBvh),	//TODO prefilter
+			teapots,
 			teapotBuffers,
 			activeShaderProgram);
 	}

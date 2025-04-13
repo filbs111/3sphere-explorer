@@ -9,13 +9,17 @@
 // for sphere test not really correct in projected space. 
 // for small objects this might not matter much, but for world level BVH this should be accounted for.
 
-function createBvhFrom3dObjectData(sourceData, bvhToPopulate){
+function createBvhFrom3dObjectData(sourceData, bvhToPopulate, vertAttrs=3){
 
     //take in triangle mesh data.
     //produce bounding volume heirarchy
 
     var tris = arrayToGroups(sourceData.indices, 3);
-    var verts = arrayToGroups(sourceData.vertices, 3);
+
+    var verts = arrayToGroups(sourceData.vertices, vertAttrs);
+    if (vertAttrs!=3){
+        verts = verts.map(vert => vert.slice(0,3)); //redundant if vertAttrs=3
+    }
 
     //calculate the whole object's bounds so fit within cube for morton/hilbert
     //AABB would be tighter, but easy to just find furthest point for origin for bounding sphere, wrap this sphere in a cube.
