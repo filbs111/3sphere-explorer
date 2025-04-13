@@ -36,7 +36,9 @@ var octoFrameBuffers={};
 var octoFrameSubdivBuffers={};		
 var tetraFrameBuffers={};
 var tetraFrameSubdivBuffers={};		
-var dodecaFrameBuffers={};	
+var dodecaFrameBuffers={};
+var dodecaFrameBuffers2={};	//without outer faces cut off
+var dodecaFrameBvh2={};
 var teapotBuffers={};
 var teapotBvh={};
 var pillarBuffers={};
@@ -334,6 +336,8 @@ function initBuffers(){
 	var tetraFrameBlenderObject = loadBlenderExportNoOutwardFaces(tetraFrameData.meshes[0]);
 	var tetraFrameSubdivObject = loadBlenderExportNoOutwardFaces(tetraFrameSubdivData);
 	var dodecaFrameBlenderObject = loadBlenderExportNoOutwardFaces(dodecaFrameData.meshes[0]);
+	var dodecaFrameBlenderObject2 = loadBlenderExport(dodecaFrameData.meshes[0]);	
+
 	var teapotObject = loadBlenderExport(teapotData);	//isn't actually a blender export - just a obj json
 	var icoballObj = loadBlenderExport(icoballdata);
 
@@ -355,12 +359,14 @@ function initBuffers(){
 	loadBufferData(tetraFrameBuffers, tetraFrameBlenderObject);
 	loadBufferData(tetraFrameSubdivBuffers, tetraFrameSubdivObject);
 	loadBufferData(dodecaFrameBuffers, dodecaFrameBlenderObject);
+	loadBufferData(dodecaFrameBuffers2, dodecaFrameBlenderObject2);
 	loadBufferData(teapotBuffers, teapotObject);
 
 	//generate bounding volume heirarchy for teapot triangles.
 	createBvhFrom3dObjectData(teapotObject, teapotBvh);
 	createBvhFrom3dObjectData(cubeFrameBlenderObject, cubeFrameBvh);
-
+	createBvhFrom3dObjectData(dodecaFrameBlenderObject2, dodecaFrameBvh2);
+	
 	loadBufferData(icoballBuffers, icoballObj);
 	loadBufferData(hyperboloidBuffers, hyperboloidData);
 	
@@ -405,7 +411,7 @@ function initBuffers(){
 	bvhObjsForWorld[2]=someObjectMatrices.map(someMat => {return {
 		mat:someMat.mat, 
 		transposedMat: someMat.transposedMat, 
-		bvh:pillarBvh,
+		bvh:dodecaFrameBvh2,
 		scale:0.2
 	};});
 	bvhObjsForWorld[3]=someObjectMatrices.map(someMat => {return {
@@ -2197,6 +2203,15 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 			(guiParams["subdiv frames"]? tetraFrameSubdivBuffers: tetraFrameBuffers)
 		);
 	}
+
+	var cubeFrames = bvhObjsForWorld[worldA].filter(objInfo=> objInfo.bvh == cubeFrameBvh)	//TODO prefilter
+	if (cubeFrames.length>0){
+		drawArrayOfModels2(cubeFrames, cubeFrameBuffers, activeShaderProgram);
+	}
+	var dodecaFrames = bvhObjsForWorld[worldA].filter(objInfo=> objInfo.bvh == dodecaFrameBvh2)	//TODO prefilter
+	if (dodecaFrames.length>0){
+		drawArrayOfModels2(dodecaFrames, dodecaFrameBuffers2, activeShaderProgram);
+	}
 	
 	//todo this should take buffers, shaders and call prepBuffersForDrawing, drawObjectFromPreppedBuffers
 	function drawArrayOfModels(cellMats, cullRad, buffers, shaderProg){
@@ -2228,6 +2243,27 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		}
 		
 		//console.log("num drawn: " + numDrawn);
+	}
+
+	//drawArrayOfModels + setting scale, without option to cull by bounding sphere, used for new bvh objects
+	function drawArrayOfModels2(objDataArr, buffers, shaderProg){
+		shaderProg = shaderProg || shaderProgramTexmap;
+		prepBuffersForDrawing(buffers, shaderProg);
+		drawArrayForFunc(function(){
+			drawObjectFromPreppedBuffers(buffers, shaderProg);
+			});
+		
+		function drawArrayForFunc(drawFunc2){
+			for (dd in objDataArr){
+				var thisObj = objDataArr[dd];
+				var myscale = thisObj.scale;
+				gl.uniform3f(activeShaderProgram.uniforms.uModelScale, myscale,myscale,myscale);
+				mat4.set(invertedWorldCamera, mvMatrix);
+				mat4.multiply(mvMatrix,thisObj.mat);
+				mat4.set(thisObj.mat, mMatrix);	//not needed in all shaders
+				drawFunc2();
+			}
+		}
 	}
 	
 	if (guiParams.drawShapes.frigate && frigateBuffers.isLoaded){
@@ -2524,29 +2560,18 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
 
 
-	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.gray);
-	gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0.1,0.3);	//some emission
+	var teapots = bvhObjsForWorld[worldA].filter(objInfo=> objInfo.bvh == teapotBvh);	//TODO prefilter
+	if (teapots.length >0){
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.gray);
+		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0.1,0.3);	//some emission
+		drawArrayOfModels2(
+			bvhObjsForWorld[worldA].filter(objInfo=> objInfo.bvh == teapotBvh),	//TODO prefilter
+			teapotBuffers,
+			activeShaderProgram);
+	}
 
-	bvhObjsForWorld[worldA]
-		.filter(objInfo=> objInfo.bvh == teapotBvh)	//TODO prefilter
-		.forEach(objInfo => {
-			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, objInfo.scale,objInfo.scale,objInfo.scale);
-			mat4.set(invertedWorldCamera, mvMatrix);
-			mat4.multiply(mvMatrix,objInfo.mat);
-			mat4.set(objInfo.mat, mMatrix);	
-			drawObjectFromBuffers(teapotBuffers, activeShaderProgram);
-		});
-
-	//TODO use correct shader so have texture
-	bvhObjsForWorld[worldA]
-		.filter(objInfo=> objInfo.bvh == cubeFrameBvh)	//TODO prefilter
-		.forEach(objInfo => {
-			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, objInfo.scale,objInfo.scale,objInfo.scale);
-			mat4.set(invertedWorldCamera, mvMatrix);
-			mat4.multiply(mvMatrix,objInfo.mat);
-			mat4.set(objInfo.mat, mMatrix);	
-			drawObjectFromBuffers(cubeFrameBuffers, activeShaderProgram);
-		});
+	
+	
 	bvhObjsForWorld[worldA]
 		.filter(objInfo=> objInfo.bvh == pillarBvh)	//TODO prefilter
 		.forEach(objInfo => {
@@ -5427,11 +5452,6 @@ var iterateMechanics = (function iterateMechanics(){
 					var transposedObjMat = objInfo.transposedMat;
 					var objMat = objInfo.mat;
 					var objBvh = objInfo.bvh;
-
-					if (objBvh != teapotBvh){
-						//return;	//??
-					}
-
 					var objScale = objInfo.scale;
 
 					var playerPosVec = vec4.create(playerPos);
@@ -5749,10 +5769,6 @@ var iterateMechanics = (function iterateMechanics(){
 
 				var projectedPosInObjFrame = bulletPosVec.slice(0,3).map(val => val/(objInfo.scale*bulletPosVec[3]));
 				var projectedPosEndInObjFrame = bulletPosEndVec.slice(0,3).map(val => val/(objInfo.scale*bulletPosEndVec[3]));
-
-				if (objInfo.bvh != teapotBvh){
-					//return; // think problem with other bvh!
-				}
 
 				//if (bvhSphereOverlapTest(projectedPosInObjFrame, 0.01, objInfo.bvh)){
 				if (bvhRayOverlapTest(projectedPosInObjFrame, projectedPosEndInObjFrame, objInfo.bvh)){
