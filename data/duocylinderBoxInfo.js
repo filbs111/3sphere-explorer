@@ -111,6 +111,9 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 		for (var ii=0;ii<list.length;++ii){
 			var thisMat = list[ii].matrix;
 			xyzrotate4mat(thisMat, rotationCorrection);
+			//fix bug - didn't rotate the transposed matrix!
+			mat4.set(thisMat, list[ii].matrixT);
+			mat4.transpose(list[ii].matrixT);
 		}
 	}
 	

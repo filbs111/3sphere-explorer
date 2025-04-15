@@ -56,6 +56,7 @@ var lucyBuffers={};
 var lucyBvh={};
 var octoFractalBuffers={};
 var bridgeBuffers={};
+var bridgeBvh={}
 var thrusterBuffers={};
 
 //var sshipModelScale=0.0001;
@@ -395,7 +396,10 @@ function initBuffers(){
 
 	loadBuffersFromObj2Or3File(octoFractalBuffers, "./data/miscobjs/fractal-octahedron4.obj3", loadBufferData, 6);
 
-	loadBuffersFromObj2Or3File(bridgeBuffers, "./data/miscobjs/bridgexmy2.obj3", loadBufferData, 6);
+	loadBuffersFromObj2Or3File(bridgeBuffers, "./data/miscobjs/bridgexmy2.obj3", (bufferObj, sourceData) => {
+		loadBufferData(bufferObj, sourceData);
+		createBvhFrom3dObjectData(sourceData, bridgeBvh, 6);
+	}, 6);
 
 	loadBuffersFromObj2Or3File(thrusterBuffers, "./data/miscobjs/thrusters-with-normals-and-vcolor.obj3", loadBufferData, 6);
 
@@ -5783,10 +5787,8 @@ var iterateMechanics = (function iterateMechanics(){
 			//collision with bvh objects
 			//transform bullet into object frame (similar logic to boxes etc), applying scale factor.
 			bvhObjsForWorld[bullet.world].forEach(objInfo => {
-				var bulletPosVec = vec4.create(bulletPos);
-				mat4.multiplyVec4(objInfo.transposedMat, bulletPosVec, bulletPosVec);
-				var bulletPosEndVec = vec4.create(newBulletPos);
-				mat4.multiplyVec4(objInfo.transposedMat, bulletPosEndVec, bulletPosEndVec);
+				var bulletPosVec = getPosInMatrixFrame(bulletPos, objInfo.transposedMat);
+				var bulletPosEndVec = getPosInMatrixFrame(newBulletPos, objInfo.transposedMat);
 
 				//reject if bullet start or end is in other hemisphere to object checking collision with.
 				//NOTE this is a stopgap measure - when using world BVH, or long ray collision with world object bounds,
@@ -5795,14 +5797,93 @@ var iterateMechanics = (function iterateMechanics(){
 					return;
 				}
 
-				var projectedPosInObjFrame = bulletPosVec.slice(0,3).map(val => val/(objInfo.scale*bulletPosVec[3]));
-				var projectedPosEndInObjFrame = bulletPosEndVec.slice(0,3).map(val => val/(objInfo.scale*bulletPosEndVec[3]));
+				var projectedPosInObjFrame = projectTo3dWithScale(bulletPosVec, objInfo.scale);
+				var projectedPosEndInObjFrame = projectTo3dWithScale(bulletPosEndVec, objInfo.scale);
 
 				//if (bvhSphereOverlapTest(projectedPosInObjFrame, 0.01, objInfo.bvh)){
 				if (bvhRayOverlapTest(projectedPosInObjFrame, projectedPosEndInObjFrame, objInfo.bvh)){
 					detonateBullet(bullet, false, [0.3,0.3,0.8]);
 				}
 			});
+
+			//ray collision with bendy objects.
+			//TODO for object chains where start of one is end of another, don't repear matrix multiplication.
+			var bendyObjsInfo = duocylinderBoxInfo.viaducts.list;	//NOTE has old grid data in duocylinderBoxInfo.viaducts, 
+																	//but will ilkely use 4d world bvh instead.
+			var bridgeScale = 0.042;	//copied from elsewhere
+			var lastInfo = bendyObjsInfo[bendyObjsInfo.length-1];
+			var projectedLastPosInObjFrame = getProjectedPointInMatrixFrame(bulletPos, lastInfo.matrixT, bridgeScale);
+			var projectedLastPosEndInObjFrame = getProjectedPointInMatrixFrame(newBulletPos, lastInfo.matrixT, bridgeScale);
+			var lastPointPositive = projectedLastPosInObjFrame.positive && projectedLastPosEndInObjFrame.positive;
+			for (var ii=0;ii<bendyObjsInfo.length;ii++){
+				var thisInfo = bendyObjsInfo[ii];
+				var projectedPosInObjFrame = getProjectedPointInMatrixFrame(bulletPos, thisInfo.matrixT,bridgeScale);
+				var projectedPosEndInObjFrame = getProjectedPointInMatrixFrame(newBulletPos, thisInfo.matrixT,bridgeScale);
+				var thisPointPositive = projectedPosInObjFrame.positive && projectedPosEndInObjFrame.positive;
+
+				if (thisPointPositive && lastPointPositive){
+					//average positions in the two frames
+					var weightedAverageStartPosObjFrame = performWeightedAverage(projectedPosInObjFrame.result, projectedLastPosInObjFrame.result);
+					var weightedAverageEndPosObjFrame = performWeightedAverage(projectedPosEndInObjFrame.result, projectedLastPosEndInObjFrame.result);
+
+					if (bvhRayOverlapTest(weightedAverageStartPosObjFrame, weightedAverageEndPosObjFrame, bridgeBvh)){
+						detonateBullet(bullet, false, [0.3,0.3,0.8]);
+					}
+				}
+
+				function performWeightedAverage(posInFirstFrame, posInSecondFrame){
+					//return posInFirstFrame;	//works for drawing individual non-bendy object.
+					
+					var weightForFirstFrame = -posInSecondFrame[2];
+					var weightForSecondFrame = posInFirstFrame[2];
+					var totalWeight = weightForFirstFrame+weightForSecondFrame;
+					weightForFirstFrame/=totalWeight;
+					weightForSecondFrame/=totalWeight;
+
+					posInFirstFrameAdjusted = posInFirstFrame.slice();
+					posInSecondFrameAdjusted = posInSecondFrame.slice();
+					posInFirstFrameAdjusted[2]-=1;
+					posInSecondFrameAdjusted[2]+=1;
+
+					var weightedAverage = [0,0,0];
+
+					for (var cc=0;cc<3;cc++){
+						weightedAverage[cc]+=
+							weightForFirstFrame*posInFirstFrameAdjusted[cc]+weightForSecondFrame*posInSecondFrameAdjusted[cc];
+					}
+
+					return weightedAverage;
+				}
+
+				lastPointPositive = thisPointPositive;
+				projectedLastPosInObjFrame = projectedPosInObjFrame;
+				projectedLastPosEndInObjFrame = projectedPosEndInObjFrame;
+					//TODO just store weighted result
+			}
+
+			function getProjectedPointInMatrixFrame(inputPos, matrixTransposed, objectScale){
+				var posInFrame = getPosInMatrixFrame(inputPos, matrixTransposed);
+				if (posInFrame[3]<0){
+					return {
+						positive:false
+					}
+				}
+				return {
+					positive: true,
+					result: projectTo3dWithScale(posInFrame,objectScale)
+				}
+			}
+				
+			function getPosInMatrixFrame(inputPos, matrixTransposed){
+				var posInFrame = vec4.create(inputPos);					//todo reuse vector
+				mat4.multiplyVec4(matrixTransposed, posInFrame, posInFrame);
+				return posInFrame;
+			}
+
+			function projectTo3dWithScale(posInFrame, objectScale){
+				var projectedPosInObjFrame = posInFrame.slice(0,3).map(val => val/(objectScale*posInFrame[3]));
+				return projectedPosInObjFrame;
+			}
 			
 
 			var cellIdxForBullet = getGridId.forPoint(bulletPos);
