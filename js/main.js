@@ -5807,58 +5807,62 @@ var iterateMechanics = (function iterateMechanics(){
 			});
 
 			//ray collision with bendy objects.
-			//TODO for object chains where start of one is end of another, don't repear matrix multiplication.
-			var bendyObjsInfo = duocylinderBoxInfo.viaducts.list;	//NOTE has old grid data in duocylinderBoxInfo.viaducts, 
-																	//but will ilkely use 4d world bvh instead.
 			var bridgeScale = 0.042;	//copied from elsewhere
-			var lastInfo = bendyObjsInfo[bendyObjsInfo.length-1];
-			var projectedLastPosInObjFrame = getProjectedPointInMatrixFrame(bulletPos, lastInfo.matrixT, bridgeScale);
-			var projectedLastPosEndInObjFrame = getProjectedPointInMatrixFrame(newBulletPos, lastInfo.matrixT, bridgeScale);
-			var lastPointPositive = projectedLastPosInObjFrame.positive && projectedLastPosEndInObjFrame.positive;
-			for (var ii=0;ii<bendyObjsInfo.length;ii++){
-				var thisInfo = bendyObjsInfo[ii];
-				var projectedPosInObjFrame = getProjectedPointInMatrixFrame(bulletPos, thisInfo.matrixT,bridgeScale);
-				var projectedPosEndInObjFrame = getProjectedPointInMatrixFrame(newBulletPos, thisInfo.matrixT,bridgeScale);
-				var thisPointPositive = projectedPosInObjFrame.positive && projectedPosEndInObjFrame.positive;
+			doBendyBvhCollision(duocylinderBoxInfo.viaducts.list, bridgeScale, bridgeBvh);
+			doBendyBvhCollision(duocylinderBoxInfo.viaducts2.list, bridgeScale, bridgeBvh);
+				//NOTE has old grid data in duocylinderBoxInfo.viaducts, 
+				//but will ilkely use 4d world bvh instead.
 
-				if (thisPointPositive && lastPointPositive){
-					//average positions in the two frames
-					var weightedAverageStartPosObjFrame = performWeightedAverage(projectedPosInObjFrame.result, projectedLastPosInObjFrame.result);
-					var weightedAverageEndPosObjFrame = performWeightedAverage(projectedPosEndInObjFrame.result, projectedLastPosEndInObjFrame.result);
+			function doBendyBvhCollision(bendyObjsInfo, objScale, bvh){
+				var lastInfo = bendyObjsInfo[bendyObjsInfo.length-1];
+				var projectedLastPosInObjFrame = getProjectedPointInMatrixFrame(bulletPos, lastInfo.matrixT, objScale);
+				var projectedLastPosEndInObjFrame = getProjectedPointInMatrixFrame(newBulletPos, lastInfo.matrixT, objScale);
+				var lastPointPositive = projectedLastPosInObjFrame.positive && projectedLastPosEndInObjFrame.positive;
+				for (var ii=0;ii<bendyObjsInfo.length;ii++){
+					var thisInfo = bendyObjsInfo[ii];
+					var projectedPosInObjFrame = getProjectedPointInMatrixFrame(bulletPos, thisInfo.matrixT,objScale);
+					var projectedPosEndInObjFrame = getProjectedPointInMatrixFrame(newBulletPos, thisInfo.matrixT,objScale);
+					var thisPointPositive = projectedPosInObjFrame.positive && projectedPosEndInObjFrame.positive;
 
-					if (bvhRayOverlapTest(weightedAverageStartPosObjFrame, weightedAverageEndPosObjFrame, bridgeBvh)){
-						detonateBullet(bullet, false, [0.3,0.3,0.8]);
-					}
-				}
+					if (thisPointPositive && lastPointPositive){
+						//average positions in the two frames
+						var weightedAverageStartPosObjFrame = performWeightedAverage(projectedPosInObjFrame.result, projectedLastPosInObjFrame.result);
+						var weightedAverageEndPosObjFrame = performWeightedAverage(projectedPosEndInObjFrame.result, projectedLastPosEndInObjFrame.result);
 
-				function performWeightedAverage(posInFirstFrame, posInSecondFrame){
-					//return posInFirstFrame;	//works for drawing individual non-bendy object.
-					
-					var weightForFirstFrame = -posInSecondFrame[2];
-					var weightForSecondFrame = posInFirstFrame[2];
-					var totalWeight = weightForFirstFrame+weightForSecondFrame;
-					weightForFirstFrame/=totalWeight;
-					weightForSecondFrame/=totalWeight;
-
-					posInFirstFrameAdjusted = posInFirstFrame.slice();
-					posInSecondFrameAdjusted = posInSecondFrame.slice();
-					posInFirstFrameAdjusted[2]-=1;
-					posInSecondFrameAdjusted[2]+=1;
-
-					var weightedAverage = [0,0,0];
-
-					for (var cc=0;cc<3;cc++){
-						weightedAverage[cc]+=
-							weightForFirstFrame*posInFirstFrameAdjusted[cc]+weightForSecondFrame*posInSecondFrameAdjusted[cc];
+						if (bvhRayOverlapTest(weightedAverageStartPosObjFrame, weightedAverageEndPosObjFrame, bvh)){
+							detonateBullet(bullet, false, [0.3,0.3,0.8]);
+						}
 					}
 
-					return weightedAverage;
-				}
+					function performWeightedAverage(posInFirstFrame, posInSecondFrame){
+						//return posInFirstFrame;	//works for drawing individual non-bendy object.
+						
+						var weightForFirstFrame = -posInSecondFrame[2];
+						var weightForSecondFrame = posInFirstFrame[2];
+						var totalWeight = weightForFirstFrame+weightForSecondFrame;
+						weightForFirstFrame/=totalWeight;
+						weightForSecondFrame/=totalWeight;
 
-				lastPointPositive = thisPointPositive;
-				projectedLastPosInObjFrame = projectedPosInObjFrame;
-				projectedLastPosEndInObjFrame = projectedPosEndInObjFrame;
-					//TODO just store weighted result
+						posInFirstFrameAdjusted = posInFirstFrame.slice();
+						posInSecondFrameAdjusted = posInSecondFrame.slice();
+						posInFirstFrameAdjusted[2]-=1;
+						posInSecondFrameAdjusted[2]+=1;
+
+						var weightedAverage = [0,0,0];
+
+						for (var cc=0;cc<3;cc++){
+							weightedAverage[cc]+=
+								weightForFirstFrame*posInFirstFrameAdjusted[cc]+weightForSecondFrame*posInSecondFrameAdjusted[cc];
+						}
+
+						return weightedAverage;
+					}
+
+					lastPointPositive = thisPointPositive;
+					projectedLastPosInObjFrame = projectedPosInObjFrame;
+					projectedLastPosEndInObjFrame = projectedPosEndInObjFrame;
+						//TODO just store weighted result
+				}
 			}
 
 			function getProjectedPointInMatrixFrame(inputPos, matrixTransposed, objectScale){
