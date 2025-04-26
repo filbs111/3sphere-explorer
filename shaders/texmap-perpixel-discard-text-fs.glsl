@@ -43,7 +43,7 @@ out vec4 fragColor;
 	void main(void) {
 #ifdef DEPTH_AWARE
 		float currentDepth =  textureProj(uSamplerDepthmap, vec3(.5,.5,1.)*vScreenSpaceCoord.xyz + vec3(.5,.5,0.)*vScreenSpaceCoord.z).r;
-		float newDepth = .5*(vZW.x/vZW.y) + .5;	//this is duplicate of custom depth calculation
+		float newDepth = .3183*atan((vZW.x*2.)/(vZW.y+1.)) + .5;	//this is duplicate of custom depth calculation
 		if (newDepth>currentDepth){
 			discard;
 		}
@@ -53,7 +53,10 @@ out vec4 fragColor;
 	//, but still want to write depth when drawing sea, which this shader used for
 	//TODO separate shader for sea if impacts perf
 #ifdef CUSTOM_DEPTH
-		float depthVal = .5*(vZW.x/vZW.y) + .5;
+		// here x=w, y=z, but also confusingly switched by pMatrix ! 
+		//TODO if this works, don't bother creating vZW in vert shader.
+		if (vZW.y > -1.){discard;} //other side of world. shouldn't happen much with culling. TODO discard earlier?
+		float depthVal = .3183*atan((vZW.x*2.)/(vZW.y+1.)) + .5;
 		gl_FragDepth = depthVal;
 #endif
 //#endif

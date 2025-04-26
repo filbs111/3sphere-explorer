@@ -20,8 +20,13 @@ out vec4 fragColor;
 	void main(void) {
 		//gl_FragColor = uColor*texture(uSampler, vTextureCoord);
 
+		// here x=w, y=z, but also confusingly switched by pMatrix ! 
+		//TODO if this works, don't bother creating vZW in vert shader.
+		if (vZW.y > -1.){discard;} //other side of world. shouldn't happen much with culling. TODO discard earlier?
+		float depthVal = .3183*atan((vZW.x*2.)/(vZW.y+1.)) + .5;	
+
 #ifdef CUSTOM_DEPTH
-		gl_FragDepth = .5*(vZW.x/vZW.y) + .5;
+		gl_FragDepth = depthVal;
 #endif
 
 #ifdef MAPPROJECT_ACTIVE
@@ -41,6 +46,5 @@ out vec4 fragColor;
 		//fragColor = uColor*fog*textureProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		//fragColor = (1.0-fog)*uFogColor;
 
-		float depthVal = .5*(vZW.x/vZW.y) + .5;	//assumes passing though vZW.
 		fragColor.a = depthVal;
 	}
