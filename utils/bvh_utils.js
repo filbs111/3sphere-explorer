@@ -415,6 +415,16 @@ function aabbsOverlap(aabb1, aabb2){
     return intersection;
 }
 
+function aabbsOverlap4d(aabb1, aabb2){
+    var intersection = true;
+    for (var ii=0;ii<4;ii++){
+            //leftmost of each span left of the rightmost of the other
+        var thisAxisIntersects = aabb1[0][ii] < aabb2[1][ii] && aabb2[0][ii] < aabb1[1][ii];
+        intersection = intersection && thisAxisIntersects;
+    }
+    return intersection;
+}
+
 function pointSignedDistanceFromPlane(point, plane){
     return dotProduct(point, plane.normal) - plane.distFromOrigin;
 }
@@ -512,4 +522,65 @@ function morton3(threevec){
         + (bitarrays[2][0]);
 
     return morton;
+}
+
+var temp3vec = [...new Array(3)];
+var temp4vec = [...new Array(4)];
+
+function aabb4DForSphere(position, sphereRad){
+    //position is 4d unit vector.
+    //sphere radius is in flat projected space (before projection onto 3-sphere surface)
+
+    var cosAng = Math.cos(Math.atan(sphereRad));   //TODO reformulate for efficiency
+
+    var positionOfCircle = position.map(component => component*cosAng); //position of centre of sphere in flat 4d space
+    var projectedCircleRad = sphereRad*cosAng;                                //projected from flat space onto surface of 3-sphere.
+    var circleAABBSize = temp4vec.map((_,ii)=> [1-position[ii]*position[ii]])
+        .map(Math.sqrt)
+        .map(component => component*projectedCircleRad);
+    var AABB = [-1,1].map(sign => positionOfCircle.map((component,ii) => component + sign*circleAABBSize[ii] ));
+
+    //find out whether the circle surrounds one of the axes.
+    for (var ii=0;ii<4;ii++){
+        if (position[ii] > cosAng){
+            AABB[1][ii]=1;
+        }
+        if (position[ii] <-cosAng){
+            AABB[0][ii]=-1;
+        }
+    }
+
+    console.log({
+        note:"aabb calculation",
+        position,
+        sphereRad,
+        AABB
+    })
+
+    return AABB;
+}
+
+function aabb4DForLine(startPos, endPos){
+
+    //TODO do this exactly/efficiently! - basically a sine wave projected onto each axis.
+    // so min/max of start, end points unless passes inflection point
+
+    //temporary bodge method. more sections = more accurate
+    var numSections = 10;
+    var points = [startPos, endPos];
+    for (var ii=1;ii<numSections;ii++){
+        var thisPoint = [];
+        var sumSq = 0;
+        for (var cc=0;cc<4;cc++){
+            var component = (endPos[cc]*ii + startPos[cc]*(numSections-ii))/numSections;
+            thisPoint.push(component);
+            sumSq+=component*component;
+        }
+        var len = Math.sqrt(sumSq); //normalise
+        points.push(thisPoint.map(xx => xx/len));
+    }
+
+    return [Math.min,Math.max].map( ff => 
+            temp4vec.map((_, ii) => ff.apply(null, points.map(pp => pp[ii])))
+        );
 }

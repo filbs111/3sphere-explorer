@@ -382,6 +382,16 @@ function initBuffers(){
 	loadBuffersFromObj2Or3File(gunBuffers, "./data/cannon/cannon-pointz-yz.obj2", (bufferObj, sourceData) => {
 		loadBufferData(bufferObj, sourceData);
 		createBvhFrom3dObjectData(sourceData, gunBvh);
+		someObjectMatrices.forEach(someMat => {
+			var scale = 0.1;
+			bvhObjsForWorld[3].push({
+				mat: someMat.mat, 
+				transposedMat: someMat.transposedMat, 
+				bvh: gunBvh,
+				aabb4d: aabb4DForSphere(someMat.mat.slice(12), scale*gunBvh.boundingSphereRadius),
+				scale
+			});
+		});
 	});
 
 	loadBuffersFromObj2Or3File(su57Buffers, "./data/miscobjs/t50/su57yz-4a.obj2", loadBufferData);
@@ -392,6 +402,18 @@ function initBuffers(){
 	loadBuffersFromObj5File(lucyBuffers, "./data/miscobjs/lucy-withvertcolor.obj5", (bufferObj, sourceData) => {
 		loadBufferData(bufferObj, sourceData);
 		createBvhFrom3dObjectData(sourceData, lucyBvh, 6);
+		someObjectMatrices.slice(3).forEach(someMat => {
+			var scale = 0.0016;
+			bvhObjsForWorld[1].push({
+				mat: someMat.mat, 
+				transposedMat: someMat.transposedMat, 
+				//bvh:cubeFrameBvh,
+				//scale:0.4
+				bvh: lucyBvh,
+				aabb4d: aabb4DForSphere(someMat.mat.slice(12), scale*lucyBvh.boundingSphereRadius),
+				scale
+			});
+		});
 	}, 6);
 
 	loadBuffersFromObj2Or3File(octoFractalBuffers, "./data/miscobjs/fractal-octahedron4.obj3", loadBufferData, 6);
@@ -404,34 +426,29 @@ function initBuffers(){
 	loadBuffersFromObj2Or3File(thrusterBuffers, "./data/miscobjs/thrusters-with-normals-and-vcolor.obj3", loadBufferData, 6);
 
 
-
 	//now bvhs ready, create the following which references them.
-	bvhObjsForWorld[0]=someObjectMatrices.map(someMat => {return {
-		mat:someMat.mat, 
-		transposedMat: someMat.transposedMat, 
-		bvh:teapotBvh,
-		scale:0.4
-	};}),
-	bvhObjsForWorld[1]=[someObjectMatrices[2]].map(someMat => {return {
-		mat:someMat.mat, 
-		transposedMat: someMat.transposedMat, 
-		//bvh:cubeFrameBvh,
-		//scale:0.4
-		bvh:lucyBvh,
-		scale:0.005
-	};});
-	bvhObjsForWorld[2]=someObjectMatrices.map(someMat => {return {
-		mat:someMat.mat, 
-		transposedMat: someMat.transposedMat, 
-		bvh:dodecaFrameBvh2,
-		scale:0.2
-	};});
-	bvhObjsForWorld[3]=someObjectMatrices.map(someMat => {return {
-		mat:someMat.mat, 
-		transposedMat: someMat.transposedMat, 
-		bvh:gunBvh,
-		scale:0.1
-	};});
+	bvhObjsForWorld[0]=someObjectMatrices.map(someMat => {
+		var scale = 0.4;
+		return {
+			mat: someMat.mat, 
+			transposedMat: someMat.transposedMat, 
+			bvh: teapotBvh,
+			aabb4d: aabb4DForSphere(someMat.mat.slice(12), scale*teapotBvh.boundingSphereRadius),
+			scale
+		};
+	});
+
+	bvhObjsForWorld[2]=someObjectMatrices.map(someMat => {
+		var scale = 0.2;
+		return {
+			mat: someMat.mat, 
+			transposedMat: someMat.transposedMat, 
+			bvh:dodecaFrameBvh2,
+			aabb4d: aabb4DForSphere(someMat.mat.slice(12), scale*dodecaFrameBvh2.boundingSphereRadius),
+			scale
+		};
+	});
+
 	//TODO array for each object type? include direct reference to rendering info (instead of matching bvh later)
 
 
@@ -4138,7 +4155,8 @@ var guiParams={
 		fireworks:false,
 		textTextBox:false,
 		textWorldNum:true,
-		bvhBoundingSpheres:false
+		bvhBoundingSpheres:false,
+		worldBvhCollisionTest:true
 	},
 	audio:{
 		volume:0.2,
@@ -4170,6 +4188,20 @@ var someObjectMatrices = (() => {
 
 	xyzmove4mat(mats[2],[0,0,0.5]);
 	xyzmove4mat(mats[2],[0,0.4,0]);
+
+	xyzmove4mat(mats[3],[0,0,0.5]);
+	xyzmove4mat(mats[3],[0,0.65,0]);
+
+	for (var xx=0;xx<3;xx++){
+		for (var yy=0;yy<3;yy++){
+			var thisMat = mat4.identity();
+			xyzmove4mat(thisMat,[0,0,-0.5-0.7*xx]);
+			xyzrotate4mat(thisMat, [0,0,Math.PI+ 1*yy]);
+			xyzmove4mat(thisMat,[0,0.8,0]);
+			xyzrotate4mat(thisMat, [0,Math.PI/4,0]);
+			mats.push(thisMat);
+		}
+	}
 
 	return mats.map(mat=>{
 		var copy = mat4.create(mat);
@@ -4388,7 +4420,8 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	debugFolder.add(guiParams.debug, "textTextBox");
 	debugFolder.add(guiParams.debug, "textWorldNum");
 	debugFolder.add(guiParams.debug, "bvhBoundingSpheres");
-
+	debugFolder.add(guiParams.debug, "worldBvhCollisionTest");
+	
 	var audioFolder = gui.addFolder('audio');
 	audioFolder.add(guiParams.audio, "volume", 0,1,0.1).onChange(MySound.setGlobalVolume);
 	MySound.setGlobalVolume(guiParams.audio.volume);	//if set above 1, fallback html media element will throw exception!!!
@@ -5799,8 +5832,19 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 
 			//collision with bvh objects
-			//transform bullet into object frame (similar logic to boxes etc), applying scale factor.
-			bvhObjsForWorld[bullet.world].forEach(objInfo => {
+			var possiblities = bvhObjsForWorld[bullet.world];
+			
+			if (guiParams.debug.worldBvhCollisionTest){
+				//find possible collisions where 4d aabb of the bounding sphere of the object overlaps
+				//the 4d aabb of the line
+				var lineAABB = aabb4DForLine(bulletPos, newBulletPos);
+				possiblities = bvhObjsForWorld[bullet.world].filter(objInfo => 
+					aabbsOverlap4d(lineAABB, objInfo.aabb4d));
+			}
+
+			possiblities.forEach(objInfo => {
+				//transform bullet into object frame (similar logic to boxes etc), applying scale factor.
+
 				var bulletPosVec = getPosInMatrixFrame(bulletPos, objInfo.transposedMat);
 				var bulletPosEndVec = getPosInMatrixFrame(newBulletPos, objInfo.transposedMat);
 
