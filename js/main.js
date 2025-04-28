@@ -596,7 +596,7 @@ var offsetCam = (function(){
 	var targetForType = {
 		"near 3rd person":[0,-37.5,-25],	//TODO reduce code duplication. do scalar vector product targetForType time?
 		"mid 3rd person":[0,-50,-75],
-		"far 3rd person":[0,-75,-100],
+		"far 3rd person":[0,-65,-90],
 		"really far 3rd person":[0,-75,-125],
 		"cockpit":[0,0,15],
 		"side":[30,0,12.5],
@@ -4027,8 +4027,8 @@ var pointerLocked=false;
 
 var guiParams={
 	worlds:[
-		{fogColor:'#dca985',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:true,seaLevel:0,seaPeakiness:0.0},
-		{fogColor:'#5cd5e6',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
+		{fogColor:'#2f9a16',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:true,seaLevel:0,seaPeakiness:0.0},
+		{fogColor:'#7496a0',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
 		{fogColor:'#bbbbbb',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
 		{fogColor:'#111111',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}
 	],
@@ -4093,14 +4093,14 @@ var guiParams={
 	display:{
 		cameraType:"far 3rd person",
 		cameraAttachedTo:"player vehicle",
-		cameraFov:125,
-		uVarOne:-0.01,
+		cameraFov:145,
+		uVarOne:-0.015,
 		flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
 		stereo3d:"off",
 		eyeSepWorld:0.0004,	//half distance between eyes in game world
 		eyeTurnIn:0.002,
 		showHud:true,
-		fisheyeEnabled:false,
+		fisheyeEnabled:true,
 		renderViaTexture:'blur-b-use-alpha',
 		renderLastStage:'fxaa',
 		drawTransparentStuff:true,
