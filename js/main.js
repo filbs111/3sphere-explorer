@@ -4057,7 +4057,7 @@ var guiParams={
 		buildingScale:10,
 		octoFractal:true,
 		octoFractalScale:20,
-		viaduct: 'instanced'
+		viaduct: 'none'
 	},
 	'random boxes':{
 		number:maxRandBoxes,	//note ui controlled value does not affect singleBuffer
@@ -5820,12 +5820,12 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			});
 
-			//ray collision with bendy objects.
-			var bridgeScale = 0.042;	//copied from elsewhere
-			doBendyBvhCollision(duocylinderBoxInfo.viaducts.list, bridgeScale, bridgeBvh);
-			doBendyBvhCollision(duocylinderBoxInfo.viaducts2.list, bridgeScale, bridgeBvh);
-				//NOTE has old grid data in duocylinderBoxInfo.viaducts, 
-				//but will ilkely use 4d world bvh instead.
+			//ray collision with bendy objects. NOTE this isn't quite right
+			if (guiParams.drawShapes.viaduct != 'none' && bridgeBuffers.isLoaded){
+				var bridgeScale = 0.042;	//copied from elsewhere
+				doBendyBvhCollision(duocylinderBoxInfo.viaducts.list, bridgeScale, bridgeBvh);
+				doBendyBvhCollision(duocylinderBoxInfo.viaducts2.list, bridgeScale, bridgeBvh);
+			}
 
 			function doBendyBvhCollision(bendyObjsInfo, objScale, bvh){
 				var lastInfo = bendyObjsInfo[bendyObjsInfo.length-1];
