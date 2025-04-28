@@ -28,6 +28,9 @@ function createBvhFrom3dObjectData(sourceData, bvhToPopulate, vertAttrs=3){
     }, 0));
     console.log("boundingSphereDiam:" + boundingSphereDiam);
 
+    bvhToPopulate.boundingSphereRadius = boundingSphereDiam/2;
+        //NOTE if this is tried to be used to create AABB4d data before is loaded, won't work!
+
     var temp3Vec = [...new Array(3)];
 
     //for each triangle, create an AABB.

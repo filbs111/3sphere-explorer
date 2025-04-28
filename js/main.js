@@ -2620,6 +2620,18 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 			drawObjectFromBuffers(gunBuffers, activeShaderProgram);
 		});
 
+	//NOTE this is inefficient but is just debug drawing (could make fast by instancing.)
+	if (guiParams.debug.bvhBoundingSpheres){
+		prepBuffersForDrawing(sphereBuffersHiRes, activeShaderProgram);
+		bvhObjsForWorld[worldA].forEach(bvhObj => {
+			var modelScale = bvhObj.scale * bvhObj.bvh.boundingSphereRadius;
+			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
+			mat4.set(invertedWorldCamera, mvMatrix);
+			mat4.multiply(mvMatrix, bvhObj.mat);
+			mat4.set(bvhObj.mat, mMatrix);
+			drawObjectFromPreppedBuffers(sphereBuffersHiRes, activeShaderProgram);
+		});
+	}
 	
 	if (guiParams.drawShapes.hyperboloid){
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.gray);
@@ -4125,7 +4137,8 @@ var guiParams={
 		emitFire:false,
 		fireworks:false,
 		textTextBox:false,
-		textWorldNum:true
+		textWorldNum:true,
+		bvhBoundingSpheres:false
 	},
 	audio:{
 		volume:0.2,
@@ -4374,6 +4387,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	debugFolder.add(guiParams.debug, "fireworks");
 	debugFolder.add(guiParams.debug, "textTextBox");
 	debugFolder.add(guiParams.debug, "textWorldNum");
+	debugFolder.add(guiParams.debug, "bvhBoundingSpheres");
 
 	var audioFolder = gui.addFolder('audio');
 	audioFolder.add(guiParams.audio, "volume", 0,1,0.1).onChange(MySound.setGlobalVolume);
