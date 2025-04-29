@@ -447,6 +447,14 @@ function normalise(inputVector){
 }
 
 function vectorSum(vec1, vec2){
+
+    // if (vec1 == undefined || vec1[0] == undefined || vec1[1] == undefined || vec1[2] == undefined){
+    //     console.log("problem with vec1! " + vec1);
+    // }
+    // if (vec2 == undefined || vec2[0] == undefined || vec2[1] == undefined || vec2[2] == undefined){
+    //     console.log("problem with vec2! " + vec2);
+    // }
+
     return [
         vec1[0] + vec2[0],
         vec1[1] + vec2[1],
@@ -461,6 +469,15 @@ function vectorDifference(vec1, vec2){
         vec1[2] - vec2[2],
     ];
 }
+
+/*
+//TODO move elsewhere? useful beyond bvh stuff.
+function pointToTriangle(point, triangle){
+    //DO Separating Axis Test (SAT) for 3 triangle points, 3 edges, face.
+    //return the vector, possibly and its length 
+    
+}
+*/
 
 function arrayToGroups(initialArray, groupSize){
     https://stackoverflow.com/a/44996257
@@ -560,12 +577,14 @@ function aabb4DForSphere(position, sphereRad){
     return AABB;
 }
 
+/*
 function aabb4DForLine(startPos, endPos){
+    //bodge method. more sections = more accurate
 
-    //TODO do this exactly/efficiently! - basically a sine wave projected onto each axis.
+    //could do this exactly - basically a sine wave projected onto each axis.
     // so min/max of start, end points unless passes inflection point
+    //but expect simple method (AABB bigger than needed) fine for now.
 
-    //temporary bodge method. more sections = more accurate
     var numSections = 10;
     var points = [startPos, endPos];
     for (var ii=1;ii<numSections;ii++){
@@ -583,4 +602,18 @@ function aabb4DForLine(startPos, endPos){
     return [Math.min,Math.max].map( ff => 
             temp4vec.map((_, ii) => ff.apply(null, points.map(pp => pp[ii])))
         );
+}
+*/
+
+function aabb4DForLine(startPos, endPos){
+    //larger aabb than necessary but easy calculation.
+    var sumSq = 0;
+    var centre = new Array(4);
+    for (var cc=0;cc<4;cc++){
+        centre[cc] = (startPos[cc] + endPos[cc])/2;
+        var halfDisp = (endPos[cc] - startPos[cc])/2;
+        sumSq+= halfDisp*halfDisp;
+    }
+    var rad = Math.sqrt(sumSq);
+    return [-1,1].map(direction => centre.map(xx => xx+direction*rad ));
 }
