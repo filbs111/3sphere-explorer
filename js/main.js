@@ -4156,7 +4156,8 @@ var guiParams={
 		textTextBox:false,
 		textWorldNum:true,
 		bvhBoundingSpheres:false,
-		worldBvhCollisionTest:true
+		worldBvhCollisionTest:true,
+		worldBvhCollisionTestPlayer:true
 	},
 	audio:{
 		volume:0.2,
@@ -4421,7 +4422,8 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	debugFolder.add(guiParams.debug, "textWorldNum");
 	debugFolder.add(guiParams.debug, "bvhBoundingSpheres");
 	debugFolder.add(guiParams.debug, "worldBvhCollisionTest");
-	
+	debugFolder.add(guiParams.debug, "worldBvhCollisionTestPlayer");
+
 	var audioFolder = gui.addFolder('audio');
 	audioFolder.add(guiParams.audio, "volume", 0,1,0.1).onChange(MySound.setGlobalVolume);
 	MySound.setGlobalVolume(guiParams.audio.volume);	//if set above 1, fallback html media element will throw exception!!!
@@ -5526,7 +5528,23 @@ var iterateMechanics = (function iterateMechanics(){
 				var closestRoughSqDistanceFound = Number.POSITIVE_INFINITY;
 				var distanceResults=[];
 
-				bvhObjsForWorld[playerContainer.world].forEach(objInfo =>
+				var possibleObjects = bvhObjsForWorld[playerContainer.world];
+				if (guiParams.debug.worldBvhCollisionTestPlayer){
+					//find set of candiate objects by their bounding spheres - 
+					//provided each object has something solid within its bounding sphere
+					//any each object has a maximum and minimum possible distance from a given point
+					//the find the minimum maximum distance for all objects.
+					//any object with a minimum distance above this is NOT the closest so can skip testing for.
+					//which in practice is likely to be the bulk of objects. 
+					var objsWithMinMaxDistances = bvhObjsForWorld[playerContainer.world].map(objInfo => {return {
+						objInfo,
+						minMaxDist: minMaxDistanceFromPointToBoundingSphere(playerPos, objInfo.mat.slice(12), objInfo.scale*objInfo.bvh.boundingSphereRadius)
+					}});
+					var maxPossibleDistance = objsWithMinMaxDistances.map(xx=>xx.minMaxDist[1]).reduce((a,b)=>Math.min(a,b), Number.MAX_VALUE);
+					possibleObjects = objsWithMinMaxDistances.filter(xx=>xx.minMaxDist[0]<=maxPossibleDistance).map(xx=>xx.objInfo);
+				}
+
+				possibleObjects.forEach(objInfo =>
 				{
 					var transposedObjMat = objInfo.transposedMat;
 					var objMat = objInfo.mat;

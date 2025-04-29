@@ -433,6 +433,10 @@ function dotProduct(first, second){
     return first[0]*second[0] + first[1]*second[1] + first[2]*second[2];
 }
 
+function dotProduct4(first, second){
+    return first[0]*second[0] + first[1]*second[1] + first[2]*second[2] + first[3]*second[3];
+}
+
 function crossProduct(vec1, vec2){
     return [
         vec1[1]*vec2[2] - vec1[2]*vec2[1],
@@ -616,4 +620,12 @@ function aabb4DForLine(startPos, endPos){
     }
     var rad = Math.sqrt(sumSq);
     return [-1,1].map(direction => centre.map(xx => xx+direction*rad ));
+}
+
+function minMaxDistanceFromPointToBoundingSphere(pointPos, spherePos, sphereRad){
+    var dp = dotProduct4(pointPos, spherePos);
+    var angDifference = Math.acos(dp);
+    var circleAngRad = Math.atan(sphereRad);    //TODO precalculate?
+    return [Math.max(0,angDifference-circleAngRad), angDifference+circleAngRad];
+        //TODO maybe remove the max(0, here since may work without anyway
 }
