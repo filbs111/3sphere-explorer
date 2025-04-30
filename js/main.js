@@ -54,6 +54,8 @@ var meshSphereBuffers={};
 var buildingBuffers={};
 var lucyBuffers={};
 var lucyBvh={};
+var mushroomBuffers={};
+var mushroomBvh={};
 var octoFractalBuffers={};
 var bridgeBuffers={};
 var bridgeBvh={}
@@ -402,7 +404,7 @@ function initBuffers(){
 	loadBuffersFromObj5File(lucyBuffers, "./data/miscobjs/lucy-withvertcolor.obj5", (bufferObj, sourceData) => {
 		loadBufferData(bufferObj, sourceData);
 		createBvhFrom3dObjectData(sourceData, lucyBvh, 6);
-		someObjectMatrices.slice(3).forEach(someMat => {
+		someObjectMatrices.slice(0,3).forEach(someMat => {
 			var scale = 0.0016;
 			bvhObjsForWorld[1].push({
 				mat: someMat.mat, 
@@ -415,6 +417,22 @@ function initBuffers(){
 			});
 		});
 	}, 6);
+
+	loadBuffersFromObj5File(mushroomBuffers, "./data/miscobjs/Pleurotus_eryngii-2-in-a-new-blend-file.obj5", (bufferObj, sourceData) => {
+			loadBufferData(bufferObj, sourceData);
+			createBvhFrom3dObjectData(sourceData, mushroomBvh, 6);
+			someObjectMatrices.slice(4).forEach(someMat => {
+				var scale = 0.025;
+				bvhObjsForWorld[1].push({
+					mat: someMat.mat, 
+					transposedMat: someMat.transposedMat, 
+					bvh: mushroomBvh,
+					aabb4d: aabb4DForSphere(someMat.mat.slice(12), scale*mushroomBvh.boundingSphereRadius),
+					scale
+				});
+			});
+		}, 6);
+
 
 	loadBuffersFromObj2Or3File(octoFractalBuffers, "./data/miscobjs/fractal-octahedron4.obj3", loadBufferData, 6);
 
@@ -2407,8 +2425,9 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	}
 
 
-	var lucys = bvhObjsForWorld[worldA].filter(objInfo=> objInfo.bvh == lucyBvh);	//TODO prefilter
-	if (lucys.length >0){
+	[{buffersToDraw:lucyBuffers, bvh:lucyBvh}, {buffersToDraw:mushroomBuffers, bvh: mushroomBvh}].forEach(info => {
+		var objs = bvhObjsForWorld[worldA].filter(objInfo=> objInfo.bvh == info.bvh);	//TODO prefilter
+		if (objs.length >0){
 		var desiredProgram = shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ];
 		if (activeShaderProgram != desiredProgram){
 			activeShaderProgram = desiredProgram;
@@ -2416,12 +2435,11 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		}
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
 		drawArrayOfModels2(
-			lucys,
-			lucyBuffers,
+			objs,
+			info.buffersToDraw,
 			activeShaderProgram);
-	}
-
-
+		}
+	});
 
 	if (guiParams.drawShapes.viaduct == 'individual' && bridgeBuffers.isLoaded){
 		var desiredProgram = shaderPrograms.coloredPerPixelDiscardVertexColoredTexmapBendy[ guiParams.display.atmosShader ];
