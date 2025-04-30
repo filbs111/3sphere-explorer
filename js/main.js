@@ -4198,7 +4198,7 @@ var playerLight;
 var muzzleFlashAmounts=[0,0,0,0];
 
 var someObjectMatrices = (() => {
-	var mats = [...new Array(3)].map(x => mat4.identity());
+	var mats = [...new Array(4)].map(x => mat4.identity());
 	
 	xyzmove4mat(mats[0],[0,0,-1]);
 
