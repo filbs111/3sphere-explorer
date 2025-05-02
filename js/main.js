@@ -5558,8 +5558,10 @@ var iterateMechanics = (function iterateMechanics(){
 						objInfo,
 						minMaxDist: minMaxDistanceFromPointToBoundingSphere(playerPos, objInfo.mat.slice(12), objInfo.scale*objInfo.bvh.boundingSphereRadius)
 					}});
-					var maxPossibleDistance = objsWithMinMaxDistances.map(xx=>xx.minMaxDist[1]).reduce((a,b)=>Math.min(a,b), Number.MAX_VALUE);
-					possibleObjects = objsWithMinMaxDistances.filter(xx=>xx.minMaxDist[0]<=maxPossibleDistance).map(xx=>xx.objInfo);
+					var maxPossibleDistance = objsWithMinMaxDistances.map(xx=>xx.minMaxDist[1]).reduce((a,b)=>Math.min(a,b), 0.1);
+					possibleObjects = objsWithMinMaxDistances
+						.filter(xx=>xx.minMaxDist[0]<=maxPossibleDistance)
+						.map(xx=>xx.objInfo);
 				}
 
 				possibleObjects.forEach(objInfo =>
