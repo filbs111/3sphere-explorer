@@ -6868,14 +6868,14 @@ function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo
 	//uses z distance, which determines size for rectilinear camera view, so can swith approximation on/off
 	// as rotate view (for same distance from camera, z-distance is smaller, so appears larger, away from centre.
 	// fisheye view reduces this effect, but is not accounted for here. TODO if using fisheye, take into account here.
-	var sizeInScreen = -otherPortalSide.shared.radius/portalInCamera[14];
+	var invSizeInScreen = -portalInCamera[14]/otherPortalSide.shared.radius;
 		//approx, works for distant objects. note using inverse since portalInCamera[14] could be 0
 		// TODO work out size of cubemap pixels
 		// something more like (distance of reflected camera (inside portal) to portal surface)
 		//							----------------------------------------
 		//							(distance from camera to portal surface)
 
-	var isFarEnoughAwayInZ = 1/sizeInScreen > 1/0.25;	//inverted so if behind camera counts as close (TODO proper calculation of pix density on portal surface)
+	var isFarEnoughAwayInZ = invSizeInScreen > 4;	//inverted so if behind camera counts as close (TODO proper calculation of pix density on portal surface)
 	var isOnOtherSideOfWorld = portalInCamera[15] <0;
 		//IIRC portalInCamera[15] = w = 1 when close to it, portalInCamera[14] = z is -ve in front, +ve behind camera.
 	var isFarEnoughAwayForApproximation = isFarEnoughAwayInZ || isOnOtherSideOfWorld;
@@ -6887,7 +6887,7 @@ function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo
 
 	if (guiParams.reflector.cmFacesUpdated>0){
 		var cubemapLevel = guiParams.reflector.cubemapDownsize == "auto" ? 
-		(sizeInScreen> 1.6 ? 0:( sizeInScreen> 0.8 ? 1:2))	:
+		(invSizeInScreen< 0.625 ? 0:( invSizeInScreen< 1.25 ? 1:2))	:
 				//todo calculate angular resolution of cubemap in final camera,  
 				//dependent on distance, FOV, blur, screen resolution etc, and choose appropriate detail level
 		guiParams.reflector.cubemapDownsize ;
