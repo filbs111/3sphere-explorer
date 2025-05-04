@@ -3159,7 +3159,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 					returnObj.rad = guiParams.reflector.draw!="none" ? portals[ii].shared.radius : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
 
-					drawPortal(activeReflectorShader, portalMatArr[ii], meshToDraw, returnObj, portalInCameraArr[ii]);
+					drawPortal(activeReflectorShader, portalMatArr[ii], meshToDraw, returnObj, portalInCameraArr[ii],false);
 										
 //					setCubemapTex(currentTex);	//maybe unnecessary
 
@@ -3185,7 +3185,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	
 					mat4.set(savedWorldCamera, worldCamera);
 					localVecFogColor=savedFogColor;
-					drawPortal(activeReflectorShader, portalMatArr[ii], meshToDraw, reflectorInfoArr[ii], portalInCameraArr[ii]);
+					drawPortal(activeReflectorShader, portalMatArr[ii], meshToDraw, reflectorInfoArr[ii], portalInCameraArr[ii],true);
 				}
 			}
 			
@@ -3196,7 +3196,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 	gl.useProgram(activeShaderProgram);
 
-	function drawPortal(shaderProgram, portalMat, meshToDraw, reflInfo, portalInCamera){
+	function drawPortal(shaderProgram, portalMat, meshToDraw, reflInfo, portalInCamera, isInMainCameraView){
 		//TODO move elsewhere, pass in everything needed.
 		//TODO do cubemap rendering here, so can use reuse cubemap texture when drawing multiple portals.
 		//TODO later, draw cubemap for portal 1, then render both eyes when in stereo mode using depth buffer ray tracing - means switching between drawing each eye view.
@@ -3221,9 +3221,12 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		
 
 		if (shaderProgram.uniforms.uFNumber){
-			//todo keep this around. also used in fisheye shader.
-			var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
-			var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
+			var fx=-1,fy=-1;
+			if (isInMainCameraView){
+				//todo keep this around. also used in fisheye shader.
+				fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
+				fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
+			}
 			gl.uniform2f(shaderProgram.uniforms.uFNumber, fx, fy);
 			gl.uniform3fv(shaderProgram.uniforms.uCentrePosScaledFSCopy, reflInfo.centreTanAngleVectorScaled	);
 			
