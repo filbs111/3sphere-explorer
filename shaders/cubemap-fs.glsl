@@ -81,7 +81,7 @@ out vec4 fragColor;
 		//mix with simple planar (avoids wobbles at close range)
 		vec4 simplePlanarPortalDir = pointingDirection*uPortaledMatrix;
 		float closeness = dot(uCentrePosScaledFSCopy,uCentrePosScaledFSCopy);	//something that goes to 1 in shaky regime, 0 outside
-		closeness = pow(closeness,6.);
+		closeness = pow(closeness,80.);
 		vec3 cubeFragCoords = normalize(-collisonPoint.xyz) - uCentrePosScaledFSCopy - 0.05*closeness*simplePlanarPortalDir.xyz;
 				//simplePlanar will become dominant when other term small
 #endif
