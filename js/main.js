@@ -3072,6 +3072,9 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		case 'screen space':
 			activeReflectorShader = shaderPrograms.specialCubemap[ guiParams.display.atmosShader ];
 			break;
+		case 'screen space 2':
+			activeReflectorShader = shaderPrograms.specialCubemap2[ guiParams.display.atmosShader ];
+			break;
 		case 'vertproj mix':
 			activeReflectorShader = shaderPrograms.vertprojMix[ guiParams.display.atmosShader ];
 			break;
@@ -3266,7 +3269,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		gl.uniform1f(shaderProgram.uniforms.uPolarity, reflInfo.polarity);
 		
 			
-		if(['vertex projection','screen space','depth to alpha copy','vertproj mix'].includes(guiParams.reflector.mappingType) ){
+		if(['vertex projection','screen space','screen space 2','depth to alpha copy','vertproj mix'].includes(guiParams.reflector.mappingType) ){
 			gl.uniform3fv(shaderProgram.uniforms.uCentrePosScaled, reflInfo.centreTanAngleVectorScaled);
 		}
 
@@ -4453,7 +4456,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	reflectorFolder.add(guiParams.reflector, "draw",["none","low","high","mesh"]);
 	reflectorFolder.add(guiParams.reflector, "cmFacesUpdated", 0,6,1);
 	reflectorFolder.add(guiParams.reflector, "cubemapDownsize", [0,1,2,3,'auto']);
-	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection','screen space','vertproj mix','depth to alpha copy']);
+	reflectorFolder.add(guiParams.reflector, "mappingType", ['projection', 'vertex projection','screen space','screen space 2','vertproj mix','depth to alpha copy']);
 	reflectorFolder.add(guiParams.reflector, "isPortal");
 	reflectorFolder.add(guiParams.reflector, "drawFrame");
 	reflectorFolder.add(guiParams.reflector, "test1");

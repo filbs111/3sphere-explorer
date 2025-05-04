@@ -245,7 +245,11 @@ function initShaders(shaderProgs){
 		cubemap:[ "cubemap-vs", "cubemap-fs",[],[],true],
 		vertprojCubemap:["cubemap-vs", "cubemap-fs", ['VERTPROJ'],[],true],
 		vertprojCubemapTestDepthAlpha:["cubemap-vs", "cubemap-fs", ['VERTPROJ'],['GREY_ALPHA'],true],
-		specialCubemap:["cubemap-vs", "cubemap-fs", ['VERTPROJ','SPECIAL'],['SPECIAL'],true],		//try calculating using screen space coordinates, to work around buggy wobbly rendering close to portal. initially use inefficient frag shader code to get screen coord, and solve problem of getting from screen coord to correct pix value. if works, might move to using scaled homogeneous coords that linearly interpolate	on screen. 	
+		specialCubemap:["cubemap-vs", "cubemap-fs", ['VERTPROJ','SPECIAL'],['SPECIAL'],true],
+			//try calculating using screen space coordinates, to work around buggy wobbly rendering close to portal.
+			//initially use inefficient frag shader code to get screen coord, and solve problem of getting from screen coord to
+			//correct pix value. if works, might move to using scaled homogeneous coords that linearly interpolate	on screen.
+		specialCubemap2:["cubemap-vs", "cubemap-fs2", ['SPECIAL'],[],true],
 		vertprojMix:["cubemap-vs", "cubemap-fs", ['VERTPROJ','SPECIAL'],['VPROJ_MIX'],true],		
 	};
 
