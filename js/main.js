@@ -3218,6 +3218,13 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		if (shaderProgram.uniforms.uPortalCameraPos){
 			uniform4fvSetter.setIfDifferent(shaderProgram, "uPortalCameraPos", portalInCamera.slice(12));
 		}
+
+		if (shaderProgram.uniforms.uPolarityFSCopy){
+			//TODO unbodge this
+			//include this in something else passed in eg flip input coords? 
+			//don't use polarity in VS???
+			gl.uniform1f(shaderProgram.uniforms.uPolarityFSCopy, guiParams.reflector.isPortal? 1:-1);
+		}
 		
 		mat4.set(portalInCamera, mvMatrix);
 		mat4.set(portalMat,mMatrix);

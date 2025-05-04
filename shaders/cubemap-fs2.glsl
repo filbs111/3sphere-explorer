@@ -17,11 +17,12 @@
 	uniform vec3 uCentrePosScaledFSCopy;
 	uniform mat4 uPortaledMatrix;
 
+	uniform float uPolarityFSCopy;
+
 
 out vec4 fragColor;
 
 	void main(void) {
-
 
 		vec2 interpCoords = vScreenSpaceCoord.xy/vScreenSpaceCoord.z;
 		vec2 portalCameraCoords = uPortalCameraPos.xy/uPortalCameraPos.z;	//calculating from uniform every pixel is bad!
@@ -70,7 +71,7 @@ out vec4 fragColor;
 		vec3 cubeFragCoords = normalize(-collisonPoint.xyz) - uCentrePosScaledFSCopy - 0.05*closeness*simplePlanarPortalDir.xyz;
 				//simplePlanar will become dominant when other term small
 		
-		vec4 fragColorRGBA = texture(uSampler, cubeFragCoords);
+		vec4 fragColorRGBA = texture(uSampler, uPolarityFSCopy*cubeFragCoords);
 		vec3 preGammaFragColor =  pow(fragColorRGBA.xyz,vec3(2.2));
 //===============
 
