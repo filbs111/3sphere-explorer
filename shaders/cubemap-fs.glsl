@@ -62,13 +62,13 @@ out vec4 fragColor;
 			discard;
 		}
 		
-		float invmaxw = 1./sqrt(maxwsq);
-		vec4 closeApproach = invmaxw * (posA*posA.w + posB*posB.w);	//TODO combo mult by invmaxw here and later
-		vec4 equatorVec = - invmaxw * (posB*posA.w - posA*posB.w);
+		//float invmaxw = 1./sqrt(maxwsq);
+		vec4 closeApproachTimesMaxW = (posA*posA.w + posB*posB.w);	//TODO combo mult by invmaxw here and later
+		vec4 equatorVecTimesMaxW = -(posB*posA.w - posA*posB.w);
 
-		float projectedradiussq = (1.-maxwsq)/maxwsq;
-		float correction = sqrt( radsq - projectedradiussq );
-		vec4 collisonPoint = invmaxw*closeApproach - correction*equatorVec;
+		float correctionTimesMaxW = sqrt( maxwsq*radsq - (1.-maxwsq) );
+
+		vec4 collisonPoint = (closeApproachTimesMaxW - correctionTimesMaxW*equatorVecTimesMaxW);	///maxwsq;
 
 		//simple test
 		vec3 scaledPoint = 10.*(normalize(-collisonPoint.xyz)+1.);
