@@ -2174,12 +2174,15 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	//draw blender object - a csg cube minus sphere. draw 8 cells for tesseract.
 	var modelScale = smoothGuiParams.get("8-cell scale");
 
+	mat4.set(invertedWorldCamera, mvMatrix);
+	var sortId = sortIdForMatrix(mvMatrix);	//lookup sort order for cells
+
 	if (guiParams["draw 8-cell net"]){
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
 		draw8cellnet(activeShaderProgram, modelScale);
 	}
 	
-	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
+	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.darkGray);
 
 	var polytopes = {
 		"draw 8-cell": {
@@ -2205,6 +2208,18 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 			cullRad: false,
 			scale: 2*Math.acos(-0.25),
 			buffers: guiParams["subdiv frames"] ? tetraFrameSubdivBuffers : tetraFrameBuffers
+		},
+		"draw 120-cell": {
+			mats: cellMatData.d120[sortId],
+			cullRad: (guiParams.display.culling ?  dodecaScale*(0.4/0.515): false),
+			scale: dodecaScale,
+			buffers: dodecaFrameBuffers
+		},
+		"draw 600-cell": {
+			mats: cellMatData.d600[sortId],
+			cullRad: guiParams.display.culling ? 0.355: false,
+			scale: 0.386, //todo use correct scale
+			buffers: guiParams["subdiv frames"]? tetraFrameSubdivBuffers: tetraFrameBuffers
 		}
 	};
 
@@ -2219,35 +2234,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 			);	
 		}
 	});
-
-	
-	mat4.set(invertedWorldCamera, mvMatrix);
-	
-	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.darkGray);
-
-	var sortId = sortIdForMatrix(mvMatrix);	//lookup sort order for cells
-	
-	//new draw dodeca stuff...
-	if (guiParams["draw 120-cell"]){
-		var cullVal =  dodecaScale*(0.4/0.515);
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, dodecaScale,dodecaScale,dodecaScale);
-		drawArrayOfModels(
-			cellMatData.d120[sortId],
-			(guiParams.display.culling ? cullVal: false),
-			dodecaFrameBuffers
-		);
-	}
-	
-	if (guiParams["draw 600-cell"]){		
-		var myscale=0.386;	//todo use correct scale
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, myscale,myscale,myscale);
-		
-		drawArrayOfModels(
-			cellMatData.d600[sortId],
-			(guiParams.display.culling ? 0.355: false),
-			(guiParams["subdiv frames"]? tetraFrameSubdivBuffers: tetraFrameBuffers)
-		);
-	}
 
 	var cubeFrames = bvhObjsForWorld[worldA].filter(objInfo=> objInfo.bvh == cubeFrameBvh)	//TODO prefilter
 	if (cubeFrames.length>0){
