@@ -2173,55 +2173,53 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	
 	//draw blender object - a csg cube minus sphere. draw 8 cells for tesseract.
 	var modelScale = smoothGuiParams.get("8-cell scale");
-	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
+
+	if (guiParams["draw 8-cell net"]){
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
+		draw8cellnet(activeShaderProgram, modelScale);
+	}
+	
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
 
-	if (guiParams["draw 8-cell"]){
-		drawArrayOfModels(
-			cellMatData.d8,
-			(guiParams.display.culling ? Math.sqrt(3): false),
-			(guiParams["subdiv frames"] ? cubeFrameSubdivBuffers: cubeFrameBuffers)
-		);	
-	}
-	if (guiParams["draw 8-cell net"]){
-		draw8cellnet(activeShaderProgram, modelScale);	
-	}
-	
-	if (guiParams["draw 16-cell"]){
-		var cellScale = 4/Math.sqrt(6);		//in the model, vertices are 0.75*sqrt(2) from the centre, and want to scale to tan(PI/3)=sqrt(3)		
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, cellScale,cellScale,cellScale);
-		
-		drawArrayOfModels(
-			cellMatData.d16,
-			(guiParams.display.culling ? 1.73: false),
-			(guiParams["subdiv frames"]? tetraFrameSubdivBuffers: tetraFrameBuffers)
-		);
-	}
-	
-	
-	if (guiParams["draw 24-cell"]){
-		modelScale = 1.0;
-		modelScale*=guiParams["24-cell scale"];
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
-	
-		drawArrayOfModels(
-			cellMatData.d24.cells,
-			(guiParams.display.culling ? 1: false),
-			(guiParams["subdiv frames"] ? octoFrameSubdivBuffers : octoFrameBuffers)
-		);	
-	}
-	
-	if (guiParams["draw 5-cell"]){
-		var moveDist = Math.acos(-0.25);
-		modelScale = 2*moveDist;		
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
-		
-		drawArrayOfModels(
-			cellMatData.d5,
-			false,
-			(guiParams["subdiv frames"] ? tetraFrameSubdivBuffers : tetraFrameBuffers)
-		);
-	}
+	var polytopes = {
+		"draw 8-cell": {
+			mats:cellMatData.d8, 
+			cullRad:guiParams.display.culling ? Math.sqrt(3): false, 
+			scale:modelScale, 
+			buffers: guiParams["subdiv frames"] ? cubeFrameSubdivBuffers: cubeFrameBuffers 
+		},
+		"draw 16-cell": {
+			mats:cellMatData.d16, 
+			cullRad:guiParams.display.culling ? 1.73: false, 
+			scale: 4/Math.sqrt(6),	//in the model, vertices are 0.75*sqrt(2) from the centre, and want to scale to tan(PI/3)=sqrt(3)		
+			buffers: guiParams["subdiv frames"]? tetraFrameSubdivBuffers: tetraFrameBuffers
+		},
+		"draw 24-cell": {
+			mats: cellMatData.d24.cells,
+			cullRad: guiParams.display.culling ? 1: false,
+			scale: guiParams["24-cell scale"],
+			buffers: guiParams["subdiv frames"] ? octoFrameSubdivBuffers : octoFrameBuffers
+		},
+		"draw 5-cell": {
+			mats: cellMatData.d5,
+			cullRad: false,
+			scale: 2*Math.acos(-0.25),
+			buffers: guiParams["subdiv frames"] ? tetraFrameSubdivBuffers : tetraFrameBuffers
+		}
+	};
+
+	Object.entries(polytopes).forEach(entry => {
+		const [key, value] = entry;
+		if (guiParams[key]){
+			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, value.scale,value.scale,value.scale);
+			drawArrayOfModels(
+				value.mats,
+				value.cullRad,
+				value.buffers
+			);	
+		}
+	});
+
 	
 	mat4.set(invertedWorldCamera, mvMatrix);
 	
