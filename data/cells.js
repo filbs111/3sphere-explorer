@@ -342,7 +342,7 @@ function addMatsFromMat(thisMat){
 	}
 	
 	if (isCovered==false){
-		console.log("not yet covered. will add");
+		//console.log("not yet covered. will add");
 		rotationStack.push(thisMat);
 		var newMat; 
 
@@ -366,7 +366,7 @@ function addMatsFromMat(thisMat){
 	
 	returnObj.d120=generateSortedArrays(returnObj.d120);
 	returnObj.d600=generateSortedArrays(returnObj.d600);
-	
+
 	function generateSortedArrays(myArr){
 		var arrayOfSortedArrays = [];
 		for (var ii=0;ii<4;ii++){
@@ -396,8 +396,7 @@ function sortIdForMatrix(inputMatrix){
 	//note can get this in neat way for 16-cell 
 	
 	//initially just code logic to find which 8-cell are in
-	//var position = [inputMatrix[12], inputMatrix[13], inputMatrix[14], inputMatrix[15]];	//todo check this - might want column instead of row
-	var position = [inputMatrix[3], inputMatrix[7], inputMatrix[11], inputMatrix[15]];	//todo check this - might want column instead of row
+	var position =inputMatrix.slice(12);
 	var absPosition =position.map(function(coord){return Math.abs(coord);});
 	
 	/*

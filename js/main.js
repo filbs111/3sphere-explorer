@@ -2174,8 +2174,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	//draw blender object - a csg cube minus sphere. draw 8 cells for tesseract.
 	var modelScale = smoothGuiParams.get("8-cell scale");
 
-	mat4.set(invertedWorldCamera, mvMatrix);
-	var sortId = sortIdForMatrix(mvMatrix);	//lookup sort order for cells
+	var sortId = sortIdForMatrix(worldCamera);	//look up sort order for cells
 
 	if (guiParams["draw 8-cell net"]){
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
