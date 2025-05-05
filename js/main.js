@@ -909,6 +909,7 @@ function drawScene(frameTime){
 			}
 			//cap oversize so doesn't kill computer!!
 			//note this is good for a proof of concept/ testing fisheye cam for gameplay, but 4x oversize (basically rendering 8k for 2k result) makes computer quite noisy! should use 2/4 panel/cubemap method if want a large FOV.
+			//if (oversize > 4){console.log("capping oversize");}
 			oversize = Math.min(oversize,4.0);
 			var oversizedViewport = [ 2*Math.floor(oversize*gl.viewportWidth/2),  2*Math.floor(oversize*gl.viewportHeight/2)];
 
@@ -2303,7 +2304,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 		modelScale = 0.001*guiParams.drawShapes.frigateScale;
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
-		mat4.set(invertedWorldCamera, mvMatrix);3
+		mat4.set(invertedWorldCamera, mvMatrix);
 		rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
 		mat4.multiply(mvMatrix,frigateMatrix);
 
@@ -2630,6 +2631,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		});
 	bvhObjsForWorld[worldA]
 		.filter(objInfo=> objInfo.bvh == gunBvh)	//TODO prefilter
+			//TODO vert colours or texture bake (already use baked texture for guns on player object)
 		.forEach(objInfo => {
 			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, objInfo.scale,objInfo.scale,objInfo.scale);
 			mat4.set(invertedWorldCamera, mvMatrix);
@@ -3235,8 +3237,10 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 			//matrixToPortal.qPair = mvMatrix.qPair.map(x=>x.map(y=>y));
 				//TODO make a general function to copy mats!
 
+				//TODO is this wanted?
 			moveMatrixThruPortal(matrixToPortal, reflInfo.rad, 1, portalsForWorld[worldA][0], true);
 				//skips start/end rotations. appears to fix rendering. TODO check for side effects
+				//^^  bug? doesn't account for 2nd portal
 
 		if (guiParams.reflector.test1){	//appears to do ~nothing
 			var matToCopyFrom = reflInfo.shaderMatrix;
@@ -3745,7 +3749,10 @@ var portalMats = [firstPortalSide.matrix, firstPortalSide.otherps.matrix];	//doe
 
 var playerCameraInterp = newIdMatWithQuats();
 var offsetPlayerCamera = newIdMatWithQuats();
-var playerContainer = {matrix:playerCamera, world:0}
+var playerContainer = {matrix:playerCamera, world:1}
+
+xyzmove4mat(playerCamera,[0,-0.4,0.1]);	//move start point towards problem area where collision distance testing many objs = slowdown
+
 var offsetCameraContainer = {matrix:offsetPlayerCamera, world:0}
 
 var worldCamera = mat4.create();
@@ -4153,14 +4160,14 @@ var guiParams={
 		draw:'high',
 		cmFacesUpdated:6,
 		cubemapDownsize:'auto',
-		mappingType:'vertex projection',
+		mappingType:'screen space 2',
 		isPortal:true,
 		drawFrame:false,
 		forceApproximation:false,
 		test1:false
 	},
 	debug:{
-		closestPoint:true,
+		closestPoint:false,
 		buoys:false,
 		nmapUseShader2:true,
 		showSpeedOverlay:false,
@@ -5040,7 +5047,7 @@ var iterateMechanics = (function iterateMechanics(){
 
 			var heatEmit = gunHeat/(gunHeat+1.5);	//reuse logic from drawSpaceship
 			if (10*Math.random()<heatEmit){
-				smokeGuns();	//TODO independently random smoking guns? blue noise not white noise, smoke from end of gun, ...
+				//smokeGuns();	//TODO independently random smoking guns? blue noise not white noise, smoke from end of gun, ...
 			}
 			
 			//particle stream
