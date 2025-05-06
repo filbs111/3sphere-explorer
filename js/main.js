@@ -833,10 +833,14 @@ function drawScene(frameTime){
 
 	mainCamFov = guiParams.display.cameraFov;	//vertical FOV
 	var aspectRatio = gl.viewportWidth/gl.viewportHeight;
-	setProjectionMatrix(nonCmapPMatrix, mainCamFov, 1/aspectRatio);	//note mouse code assumes 90 deg fov used. TODO fix.
+
+	var quadView = guiParams.display.quadView ? {topness:-1,rightness:1}:false;
+
+	setProjectionMatrix(nonCmapPMatrix, mainCamFov, 1/aspectRatio, quadView);	//note mouse code assumes 90 deg fov used. TODO fix.
 	if (reverseCamera){
 		nonCmapPMatrix[0]=-nonCmapPMatrix[0];
 		xyzrotate4mat(worldCamera, (guiParams.display.flipReverseCamera? [Math.PI,0,0]:[0,Math.PI,0] ));	//flip 180  - note repeated later. TODO do once and store copy of camera
+		//TODO check this works once have quad view camera working (perhaps other signs should be flipped...)
 	}
 	
 	mat4.set(worldCamera, invertedWorldCamera);
@@ -1286,12 +1290,19 @@ function drawScene(frameTime){
 	heapPerfMon.delaySample(0);
 }
 
+var printPMatCreation=false;
+
 var mainCamFov = 105;	//degrees.
-function setProjectionMatrix(pMatrix, vFov, ratio, polarity){
+function setProjectionMatrix(pMatrix, vFov, ratio, quadViewTest){
 	mat4.identity(pMatrix);
 	
 	var fy = Math.tan((Math.PI/180.0)*vFov/2);
 	
+	// 0 1 2 3
+	// 4 5 6 7
+	// 8 9 10 11
+	// 12 13 14 15
+
 	pMatrix[0] = ratio/fy ;
 	pMatrix[5] = 1.0/fy;
 	pMatrix[11]	= -1;	//rotate w into z.
@@ -1301,6 +1312,84 @@ function setProjectionMatrix(pMatrix, vFov, ratio, polarity){
 	
 	pMatrix[10]	= 0;
 	pMatrix[15] = 0;
+	
+	if (printPMatCreation){
+		console.log({"pMatrix standard": pMatrix.slice()});
+	}
+
+	if (quadViewTest){	//TODO don't do this for cubemap stuff
+		//initial version just bodged from webgl-wideanglecamera project
+		//TODO sort problem of not rendering behind camera when >180 FOV, seems because of discard in custom depth
+		// calc in frag shader - the depth used should in direction of the "skewed" quarter camera. the current
+		// matrix components affecting depth might be right or wrong - won't render with current discard criteria...
+		//TODO ensure configuration variables are appropriate for confiugured fov, zoom
+		// (this proj does not now have zoom param)
+		// currently is ~2x too big (when uVar1=0, see that centre of perspective shifted, but all, not a quarter of regular view)
+		//TODO draw all 4 quadrants on screen
+		// try rendering all objects/ shaders for each quad vs all quads for each obj/shader
+		// (maybe fewer gl calls, depends if setting pMatrix, viewport is fast)
+		//TODO apply correct fisheye mapping so get result matching existing fisheye (but faster/wider/better quality)
+		//TODO fix portal drawing in quad view mode.
+
+		//mat4.perspective(2*(180/Math.PI)*Math.atan(quadplane.fy), 
+
+		var var1 = guiParams.display.uVarOne * 0.125;	//TODO what multiplier right here? 
+		var var2 = 1;	//parseFloat(10.0/guiParams.zoom);
+	
+		// if (guiParams.indentViews){
+		// 	var2*= 0.9;	//some variable that will modify by UI, to allow showing the curved limits (for real use, should set this to 1.0/remove from code)
+		// }
+	
+		var maxyvert = vFov;	//??
+		var maxxvert = vFov/ratio;	//screenAspect;
+
+		var zalpha = 2.0 + var1*(maxxvert*maxxvert + maxyvert*maxyvert);	//basically "mag"
+		var zc = 2.0 + var1*(maxyvert*maxyvert);	//at the top/bottom of screen
+		var zk = 2.0 + var1*(maxxvert*maxxvert);	//left/right. 
+			//the above could be optimised...
+		
+		var xadjust = (zalpha -zc)/maxxvert;
+		var yadjust = (zalpha -zk)/maxyvert;
+		
+		//var qpfx= 1.0/( ( 2.0*zk/maxxvert ) - xadjust );
+		//var qpfy= 1.0/( ( 2.0*zc/maxyvert ) - yadjust );
+		
+		//var camParams = {near:1, far:0};	//does this matter?
+		//var tempPMatrix = mat4.identity();
+		// mat4.perspective(2*(180/Math.PI)*Math.atan(qpfy), qpfx/qpfy, camParams.near, camParams.far, tempPMatrix);
+		// if (printPMatCreation){
+		// 	console.log({"tempPMatrix": tempPMatrix.slice()});
+		// }
+		//pMatrix[0] = tempPMatrix[0];	//??? mat4.perspective switches signs??
+		//pMatrix[5] = tempPMatrix[5];
+
+		//fudge? missed a sign somewhere?
+		//xadjust/=-1;
+		//yadjust/=-1;
+
+
+		//like {topness:1, rightness:-1} for top left quadrant etc
+		//TODO are both z,w columns required if using custom depth?
+		var {topness,rightness}=quadViewTest;
+		pMatrix[1] = xadjust*topness*rightness;
+		//pMatrix[2] = -xadjust*rightness;	//doesn't do much?
+		pMatrix[3] = -xadjust*rightness;
+
+		pMatrix[4] = yadjust*topness*rightness;
+		//pMatrix[6] = -yadjust*topness;	//doesn't do much?
+		pMatrix[7] = -yadjust*topness;
+
+		pMatrix[8] = rightness;
+		pMatrix[9] = topness;
+		//pMatrix[12] = rightness;
+		//pMatrix[13] = topness;
+		if (printPMatCreation){
+			console.log({"pMatrix quadplane": pMatrix.slice()})
+		}
+	}
+
+	printPMatCreation=false;
+
 }
 
 var sshipWorld=0;	//used for player light
@@ -4138,7 +4227,7 @@ var guiParams={
 		eyeSepWorld:0.0004,	//half distance between eyes in game world
 		eyeTurnIn:0.002,
 		showHud:true,
-		fisheyeEnabled:true,
+		fisheyeEnabled:false,
 		renderViaTexture:'blur-b-use-alpha',
 		renderLastStage:'fxaa',
 		drawTransparentStuff:true,
@@ -4154,7 +4243,8 @@ var guiParams={
 		culling:true,
 		useSpecular:true,
 		specularStrength:0.5,
-		specularPower:20.0
+		specularPower:20.0,
+		quadView:false
 	},
 	reflector:{
 		draw:'high',
@@ -4422,6 +4512,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	displayFolder.add(guiParams.display, "useSpecular");
 	displayFolder.add(guiParams.display, "specularStrength", 0,1,0.05);	//currently diffuse colour and distance attenuation applies to both specular and diffuse, keeping nonnegative by having diffuse multiplier 1-specularStrength. therefore range 0-1. TODO different specular, diffuse colours, (instead of float strength), specular maybe shouldn't have distance attenuation same way - possibly correct for point source but want solution for sphere light...
 	displayFolder.add(guiParams.display, "specularPower", 1,20,0.5);
+	displayFolder.add(guiParams.display, "quadView");
 	displayFolder.add(guiParams, "normalMove", 0,0.02,0.001);
 	
 	var debugFolder = gui.addFolder('debug');
