@@ -801,10 +801,21 @@ function drawScene(frameTime){
 			break;
 		case 'off':
 		default:
-			drawSceneToScreen(
-				offsetPlayerCamera, 
-				{left:0,top:0,width:gl.viewportWidth,height:gl.viewportHeight}, 
-				null);
+			//TODO ensure quad view also works for stereo mode
+			//TODO ensure resolution of rectilinear image is appropriate for small quadrant
+			//TODO prepare this elsewhere (array of func args?)
+			if (guiParams.display.quadView){
+				drawSceneToScreen(
+					offsetPlayerCamera,
+					//bottom right quadrant
+					{left:gl.viewportWidth/2,top:0,width:gl.viewportWidth/2,height:gl.viewportHeight/2}, 
+					null);
+			}else{
+				drawSceneToScreen(
+					offsetPlayerCamera, 
+					{left:0,top:0,width:gl.viewportWidth,height:gl.viewportHeight}, 
+					null);
+			}
 	} 
 
 	function drawStereoPair(viewportL, viewportR, outputFb){
