@@ -862,12 +862,12 @@ function drawScene(frameTime){
 		
 	mat4.set(cameraForScene, worldCamera);
 
-	mainCamFov = guiParams.display.cameraFov;	//vertical FOV
+	mainCamZoom = guiParams.display.cameraZoom;
 	var aspectRatio = gl.viewportWidth/gl.viewportHeight;
 
 	//TODO update only when required
-	setProjectionMatrix(nonCmapPMatrix, mainCamFov, 1/aspectRatio);	//note mouse code assumes 90 deg fov used. TODO fix.
-	setQuadViewProjMatrices(quadViewMatrices, mainCamFov, 1/aspectRatio);	//only necessary if quad view selected
+	setProjectionMatrix(nonCmapPMatrix, mainCamZoom, 1/aspectRatio);	//note mouse code assumes 90 deg fov used. TODO fix.
+	setQuadViewProjMatrices(quadViewMatrices, mainCamZoom, 1/aspectRatio);	//only necessary if quad view selected
 
 	if (reverseCamera){
 		nonCmapPMatrix[0]=-nonCmapPMatrix[0];
@@ -927,11 +927,19 @@ function drawScene(frameTime){
 		var sceneDrawingOutputView;
 
 		if (guiParams.display.fisheyeEnabled){
-			var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
-			var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
+			//var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
+			//var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
 			
-			var uF = [fx, fy];
 			var uVarOne = guiParams.display.uVarOne;
+
+			var var2 = 10.0/guiParams.display.cameraZoom;
+			var ratio = 1/(gl.viewportWidth/gl.viewportHeight);	
+			var maxyvert = var2;
+			var maxxvert = var2/ratio;
+			var fx = maxxvert /(2.0 + uVarOne*maxyvert*maxyvert);
+			var fy = fx*ratio;
+
+			var uF = [fx, fy];
 			
 			//see shader file for derivation of oversize calculation
 			var sumInvSqs = uF[0]*uF[0] + uF[1]*uF[1];
@@ -1325,10 +1333,13 @@ function drawScene(frameTime){
 var printPMatCreation=false;
 
 var mainCamFov = 105;	//degrees.
-function setProjectionMatrix(pMatrix, vFov, ratio, quadViewTest){
+function setProjectionMatrix(pMatrix, cameraZoom, ratio, quadViewTest){
 	mat4.identity(pMatrix);
 	
-	var fy = Math.tan((Math.PI/180.0)*vFov/2);
+	var var2 = 10.0/cameraZoom;	
+
+	//TODO print vFOV, hFOV, check consistent here...
+	var fy = var2;
 	
 	// 0 1 2 3
 	// 4 5 6 7
@@ -1365,15 +1376,20 @@ function setProjectionMatrix(pMatrix, vFov, ratio, quadViewTest){
 
 		//mat4.perspective(2*(180/Math.PI)*Math.atan(quadplane.fy), 
 
-		var var1 = guiParams.display.uVarOne * 0.125;	//TODO what multiplier right here? 
-		var var2 = 1;	//parseFloat(10.0/guiParams.zoom);
-	
+		var var1 = guiParams.display.uVarOne;	// * 0.125;	//TODO what multiplier right here? 
+		
+
 		// if (guiParams.indentViews){
 		// 	var2*= 0.9;	//some variable that will modify by UI, to allow showing the curved limits (for real use, should set this to 1.0/remove from code)
 		// }
 	
-		var maxyvert = vFov;	//??
-		var maxxvert = vFov/ratio;	//screenAspect;
+		var maxyvert = var2;	//??
+		var maxxvert = var2/ratio;	//screenAspect;
+
+
+		pMatrix[0] = 1/(maxxvert /(2.0 + var1*maxyvert*maxyvert));
+		pMatrix[5] = pMatrix[0]/ratio;
+
 
 		var zalpha = 2.0 + var1*(maxxvert*maxxvert + maxyvert*maxyvert);	//basically "mag"
 		var zc = 2.0 + var1*(maxyvert*maxyvert);	//at the top/bottom of screen
@@ -3348,8 +3364,17 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 			var fx=-1,fy=-1;
 			if (isInMainCameraView){
 				//todo keep this around. also used in fisheye shader.
-				fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
-				fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
+				//fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
+				//fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
+				
+				//TODO don't recalulate/read these so much
+				//var var1 = guiParams.display.uVarOne;
+				var var2 = 10.0/guiParams.display.cameraZoom;
+				var ratio = 1/(gl.viewportWidth/gl.viewportHeight);
+				//var maxyvert = var2;
+				var maxxvert = var2/ratio;
+				var fx = maxxvert;	// /(2.0 + var1*maxyvert*maxyvert);
+				var fy = fx*ratio;
 			}
 			gl.uniform2f(shaderProgram.uniforms.uFNumber, fx, fy);
 			gl.uniform3fv(shaderProgram.uniforms.uCentrePosScaledFSCopy, reflInfo.centreTanAngleVectorScaled	);
@@ -3891,7 +3916,7 @@ var portalInCameraCopy2 = mat4.create();
 var portalInCameraCopy3 = mat4.create();
 
 var cmapPMatrix = mat4.create();
-setProjectionMatrix(cmapPMatrix, -90.0, 1.0);	//-90 gets reflection to look right. (different for portal?)
+setProjectionMatrix(cmapPMatrix, -10, 1.0);	//-10 gets reflection to look right. (different for portal?)
 var squareFrustumCull = generateCullFunc(cmapPMatrix);
 
 var invertedWorldCamera = mat4.create();
@@ -4261,7 +4286,7 @@ var guiParams={
 	display:{
 		cameraType:"far 3rd person",
 		cameraAttachedTo:"player vehicle",
-		cameraFov:145,
+		cameraZoom:4,
 		uVarOne:-0.015,
 		flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
 		stereo3d:"off",
@@ -4529,7 +4554,7 @@ function init(){
 	var displayFolder = gui.addFolder('display');	//control and movement
 	displayFolder.add(guiParams.display, "cameraType", ["cockpit", "near 3rd person", "mid 3rd person", "far 3rd person", "really far 3rd person", "side","none"]);
 	displayFolder.add(guiParams.display, "cameraAttachedTo", ["player vehicle", "turret","none"]);	//"none" acts like drop camera
-	displayFolder.add(guiParams.display, "cameraFov", 60,165,5);
+	displayFolder.add(guiParams.display, "cameraZoom", 1.5,15,0.1);
 	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.005);
 	displayFolder.add(guiParams.display, "flipReverseCamera");
 	displayFolder.add(guiParams.display, "stereo3d", ["off","sbs","sbs-cross","top-bottom","anaglyph","anaglyph-green/magenta"]);
