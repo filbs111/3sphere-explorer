@@ -806,12 +806,32 @@ function drawScene(frameTime){
 			//TODO prepare this elsewhere (array of func args?)
 			if (guiParams.display.quadView){
 				drawSceneToScreen(
+					quadViewMatrices[0],
+					offsetPlayerCamera,
+					//bottom left quadrant
+					{left:0,top:0,width:gl.viewportWidth/2,height:gl.viewportHeight/2}, 
+					null);
+				drawSceneToScreen(
+					quadViewMatrices[1],
 					offsetPlayerCamera,
 					//bottom right quadrant
 					{left:gl.viewportWidth/2,top:0,width:gl.viewportWidth/2,height:gl.viewportHeight/2}, 
 					null);
+				drawSceneToScreen(
+					quadViewMatrices[2],
+					offsetPlayerCamera,
+					//top left quadrant
+					{left:0,top:gl.viewportHeight/2,width:gl.viewportWidth/2,height:gl.viewportHeight/2}, 
+					null);
+				drawSceneToScreen(
+					quadViewMatrices[3],
+					offsetPlayerCamera,
+					//top right quadrant
+					{left:gl.viewportWidth/2,top:gl.viewportHeight/2,width:gl.viewportWidth/2,height:gl.viewportHeight/2}, 
+					null);
 			}else{
 				drawSceneToScreen(
+					nonCmapPMatrix,
 					offsetPlayerCamera, 
 					{left:0,top:0,width:gl.viewportWidth,height:gl.viewportHeight}, 
 					null);
@@ -825,29 +845,30 @@ function drawScene(frameTime){
 		var savedWorld = offsetCameraContainer.world;
 		moveMatHandlingPortal(offsetCameraContainer, [guiParams.display.eyeSepWorld,0,0]);
 		xyzrotate4mat(offsetPlayerCamera, [0,-guiParams.display.eyeTurnIn,0]);
-		drawSceneToScreen(offsetPlayerCamera, viewportL, outputFb);
+		drawSceneToScreen(nonCmapPMatrix, offsetPlayerCamera, viewportL, outputFb);
 
 		setMat4FromToWithQuats(savedCam, offsetPlayerCamera);
 		offsetCameraContainer.world = savedWorld;
 		moveMatHandlingPortal(offsetCameraContainer, [-guiParams.display.eyeSepWorld,0,0]);
 		xyzrotate4mat(offsetPlayerCamera, [0,guiParams.display.eyeTurnIn,0]);
-		drawSceneToScreen(offsetPlayerCamera, viewportR, outputFb);
+		drawSceneToScreen(nonCmapPMatrix, offsetPlayerCamera, viewportR, outputFb);
 		//note inefficient currently, since does full screen full render for each eye view.
 		// for top/down split, intermediate render targets could be half screen size
 		// some rendering could be shared between eyes - eg portal cubemaps.
 	}
 
 
-	function drawSceneToScreen(cameraForScene, viewP, sceneFinalOutputFramebuf){
+	function drawSceneToScreen(projMatrix, cameraForScene, viewP, sceneFinalOutputFramebuf){
 		
 	mat4.set(cameraForScene, worldCamera);
 
 	mainCamFov = guiParams.display.cameraFov;	//vertical FOV
 	var aspectRatio = gl.viewportWidth/gl.viewportHeight;
 
-	var quadView = guiParams.display.quadView ? {topness:-1,rightness:1}:false;
+	//TODO update only when required
+	setProjectionMatrix(nonCmapPMatrix, mainCamFov, 1/aspectRatio);	//note mouse code assumes 90 deg fov used. TODO fix.
+	setQuadViewProjMatrices(quadViewMatrices, mainCamFov, 1/aspectRatio);	//only necessary if quad view selected
 
-	setProjectionMatrix(nonCmapPMatrix, mainCamFov, 1/aspectRatio, quadView);	//note mouse code assumes 90 deg fov used. TODO fix.
 	if (reverseCamera){
 		nonCmapPMatrix[0]=-nonCmapPMatrix[0];
 		xyzrotate4mat(worldCamera, (guiParams.display.flipReverseCamera? [Math.PI,0,0]:[0,Math.PI,0] ));	//flip 180  - note repeated later. TODO do once and store copy of camera
@@ -856,7 +877,7 @@ function drawScene(frameTime){
 	
 	mat4.set(worldCamera, invertedWorldCamera);
 	mat4.transpose(invertedWorldCamera);
-	nonCmapCullFunc = generateCullFunc(nonCmapPMatrix);										//todo only update pmatrix, nonCmapCullFunc if input variables have changed
+	nonCmapCullFunc = generateCullFunc(projMatrix);										//todo only update pmatrix, nonCmapCullFunc if input variables have changed
 		
 
 	mat4.set(invertedWorldCamera, portalInCameraCopy);
@@ -887,7 +908,7 @@ function drawScene(frameTime){
 	//setup for drawing to screen
 	//gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	//gl.viewport(viewP.left, viewP.top, viewP.width, viewP.height);
-	mat4.set(nonCmapPMatrix, pMatrix);
+	mat4.set(projMatrix, pMatrix);
 														
 	frustumCull = nonCmapCullFunc;
 	
@@ -1400,7 +1421,13 @@ function setProjectionMatrix(pMatrix, vFov, ratio, quadViewTest){
 	}
 
 	printPMatCreation=false;
+}
 
+function setQuadViewProjMatrices(quadViewMatrices, vFov, ratio){
+	setProjectionMatrix(quadViewMatrices[0], vFov, ratio, {topness:-1,rightness:-1}); 	//bottom left
+	setProjectionMatrix(quadViewMatrices[1], vFov, ratio, {topness:-1,rightness:1});		//bottom right
+	setProjectionMatrix(quadViewMatrices[2], vFov, ratio, {topness:1,rightness:-1});		//top left
+	setProjectionMatrix(quadViewMatrices[3], vFov, ratio, {topness:1,rightness:1});		//top right
 }
 
 var sshipWorld=0;	//used for player light
@@ -3191,7 +3218,9 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	var savedFogColor = localVecFogColor;
 
 	//draw multiple portals...
-	if (guiParams.reflector.draw){
+	if (guiParams.reflector.draw && !guiParams.display.quadView){
+		//TODO draw portals in quad view mode
+
 		if (isCubemapView){
 			//draw simple fog coloured spheres, so pop-in less jarring.
 			//TODO draw properly, maybe can make more efficient since view of one portal through another doesn't change much
@@ -3838,6 +3867,7 @@ var mvMatrixB = mat4.create();
 
 var pMatrix = mat4.create();
 var nonCmapPMatrix = mat4.create();
+var quadViewMatrices = [...new Array(4)].map(xx=> mat4.identity());
 var playerCamera = newIdMatWithQuats();
 	
 
