@@ -816,25 +816,31 @@ function drawScene(frameTime){
 					offsetPlayerCamera,
 					//bottom left quadrant
 					{left:0,top:0,width:gl.viewportWidth/2,height:gl.viewportHeight/2}, 
-					null);
+					null,
+					quadViewData[0]);
 				drawSceneToScreen(
 					quadViewMatrices[1],
 					offsetPlayerCamera,
 					//bottom right quadrant
 					{left:gl.viewportWidth/2,top:0,width:gl.viewportWidth/2,height:gl.viewportHeight/2}, 
-					null);
+					null,
+					quadViewData[1]);
 				drawSceneToScreen(
 					quadViewMatrices[2],
 					offsetPlayerCamera,
 					//top left quadrant
 					{left:0,top:gl.viewportHeight/2,width:gl.viewportWidth/2,height:gl.viewportHeight/2}, 
-					null);
+					null,
+					quadViewData[2]);
+					
+
 				drawSceneToScreen(
 					quadViewMatrices[3],
 					offsetPlayerCamera,
 					//top right quadrant
 					{left:gl.viewportWidth/2,top:gl.viewportHeight/2,width:gl.viewportWidth/2,height:gl.viewportHeight/2}, 
-					null);
+					null,
+					quadViewData[3]);
 			}else{
 				drawSceneToScreen(
 					nonCmapPMatrix,
@@ -864,7 +870,7 @@ function drawScene(frameTime){
 	}
 
 
-	function drawSceneToScreen(projMatrix, cameraForScene, viewP, sceneFinalOutputFramebuf){
+	function drawSceneToScreen(projMatrix, cameraForScene, viewP, sceneFinalOutputFramebuf, qvData){
 		
 	mat4.set(cameraForScene, worldCamera);
 
@@ -985,23 +991,85 @@ function drawScene(frameTime){
 			bind2dTextureIfRequired(sceneDrawingOutputView.depthTexture,gl.TEXTURE2);
 				//^^ not needed if using alpha for blur
 
-			activeProg = shaderPrograms.fullscreenTexturedFisheye;
-			gl.useProgram(activeProg);
-			enableDisableAttributes(activeProg);
-			gl.cullFace(gl.BACK);
-			
-			//if (activeProg.uniforms.uInvF){	//used for fisheye TODO lose IF?
-			gl.uniform2fv(activeProg.uniforms.uInvF, fisheyeParams.uInvF);
-			//}
-			gl.uniform1f(activeProg.uniforms.uVarOne, fisheyeParams.uVarOne);
-			gl.uniform1f(activeProg.uniforms.uOversize, fisheyeParams.uOversize);
-			
-			gl.uniform1i(activeProg.uniforms.uSampler, 0);	
-			gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);	
-			gl.uniform2f(activeProg.uniforms.uInvSize, 1/gl.viewportWidth , 1/gl.viewportHeight);		
-			gl.depthFunc(gl.ALWAYS);
-			drawObjectFromBuffers(fsBuffers, activeProg);
-			//gl.depthFunc(gl.LESS);
+			if (!guiParams.display.quadView){
+				if (guiParams.display.regularFisheye2){
+					activeProg = shaderPrograms.fullscreenTexturedFisheye2;
+					gl.useProgram(activeProg);
+					enableDisableAttributes(activeProg);
+					gl.cullFace(gl.BACK);
+					
+					//if (activeProg.uniforms.uInvF){	//used for fisheye TODO lose IF?
+					gl.uniform2fv(activeProg.uniforms.uInvF, fisheyeParams.uInvF);
+					//}
+					gl.uniform1f(activeProg.uniforms.uVarOne, fisheyeParams.uVarOne);
+					gl.uniform1f(activeProg.uniforms.uOversize, fisheyeParams.uOversize);
+					
+					gl.uniform1i(activeProg.uniforms.uSampler, 0);	
+					gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);	
+					//gl.uniform2f(activeProg.uniforms.uInvSize, 1/gl.viewportWidth , 1/gl.viewportHeight);	
+					
+					
+					//extra vars for fullscreenTexturedFisheye2
+					gl.uniform2fv(activeProg.uniforms.xMultShift, [1.0, 0]);
+					gl.uniform2fv(activeProg.uniforms.yMultShift, [1.0, 0]);
+					gl.uniform1f(activeProg.uniforms.uVarTwo, 10.0/guiParams.display.cameraZoom);
+					gl.uniform1f(activeProg.uniforms.uAspect, gl.viewportWidth/gl.viewportHeight);
+
+
+					gl.depthFunc(gl.ALWAYS);
+					drawObjectFromBuffers(fsBuffers, activeProg);
+				}else{				
+					activeProg = shaderPrograms.fullscreenTexturedFisheye;
+					gl.useProgram(activeProg);
+					enableDisableAttributes(activeProg);
+					gl.cullFace(gl.BACK);
+					
+					//if (activeProg.uniforms.uInvF){	//used for fisheye TODO lose IF?
+					gl.uniform2fv(activeProg.uniforms.uInvF, fisheyeParams.uInvF);
+					//}
+					gl.uniform1f(activeProg.uniforms.uVarOne, fisheyeParams.uVarOne);
+					gl.uniform1f(activeProg.uniforms.uOversize, fisheyeParams.uOversize);
+					
+					gl.uniform1i(activeProg.uniforms.uSampler, 0);	
+					gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);	
+					//gl.uniform2f(activeProg.uniforms.uInvSize, 1/gl.viewportWidth , 1/gl.viewportHeight);	
+					
+					gl.depthFunc(gl.ALWAYS);
+					drawObjectFromBuffers(fsBuffers, activeProg);
+					//gl.depthFunc(gl.LESS);
+				}
+			}else{
+				//TODO deduplicate code, shaders, inputs etc for regular and quadview fisheye
+				activeProg = shaderPrograms.fullscreenTexturedFisheyeQuadView;
+				gl.useProgram(activeProg);
+				enableDisableAttributes(activeProg);
+				gl.cullFace(gl.BACK);
+
+				//here require knowing which quadrant is being drawn...
+				gl.uniform2fv(activeProg.uniforms.uInvFadjusted, [1.0/quadplane.fx + quadplane.xadjust, 1.0/quadplane.fy + quadplane.yadjust]);		//bottom left
+				gl.uniform2fv(activeProg.uniforms.xMultShift, [0.5, 0.5*qvData.rightness]);
+				gl.uniform2fv(activeProg.uniforms.yMultShift, [0.5, 0.5*qvData.topness]);
+				//gl.uniform2fv(activeProg.uniforms.xMultShift, [1, 1]);	//different because in WAC project IIRC drawing 4 rectinilear renders to same surf then mapping each separately?
+				//gl.uniform2fv(activeProg.uniforms.yMultShift, [1, 1]);
+
+				gl.uniform2fv(activeProg.uniforms.adjust, [-quadplane.xadjust*qvData.rightness, -quadplane.yadjust*qvData.topness ]);
+					
+				gl.uniform2fv(activeProg.uniforms.uInvF, fisheyeParams.uInvF);
+				//gl.uniform2fv(activeProg.uniforms.uInvFadjusted, fisheyeParams.uInvF);	//??
+
+				gl.uniform1f(activeProg.uniforms.uVarOne, fisheyeParams.uVarOne);
+				gl.uniform1f(activeProg.uniforms.uOversize, fisheyeParams.uOversize);
+
+				gl.uniform1f(activeProg.uniforms.uVarTwo, 10.0/guiParams.display.cameraZoom);
+				gl.uniform1f(activeProg.uniforms.uAspect, gl.viewportWidth/gl.viewportHeight);
+				//gl.uniform1f(activeProg.uniforms.uAspect, quadplane.aspect);
+
+				gl.uniform1i(activeProg.uniforms.uSampler, 0);	
+				gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);	
+				//gl.uniform2f(activeProg.uniforms.uInvSize, 2/gl.viewportWidth , 2/gl.viewportHeight);		
+				gl.depthFunc(gl.ALWAYS);
+				drawObjectFromBuffers(fsBuffers, activeProg);
+			}
 
 			sceneDrawingOutputView = outView;
 
@@ -1459,11 +1527,17 @@ function setProjectionMatrix(pMatrix, cameraZoom, ratio, quadViewTest){
 	printPMatCreation=false;
 }
 
+var quadViewData = [
+	{topness:-1,rightness:-1},	//bottom left
+	{topness:-1,rightness:1},	//bottom right
+	{topness:1,rightness:-1},	//top left
+	{topness:1,rightness:1}		//top right
+];
+
 function setQuadViewProjMatrices(quadViewMatrices, vFov, ratio){
-	setProjectionMatrix(quadViewMatrices[0], vFov, ratio, {topness:-1,rightness:-1}); 	//bottom left
-	setProjectionMatrix(quadViewMatrices[1], vFov, ratio, {topness:-1,rightness:1});		//bottom right
-	setProjectionMatrix(quadViewMatrices[2], vFov, ratio, {topness:1,rightness:-1});		//top left
-	setProjectionMatrix(quadViewMatrices[3], vFov, ratio, {topness:1,rightness:1});		//top right
+	for(var ii=0;ii<4;ii++){
+		setProjectionMatrix(quadViewMatrices[ii], vFov, ratio, quadViewData[ii]);
+	}
 }
 
 var sshipWorld=0;	//used for player light
@@ -4576,7 +4650,7 @@ function init(){
 	displayFolder.add(guiParams.display, "cameraType", ["cockpit", "near 3rd person", "mid 3rd person", "far 3rd person", "really far 3rd person", "side","none"]);
 	displayFolder.add(guiParams.display, "cameraAttachedTo", ["player vehicle", "turret","none"]);	//"none" acts like drop camera
 	displayFolder.add(guiParams.display, "cameraZoom", 1.5,15,0.1);
-	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.005);
+	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.0125);
 	displayFolder.add(guiParams.display, "flipReverseCamera");
 	displayFolder.add(guiParams.display, "stereo3d", ["off","sbs","sbs-cross","top-bottom","anaglyph","anaglyph-green/magenta"]);
 	displayFolder.add(guiParams.display, "eyeSepWorld", -0.001,0.001,0.0001);
