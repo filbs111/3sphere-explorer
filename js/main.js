@@ -1,3 +1,9 @@
+var quadplane={	//temp...
+	fx:5,
+	fy:0.9,
+	xadjust:0.6,
+	yadjust:0.35	//maybe initial settings unused
+};
 var shaderPrograms={};
 var debugPortalInfo = {};
 var havePrerenderedCentredCubemaps=false;
@@ -1399,9 +1405,12 @@ function setProjectionMatrix(pMatrix, cameraZoom, ratio, quadViewTest){
 		var xadjust = (zalpha -zc)/maxxvert;
 		var yadjust = (zalpha -zk)/maxyvert;
 		
-		//var qpfx= 1.0/( ( 2.0*zk/maxxvert ) - xadjust );
-		//var qpfy= 1.0/( ( 2.0*zc/maxyvert ) - yadjust );
+		var qpfx= 1.0/( ( 2.0*zk/maxxvert ) - xadjust );
+		var qpfy= 1.0/( ( 2.0*zc/maxyvert ) - yadjust );
 		
+		pMatrix[0] = 1/qpfx;	//???
+		pMatrix[5] = 1/qpfy;
+
 		//var camParams = {near:1, far:0};	//does this matter?
 		//var tempPMatrix = mat4.identity();
 		// mat4.perspective(2*(180/Math.PI)*Math.atan(qpfy), qpfx/qpfy, camParams.near, camParams.far, tempPMatrix);
@@ -1434,6 +1443,17 @@ function setProjectionMatrix(pMatrix, cameraZoom, ratio, quadViewTest){
 		if (printPMatCreation){
 			console.log({"pMatrix quadplane": pMatrix.slice()})
 		}
+
+
+		//populate global obj (bodge) to use in quadplane fisheye...
+		quadplane.xadjust = xadjust;
+		quadplane.yadjust = yadjust;
+		quadplane.fx= qpfx;
+		quadplane.fy= qpfy;
+		//fudge? missed a sign somewhere?
+		quadplane.xadjust/=-1;
+		quadplane.yadjust/=-1;
+		//quadplane.aspect = qpfx/qpfy;
 	}
 
 	printPMatCreation=false;
@@ -4293,7 +4313,7 @@ var guiParams={
 		eyeSepWorld:0.0004,	//half distance between eyes in game world
 		eyeTurnIn:0.002,
 		showHud:true,
-		fisheyeEnabled:false,
+		fisheyeEnabled:true,
 		renderViaTexture:'blur-b-use-alpha',
 		renderLastStage:'fxaa',
 		drawTransparentStuff:true,
@@ -4310,7 +4330,8 @@ var guiParams={
 		useSpecular:true,
 		specularStrength:0.5,
 		specularPower:20.0,
-		quadView:false
+		quadView:true,
+		regularFisheye2:false
 	},
 	reflector:{
 		draw:'high',
@@ -4579,6 +4600,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	displayFolder.add(guiParams.display, "specularStrength", 0,1,0.05);	//currently diffuse colour and distance attenuation applies to both specular and diffuse, keeping nonnegative by having diffuse multiplier 1-specularStrength. therefore range 0-1. TODO different specular, diffuse colours, (instead of float strength), specular maybe shouldn't have distance attenuation same way - possibly correct for point source but want solution for sphere light...
 	displayFolder.add(guiParams.display, "specularPower", 1,20,0.5);
 	displayFolder.add(guiParams.display, "quadView");
+	displayFolder.add(guiParams.display, "regularFisheye2");	
 	displayFolder.add(guiParams, "normalMove", 0,0.02,0.001);
 	
 	var debugFolder = gui.addFolder('debug');
