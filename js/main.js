@@ -971,6 +971,11 @@ function drawScene(frameTime){
 			oversize = Math.min(oversize,4.0);
 			var oversizedViewport = [ 2*Math.floor(oversize*gl.viewportWidth/2),  2*Math.floor(oversize*gl.viewportHeight/2)];
 
+			if (guiParams.display.quadView){
+				//temp - TODO find an appropriate scale
+				oversizedViewport = [gl.viewportWidth/2, gl.viewportHeight/2];
+			}
+
 			window.fsq = sumInvSqs;	 //so can access elsewhere. TODO organise fisheye stuff
 
 			var fisheyeParams={
