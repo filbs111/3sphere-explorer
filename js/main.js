@@ -881,6 +881,8 @@ function drawScene(frameTime){
 	setProjectionMatrix(nonCmapPMatrix, mainCamZoom, 1/aspectRatio);	//note mouse code assumes 90 deg fov used. TODO fix.
 	setQuadViewProjMatrices(quadViewMatrices, mainCamZoom, 1/aspectRatio);	//only necessary if quad view selected
 
+	updateFovVals();
+
 	if (reverseCamera){
 		nonCmapPMatrix[0]=-nonCmapPMatrix[0];
 		xyzrotate4mat(worldCamera, (guiParams.display.flipReverseCamera? [Math.PI,0,0]:[0,Math.PI,0] ));	//flip 180  - note repeated later. TODO do once and store copy of camera
@@ -1404,6 +1406,27 @@ function drawScene(frameTime){
 	heapPerfMon.delaySample(0);
 }
 
+
+function updateFovVals(){
+	var var1=guiParams.display.uVarOne;
+	var var2 = 10.0/guiParams.display.cameraZoom;
+
+	var ratio = gl.viewportHeight/gl.viewportWidth; //??
+
+	var maxyvert = var2;	//??
+	var maxxvert = var2/ratio;	//screenAspect;	
+
+	//update something in UI to show what fov SHOULD be (might not match currently!!!)
+	var vfov = (360/Math.PI)*Math.atan2(maxyvert , 2.0 + var1*maxyvert*maxyvert);
+	var hfov = (360/Math.PI)*Math.atan2(maxxvert , 2.0 + var1*maxxvert*maxxvert);
+
+	//console.log({vfov,hfov});
+
+	guiParams.display.vFOV = vfov.toFixed(1);
+	guiParams.display.hFOV = hfov.toFixed(1);
+}
+
+
 var printPMatCreation=false;
 
 var mainCamFov = 105;	//degrees.
@@ -1411,8 +1434,6 @@ function setProjectionMatrix(pMatrix, cameraZoom, ratio, quadViewTest){
 	mat4.identity(pMatrix);
 	
 	var var2 = 10.0/cameraZoom;	
-
-	//TODO print vFOV, hFOV, check consistent here...
 	var fy = var2;
 	
 	// 0 1 2 3
@@ -4382,6 +4403,8 @@ var guiParams={
 		cameraAttachedTo:"player vehicle",
 		cameraZoom:4,
 		uVarOne:-0.015,
+		vFOV:"",
+		hFOV:"",
 		flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
 		stereo3d:"off",
 		eyeSepWorld:0.0004,	//half distance between eyes in game world
@@ -4651,6 +4674,8 @@ function init(){
 	displayFolder.add(guiParams.display, "cameraAttachedTo", ["player vehicle", "turret","none"]);	//"none" acts like drop camera
 	displayFolder.add(guiParams.display, "cameraZoom", 1.5,15,0.1);
 	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.0125);
+	displayFolder.add(guiParams.display, "vFOV").listen();
+	displayFolder.add(guiParams.display, "hFOV").listen();
 	displayFolder.add(guiParams.display, "flipReverseCamera");
 	displayFolder.add(guiParams.display, "stereo3d", ["off","sbs","sbs-cross","top-bottom","anaglyph","anaglyph-green/magenta"]);
 	displayFolder.add(guiParams.display, "eyeSepWorld", -0.001,0.001,0.0001);
