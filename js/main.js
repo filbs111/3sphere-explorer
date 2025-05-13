@@ -847,6 +847,7 @@ function drawScene(frameTime){
 					offsetPlayerCamera, 
 					{left:0,top:0,width:gl.viewportWidth,height:gl.viewportHeight}, 
 					null);
+				drawHud();
 			}
 	} 
 
@@ -858,12 +859,14 @@ function drawScene(frameTime){
 		moveMatHandlingPortal(offsetCameraContainer, [guiParams.display.eyeSepWorld,0,0]);
 		xyzrotate4mat(offsetPlayerCamera, [0,-guiParams.display.eyeTurnIn,0]);
 		drawSceneToScreen(nonCmapPMatrix, offsetPlayerCamera, viewportL, outputFb);
+		drawHud();
 
 		setMat4FromToWithQuats(savedCam, offsetPlayerCamera);
 		offsetCameraContainer.world = savedWorld;
 		moveMatHandlingPortal(offsetCameraContainer, [-guiParams.display.eyeSepWorld,0,0]);
 		xyzrotate4mat(offsetPlayerCamera, [0,guiParams.display.eyeTurnIn,0]);
 		drawSceneToScreen(nonCmapPMatrix, offsetPlayerCamera, viewportR, outputFb);
+		drawHud();
 		//note inefficient currently, since does full screen full render for each eye view.
 		// for top/down split, intermediate render targets could be half screen size
 		// some rendering could be shared between eyes - eg portal cubemaps.
@@ -1214,10 +1217,10 @@ function drawScene(frameTime){
 		gl.depthFunc(gl.ALWAYS);		
 		drawObjectFromBuffers(fsBuffers, activeProg);
 		gl.depthFunc(gl.LESS);
+	}	//end of function drawSceneToScreen
+
+	function drawHud(){
 	
-	
-	if (guiParams.display.showHud){
-		
 		//draw target box ?
 		//var activeShaderProgram = shaderPrograms.colored;
 		var activeShaderProgram = shaderPrograms.decal;
@@ -1370,10 +1373,8 @@ function drawScene(frameTime){
 
 		gl.disable(gl.BLEND);
 		gl.enable(gl.DEPTH_TEST);
-	}
 
-	
-	function drawTargetDecal(scale, color, pos, rotation=0, uvPosAndSize = [0,0,1,1]){
+		function drawTargetDecal(scale, color, pos, rotation=0, uvPosAndSize = [0,0,1,1]){
 			//scale*= 0.01/pos[2];
 			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, scale);
 			uniform4fvSetter.setIfDifferent(activeShaderProgram, "uUvCoords", uvPosAndSize);
@@ -1382,16 +1383,15 @@ function drawScene(frameTime){
 			xyzmove4mat(mvMatrix,[0.01*pos[0]/pos[2],0.01*pos[1]/pos[2],0.01]);
 			xyzrotate4mat(mvMatrix, [0,0,rotation]);
 			drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
-	}
+		}
 
-	function drawTargetDecalCharacter(scale, color, pos, charInfo){
-		drawTargetDecal(scale, color, pos, 0, uvPosAndSize = [
-			charInfo.x/512,(1-charInfo.y/512) - charInfo.height/512,
-			charInfo.width/512, charInfo.height/512]);
-			//note could flip quad y to make above simpler (but will use different method anyway)
+		function drawTargetDecalCharacter(scale, color, pos, charInfo){
+			drawTargetDecal(scale, color, pos, 0, uvPosAndSize = [
+				charInfo.x/512,(1-charInfo.y/512) - charInfo.height/512,
+				charInfo.width/512, charInfo.height/512]);
+				//note could flip quad y to make above simpler (but will use different method anyway)
+		}
 	}
-
-	}	//end of function drawSceneToScreen
 
 
 	heapPerfMon.sample();
@@ -1452,6 +1452,7 @@ function setProjectionMatrix(pMatrix, cameraZoom, ratio, varOne, quadViewTest){
 	}
 
 	if (quadViewTest){	//TODO don't do this for cubemap stuff
+
 		//initial version just bodged from webgl-wideanglecamera project
 		//TODO sort problem of not rendering behind camera when >180 FOV, seems because of discard in custom depth
 		// calc in frag shader - the depth used should in direction of the "skewed" quarter camera. the current
