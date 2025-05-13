@@ -878,7 +878,7 @@ function drawScene(frameTime){
 	var aspectRatio = gl.viewportWidth/gl.viewportHeight;
 
 	//TODO update only when required
-	setProjectionMatrix(nonCmapPMatrix, mainCamZoom, 1/aspectRatio);	//note mouse code assumes 90 deg fov used. TODO fix.
+	setProjectionMatrix(nonCmapPMatrix, mainCamZoom, 1/aspectRatio, guiParams.display.uVarOne);	//note mouse code assumes 90 deg fov used. TODO fix.
 	setQuadViewProjMatrices(quadViewMatrices, mainCamZoom, 1/aspectRatio);	//only necessary if quad view selected
 
 	updateFovVals();
@@ -1435,19 +1435,23 @@ function updateFovVals(){
 var printPMatCreation=false;
 
 var mainCamFov = 105;	//degrees.
-function setProjectionMatrix(pMatrix, cameraZoom, ratio, quadViewTest){
+function setProjectionMatrix(pMatrix, cameraZoom, ratio, varOne, quadViewTest){
 	mat4.identity(pMatrix);
 	
-	var var2 = 10.0/cameraZoom;	
-	var fy = var2;
-	
+	var var2 = 10.0/cameraZoom;
+
+	var maxyverta = var2;	//??
+	var maxxverta = var2/ratio;	//screenAspect;
+
+	var fx = (maxxverta /(2.0 + varOne*maxyverta*maxyverta));
+
 	// 0 1 2 3
 	// 4 5 6 7
 	// 8 9 10 11
 	// 12 13 14 15
 
-	pMatrix[0] = ratio/fy ;
-	pMatrix[5] = 1.0/fy;
+	pMatrix[0] = 1.0/fx ;
+	pMatrix[5] = 1.0/(fx*ratio);
 	pMatrix[11]	= -1;	//rotate w into z.
 	//pMatrix[14] = -0.00003;	//smaller = more z range. 1/50 gets ~same near clipping result as stereographic/perspective 0.01 near
 	pMatrix[14] = 0;	//with custom depth extension, still discards based on gl_Position w,z, so "disable" that here (setting this to 0 should cause all depths to be 0)
@@ -1562,7 +1566,7 @@ var quadViewData = [
 
 function setQuadViewProjMatrices(quadViewMatrices, vFov, ratio){
 	for(var ii=0;ii<4;ii++){
-		setProjectionMatrix(quadViewMatrices[ii], vFov, ratio, quadViewData[ii]);
+		setProjectionMatrix(quadViewMatrices[ii], vFov, ratio, guiParams.display.uVarOne, quadViewData[ii]);
 	}
 }
 
@@ -3488,12 +3492,12 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 				//fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
 				
 				//TODO don't recalulate/read these so much
-				//var var1 = guiParams.display.uVarOne;
+				var var1 = guiParams.display.uVarOne;
 				var var2 = 10.0/guiParams.display.cameraZoom;
 				var ratio = 1/(gl.viewportWidth/gl.viewportHeight);
-				//var maxyvert = var2;
+				var maxyvert = var2;
 				var maxxvert = var2/ratio;
-				var fx = maxxvert;	// /(2.0 + var1*maxyvert*maxyvert);
+				var fx = maxxvert /(2.0 + var1*maxyvert*maxyvert);
 				var fy = fx*ratio;
 			}
 			gl.uniform2f(shaderProgram.uniforms.uFNumber, fx, fy);
@@ -4036,7 +4040,8 @@ var portalInCameraCopy2 = mat4.create();
 var portalInCameraCopy3 = mat4.create();
 
 var cmapPMatrix = mat4.create();
-setProjectionMatrix(cmapPMatrix, -10, 1.0);	//-10 gets reflection to look right. (different for portal?)
+setProjectionMatrix(cmapPMatrix, -5, 1.0, 0);	//-5 gets reflection to look right. (different for portal?)
+
 var squareFrustumCull = generateCullFunc(cmapPMatrix);
 
 var invertedWorldCamera = mat4.create();
