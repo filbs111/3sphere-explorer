@@ -836,45 +836,22 @@ function drawScene(frameTime){
 		if (guiParams.display.quadView){
 			drawQuadViewsToScreen(viewrect, outputFb);
 		}else{
-			drawSceneToScreen(
-				nonCmapPMatrix,
-				offsetPlayerCamera,
-				viewrect,
-				outputFb);
+			drawSceneToScreen(nonCmapPMatrix, offsetPlayerCamera, viewrect, outputFb);
 			drawHud();
 		}
 	}
 
 	function drawQuadViewsToScreen(viewrect, outputFb){
 		var quadrantsize = [viewrect.width/2, viewrect.height/2];
-		drawSceneToScreen(
-			quadViewMatrices[0],
-			offsetPlayerCamera,
-			//bottom left quadrant
-			{left:viewrect.left,top:viewrect.top,width:quadrantsize[0],height:quadrantsize[1]}, 
-			outputFb,
-			quadViewData[0]);
-		drawSceneToScreen(
-			quadViewMatrices[1],
-			offsetPlayerCamera,
-			//bottom right quadrant
-			{left:viewrect.left+quadrantsize[0],top:viewrect.top,width:quadrantsize[0],height:quadrantsize[1]}, 
-			outputFb,
-			quadViewData[1]);
-		drawSceneToScreen(
-			quadViewMatrices[2],
-			offsetPlayerCamera,
-			//top left quadrant
-			{left:viewrect.left,top:viewrect.top+quadrantsize[1],width:quadrantsize[0],height:quadrantsize[1]}, 
-			outputFb,
-			quadViewData[2]);
-		drawSceneToScreen(
-			quadViewMatrices[3],
-			offsetPlayerCamera,
-			//top right quadrant
-			{left:viewrect.left+quadrantsize[0],top:viewrect.top+quadrantsize[1],width:quadrantsize[0],height:quadrantsize[1]}, 
-			outputFb,
-			quadViewData[3]);
+		var quadrants = 
+		[{left:viewrect.left,top:viewrect.top,width:quadrantsize[0],height:quadrantsize[1]},								//bottom left
+		{left:viewrect.left+quadrantsize[0],top:viewrect.top,width:quadrantsize[0],height:quadrantsize[1]},					//bottom right
+		{left:viewrect.left,top:viewrect.top+quadrantsize[1],width:quadrantsize[0],height:quadrantsize[1]},					//top left
+		{left:viewrect.left+quadrantsize[0],top:viewrect.top+quadrantsize[1],width:quadrantsize[0],height:quadrantsize[1]}	//top right
+		];
+		quadrants.forEach((bounds, ii) => {
+			drawSceneToScreen(quadViewMatrices[ii], offsetPlayerCamera, bounds, outputFb, quadViewData[ii]);
+		});
 	}
 
 	function drawSceneToScreen(projMatrix, cameraForScene, viewP, sceneFinalOutputFramebuf, qvData){
