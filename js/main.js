@@ -810,46 +810,8 @@ function drawScene(frameTime){
 			//TODO ensure quad view also works for stereo mode
 			//TODO ensure resolution of rectilinear image is appropriate for small quadrant
 			//TODO prepare this elsewhere (array of func args?)
-			if (guiParams.display.quadView){
-				drawSceneToScreen(
-					quadViewMatrices[0],
-					offsetPlayerCamera,
-					//bottom left quadrant
-					{left:0,top:0,width:gl.viewportWidth/2,height:gl.viewportHeight/2}, 
-					null,
-					quadViewData[0]);
-				drawSceneToScreen(
-					quadViewMatrices[1],
-					offsetPlayerCamera,
-					//bottom right quadrant
-					{left:gl.viewportWidth/2,top:0,width:gl.viewportWidth/2,height:gl.viewportHeight/2}, 
-					null,
-					quadViewData[1]);
-				drawSceneToScreen(
-					quadViewMatrices[2],
-					offsetPlayerCamera,
-					//top left quadrant
-					{left:0,top:gl.viewportHeight/2,width:gl.viewportWidth/2,height:gl.viewportHeight/2}, 
-					null,
-					quadViewData[2]);
-					
-
-				drawSceneToScreen(
-					quadViewMatrices[3],
-					offsetPlayerCamera,
-					//top right quadrant
-					{left:gl.viewportWidth/2,top:gl.viewportHeight/2,width:gl.viewportWidth/2,height:gl.viewportHeight/2}, 
-					null,
-					quadViewData[3]);
-			}else{
-				drawSceneToScreen(
-					nonCmapPMatrix,
-					offsetPlayerCamera, 
-					{left:0,top:0,width:gl.viewportWidth,height:gl.viewportHeight}, 
-					null);
-				drawHud();
-			}
-	} 
+			drawSingleOrQuadViews({left:0,top:0,width:gl.viewportWidth,height:gl.viewportHeight}, null);
+	}
 
 	function drawStereoPair(viewportL, viewportR, outputFb){
 		var savedCam = newIdMatWithQuats();
@@ -858,20 +820,62 @@ function drawScene(frameTime){
 		var savedWorld = offsetCameraContainer.world;
 		moveMatHandlingPortal(offsetCameraContainer, [guiParams.display.eyeSepWorld,0,0]);
 		xyzrotate4mat(offsetPlayerCamera, [0,-guiParams.display.eyeTurnIn,0]);
-		drawSceneToScreen(nonCmapPMatrix, offsetPlayerCamera, viewportL, outputFb);
-		drawHud();
+		drawSingleOrQuadViews(viewportL, outputFb);
 
 		setMat4FromToWithQuats(savedCam, offsetPlayerCamera);
 		offsetCameraContainer.world = savedWorld;
 		moveMatHandlingPortal(offsetCameraContainer, [-guiParams.display.eyeSepWorld,0,0]);
 		xyzrotate4mat(offsetPlayerCamera, [0,guiParams.display.eyeTurnIn,0]);
-		drawSceneToScreen(nonCmapPMatrix, offsetPlayerCamera, viewportR, outputFb);
-		drawHud();
+		drawSingleOrQuadViews(viewportR, outputFb);
 		//note inefficient currently, since does full screen full render for each eye view.
 		// for top/down split, intermediate render targets could be half screen size
 		// some rendering could be shared between eyes - eg portal cubemaps.
 	}
 
+	function drawSingleOrQuadViews(viewrect, outputFb){
+		if (guiParams.display.quadView){
+			drawQuadViewsToScreen(viewrect, outputFb);
+		}else{
+			drawSceneToScreen(
+				nonCmapPMatrix,
+				offsetPlayerCamera,
+				viewrect,
+				outputFb);
+			drawHud();
+		}
+	}
+
+	function drawQuadViewsToScreen(viewrect, outputFb){
+		var quadrantsize = [viewrect.width/2, viewrect.height/2];
+		drawSceneToScreen(
+			quadViewMatrices[0],
+			offsetPlayerCamera,
+			//bottom left quadrant
+			{left:viewrect.left,top:viewrect.top,width:quadrantsize[0],height:quadrantsize[1]}, 
+			outputFb,
+			quadViewData[0]);
+		drawSceneToScreen(
+			quadViewMatrices[1],
+			offsetPlayerCamera,
+			//bottom right quadrant
+			{left:viewrect.left+quadrantsize[0],top:viewrect.top,width:quadrantsize[0],height:quadrantsize[1]}, 
+			outputFb,
+			quadViewData[1]);
+		drawSceneToScreen(
+			quadViewMatrices[2],
+			offsetPlayerCamera,
+			//top left quadrant
+			{left:viewrect.left,top:viewrect.top+quadrantsize[1],width:quadrantsize[0],height:quadrantsize[1]}, 
+			outputFb,
+			quadViewData[2]);
+		drawSceneToScreen(
+			quadViewMatrices[3],
+			offsetPlayerCamera,
+			//top right quadrant
+			{left:viewrect.left+quadrantsize[0],top:viewrect.top+quadrantsize[1],width:quadrantsize[0],height:quadrantsize[1]}, 
+			outputFb,
+			quadViewData[3]);
+	}
 
 	function drawSceneToScreen(projMatrix, cameraForScene, viewP, sceneFinalOutputFramebuf, qvData){
 		
