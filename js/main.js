@@ -894,30 +894,17 @@ function drawScene(frameTime){
 	nonCmapCullFunc = generateCullFunc(projMatrix);										//todo only update pmatrix, nonCmapCullFunc if input variables have changed
 		
 
-	mat4.set(invertedWorldCamera, portalInCameraCopy);
-		//portalInCamera is calculated in different scope
+	var portalInCameraCopies = [portalInCameraCopy, portalInCameraCopy2, portalInCameraCopy3];
+	portalsForWorld[offsetCameraContainer.world].forEach((portal, ii)=>{
+		var portalInCamera = portalInCameraCopies[ii];
+		mat4.set(invertedWorldCamera, portalInCamera);
+		//portalInCamera is calculated in different scope (in drawWorldScene)
 		//TODO reorganise/tidy code, reduce duplication
-
-	var portals = portalsForWorld[offsetCameraContainer.world];
-	mat4.multiply(portalInCameraCopy, portals[0].matrix); //TODO is offsetCameraContainer.world updated yet?
+		mat4.multiply(portalInCamera, portal.matrix); //TODO is offsetCameraContainer.world updated yet?
 																				//if not may see 1 frame glitch on crossing
-	mat4.transpose(portalInCameraCopy);	//TODO lose this, use indices 3,7,11 instead of 12,13,14 in calcReflectionInfo?
-
-	calcReflectionInfo(portalInCameraCopy,reflectorInfoArr[0], portals[0].shared.radius);
-
-	//for 2nd portal in this world. TODO generalise
-	if (portals.length>1){
-		mat4.set(invertedWorldCamera, portalInCameraCopy2);
-		mat4.multiply(portalInCameraCopy2, portals[1].matrix);
-		mat4.transpose(portalInCameraCopy2);
-		calcReflectionInfo(portalInCameraCopy2,reflectorInfoArr[1], portals[1].shared.radius);
-	}
-	if (portals.length>2){
-		mat4.set(invertedWorldCamera, portalInCameraCopy3);
-		mat4.multiply(portalInCameraCopy3, portals[2].matrix);
-		mat4.transpose(portalInCameraCopy3);
-		calcReflectionInfo(portalInCameraCopy3,reflectorInfoArr[2], portals[2].shared.radius);
-	}
+		mat4.transpose(portalInCamera);	//TODO lose this, use indices 3,7,11 instead of 12,13,14 in calcReflectionInfo?
+		calcReflectionInfo(portalInCamera,reflectorInfoArr[ii], portal.shared.radius);
+	});
 
 	//setup for drawing to screen
 	//gl.bindFramebuffer(gl.FRAMEBUFFER, null);
