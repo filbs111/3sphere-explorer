@@ -888,6 +888,12 @@ function drawScene(frameTime){
 
 	if (reverseCamera){
 		nonCmapPMatrix[0]=-nonCmapPMatrix[0];
+		quadViewMatrices.forEach(mm=>{
+			mm[0]=-mm[0];
+			mm[1]=-mm[1];
+			mm[2]=-mm[2];
+			mm[3]=-mm[3];
+		});
 		xyzrotate4mat(worldCamera, (guiParams.display.flipReverseCamera? [Math.PI,0,0]:[0,Math.PI,0] ));	//flip 180  - note repeated later. TODO do once and store copy of camera
 		//TODO check this works once have quad view camera working (perhaps other signs should be flipped...)
 	}
