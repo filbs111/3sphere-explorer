@@ -1226,7 +1226,7 @@ function drawScene(frameTime){
 	}	//end of function drawSceneToScreen
 
 	function drawHud(){
-	
+		if (!guiParams.display.showHud){return;}
 		//draw target box ?
 		//var activeShaderProgram = shaderPrograms.colored;
 		var activeShaderProgram = shaderPrograms.decal;
