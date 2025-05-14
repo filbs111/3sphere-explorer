@@ -902,6 +902,10 @@ function drawScene(frameTime){
 	mat4.set(projMatrix, pMatrix);
 														
 	frustumCull = nonCmapCullFunc;
+
+	if (guiParams.display.quadView){
+		frustumCull = noCullCullFunc;	//TODO proper culling func for quad view. for now just draw everything
+	}
 	
 	mat4.set(cameraForScene, worldCamera);	//set worldCamera to playerCamera
 	//xyzmove4mat(worldCamera,[0,-0.01,-0.015]);	//3rd person camera
@@ -3739,6 +3743,10 @@ function generateCullFunc(pMat){
 		if (mat[14]+const2*mat[12]>const6){return false;}
 		return true;
 	}
+}
+
+function noCullCullFunc(mat, rad){
+	return true;
 }
 
 var enableDisableAttributes = (function generateEnableDisableAttributesFunc(){
