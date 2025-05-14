@@ -1061,7 +1061,7 @@ function drawScene(frameTime){
 
 			sceneDrawingOutputView = outView;
 
-		} else if (["blur",  "blur-b", "blur-b-use-alpha", "blur-big", "2-pass-blur"].includes( guiParams.display.renderViaTexture )){
+		} else if (["blur",  "blur-b", "blur-b-use-alpha", "blur-big", "2-pass-blur",'1d-blur'].includes( guiParams.display.renderViaTexture )){
 			initialRectilinearRender( gl.viewportWidth, gl.viewportHeight, rttStageOneView, rttFisheyeView2);
 		} else{
 			initialRectilinearRender( gl.viewportWidth, gl.viewportHeight, rttStageOneView, rttView);
@@ -1152,6 +1152,13 @@ function drawScene(frameTime){
 			drawBlur(activeProg, sceneDrawingOutputView, rttView, [1/gl.viewportWidth , 0]);
 			drawBlur(activeProg, rttView, savedView, [0 , 1/gl.viewportHeight]);
 				//note hacky use of uInvSizeVec to convey the step vector for samples.
+		}
+		if (guiParams.display.renderViaTexture == "1d-blur"){
+			//temporary!
+			activeProg = shaderPrograms.fullscreenBlur1dDdx;
+			gl.useProgram(activeProg);
+			enableDisableAttributes(activeProg);
+			drawBlur(activeProg, sceneDrawingOutputView, rttView, [1/gl.viewportWidth , 0]);
 		}
 
 
@@ -4678,7 +4685,7 @@ function init(){
 	displayFolder.add(guiParams.display, "eyeTurnIn", -0.01,0.01,0.0005);
 	displayFolder.add(guiParams.display, "showHud");
 	displayFolder.add(guiParams.display, "fisheyeEnabled");
-	displayFolder.add(guiParams.display, "renderViaTexture", ['basic','blur','blur-b','blur-b-use-alpha','blur-big','2-pass-blur']);
+	displayFolder.add(guiParams.display, "renderViaTexture", ['basic','blur','blur-b','blur-b-use-alpha','blur-big','2-pass-blur','1d-blur']);
 	displayFolder.add(guiParams.display, "renderLastStage", ['simpleCopy','fxaa','fxaaSimple','showAlpha']);
 	displayFolder.add(guiParams.display, "drawTransparentStuff");
 	displayFolder.add(guiParams.display, "voxNmapTest");
