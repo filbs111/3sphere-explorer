@@ -920,11 +920,11 @@ function drawScene(frameTime){
 	}else{
 		gl.cullFace(gl.BACK);
 	}
-	
-		
-		var sceneDrawingOutputView;
 
-		if (guiParams.display.fisheyeEnabled){
+		if (!guiParams.display.fisheyeEnabled){
+			return initialRectilinearRender( gl.viewportWidth, gl.viewportHeight, rttStageOneView, rttFisheyeView2);
+		}
+
 			//var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
 			//var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
 			
@@ -968,7 +968,7 @@ function drawScene(frameTime){
 				uOversize : oversize
 			}
 						
-			initialRectilinearRender(oversizedViewport[0], oversizedViewport[1], rttFisheyeRectRenderOutput, rttFisheyeRectRenderOutput2);
+			var initialRenderOutput = initialRectilinearRender(oversizedViewport[0], oversizedViewport[1], rttFisheyeRectRenderOutput, rttFisheyeRectRenderOutput2);
 		
 			//do fisheye mapping (before possible blur, FXAA)
 			var outView = rttStageOneView;		//just bind to next stage. 
@@ -978,8 +978,8 @@ function drawScene(frameTime){
 			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
 			setRttSize( outView, gl.viewportWidth, gl.viewportHeight );
 
-			bind2dTextureIfRequired(sceneDrawingOutputView.texture);	//old output view.
-			bind2dTextureIfRequired(sceneDrawingOutputView.depthTexture,gl.TEXTURE2);
+			bind2dTextureIfRequired(initialRenderOutput.texture);	//old output view.
+			bind2dTextureIfRequired(initialRenderOutput.depthTexture,gl.TEXTURE2);
 				//^^ not needed if using alpha for blur
 
 			if (!guiParams.display.quadView){
@@ -1062,13 +1062,8 @@ function drawScene(frameTime){
 				drawObjectFromBuffers(fsBuffers, activeProg);
 			}
 
-			sceneDrawingOutputView = outView;
-		} else {
-			initialRectilinearRender( gl.viewportWidth, gl.viewportHeight, rttStageOneView, rttFisheyeView2);
-		}
-
-		return sceneDrawingOutputView;
-
+			return outView;
+		
 		/**
 		 * 
 		 * @param {*} width 
@@ -1076,7 +1071,6 @@ function drawScene(frameTime){
 		 * @param {*} traspOutView to set sceneDrawingOutputView if drawing transparent stuff
 		 */
 		function initialRectilinearRender(width, height, initialOutView, traspOutView){
-			sceneDrawingOutputView = initialOutView;
 			gl.bindFramebuffer(gl.FRAMEBUFFER, initialOutView.framebuffer);
 			
 			gl.viewport( 0,0, width, height );
@@ -1091,10 +1085,12 @@ function drawScene(frameTime){
 			drawWorldScene(frameTime, false, viewSettings, wSettings);
 			mat4.set(savedCamera, worldCamera);	//set worldCamera back to savedCamera (might have been changed due to rendering portal cubemaps within drawWorldScene)
 
-			if (guiParams.display.drawTransparentStuff){
-				drawTransparentStuff(initialOutView, traspOutView, width, height, wSettings);
-				sceneDrawingOutputView = traspOutView;
+			if (!guiParams.display.drawTransparentStuff){
+				return initialOutView;
 			}
+
+			drawTransparentStuff(initialOutView, traspOutView, width, height, wSettings);
+			return traspOutView;
 		}
 
 		function drawTransparentStuff(fromView, toView, sizeX, sizeY, wSettings){
