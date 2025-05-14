@@ -1175,12 +1175,15 @@ function drawScene(frameTime){
 			sceneDrawingOutputView = destinationView;
 		}
 
-		
+		lastStageRender(viewP, sceneDrawingOutputView, sceneFinalOutputFramebuf);
+	}	//end of function drawSceneToScreen
+
+	function lastStageRender(viewP, sourceFramebuf, sceneFinalOutputFramebuf){
 		//draw quad to screen using drawn texture
 		gl.bindFramebuffer(gl.FRAMEBUFFER, sceneFinalOutputFramebuf);	//draw to screen (null), or intermediate view in case of anaglyph
 		gl.viewport(viewP.left, viewP.top, viewP.width, viewP.height);	//TODO check whether necessary to keep setting this
 		
-		bind2dTextureIfRequired(sceneDrawingOutputView.texture);	
+		bind2dTextureIfRequired(sourceFramebuf.texture);
 		
 		//draw the simple quad object to the screen
 		switch (guiParams.display.renderLastStage){
@@ -1204,7 +1207,7 @@ function drawScene(frameTime){
 		gl.depthFunc(gl.ALWAYS);		
 		drawObjectFromBuffers(fsBuffers, activeProg);
 		gl.depthFunc(gl.LESS);
-	}	//end of function drawSceneToScreen
+	}
 
 	function drawHud(){
 		if (!guiParams.display.showHud){return;}
