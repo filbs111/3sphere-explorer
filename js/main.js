@@ -856,7 +856,16 @@ function drawScene(frameTime){
 
 	function drawSceneToScreen(projMatrix, cameraForScene, viewP, sceneFinalOutputFramebuf, qvData){
 		
-	mat4.set(cameraForScene, worldCamera);
+		var startStageOutput = startStageRender(projMatrix, cameraForScene, qvData);	//NOTE start stage quite complicated currently - initial render+fisheye mapping.
+
+		var penultimateStageOutput = penultimateStageRender(startStageOutput, rttView); 
+		lastStageRender(viewP, penultimateStageOutput, sceneFinalOutputFramebuf);
+
+	}//end of function drawSceneToScreen
+
+	function startStageRender(projMatrix, cameraForScene, qvData){
+
+		mat4.set(cameraForScene, worldCamera);
 
 	mainCamZoom = guiParams.display.cameraZoom;
 	var aspectRatio = gl.viewportWidth/gl.viewportHeight;
@@ -1060,10 +1069,12 @@ function drawScene(frameTime){
 			}
 
 			sceneDrawingOutputView = outView;
-		} else{
+		} else {
 			initialRectilinearRender( gl.viewportWidth, gl.viewportHeight, rttStageOneView, rttFisheyeView2);
 		}
-		
+
+		return sceneDrawingOutputView;
+
 		/**
 		 * 
 		 * @param {*} width 
@@ -1117,10 +1128,7 @@ function drawScene(frameTime){
 			
 			drawWorldScene2(frameTime, wSettings, fromView.depthTexture);	//depth aware drawing stuff like sea
 		}
-
-		var penultimateStageOutput = penultimateStageRender(sceneDrawingOutputView, rttView); 
-		lastStageRender(viewP, penultimateStageOutput, sceneFinalOutputFramebuf);
-	}	//end of function drawSceneToScreen
+	}
 
 	function penultimateStageRender(screenBufOne, screenBufTwo){
 		var activeProg;
