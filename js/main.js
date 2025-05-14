@@ -1121,7 +1121,11 @@ function drawScene(frameTime){
 			drawWorldScene2(frameTime, wSettings, fromView.depthTexture);	//depth aware drawing stuff like sea
 		}
 
-		
+		var penultimateStageOutput = penultimateStageRender(sceneDrawingOutputView, rttView); 
+		lastStageRender(viewP, penultimateStageOutput, sceneFinalOutputFramebuf);
+	}	//end of function drawSceneToScreen
+
+	function penultimateStageRender(screenBufOne, screenBufTwo){
 		var activeProg;
 		
 		if (["blur",  "blur-b", "blur-b-use-alpha", "blur-big"].includes( guiParams.display.renderViaTexture )){
@@ -1134,8 +1138,9 @@ function drawScene(frameTime){
 			enableDisableAttributes(activeProg);
 
 			var blurScale = guiParams.display.renderViaTexture == "blur-big"? 1 : 2.5;
-			drawBlur(activeProg, sceneDrawingOutputView, rttView, [blurScale/gl.viewportWidth , blurScale/gl.viewportHeight]);
+			drawBlur(activeProg, screenBufOne, screenBufTwo, [blurScale/gl.viewportWidth , blurScale/gl.viewportHeight]);
 				//TODO blur constant angle - currently blurs constant pixels, so behaviour depends on display resolution.
+			return screenBufTwo;
 		}
 
 		//second pass blur iff appropriate
@@ -1145,22 +1150,25 @@ function drawScene(frameTime){
 			activeProg = shaderPrograms.fullscreenBlur1d;
 			gl.useProgram(activeProg);
 			enableDisableAttributes(activeProg);
-			var savedView = sceneDrawingOutputView;	//TODO better names for these things!
-			//drawBlur(activeProg, sceneDrawingOutputView, rttView, [1/gl.viewportWidth , 1/gl.viewportHeight]);
+
+			//drawBlur(activeProg, screenBufOne, screenBufTwo, [1/gl.viewportWidth , 1/gl.viewportHeight]);
 
 			//2-pass blur abusing big blur (many samples redundant, but should have same effect)
-			drawBlur(activeProg, sceneDrawingOutputView, rttView, [1/gl.viewportWidth , 0]);
-			drawBlur(activeProg, rttView, savedView, [0 , 1/gl.viewportHeight]);
+			drawBlur(activeProg, screenBufOne, screenBufTwo, [1/gl.viewportWidth , 0]);
+			drawBlur(activeProg, screenBufTwo, screenBufOne, [0 , 1/gl.viewportHeight]);
 				//note hacky use of uInvSizeVec to convey the step vector for samples.
+			return screenBufOne;
 		}
 		if (guiParams.display.renderViaTexture == "1d-blur"){
 			//temporary!
 			activeProg = shaderPrograms.fullscreenBlur1dDdx;
 			gl.useProgram(activeProg);
 			enableDisableAttributes(activeProg);
-			drawBlur(activeProg, sceneDrawingOutputView, rttView, [1/gl.viewportWidth , 0]);
+			drawBlur(activeProg, screenBufOne, screenBufTwo, [1/gl.viewportWidth , 0]);
+			return screenBufTwo;
 		}
 
+		return screenBufOne;
 
 		function drawBlur(shaderProg, fromView, destinationView, uInvSizeVec){
 			//TODO depth aware blur. for now, simple
@@ -1182,12 +1190,8 @@ function drawScene(frameTime){
 			gl.depthFunc(gl.ALWAYS);
 			drawObjectFromBuffers(fsBuffers, shaderProg);
 			//gl.depthFunc(gl.LESS);
-
-			sceneDrawingOutputView = destinationView;
 		}
-
-		lastStageRender(viewP, sceneDrawingOutputView, sceneFinalOutputFramebuf);
-	}	//end of function drawSceneToScreen
+	}
 
 	function lastStageRender(viewP, sourceFramebuf, sceneFinalOutputFramebuf){
 		//draw quad to screen using drawn texture
