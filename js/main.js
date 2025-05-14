@@ -1060,11 +1060,8 @@ function drawScene(frameTime){
 			}
 
 			sceneDrawingOutputView = outView;
-
-		} else if (["blur",  "blur-b", "blur-b-use-alpha", "blur-big", "2-pass-blur",'1d-blur'].includes( guiParams.display.renderViaTexture )){
-			initialRectilinearRender( gl.viewportWidth, gl.viewportHeight, rttStageOneView, rttFisheyeView2);
 		} else{
-			initialRectilinearRender( gl.viewportWidth, gl.viewportHeight, rttStageOneView, rttView);
+			initialRectilinearRender( gl.viewportWidth, gl.viewportHeight, rttStageOneView, rttFisheyeView2);
 		}
 		
 		/**
