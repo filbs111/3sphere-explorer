@@ -910,15 +910,9 @@ function drawScene(frameTime){
 	//gl.viewport(viewP.left, viewP.top, viewP.width, viewP.height);
 	mat4.set(projMatrix, pMatrix);
 														
-	frustumCull = nonCmapCullFunc;
+	frustumCull = guiParams.display.quadView? noCullCullFunc: nonCmapCullFunc;	//TODO proper culling func for quad view. for now just draw everything
 
-	if (guiParams.display.quadView){
-		frustumCull = noCullCullFunc;	//TODO proper culling func for quad view. for now just draw everything
-	}
-	
 	mat4.set(cameraForScene, worldCamera);	//set worldCamera to playerCamera
-	//xyzmove4mat(worldCamera,[0,-0.01,-0.015]);	//3rd person camera
-	//xyzmove4mat(worldCamera,[0,0,0.005]);	//forward camera
 
 	if (reverseCamera){
 		gl.cullFace(gl.FRONT);	//todo revert for drawing cubemap faces. or : for PIP camera, render to texture, flip when texture to screen (and if fullscreen reversing camera, use same cullface setting when drawing them (if switching cullface is a slow gl call)
