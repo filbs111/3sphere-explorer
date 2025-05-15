@@ -833,10 +833,39 @@ function drawScene(frameTime){
 	}
 
 	function drawSingleOrQuadViews(viewrect, outputFb){
+
+		mat4.set(nonCmapPMatrix, worldCamera);
+
+		mainCamZoom = guiParams.display.cameraZoom;
+		var aspectRatio = gl.viewportWidth/gl.viewportHeight;
+
+		//TODO update only when required
+		setProjectionMatrix(nonCmapPMatrix, mainCamZoom, 1/aspectRatio, guiParams.display.uVarOne);	//note mouse code assumes 90 deg fov used. TODO fix.
+		setQuadViewProjMatrices(quadViewMatrices, mainCamZoom, 1/aspectRatio);	//only necessary if quad view selected
+
+		updateFovVals();
+
+		if (reverseCamera){
+			nonCmapPMatrix[0]=-nonCmapPMatrix[0];
+			quadViewMatrices.forEach(mm=>{
+				mm[0]=-mm[0];
+				mm[1]=-mm[1];
+				mm[2]=-mm[2];
+				mm[3]=-mm[3];
+			});
+			xyzrotate4mat(worldCamera, (guiParams.display.flipReverseCamera? [Math.PI,0,0]:[0,Math.PI,0] ));	//flip 180  - note repeated later. TODO do once and store copy of camera
+			//TODO check this works once have quad view camera working (perhaps other signs should be flipped...)
+		}
+
+
 		if (guiParams.display.quadView){
 			drawQuadViewsToScreen(viewrect, outputFb);
 		}else{
-			drawSceneToScreen(nonCmapPMatrix, offsetPlayerCamera, viewrect, outputFb);
+			setRttSize( rttStageOneView, viewrect.width, viewrect.height );
+			drawSceneToScreen(nonCmapPMatrix, offsetPlayerCamera, rttStageOneView, viewrect);
+			var penultimateRenderer = penultimateStageRenderFunc(rttStageOneView, rttView);
+			penultimateRenderer.renderFunc(viewrect);
+			lastStageRender(viewrect, penultimateRenderer.outBuffer, outputFb);
 			drawHud();
 		}
 	}
@@ -849,24 +878,30 @@ function drawScene(frameTime){
 		{left:viewrect.left,top:viewrect.top+quadrantsize[1],width:quadrantsize[0],height:quadrantsize[1]},					//top left
 		{left:viewrect.left+quadrantsize[0],top:viewrect.top+quadrantsize[1],width:quadrantsize[0],height:quadrantsize[1]}	//top right
 		];
+
+		var penultimateRenderer = penultimateStageRenderFunc(rttStageOneView, rttView);
+
+		setRttSize( rttStageOneView, viewrect.width, viewrect.height );
+
 		quadrants.forEach((bounds, ii) => {
-			drawSceneToScreen(quadViewMatrices[ii], offsetPlayerCamera, bounds, outputFb, quadViewData[ii]);
+			gl.depthFunc(gl.LESS);	//guess gfx fix. TODO put in proper place
+			drawSceneToScreen(quadViewMatrices[ii], offsetPlayerCamera, rttStageOneView, bounds, quadViewData[ii]);
 		});
+
+		penultimateRenderer.renderFunc(viewrect);
+		lastStageRender(viewrect, penultimateRenderer.outBuffer, outputFb);
+
+		//lastStageRender(viewrect, rttStageOneView, outputFb);	//skip penultimate render to help debug
 	}
 
-	function drawSceneToScreen(projMatrix, cameraForScene, viewP, sceneFinalOutputFramebuf, qvData){
-		
-		var startStageOutput = startStageRender(projMatrix, cameraForScene, qvData);	//NOTE start stage quite complicated currently - initial render+fisheye mapping.
-
-		var penultimateStageOutput = penultimateStageRender(startStageOutput, rttView); 
-		lastStageRender(viewP, penultimateStageOutput, sceneFinalOutputFramebuf);
-
+	function drawSceneToScreen(projMatrix, cameraForScene, destinationBuf, destinationView, qvData){
+		startStageRender(projMatrix, cameraForScene, destinationBuf, destinationView, qvData);	//NOTE start stage quite complicated currently - initial render+fisheye mapping.
+		return;
 	}//end of function drawSceneToScreen
 
-	function startStageRender(projMatrix, cameraForScene, qvData){
-
+	function startStageRender(projMatrix, cameraForScene, destinationBuf, destinationView, qvData){
 		mat4.set(cameraForScene, worldCamera);
-
+/*
 	mainCamZoom = guiParams.display.cameraZoom;
 	var aspectRatio = gl.viewportWidth/gl.viewportHeight;
 
@@ -887,6 +922,7 @@ function drawScene(frameTime){
 		xyzrotate4mat(worldCamera, (guiParams.display.flipReverseCamera? [Math.PI,0,0]:[0,Math.PI,0] ));	//flip 180  - note repeated later. TODO do once and store copy of camera
 		//TODO check this works once have quad view camera working (perhaps other signs should be flipped...)
 	}
+	*/
 	
 	mat4.set(worldCamera, invertedWorldCamera);
 	mat4.transpose(invertedWorldCamera);
@@ -969,14 +1005,9 @@ function drawScene(frameTime){
 			}
 						
 			var initialRenderOutput = initialRectilinearRender(oversizedViewport[0], oversizedViewport[1], rttFisheyeRectRenderOutput, rttFisheyeRectRenderOutput2);
-		
-			//do fisheye mapping (before possible blur, FXAA)
-			var outView = rttStageOneView;		//just bind to next stage. 
-				//TODO bind rttView if will skip blur stage.
-
-			gl.bindFramebuffer(gl.FRAMEBUFFER, outView.framebuffer);
-			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
-			setRttSize( outView, gl.viewportWidth, gl.viewportHeight );
+				
+			gl.bindFramebuffer(gl.FRAMEBUFFER, destinationBuf.framebuffer);
+			gl.viewport( destinationView.left, destinationView.top, destinationView.width, destinationView.height );
 
 			bind2dTextureIfRequired(initialRenderOutput.texture);	//old output view.
 			bind2dTextureIfRequired(initialRenderOutput.depthTexture,gl.TEXTURE2);
@@ -1062,7 +1093,7 @@ function drawScene(frameTime){
 				drawObjectFromBuffers(fsBuffers, activeProg);
 			}
 
-			return outView;
+			return;
 		
 		/**
 		 * 
@@ -1120,50 +1151,64 @@ function drawScene(frameTime){
 		}
 	}
 
-	function penultimateStageRender(screenBufOne, screenBufTwo){
-		var activeProg;
-		
+	function penultimateStageRenderFunc(screenBufOne, screenBufTwo){		
 		if (["blur",  "blur-b", "blur-b-use-alpha", "blur-big"].includes( guiParams.display.renderViaTexture )){
-			
-			activeProg = guiParams.display.renderViaTexture == "blur" ? shaderPrograms.fullscreenBlur:
-				guiParams.display.renderViaTexture == "blur-b" ? shaderPrograms.fullscreenBlurB :
-				guiParams.display.renderViaTexture == "blur-b-use-alpha" ? shaderPrograms.fullscreenBlurBUseAlpha
-																		:shaderPrograms.fullscreenBlurBig;
-			gl.useProgram(activeProg);
-			enableDisableAttributes(activeProg);
+			var activeProg = guiParams.display.renderViaTexture == "blur" ? shaderPrograms.fullscreenBlur:
+					guiParams.display.renderViaTexture == "blur-b" ? shaderPrograms.fullscreenBlurB :
+					guiParams.display.renderViaTexture == "blur-b-use-alpha" ? shaderPrograms.fullscreenBlurBUseAlpha
+																			:shaderPrograms.fullscreenBlurBig;
+			return {
+				outBuffer : screenBufTwo,
+				renderFunc : function(){
+					gl.useProgram(activeProg);
+					enableDisableAttributes(activeProg);
 
-			var blurScale = guiParams.display.renderViaTexture == "blur-big"? 1 : 2.5;
-			drawBlur(activeProg, screenBufOne, screenBufTwo, [blurScale/gl.viewportWidth , blurScale/gl.viewportHeight]);
-				//TODO blur constant angle - currently blurs constant pixels, so behaviour depends on display resolution.
-			return screenBufTwo;
+					var blurScale = guiParams.display.renderViaTexture == "blur-big"? 1 : 2.5;
+					drawBlur(activeProg, screenBufOne, screenBufTwo, [blurScale/gl.viewportWidth , blurScale/gl.viewportHeight]);
+					//TODO blur constant angle - currently blurs constant pixels, so behaviour depends on display resolution.
+				}
+			};
 		}
 
 		//second pass blur iff appropriate
 		if (guiParams.display.renderViaTexture == "2-pass-blur"){
-			//possibly TODO rotating screen, so always sampling vertical or horizontal for both passes
-			//but that would want intermediate buffer to have dimensions transposed.
-			activeProg = shaderPrograms.fullscreenBlur1d;
-			gl.useProgram(activeProg);
-			enableDisableAttributes(activeProg);
+			var activeProg = shaderPrograms.fullscreenBlur1d;
+			return {
+				outBuffer: screenBufOne,
+				renderFunc: function(){
+					//possibly TODO rotating screen, so always sampling vertical or horizontal for both passes
+					//but that would want intermediate buffer to have dimensions transposed.
+					activeProg = shaderPrograms.fullscreenBlur1d;
+					gl.useProgram(activeProg);
+					enableDisableAttributes(activeProg);
 
-			//drawBlur(activeProg, screenBufOne, screenBufTwo, [1/gl.viewportWidth , 1/gl.viewportHeight]);
+					//drawBlur(activeProg, screenBufOne, screenBufTwo, [1/gl.viewportWidth , 1/gl.viewportHeight]);
 
-			//2-pass blur abusing big blur (many samples redundant, but should have same effect)
-			drawBlur(activeProg, screenBufOne, screenBufTwo, [1/gl.viewportWidth , 0]);
-			drawBlur(activeProg, screenBufTwo, screenBufOne, [0 , 1/gl.viewportHeight]);
-				//note hacky use of uInvSizeVec to convey the step vector for samples.
-			return screenBufOne;
+					//2-pass blur abusing big blur (many samples redundant, but should have same effect)
+					drawBlur(activeProg, screenBufOne, screenBufTwo, [1/gl.viewportWidth , 0]);
+					drawBlur(activeProg, screenBufTwo, screenBufOne, [0 , 1/gl.viewportHeight]);
+					//note hacky use of uInvSizeVec to convey the step vector for samples.
+				}
+			}
 		}
+
 		if (guiParams.display.renderViaTexture == "1d-blur"){
 			//temporary!
-			activeProg = shaderPrograms.fullscreenBlur1dDdx;
-			gl.useProgram(activeProg);
-			enableDisableAttributes(activeProg);
-			drawBlur(activeProg, screenBufOne, screenBufTwo, [1/gl.viewportWidth , 0]);
-			return screenBufTwo;
+			var activeProg = shaderPrograms.fullscreenBlur1dDdx;
+			return {
+				outBuffer: screenBufTwo,
+				renderFunc: function(){
+					gl.useProgram(activeProg);
+					enableDisableAttributes(activeProg);
+					drawBlur(activeProg, screenBufOne, screenBufTwo, [1/gl.viewportWidth , 0]);
+				}
+			}
 		}
 
-		return screenBufOne;
+		return {
+			outBuffer: screenBufOne,
+			renderFunc : function(){}
+		};	//TODO for quadrant view, do a copy from quadrant view to quadrant of intermediate buffer
 
 		function drawBlur(shaderProg, fromView, destinationView, uInvSizeVec){
 			//TODO depth aware blur. for now, simple
