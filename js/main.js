@@ -4459,8 +4459,8 @@ var guiParams={
 	display:{
 		cameraType:"far 3rd person",
 		cameraAttachedTo:"player vehicle",
-		cameraZoom:4,
-		uVarOne:-0.015,
+		cameraZoom:3,
+		uVarOne:-0.025,
 		vFOV:"",
 		hFOV:"",
 		flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
@@ -4730,7 +4730,7 @@ function init(){
 	var displayFolder = gui.addFolder('display');	//control and movement
 	displayFolder.add(guiParams.display, "cameraType", ["cockpit", "near 3rd person", "mid 3rd person", "far 3rd person", "really far 3rd person", "side","none"]);
 	displayFolder.add(guiParams.display, "cameraAttachedTo", ["player vehicle", "turret","none"]);	//"none" acts like drop camera
-	displayFolder.add(guiParams.display, "cameraZoom", 1.5,15,0.1);
+	displayFolder.add(guiParams.display, "cameraZoom", 1,10,0.1);
 	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.0125);
 	displayFolder.add(guiParams.display, "vFOV").listen();
 	displayFolder.add(guiParams.display, "hFOV").listen();
