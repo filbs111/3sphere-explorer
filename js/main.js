@@ -1,3 +1,4 @@
+var shouldDumpDebug = false;
 var quadplane={	//temp...
 	fx:5,
 	fy:0.9,
@@ -786,14 +787,14 @@ function drawScene(frameTime){
 			//no centre of perspective shift (rotate cameras inward by eyeTurnIn is not ideal)
 			//TODO shift x-hairs when using turn in or persp shift (eye x-hairs appear to be at screen depth)
 			drawStereoPair(
-				{left:0,top:gl.viewportHeight/2,width:gl.viewportWidth,height:gl.viewportHeight/2},
+				{left:0,top:gl.viewportHeight/2,width:gl.viewportWidth,height:gl.viewportHeight/2}, //TOP
 				{left:0,top:0,width:gl.viewportWidth,height:gl.viewportHeight/2},
 				null
 			);
 			break;
 		case 'sbs':
 			drawStereoPair(
-				{left:0,top:0,width:gl.viewportWidth/2,height:gl.viewportHeight},
+				{left:0,top:0,width:gl.viewportWidth/2,height:gl.viewportHeight},					//LEFT
 				{left:gl.viewportWidth/2,top:0,width:gl.viewportWidth/2,height:gl.viewportHeight},
 				null
 			);
@@ -832,9 +833,9 @@ function drawScene(frameTime){
 		// some rendering could be shared between eyes - eg portal cubemaps.
 	}
 
-	function drawSingleOrQuadViews(viewrect, outputFb){
+	function drawSingleOrQuadViews(viewrect, outputFb, isRightSide){
 
-		mat4.set(nonCmapPMatrix, worldCamera);
+		mat4.set(offsetPlayerCamera, worldCamera);
 
 		mainCamZoom = guiParams.display.cameraZoom;
 		var aspectRatio = gl.viewportWidth/gl.viewportHeight;
@@ -859,39 +860,46 @@ function drawScene(frameTime){
 
 
 		if (guiParams.display.quadView){
-			drawQuadViewsToScreen(viewrect, outputFb);
+			drawQuadViewsToScreen(offsetPlayerCamera, viewrect, outputFb);	//?? camera should be reversed??
 		}else{
 			setRttSize( rttStageOneView, viewrect.width, viewrect.height );
-			drawSceneToScreen(nonCmapPMatrix, offsetPlayerCamera, rttStageOneView, viewrect);
+			setRttSize( rttView, viewrect.width, viewrect.height );
+
+			var initialViewRect = {left:0, top:0, width:viewrect.width, height:viewrect.height}
+
+			drawSceneToScreen(nonCmapPMatrix, offsetPlayerCamera, rttStageOneView, initialViewRect);
 			var penultimateRenderer = penultimateStageRenderFunc(rttStageOneView, rttView);
-			penultimateRenderer.renderFunc(viewrect);
+
+			penultimateRenderer.renderFunc(initialViewRect);
 			lastStageRender(viewrect, penultimateRenderer.outBuffer, outputFb);
 			drawHud();
 		}
 	}
 
-	function drawQuadViewsToScreen(viewrect, outputFb){
+	function drawQuadViewsToScreen(camera, viewrect, outputFb){
+		var initialViewRect = {left:0, top:0, width:viewrect.width, height:viewrect.height};
+
 		var quadrantsize = [viewrect.width/2, viewrect.height/2];
 		var quadrants = 
-		[{left:viewrect.left,top:viewrect.top,width:quadrantsize[0],height:quadrantsize[1]},								//bottom left
-		{left:viewrect.left+quadrantsize[0],top:viewrect.top,width:quadrantsize[0],height:quadrantsize[1]},					//bottom right
-		{left:viewrect.left,top:viewrect.top+quadrantsize[1],width:quadrantsize[0],height:quadrantsize[1]},					//top left
-		{left:viewrect.left+quadrantsize[0],top:viewrect.top+quadrantsize[1],width:quadrantsize[0],height:quadrantsize[1]}	//top right
+		[{left:0,top:0,width:quadrantsize[0],height:quadrantsize[1]},							//bottom left
+		{left:quadrantsize[0],top:0,width:quadrantsize[0],height:quadrantsize[1]},				//bottom right
+		{left:0,top:quadrantsize[1],width:quadrantsize[0],height:quadrantsize[1]},				//top left
+		{left:quadrantsize[0],top:quadrantsize[1],width:quadrantsize[0],height:quadrantsize[1]}	//top right
 		];
-
+		
 		var penultimateRenderer = penultimateStageRenderFunc(rttStageOneView, rttView);
 
 		setRttSize( rttStageOneView, viewrect.width, viewrect.height );
+		setRttSize( rttView, viewrect.width, viewrect.height );
 
 		quadrants.forEach((bounds, ii) => {
 			gl.depthFunc(gl.LESS);	//guess gfx fix. TODO put in proper place
-			drawSceneToScreen(quadViewMatrices[ii], offsetPlayerCamera, rttStageOneView, bounds, quadViewData[ii]);
+			drawSceneToScreen(quadViewMatrices[ii], camera, rttStageOneView, bounds, quadViewData[ii]);
 		});
 
-		penultimateRenderer.renderFunc(viewrect);
+		gl.depthFunc(gl.ALWAYS);
+		penultimateRenderer.renderFunc(initialViewRect);
 		lastStageRender(viewrect, penultimateRenderer.outBuffer, outputFb);
-
-		//lastStageRender(viewrect, rttStageOneView, outputFb);	//skip penultimate render to help debug
 	}
 
 	function drawSceneToScreen(projMatrix, cameraForScene, destinationBuf, destinationView, qvData){
@@ -900,7 +908,7 @@ function drawScene(frameTime){
 	}//end of function drawSceneToScreen
 
 	function startStageRender(projMatrix, cameraForScene, destinationBuf, destinationView, qvData){
-		mat4.set(cameraForScene, worldCamera);
+		mat4.set(cameraForScene, worldCamera);	//setting world camera to itself?
 /*
 	mainCamZoom = guiParams.display.cameraZoom;
 	var aspectRatio = gl.viewportWidth/gl.viewportHeight;
@@ -948,7 +956,7 @@ function drawScene(frameTime){
 														
 	frustumCull = guiParams.display.quadView? noCullCullFunc: nonCmapCullFunc;	//TODO proper culling func for quad view. for now just draw everything
 
-	mat4.set(cameraForScene, worldCamera);	//set worldCamera to playerCamera
+	//mat4.set(cameraForScene, worldCamera);	//set worldCamera to playerCamera
 
 	if (reverseCamera){
 		gl.cullFace(gl.FRONT);	//todo revert for drawing cubemap faces. or : for PIP camera, render to texture, flip when texture to screen (and if fullscreen reversing camera, use same cullface setting when drawing them (if switching cullface is a slow gl call)
@@ -1159,12 +1167,12 @@ function drawScene(frameTime){
 																			:shaderPrograms.fullscreenBlurBig;
 			return {
 				outBuffer : screenBufTwo,
-				renderFunc : function(){
+				renderFunc : function(viewP){
 					gl.useProgram(activeProg);
 					enableDisableAttributes(activeProg);
 
 					var blurScale = guiParams.display.renderViaTexture == "blur-big"? 1 : 2.5;
-					drawBlur(activeProg, screenBufOne, screenBufTwo, [blurScale/gl.viewportWidth , blurScale/gl.viewportHeight]);
+					drawBlur(activeProg, screenBufOne, screenBufTwo, viewP, [blurScale/gl.viewportWidth , blurScale/gl.viewportHeight]);
 					//TODO blur constant angle - currently blurs constant pixels, so behaviour depends on display resolution.
 				}
 			};
@@ -1175,7 +1183,7 @@ function drawScene(frameTime){
 			var activeProg = shaderPrograms.fullscreenBlur1d;
 			return {
 				outBuffer: screenBufOne,
-				renderFunc: function(){
+				renderFunc: function(viewP){
 					//possibly TODO rotating screen, so always sampling vertical or horizontal for both passes
 					//but that would want intermediate buffer to have dimensions transposed.
 					activeProg = shaderPrograms.fullscreenBlur1d;
@@ -1185,8 +1193,8 @@ function drawScene(frameTime){
 					//drawBlur(activeProg, screenBufOne, screenBufTwo, [1/gl.viewportWidth , 1/gl.viewportHeight]);
 
 					//2-pass blur abusing big blur (many samples redundant, but should have same effect)
-					drawBlur(activeProg, screenBufOne, screenBufTwo, [1/gl.viewportWidth , 0]);
-					drawBlur(activeProg, screenBufTwo, screenBufOne, [0 , 1/gl.viewportHeight]);
+					drawBlur(activeProg, screenBufOne, screenBufTwo, viewP, [1/gl.viewportWidth , 0]);
+					drawBlur(activeProg, screenBufTwo, screenBufOne, viewP, [0 , 1/gl.viewportHeight]);
 					//note hacky use of uInvSizeVec to convey the step vector for samples.
 				}
 			}
@@ -1197,10 +1205,10 @@ function drawScene(frameTime){
 			var activeProg = shaderPrograms.fullscreenBlur1dDdx;
 			return {
 				outBuffer: screenBufTwo,
-				renderFunc: function(){
+				renderFunc: function(viewP){
 					gl.useProgram(activeProg);
 					enableDisableAttributes(activeProg);
-					drawBlur(activeProg, screenBufOne, screenBufTwo, [1/gl.viewportWidth , 0]);
+					drawBlur(activeProg, screenBufOne, screenBufTwo, viewP, [1/gl.viewportWidth , 0]);
 				}
 			}
 		}
@@ -1210,12 +1218,15 @@ function drawScene(frameTime){
 			renderFunc : function(){}
 		};	//TODO for quadrant view, do a copy from quadrant view to quadrant of intermediate buffer
 
-		function drawBlur(shaderProg, fromView, destinationView, uInvSizeVec){
+		function drawBlur(shaderProg, fromView, destinationView, viewP, uInvSizeVec){
 			//TODO depth aware blur. for now, simple
 			//draw scene to penultimate screen (before FXAA)
 			gl.bindFramebuffer(gl.FRAMEBUFFER, destinationView.framebuffer);
-			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
-			setRttSize( destinationView, gl.viewportWidth, gl.viewportHeight );
+			//gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
+
+			gl.viewport(viewP.left, viewP.top, viewP.width, viewP.height);
+
+			//setRttSize( destinationView, gl.viewportWidth, gl.viewportHeight );
 
 			bind2dTextureIfRequired(fromView.texture);	
 			bind2dTextureIfRequired(fromView.depthTexture,gl.TEXTURE2);	//note many blurs don't actually use this.
