@@ -4871,8 +4871,8 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	
 	initGL();
 
-	initTextureFramebuffer(rttFisheyeRectRenderOutput);
-	initTextureFramebuffer(rttFisheyeRectRenderOutput2);
+	initTextureFramebuffer(rttFisheyeRectRenderOutput, true);
+	initTextureFramebuffer(rttFisheyeRectRenderOutput2, true);
 
 	initTextureFramebuffer(rttView);
 	initTextureFramebuffer(rttStageOneView, true);
