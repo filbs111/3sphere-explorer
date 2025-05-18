@@ -8,6 +8,7 @@
 	in vec2 aVertexPosition;			//offset position
 #ifdef CUSTOM_DEPTH
 	out vec2 vZW;
+	out vec4 vP;
 #endif
 #ifdef INSTANCE_COLOR
 	in vec4 aColor;
@@ -21,6 +22,7 @@
 #endif
 #ifdef CUSTOM_DEPTH
 		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
+		vP = transformedCoord;
 #endif
 		gl_Position = uPMatrix * ( transformedCoord + vec4(aVertexPosition, vec2(0.)));
 	}

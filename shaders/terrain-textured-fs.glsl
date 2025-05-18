@@ -16,6 +16,7 @@ in vec4 vDebugColor;
 
 in float fog;
 in vec2 vZW;	//for custom depth
+in vec4 vP;
 
 out vec4 fragColor;
 
@@ -57,8 +58,7 @@ void main(void){
 
     fragColor = pow(preGammaFragColor, vec4(0.455));
 
-
-    float depthVal = .5*(vZW.x/vZW.y) + .5;
+    float depthVal =-.3183*atan(vP.w/length(vP.xyz)) + .5;
     gl_FragDepth = depthVal;
     fragColor.a = depthVal;
 }

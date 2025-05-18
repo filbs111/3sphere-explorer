@@ -23,6 +23,7 @@
 	out vec3 vScreenSpaceCoord;
 #ifdef CUSTOM_DEPTH
 	out vec2 vZW;
+	out vec4 vP;
 #endif
 
 	void main(void) {
@@ -40,6 +41,7 @@
 		vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
 #ifdef CUSTOM_DEPTH
 		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
+		vP = transformedCoord;
 #endif
 #ifdef ATMOS_CONSTANT
 #ifdef VEC_ATMOS_THICK

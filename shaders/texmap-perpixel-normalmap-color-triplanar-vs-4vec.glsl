@@ -36,6 +36,7 @@
 	out vec3 vNormal;	
 #ifdef CUSTOM_DEPTH
 	out vec2 vZW;
+	out vec4 vP;
 #endif
 #ifdef DEPTH_AWARE
 	out vec3 vScreenSpaceCoord;
@@ -57,6 +58,7 @@
 		gl_Position = uPMatrix * transformedCoord;
 #ifdef CUSTOM_DEPTH
 		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
+		vP = transformedCoord;
 #endif
 #ifdef DEPTH_AWARE
 		vScreenSpaceCoord = gl_Position.xyw;

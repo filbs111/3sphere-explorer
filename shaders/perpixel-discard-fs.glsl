@@ -34,6 +34,7 @@
 #endif
 #ifdef CUSTOM_DEPTH
 	in vec2 vZW;
+	in vec4 vP;
 #endif
 
 out vec4 fragColor;
@@ -110,8 +111,9 @@ out vec4 fragColor;
 		fragColor.a =uColor.a;	//TODO confirm check logic for transparent objects
 #ifdef CUSTOM_DEPTH
 		// here x=w, y=z !	//TODO if this works, don't bother creating vZW in vert shader.
-		if (vZW.y > -1.){discard;}
-		float depthVal = .3183*atan((vZW.x*2.)/(vZW.y+1.)) + .5;
+		//if (vZW.y > -1.){discard;}
+		//float depthVal = .3183*atan((vZW.x*2.)/(vZW.y+1.)) + .5;
+		float depthVal = -.3183*atan(vP.w/length(vP.xyz)) + .5;
 
 		gl_FragDepth = depthVal;
 		fragColor.a = depthVal;
