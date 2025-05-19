@@ -3411,7 +3411,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	var savedFogColor = localVecFogColor;
 
 	//draw multiple portals...
-	if (guiParams.reflector.draw && !guiParams.display.quadView){
+	if (guiParams.reflector.draw !="none"){
 		//TODO draw portals in quad view mode
 
 		if (isCubemapView){
@@ -3479,6 +3479,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 			
 		}else{
 			
+			var savedPMatrix = mat4.create(pMatrix);	//nonCmapPMatrix for non-quadview, will be different for quadrant views
+
 			for (var ii=0;ii<portals.length;ii++){
 				if (frustumCull(portalInCameraArr[ii],reflectorInfoArr[ii].rad)){
 					drawPortalCubemapAtRuntime(pMatrix, portalInCameraArr[ii], frameTime, reflectorInfoArr[ii],ii);
@@ -3489,9 +3491,10 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	
 					//set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
 					gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
-					gl.viewport( 0,0, viewSettings.width, viewSettings.height );
-					mat4.set(nonCmapPMatrix, pMatrix);	
-					frustumCull = nonCmapCullFunc;
+					gl.viewport( 0,0, viewSettings.width, viewSettings.height );	//TODO different for quad views
+
+					mat4.set(savedPMatrix, pMatrix);
+					frustumCull = nonCmapCullFunc;	//TODO different for quad views (could use noCullCullFunc)
 	
 					mat4.set(savedWorldCamera, worldCamera);
 					localVecFogColor=savedFogColor;
