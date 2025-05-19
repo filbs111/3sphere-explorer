@@ -861,6 +861,8 @@ function drawScene(frameTime){
 
 		if (guiParams.display.quadView){
 			drawQuadViewsToScreen(offsetPlayerCamera, viewrect, outputFb);	//?? camera should be reversed??
+			mat4.set(nonCmapPMatrix, pMatrix);
+			drawHud();
 		}else{
 			setRttSize( rttStageOneView, viewrect.width, viewrect.height );
 			setRttSize( rttView, viewrect.width, viewrect.height );
@@ -1005,6 +1007,13 @@ function drawScene(frameTime){
 			}
 
 			window.fsq = sumInvSqs;	 //so can access elsewhere. TODO organise fisheye stuff
+
+			//FOV presented is different for quad view and regularFisheye2! (TODO make same)
+			//educated guess, seems about right...
+			if (guiParams.display.quadView || guiParams.display.regularFisheye2){
+				window.fsq = uF[1]*uF[1];
+			}
+
 
 			var fisheyeParams={
 				uInvF : uF.map(elem=>1/elem),
