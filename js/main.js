@@ -4656,6 +4656,20 @@ function init(){
 		canvas.requestPointerLock();
 		gui.close();
 	}
+
+	//escape escapes pointer lock and exit fullscreen
+	// - browsers seem to have this already, but electron apparently doesn't!
+	//todo also cancel the logic that does a 1s delayed pointer lock on pressing F to fullscreen!
+	document.addEventListener('keydown', function(event) {
+	  if (event.key === 'Escape' || event.code === 'Escape') {
+		console.log('Escape key was pressed!!');
+		document.exitPointerLock();
+		if (window.electronAPI){
+			console.log("exiting fullscreen");
+			window.electronAPI.exitFullscreen();
+		}
+	  }
+	});
 	
 	var gui = new dat.GUI();
 	gui.addColor(guiParams, 'playerLight').onChange(function(color){

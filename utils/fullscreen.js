@@ -1,5 +1,7 @@
 function goFullscreen(elem){
-	if (elem.requestFullscreen) {
+	if (window.electronAPI){
+		window.electronAPI.enterFullscreen();
+	} else if (elem.requestFullscreen) {
 		elem.requestFullscreen();
 	} else if (elem.webkitRequestFullscreen) {
 		elem.webkitRequestFullscreen();
