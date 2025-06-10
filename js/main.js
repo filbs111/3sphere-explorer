@@ -1547,18 +1547,24 @@ function setProjectionMatrix(pMatrix, cameraZoom, ratio, varOne, quadViewTest){
 		pMatrix[0] = 1/(maxxvert /(2.0 + var1*maxyvert*maxyvert));
 		pMatrix[5] = pMatrix[0]/ratio;
 
-
-		var zalpha = 2.0 + var1*(maxxvert*maxxvert + maxyvert*maxyvert);	//basically "mag"
-		var zc = 2.0 + var1*(maxyvert*maxyvert);	//at the top/bottom of screen
-		var zk = 2.0 + var1*(maxxvert*maxxvert);	//left/right. 
+		// var zalpha = 2.0 + var1*(maxxvert*maxxvert + maxyvert*maxyvert);	//basically "mag"
+		// var zc = 2.0 + var1*(maxyvert*maxyvert);	//at the top/bottom of screen
+		// var zk = 2.0 + var1*(maxxvert*maxxvert);	//left/right.
 			//the above could be optimised...
 		
-		var xadjust = (zalpha -zc)/maxxvert;
-		var yadjust = (zalpha -zk)/maxyvert;
-		
-		var qpfx= 1.0/( ( 2.0*zk/maxxvert ) - xadjust );
-		var qpfy= 1.0/( ( 2.0*zc/maxyvert ) - yadjust );
-		
+		//var xadjust = (zalpha -zc)/maxxvert;		//?? appears this is just var1*maxxvert
+		//var yadjust = (zalpha -zk)/maxyvert;		// and this is just var1*maxyvert
+		var xadjust = var1*maxxvert;
+		var yadjust = var1*maxyvert;
+
+		//var qpfx= 1.0/( ( 2.0*zk/maxxvert ) - xadjust );
+			//so this is 1/ ( 2*2/maxxvert + 2*var1*maxxvert - var1*maxxvert))
+			// = 1/ ( 2*2/maxxvert + var1*var1*maxyvert) = maxxvert/(4+var1*maxxvert*maxxvert)
+		var qpfx = maxxvert/(4+var1*maxxvert*maxxvert);
+
+		//var qpfy= 1.0/( ( 2.0*zc/maxyvert ) - yadjust );
+		var qpfy = maxyvert/(4+var1*maxyvert*maxyvert);
+
 		pMatrix[0] = 1/qpfx;	//???
 		pMatrix[5] = 1/qpfy;
 
