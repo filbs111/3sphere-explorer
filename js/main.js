@@ -3486,6 +3486,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		}else{
 			
 			var savedPMatrix = mat4.create(pMatrix);	//nonCmapPMatrix for non-quadview, will be different for quadrant views
+			var savedFrustumCull = frustumCull;
 
 			for (var ii=0;ii<portals.length;ii++){
 				if (frustumCull(portalInCameraArr[ii],reflectorInfoArr[ii].rad)){
@@ -3500,8 +3501,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 					gl.viewport( 0,0, viewSettings.width, viewSettings.height );	//TODO different for quad views
 
 					mat4.set(savedPMatrix, pMatrix);
-					frustumCull = nonCmapCullFunc;	//TODO different for quad views (could use noCullCullFunc)
-	
+					frustumCull = savedFrustumCull;	
+					
 					mat4.set(savedWorldCamera, worldCamera);
 					localVecFogColor=savedFogColor;
 					drawPortal(activeReflectorShader, portalMatArr[ii], meshToDraw, reflectorInfoArr[ii], portalInCameraArr[ii],true);
