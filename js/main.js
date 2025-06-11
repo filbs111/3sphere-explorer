@@ -3369,9 +3369,13 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		drawObjectFromBuffers(cubeBuffers, shaderProg);
 	}
 
+	if (guiParams.reflector.draw !="none"){
+		drawPortalsForMultipleCameraViews(isCubemapView, wSettings, portals, portalMatArr, 
+			portalInCameraArr, worldColors, frameTime, viewSettings, localVecFogColor);
+	}
+}
 
-	//DRAW PORTALS/REFLECTORS
-
+function getReflectorShaderAndMesh(){
 	var activeReflectorShader;
 	switch(guiParams.reflector.mappingType){
 		case 'projection':
@@ -3406,6 +3410,22 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 			break;
 	}
 
+	return {
+		activeReflectorShader,
+		meshToDraw
+	}
+}
+
+
+function drawPortalsForMultipleCameraViews(isCubemapView, wSettings, portals, portalMatArr, 
+	portalInCameraArr, worldColors, frameTime, viewSettings, localVecFogColor){
+	//currently just testing can move to a function and only using for 1 cam view at a time.
+	//TODO pass in multiple camera views and loop through for each portal
+
+	//DRAW PORTALS/REFLECTORS
+	var {activeReflectorShader, meshToDraw} = getReflectorShaderAndMesh();
+	
+
 	//work around drawing portal cubemaps messing up subsequent drawing of portals.
 	//this is a problem likely introduced when moving the portal cubemap drawing code from before main scene, to here at the
 	//end, before using those cubemaps to draw portals. 
@@ -3416,101 +3436,95 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	var savedWorldCamera = mat4.create(worldCamera);
 	var savedFogColor = localVecFogColor;
 
-	//draw multiple portals...
-	if (guiParams.reflector.draw !="none"){
-		//TODO draw portals in quad view mode
+	if (isCubemapView){
+		//draw simple fog coloured spheres, so pop-in less jarring.
+		//TODO draw properly, maybe can make more efficient since view of one portal through another doesn't change much
 
-		if (isCubemapView){
-			//draw simple fog coloured spheres, so pop-in less jarring.
-			//TODO draw properly, maybe can make more efficient since view of one portal through another doesn't change much
+		// TODO don't draw the portal that are looking through.
+		for (var ii=0;ii<portals.length;ii++){
 
-			// TODO don't draw the portal that are looking through.
-			for (var ii=0;ii<portals.length;ii++){
+			var portalRad = 1.02*portals[ii].shared.radius;
 
-				var portalRad = 1.02*portals[ii].shared.radius;
+			//TODO remove this - perhaps just remove calls to it (don't draw portal at all),
+			// and prerender several iterations of each portal (ie portal in portal in portal ... is invisible,
+			// but practically doesn't matter since < pixel size)
+			function drawPlaceholderPortal(){
+				activeShaderProgram = shaderProgramColored;
+				gl.useProgram(activeShaderProgram);
+				performShaderSetup(activeShaderProgram, wSettings);	//?? appears to not help
+	
+				var placeholderPortalMesh = sphereBuffersHiRes;
+				
+				var pColor = worldColors[portals[ii].otherps.world];
+				
+				gl.uniform3f(activeShaderProgram.uniforms.uModelScale, portalRad,portalRad,portalRad);		
+				uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.black);
+				gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, pColor[0], pColor[1], pColor[2]);
+				mat4.set(portalInCameraArr[ii], mvMatrix);mat4.set(portalMatArr[ii], mMatrix);
+				drawObjectFromBuffers(placeholderPortalMesh, activeShaderProgram);
+			}
 
-				//TODO remove this - perhaps just remove calls to it (don't draw portal at all),
-				// and prerender several iterations of each portal (ie portal in portal in portal ... is invisible,
-				// but practically doesn't matter since < pixel size)
-				function drawPlaceholderPortal(){
-					activeShaderProgram = shaderProgramColored;
-					gl.useProgram(activeShaderProgram);
-					performShaderSetup(activeShaderProgram, wSettings);	//?? appears to not help
-		
-					var placeholderPortalMesh = sphereBuffersHiRes;
-					
-					var pColor = worldColors[portals[ii].otherps.world];
-					
-					gl.uniform3f(activeShaderProgram.uniforms.uModelScale, portalRad,portalRad,portalRad);		
-					uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.black);
-					gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, pColor[0], pColor[1], pColor[2]);
-					mat4.set(portalInCameraArr[ii], mvMatrix);mat4.set(portalMatArr[ii], mMatrix);
-					drawObjectFromBuffers(placeholderPortalMesh, activeShaderProgram);
-				}
+			if (frustumCull(portalInCameraArr[ii], portals[ii].shared.radius)){
+				//if don't scale up a bit, invisible because within discard radius!
+				//TODO a shader without discard - should also be emmissive, not lit by world...
 
-				if (frustumCull(portalInCameraArr[ii], portals[ii].shared.radius)){
-					//if don't scale up a bit, invisible because within discard radius!
-					//TODO a shader without discard - should also be emmissive, not lit by world...
+				
+				var otherPortalSide = guiParams.reflector.isPortal ? portals[ii].otherps : 
+					portals[ii];
 
-					
-					var otherPortalSide = guiParams.reflector.isPortal ? portals[ii].otherps : 
-						portals[ii];
+				if (!otherPortalSide.prerenderedView.haveDrawn){
+					drawPlaceholderPortal();
+				}else{
 
-					if (!otherPortalSide.prerenderedView.haveDrawn){
-						drawPlaceholderPortal();
-					}else{
+				var currentTex = getCurrentTex();
+				drawCentredCubemap(otherPortalSide);
 
-					var currentTex = getCurrentTex();
-					drawCentredCubemap(otherPortalSide);
+				//TODO don't calculate these here, since for portal in portal, done for every cubemap face portal in portal is seen in.
+				//there is already reflectorInfoArr, but not currently suitable due to jumbling of portalInCameraArr, portalMatArr relative to this (in order to 
+				// put the portal that want to discard pixels for first - if fix that, can avoid calculation here, just use reflectorInfoArr[ii]
+				var returnObj = {};
+				var transposed = mat4.create(portalInCameraArr[ii]);
+				mat4.transpose(transposed);
+				calcReflectionInfo(transposed, returnObj, portalRad);
 
-					//TODO don't calculate these here, since for portal in portal, done for every cubemap face portal in portal is seen in.
-					//there is already reflectorInfoArr, but not currently suitable due to jumbling of portalInCameraArr, portalMatArr relative to this (in order to 
-					// put the portal that want to discard pixels for first - if fix that, can avoid calculation here, just use reflectorInfoArr[ii]
-					var returnObj = {};
-					var transposed = mat4.create(portalInCameraArr[ii]);
-					mat4.transpose(transposed);
-					calcReflectionInfo(transposed, returnObj, portalRad);
+				debugPortalInfo = {returnObj, ii, portals, reflectorInfoArr, infoForPortals};
 
-					debugPortalInfo = {returnObj, ii, portals, reflectorInfoArr, infoForPortals};
+				returnObj.rad = guiParams.reflector.draw!="none" ? portals[ii].shared.radius : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
 
-					returnObj.rad = guiParams.reflector.draw!="none" ? portals[ii].shared.radius : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
-
-					drawPortal(activeReflectorShader, portalMatArr[ii], meshToDraw, returnObj, portalInCameraArr[ii],false);
-										
+				drawPortal(activeReflectorShader, portalMatArr[ii], meshToDraw, returnObj, portalInCameraArr[ii],false);
+									
 //					setCubemapTex(currentTex);	//maybe unnecessary
 
-					}
 				}
 			}
-			
-		}else{
-			
-			var savedPMatrix = mat4.create(pMatrix);	//nonCmapPMatrix for non-quadview, will be different for quadrant views
-			var savedFrustumCull = frustumCull;
-
-			for (var ii=0;ii<portals.length;ii++){
-				if (frustumCull(portalInCameraArr[ii],reflectorInfoArr[ii].rad)){
-					drawPortalCubemapAtRuntime(pMatrix, portalInCameraArr[ii], frameTime, reflectorInfoArr[ii],ii);
-
-					if (reverseCamera){
-						gl.cullFace(gl.FRONT);
-					}
-	
-					//set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
-					gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
-					gl.viewport( 0,0, viewSettings.width, viewSettings.height );	//TODO different for quad views
-
-					mat4.set(savedPMatrix, pMatrix);
-					frustumCull = savedFrustumCull;	
-					
-					mat4.set(savedWorldCamera, worldCamera);
-					localVecFogColor=savedFogColor;
-					drawPortal(activeReflectorShader, portalMatArr[ii], meshToDraw, reflectorInfoArr[ii], portalInCameraArr[ii],true);
-				}
-			}
-			
 		}
+		
+	}else{
+		
+		var savedPMatrix = mat4.create(pMatrix);	//nonCmapPMatrix for non-quadview, will be different for quadrant views
+		var savedFrustumCull = frustumCull;
 
+		for (var ii=0;ii<portals.length;ii++){
+			if (frustumCull(portalInCameraArr[ii],reflectorInfoArr[ii].rad)){
+				drawPortalCubemapAtRuntime(pMatrix, portalInCameraArr[ii], frameTime, reflectorInfoArr[ii],ii);
+
+				if (reverseCamera){
+					gl.cullFace(gl.FRONT);
+				}
+
+				//set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
+				gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
+				gl.viewport( 0,0, viewSettings.width, viewSettings.height );	//TODO different for quad views
+
+				mat4.set(savedPMatrix, pMatrix);
+				frustumCull = savedFrustumCull;	
+
+				mat4.set(savedWorldCamera, worldCamera);
+				localVecFogColor=savedFogColor;
+				drawPortal(activeReflectorShader, portalMatArr[ii], meshToDraw, reflectorInfoArr[ii], portalInCameraArr[ii],true);
+			}
+		}
+		
 	}
 
 
