@@ -10,9 +10,8 @@
 	uniform vec4 uColor;	//TODO remove? (should be white, but useful to tint for debug/ coloured reflector)
 	uniform vec4 uFogColor;
 	uniform float uPortalRad;
-	in vec3 vScreenSpaceCoord;
 	uniform vec4 uPortalCameraPos;	//for "special" 
-	uniform vec2 uFNumber;
+	in vec4 vInterpCoords;
 	uniform mat4 uMVMatrixFSCopy;
 	uniform vec3 uCentrePosScaledFSCopy;
 	uniform mat4 uPortaledMatrix;
@@ -24,11 +23,8 @@ out vec4 fragColor;
 
 	void main(void) {
 
-		vec2 interpCoords = vScreenSpaceCoord.xy/vScreenSpaceCoord.z;
-		vec2 portalCameraCoords = uPortalCameraPos.xy/uPortalCameraPos.z;	//calculating from uniform every pixel is bad!
-		
 		vec4 position = vec4(vec3(0.),1.);									//for camera in camera space
-		vec4 pointingDirection = normalize(vec4(-uFNumber*interpCoords,1.,0.));
+		vec4 pointingDirection = normalize(-vInterpCoords);
 		
 		//convert these into portal space. TODO do this in vertex shader and benefit from interpolation
 		vec4 posA = position * uMVMatrixFSCopy;		//this is posA in main.js:testRayBallCollision
@@ -51,9 +47,8 @@ out vec4 fragColor;
 		vec4 collisonPoint = (closeApproachTimesMaxW - correctionTimesMaxW*equatorVecTimesMaxW);	///maxwsq;
 
 		//simple test
-		vec3 scaledPoint = 10.*(normalize(-collisonPoint.xyz)+1.);
-		scaledPoint = scaledPoint - floor(scaledPoint);
-	
+		//vec3 scaledPoint = 10.*(normalize(-collisonPoint.xyz)+1.);
+		//scaledPoint = scaledPoint - floor(scaledPoint);
 		//vec3 preGammaFragColor = scaledPoint;	//looks solid!
 
 	

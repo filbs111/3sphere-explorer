@@ -3563,6 +3563,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 				var fy = fx*ratio;
 			}
 			gl.uniform2f(shaderProgram.uniforms.uFNumber, fx, fy);
+		}
+		if (shaderProgram.uniforms.uCentrePosScaledFSCopy){
 			gl.uniform3fv(shaderProgram.uniforms.uCentrePosScaledFSCopy, reflInfo.centreTanAngleVectorScaled	);
 			
 			if (shaderProgram.uniforms.uPortalRad){	//specific stuff to special
