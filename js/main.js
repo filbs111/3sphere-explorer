@@ -1029,55 +1029,18 @@ function drawScene(frameTime){
 				if (guiParams.display.regularFisheye2){
 					activeProg = shaderPrograms.fullscreenTexturedFisheye2;
 					gl.useProgram(activeProg);
-					enableDisableAttributes(activeProg);
-					gl.cullFace(gl.BACK);
 					
-					//if (activeProg.uniforms.uInvF){	//used for fisheye TODO lose IF?
-					gl.uniform2fv(activeProg.uniforms.uInvF, fisheyeParams.uInvF);
-					//}
-					gl.uniform1f(activeProg.uniforms.uVarOne, fisheyeParams.uVarOne);
-					gl.uniform1f(activeProg.uniforms.uOversize, fisheyeParams.uOversize);
-					
-					gl.uniform1i(activeProg.uniforms.uSampler, 0);	
-					gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);	
-					//gl.uniform2f(activeProg.uniforms.uInvSize, 1/gl.viewportWidth , 1/gl.viewportHeight);	
-					
-					
-					//extra vars for fullscreenTexturedFisheye2
 					gl.uniform2fv(activeProg.uniforms.xMultShift, [1.0, 0]);
 					gl.uniform2fv(activeProg.uniforms.yMultShift, [1.0, 0]);
 					gl.uniform1f(activeProg.uniforms.uVarTwo, 10.0/guiParams.display.cameraZoom);
 					gl.uniform1f(activeProg.uniforms.uAspect, gl.viewportWidth/gl.viewportHeight);
-
-
-					gl.depthFunc(gl.ALWAYS);
-					drawObjectFromBuffers(fsBuffers, activeProg);
 				}else{				
 					activeProg = shaderPrograms.fullscreenTexturedFisheye;
 					gl.useProgram(activeProg);
-					enableDisableAttributes(activeProg);
-					gl.cullFace(gl.BACK);
-					
-					//if (activeProg.uniforms.uInvF){	//used for fisheye TODO lose IF?
-					gl.uniform2fv(activeProg.uniforms.uInvF, fisheyeParams.uInvF);
-					//}
-					gl.uniform1f(activeProg.uniforms.uVarOne, fisheyeParams.uVarOne);
-					gl.uniform1f(activeProg.uniforms.uOversize, fisheyeParams.uOversize);
-					
-					gl.uniform1i(activeProg.uniforms.uSampler, 0);	
-					gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);	
-					//gl.uniform2f(activeProg.uniforms.uInvSize, 1/gl.viewportWidth , 1/gl.viewportHeight);	
-					
-					gl.depthFunc(gl.ALWAYS);
-					drawObjectFromBuffers(fsBuffers, activeProg);
-					//gl.depthFunc(gl.LESS);
 				}
 			}else{
-				//TODO deduplicate code, shaders, inputs etc for regular and quadview fisheye
 				activeProg = shaderPrograms.fullscreenTexturedFisheyeQuadView;
 				gl.useProgram(activeProg);
-				enableDisableAttributes(activeProg);
-				gl.cullFace(gl.BACK);
 
 				//here require knowing which quadrant is being drawn...
 				gl.uniform2fv(activeProg.uniforms.uInvFadjusted, [1.0/quadplane.fx + quadplane.xadjust, 1.0/quadplane.fy + quadplane.yadjust]);		//bottom left
@@ -1087,23 +1050,27 @@ function drawScene(frameTime){
 				//gl.uniform2fv(activeProg.uniforms.yMultShift, [1, 1]);
 
 				gl.uniform2fv(activeProg.uniforms.adjust, [-quadplane.xadjust*qvData.rightness, -quadplane.yadjust*qvData.topness ]);
-					
-				gl.uniform2fv(activeProg.uniforms.uInvF, fisheyeParams.uInvF);
-				//gl.uniform2fv(activeProg.uniforms.uInvFadjusted, fisheyeParams.uInvF);	//??
-
-				gl.uniform1f(activeProg.uniforms.uVarOne, fisheyeParams.uVarOne);
-				gl.uniform1f(activeProg.uniforms.uOversize, fisheyeParams.uOversize);
 
 				gl.uniform1f(activeProg.uniforms.uVarTwo, 10.0/guiParams.display.cameraZoom);
 				gl.uniform1f(activeProg.uniforms.uAspect, gl.viewportWidth/gl.viewportHeight);
 				//gl.uniform1f(activeProg.uniforms.uAspect, quadplane.aspect);
-
-				gl.uniform1i(activeProg.uniforms.uSampler, 0);	
-				gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);	
-				//gl.uniform2f(activeProg.uniforms.uInvSize, 2/gl.viewportWidth , 2/gl.viewportHeight);		
-				gl.depthFunc(gl.ALWAYS);
-				drawObjectFromBuffers(fsBuffers, activeProg);
 			}
+
+			enableDisableAttributes(activeProg);
+
+			gl.uniform2fv(activeProg.uniforms.uInvF, fisheyeParams.uInvF);
+			//gl.uniform2fv(activeProg.uniforms.uInvFadjusted, fisheyeParams.uInvF);	//??
+
+			gl.uniform1f(activeProg.uniforms.uVarOne, fisheyeParams.uVarOne);
+			gl.uniform1f(activeProg.uniforms.uOversize, fisheyeParams.uOversize);
+
+			gl.uniform1i(activeProg.uniforms.uSampler, 0);	
+			gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);	
+			//gl.uniform2f(activeProg.uniforms.uInvSize, 2/gl.viewportWidth , 2/gl.viewportHeight);
+
+			gl.cullFace(gl.BACK);
+			gl.depthFunc(gl.ALWAYS);
+			drawObjectFromBuffers(fsBuffers, activeProg);
 
 			return;
 		
