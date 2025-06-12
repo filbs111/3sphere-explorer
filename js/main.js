@@ -764,7 +764,7 @@ function drawScene(frameTime){
 				rttAnaglyphIntermediateView.framebuffer 
 			);
 			// map to final screen.
-			//this copypasted from end of drawSceneToScreen()
+			//this copypasted from end of startStageRender()
 
 			gl.bindFramebuffer(gl.FRAMEBUFFER, null);	//draw to screen (null)
 			gl.viewport(0, 0, gl.viewportWidth,gl.viewportHeight);
@@ -833,7 +833,7 @@ function drawScene(frameTime){
 		// some rendering could be shared between eyes - eg portal cubemaps.
 	}
 
-	function drawSingleOrQuadViews(viewrect, outputFb, isRightSide){
+	function drawSingleOrQuadViews(viewrect, outputFb){
 
 		mat4.set(offsetPlayerCamera, worldCamera);
 
@@ -869,7 +869,7 @@ function drawScene(frameTime){
 
 			var initialViewRect = {left:0, top:0, width:viewrect.width, height:viewrect.height}
 
-			drawSceneToScreen(nonCmapPMatrix, offsetPlayerCamera, rttStageOneView, initialViewRect);
+			startStageRender(nonCmapPMatrix, offsetPlayerCamera, rttStageOneView, initialViewRect);
 			var penultimateRenderer = penultimateStageRenderFunc(rttStageOneView, rttView);
 
 			penultimateRenderer.renderFunc(initialViewRect);
@@ -896,18 +896,13 @@ function drawScene(frameTime){
 
 		quadrants.forEach((bounds, ii) => {
 			gl.depthFunc(gl.LESS);	//guess gfx fix. TODO put in proper place
-			drawSceneToScreen(quadViewMatrices[ii], camera, rttStageOneView, bounds, quadViewData[ii]);
+			startStageRender(quadViewMatrices[ii], camera, rttStageOneView, bounds, quadViewData[ii]);
 		});
 
 		gl.depthFunc(gl.ALWAYS);
 		penultimateRenderer.renderFunc(initialViewRect);
 		lastStageRender(viewrect, penultimateRenderer.outBuffer, outputFb);
 	}
-
-	function drawSceneToScreen(projMatrix, cameraForScene, destinationBuf, destinationView, qvData){
-		startStageRender(projMatrix, cameraForScene, destinationBuf, destinationView, qvData);	//NOTE start stage quite complicated currently - initial render+fisheye mapping.
-		return;
-	}//end of function drawSceneToScreen
 
 	function startStageRender(projMatrix, cameraForScene, destinationBuf, destinationView, qvData){
 		mat4.set(cameraForScene, worldCamera);	//setting world camera to itself?
