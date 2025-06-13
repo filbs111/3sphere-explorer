@@ -1,4 +1,5 @@
 var shouldDumpDebug = false;
+var printOsVp=false;
 var quadplane={	//temp...
 	fx:5,
 	fy:0.9,
@@ -869,7 +870,7 @@ function drawScene(frameTime){
 
 			var initialViewRect = {left:0, top:0, width:viewrect.width, height:viewrect.height}
 
-			startStageRender(nonCmapPMatrix, offsetPlayerCamera, rttStageOneView, initialViewRect);
+			startStageRender([nonCmapPMatrix], offsetPlayerCamera, rttStageOneView, [initialViewRect]);
 			var penultimateRenderer = penultimateStageRenderFunc(rttStageOneView, rttView);
 
 			penultimateRenderer.renderFunc(initialViewRect);
@@ -894,17 +895,20 @@ function drawScene(frameTime){
 		setRttSize( rttStageOneView, viewrect.width, viewrect.height );
 		setRttSize( rttView, viewrect.width, viewrect.height );
 
-		quadrants.forEach((bounds, ii) => {
-			gl.depthFunc(gl.LESS);	//guess gfx fix. TODO put in proper place
-			startStageRender(quadViewMatrices[ii], camera, rttStageOneView, bounds, quadViewData[ii]);
-		});
+		startStageRender(quadViewMatrices, camera, rttStageOneView, quadrants, quadViewData);
+		//TODO what we want here is to split up startStageRender and iterate over 4 views for each part.
+		// first the rectilinear renders. then for each portal, draw to each quad view. then
+		// map each quadrant using fisheye mapping (if enabled)
+		// note the first part could also be further split up - eg for each shader, texture used, draw
+		// each quadrant sequentially. perhaps means fewer gl calls. 
+
 
 		gl.depthFunc(gl.ALWAYS);
 		penultimateRenderer.renderFunc(initialViewRect);
 		lastStageRender(viewrect, penultimateRenderer.outBuffer, outputFb);
 	}
 
-	function startStageRender(projMatrix, cameraForScene, destinationBuf, destinationView, qvData){
+	function startStageRender(projMatrices, cameraForScene, destinationBuf, destinationViewports, qvDataArr){
 		mat4.set(cameraForScene, worldCamera);	//setting world camera to itself?
 /*
 	mainCamZoom = guiParams.display.cameraZoom;
@@ -931,8 +935,7 @@ function drawScene(frameTime){
 	
 	mat4.set(worldCamera, invertedWorldCamera);
 	mat4.transpose(invertedWorldCamera);
-	nonCmapCullFunc = generateCullFunc(projMatrix);										//todo only update pmatrix, nonCmapCullFunc if input variables have changed
-		
+	nonCmapCullFunc = generateCullFunc(projMatrices[0]);										//todo only update pmatrix, nonCmapCullFunc if input variables have changed
 
 	var portalInCameraCopies = [portalInCameraCopy, portalInCameraCopy2, portalInCameraCopy3];
 	portalsForWorld[offsetCameraContainer.world].forEach((portal, ii)=>{
@@ -949,7 +952,6 @@ function drawScene(frameTime){
 	//setup for drawing to screen
 	//gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	//gl.viewport(viewP.left, viewP.top, viewP.width, viewP.height);
-	mat4.set(projMatrix, pMatrix);
 														
 	frustumCull = guiParams.display.quadView? noCullCullFunc: nonCmapCullFunc;	//TODO proper culling func for quad view. for now just draw everything
 
@@ -963,7 +965,16 @@ function drawScene(frameTime){
 	}
 
 		if (!guiParams.display.fisheyeEnabled){
-			return initialRectilinearRender( gl.viewportWidth, gl.viewportHeight, rttStageOneView, rttFisheyeView2);
+			//gl.bindFramebuffer(gl.FRAMEBUFFER, initialOutView.framebuffer);	//necessary for below???
+			setRttSize(rttStageOneView, gl.viewportWidth, gl.viewportHeight);
+			setRttSize(rttFisheyeView2, gl.viewportWidth, gl.viewportHeight);
+			
+			var output;
+			destinationViewports.forEach( (destinationViewport, ii) => {
+				mat4.set(projMatrices[ii], pMatrix);
+				output = initialRectilinearRender(rttStageOneView, rttFisheyeView2, destinationViewport, ii==0);
+			});
+			return output;
 		}
 
 			//var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
@@ -998,7 +1009,13 @@ function drawScene(frameTime){
 
 			if (guiParams.display.quadView){
 				//temp - TODO find an appropriate scale
-				oversizedViewport = [gl.viewportWidth/2, gl.viewportHeight/2];
+				// TODO render the oversized view using appropriate mipmap levels (so before fisheye transformation, sharper in the centre)
+				//oversizedViewport = [gl.viewportWidth, gl.viewportHeight];
+				oversizedViewport = [gl.viewportWidth, gl.viewportHeight].map(xx => Math.floor((xx*1.6)/2)*2);
+				if (printOsVp){
+					printOsVp=false;
+					console.log(oversizedViewport);
+				}
 			}
 
 			window.fsq = sumInvSqs;	 //so can access elsewhere. TODO organise fisheye stuff
@@ -1009,20 +1026,47 @@ function drawScene(frameTime){
 				window.fsq = uF[1]*uF[1];
 			}
 
-
 			var fisheyeParams={
 				uInvF : uF.map(elem=>1/elem),
 				uVarOne : uVarOne,
 				uOversize : oversize
 			}
-						
-			var initialRenderOutput = initialRectilinearRender(oversizedViewport[0], oversizedViewport[1], rttFisheyeRectRenderOutput, rttFisheyeRectRenderOutput2);
-				
-			gl.bindFramebuffer(gl.FRAMEBUFFER, destinationBuf.framebuffer);
-			gl.viewport( destinationView.left, destinationView.top, destinationView.width, destinationView.height );
 
-			bind2dTextureIfRequired(initialRenderOutput.texture);	//old output view.
-			bind2dTextureIfRequired(initialRenderOutput.depthTexture,gl.TEXTURE2);
+			setRttSize(rttFisheyeRectRenderOutput, oversizedViewport[0], oversizedViewport[1]);
+			setRttSize(rttFisheyeRectRenderOutput2, oversizedViewport[0], oversizedViewport[1]);
+			
+		destinationViewports.forEach( (destinationViewport, ii) => {
+			mat4.set(projMatrices[ii], pMatrix);
+			var initialRenderOutput = rttFisheyeRectRenderOutput2;
+
+			var intialRenderViewport = guiParams.display.quadView?{
+				left: destinationViewport.left == 0? 0: oversizedViewport[0]/2,
+				top: destinationViewport.top == 0? 0: oversizedViewport[1]/2,
+				width: oversizedViewport[0]/2,
+				height: oversizedViewport[1]/2
+			}:{
+				left:0,
+				top:0,
+				width: oversizedViewport[0],
+				height: oversizedViewport[1]
+			};
+
+			//try redo setting from earlier.
+			//won't need this if do 4 initial renders first, then 4 fisheye mappings.
+			if (reverseCamera){
+				gl.cullFace(gl.FRONT);	//todo revert for drawing cubemap faces. or : for PIP camera, render to texture, flip when texture to screen (and if fullscreen reversing camera, use same cullface setting when drawing them (if switching cullface is a slow gl call)
+			}else{
+				gl.cullFace(gl.BACK);
+			}
+			gl.depthFunc(gl.LESS);
+
+			var output=initialRectilinearRender(rttFisheyeRectRenderOutput, initialRenderOutput, intialRenderViewport, ii==0);
+
+			gl.bindFramebuffer(gl.FRAMEBUFFER, destinationBuf.framebuffer);
+			gl.viewport( destinationViewport.left, destinationViewport.top, destinationViewport.width, destinationViewport.height );
+
+			bind2dTextureIfRequired(output.texture);	//old output view.
+			bind2dTextureIfRequired(output.depthTexture,gl.TEXTURE2);
 				//^^ not needed if using alpha for blur
 
 			if (!guiParams.display.quadView){
@@ -1042,17 +1086,28 @@ function drawScene(frameTime){
 				activeProg = shaderPrograms.fullscreenTexturedFisheyeQuadView;
 				gl.useProgram(activeProg);
 
+				var qvData = qvDataArr[ii];
+
 				//here require knowing which quadrant is being drawn...
 				gl.uniform2fv(activeProg.uniforms.uInvFadjusted, [1.0/quadplane.fx + quadplane.xadjust, 1.0/quadplane.fy + quadplane.yadjust]);		//bottom left
+
+				var uv2 = 10.0/guiParams.display.cameraZoom;
+				var asp = gl.viewportWidth/gl.viewportHeight;
+
 				gl.uniform2fv(activeProg.uniforms.xMultShift, [0.5, 0.5*qvData.rightness]);
 				gl.uniform2fv(activeProg.uniforms.yMultShift, [0.5, 0.5*qvData.topness]);
+
+				//bodge. probably can reformulate so don't need this in frag shader!
+				gl.uniform2fv(activeProg.uniforms.xMultShiftCopy, [0.5, 0.5*qvData.rightness]);
+				gl.uniform2fv(activeProg.uniforms.yMultShiftCopy, [0.5, 0.5*qvData.topness]);
+
 				//gl.uniform2fv(activeProg.uniforms.xMultShift, [1, 1]);	//different because in WAC project IIRC drawing 4 rectinilear renders to same surf then mapping each separately?
 				//gl.uniform2fv(activeProg.uniforms.yMultShift, [1, 1]);
 
 				gl.uniform2fv(activeProg.uniforms.adjust, [-quadplane.xadjust*qvData.rightness, -quadplane.yadjust*qvData.topness ]);
 
-				gl.uniform1f(activeProg.uniforms.uVarTwo, 10.0/guiParams.display.cameraZoom);
-				gl.uniform1f(activeProg.uniforms.uAspect, gl.viewportWidth/gl.viewportHeight);
+				gl.uniform1f(activeProg.uniforms.uVarTwo, uv2);
+				gl.uniform1f(activeProg.uniforms.uAspect, asp);
 				//gl.uniform1f(activeProg.uniforms.uAspect, quadplane.aspect);
 			}
 
@@ -1071,44 +1126,47 @@ function drawScene(frameTime){
 			gl.cullFace(gl.BACK);
 			gl.depthFunc(gl.ALWAYS);
 			drawObjectFromBuffers(fsBuffers, activeProg);
+		});
 
-			return;
+		return;
 		
-		/**
-		 * 
-		 * @param {*} width 
-		 * @param {*} height 
-		 * @param {*} traspOutView to set sceneDrawingOutputView if drawing transparent stuff
-		 */
-		function initialRectilinearRender(width, height, initialOutView, traspOutView){
+		function initialRectilinearRender(initialOutView, traspOutView, destinationView, doClear){
 			gl.bindFramebuffer(gl.FRAMEBUFFER, initialOutView.framebuffer);
 			
-			gl.viewport( 0,0, width, height );
-			setRttSize( initialOutView, width, height );	//todo stop setting this repeatedly
-
-			var viewSettings = {buf: initialOutView.framebuffer, width, height};
+			gl.viewport( destinationView.left, destinationView.top, destinationView.width, destinationView.height );
+			
+			var viewSettings = {buf: initialOutView.framebuffer, destinationView};
 			var savedCamera = mat4.create(worldCamera);	//TODO don't instantiate!
 
 			mat4.set(playerCameraInterp,sshipMatrix);	//copy current player 4-rotation matrix to the spaceship object
 
 			var wSettings = getWorldSceneSettings.forNonPortalView(offsetCameraContainer.world);
-			drawWorldScene(frameTime, false, viewSettings, wSettings);
+
+			drawWorldScene(frameTime, false, viewSettings, wSettings, doClear);
+				//TODO fix problem - glClear is 
+
+			// if (guiParams.reflector.draw !="none"){
+			// 	drawPortalsForMultipleCameraViews( ??);
+			// }
+
 			mat4.set(savedCamera, worldCamera);	//set worldCamera back to savedCamera (might have been changed due to rendering portal cubemaps within drawWorldScene)
 
+
 			if (!guiParams.display.drawTransparentStuff){
+
+				//gl.depthFunc(gl.LESS);	//????
 				return initialOutView;
 			}
 
-			drawTransparentStuff(initialOutView, traspOutView, width, height, wSettings);
+			drawTransparentStuff(initialOutView, traspOutView, viewSettings.destinationView, wSettings);
 			return traspOutView;
 		}
 
-		function drawTransparentStuff(fromView, toView, sizeX, sizeY, wSettings){
+		function drawTransparentStuff(fromView, toView, destinationViewport, wSettings){
 			//switch to another view of same size, asign textures for existing rgb(a) and depth map, and draw these to new rgb(a), depth map (fullscreen quad)
 			// note that drawing depthmap maybe redundant because will be looking up depth map from texture to determine colours anyway, but might help with discarding pixels etc.
 			gl.bindFramebuffer(gl.FRAMEBUFFER, toView.framebuffer);
-			gl.viewport( 0,0, sizeX, sizeY);
-			setRttSize( toView, sizeX, sizeY);	//todo stop setting this repeatedly
+			gl.viewport( destinationViewport.left, destinationViewport.top, destinationViewport.width, destinationViewport.height);
 			activeProg = shaderPrograms.fullscreenTexturedWithDepthmap;
 			gl.useProgram(activeProg);
 			enableDisableAttributes(activeProg);
@@ -1990,8 +2048,7 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 	};
 })();
 
-
-function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
+function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings, doClear) {
 
 	({worldA,worldInfo, localVecFogColor, infoForPortals, sshipDrawMatrices} = wSettings);
 		
@@ -1999,9 +2056,12 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		updateTerrain2QuadtreeForCampos(worldCamera.slice(12), worldInfo.spin);
 	}
 	
-	gl.clearColor.apply(gl,worldColorsPlain[worldA]);
-	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-	
+	if (doClear){ //TODO move outside this func (used here because when drawing quad views, only want glclear 
+		//for first quadrant because glclear disregards viewport!!)
+		gl.clearColor.apply(gl,worldColorsPlain[worldA]);
+		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	}
+
 	mat4.set(worldCamera, invertedWorldCamera);
 	mat4.transpose(invertedWorldCamera);
 	
@@ -3476,7 +3536,8 @@ function drawPortalsForMultipleCameraViews(isCubemapView, wSettings, portals, po
 
 				//set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
 				gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
-				gl.viewport( 0,0, viewSettings.width, viewSettings.height );	//TODO different for quad views
+				var dv = viewSettings.destinationView;
+				gl.viewport( dv.left, dv.top, dv.width, dv.height );
 
 				mat4.set(savedPMatrix, pMatrix);
 				frustumCull = savedFrustumCull;	
@@ -7336,7 +7397,7 @@ function drawPortalCubemap(
 		gl.viewport(0, 0, framebuffer.width, framebuffer.height);
 		mat4.set(cameraContainer.matrix, worldCamera);
 		rotateCameraForFace(ii);
-		drawWorldScene(frameTime, true, null, wSettingsArr[ii]);
+		drawWorldScene(frameTime, true, null, wSettingsArr[ii], true);
 
 		setCubemapTex(cubemapView.cubemapTexture);	//reset. only requried if draw portals within portals. TODO avoid?
 				//TODO - is this messing up drawing of portals in portals???
