@@ -997,12 +997,18 @@ function drawScene(frameTime){
 			//note this is good for a proof of concept/ testing fisheye cam for gameplay, but 4x oversize (basically rendering 8k for 2k result) makes computer quite noisy! should use 2/4 panel/cubemap method if want a large FOV.
 			//if (oversize > 4){console.log("capping oversize");}
 			oversize = Math.min(oversize,4.0);
-			var oversizedViewport = [ 2*Math.floor(oversize*gl.viewportWidth/2),  2*Math.floor(oversize*gl.viewportHeight/2)];
 
 			if (guiParams.display.quadView){
-				//temp - TODO find an appropriate scale
-				oversizedViewport = [gl.viewportWidth/2, gl.viewportHeight/2];
+				//temp - TODO find an appropriate scale given amount of fisheye distortion
+				//so final result is not blocky. too large is inefficient. Also results in "swimming" textures,
+				//though that should be solved by sampling better mipmap level - ideally dependent on screen position,
+				//but uniform offset might be better than nothing
+				// (multiplier here should be *0.5 for zero distortion)
+				//this doesn't work great with FXAA. possibly FXAA, blur should be applied using rectilinear input.
+				oversize = 0.64;
 			}
+
+			var oversizedViewport = [gl.viewportWidth, gl.viewportHeight].map(xx => 2*Math.floor(oversize*xx/2));
 
 			window.fsq = sumInvSqs;	 //so can access elsewhere. TODO organise fisheye stuff
 
