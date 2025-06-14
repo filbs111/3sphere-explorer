@@ -680,6 +680,9 @@ var offsetCam = (function(){
 
 var lastSeaTime=0;
 function drawScene(frameTime){
+
+	cubemapViewCache.clearCache();	//NOTE putting here breaks stereo 3d through portals (will reuse 1st eye)
+
 	resizecanvas();
 	heapPerfMon.sample();	//suspect not right place for this, better at end
 
@@ -4117,29 +4120,10 @@ function setMatrixUniforms(shaderProgram) {
 var cubemapViews;
 //cube map code from http://www.humus.name/cubemapviewer.js (slightly modified)
 
-function power_of_2(n) {
-	if (typeof n !== 'number') 
-		return false;
-   
-	return (n >= 1) && (n & (n - 1)) === 0;
-}
 
 function initCubemapFramebuffers(){
-	const urlParams = new URLSearchParams(window.location.search);
-	var manualCubemapSize = Number(urlParams.get('cms'));
-	var cubemapSize = power_of_2(manualCubemapSize) ? manualCubemapSize : 1024;
-										//512 decent for 1080p end result. 1024 bit better. my machine handles 4096, but no point
-										//TODO maybe drop max res if using other method for close to portal rendering.
-	cubemapSize = Math.min(cubemapSize, 4096);	//disallow really big, because causes awful perf.
-	cubemapSize = Math.max(cubemapSize, 64);	//disallow very small.
-	
-	console.log({manualCubemapSize, cubemapSize});
-
-	var numLevels = 4;
-	var cubemapViews = new Array(numLevels);
-	for (var ii=0;ii<numLevels;ii++){
-		cubemapViews[ii]=initCubemapFramebuffer(cubemapSize >> ii);
-	}
+	//only initialising prerendered here. for realtime cubemap rendering now moved to cubemapviewcache.js.
+	//maybe should add to pool here though, if see hitches when initialising framebuffers on the fly.
 
 	for (var world=0;world<portalsForWorld.length; world++){
 		var portalsForThisWorld = portalsForWorld[world];
@@ -4151,8 +4135,18 @@ function initCubemapFramebuffers(){
 	return cubemapViews;
 }
 
-var setCubemapTexLevel = function(level){
-	setCubemapTex(cubemapViews[level].cubemapTexture);
+var setCubemapTexForPortalAndLevel = function(portalIdx, level){
+	var viewFromCache = cubemapViewCache.getCubemap(portalIdx);
+	if (viewFromCache){
+		//console.log({mssg:"returning existing view", viewFromCache});
+		setCubemapTex(viewFromCache.item.cubemapTexture);
+		return false;	//don't need to redraw since got from cache.
+	}
+	viewFromCache = cubemapViewCache.getNewCubemap(portalIdx, level);
+	//console.log({mssg:"returning new view", viewFromCache});	//new from pool OR newly created.
+
+	setCubemapTex(viewFromCache.item.cubemapTexture);
+	return true;
 }
 
 var setCubemapTex, getCurrentTex;
@@ -7242,30 +7236,32 @@ function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo
 				//dependent on distance, FOV, blur, screen resolution etc, and choose appropriate detail level
 		guiParams.reflector.cubemapDownsize ;
 
-		setCubemapTexLevel(cubemapLevel);	//set texture#1
+		var shouldDrawCubemap = setCubemapTexForPortalAndLevel(portalNum, cubemapLevel);	//set texture#1. 
 
-		gl.cullFace(gl.BACK);	//because might have set to front for mirror reversing/landing camera.
-		mat4.set(cmapPMatrix, pMatrix);
+		if (shouldDrawCubemap){
+			gl.cullFace(gl.BACK);	//because might have set to front for mirror reversing/landing camera.
+			mat4.set(cmapPMatrix, pMatrix);
 			//note though pMatrix is actually global. (TODO don't do that, pass in )
 
-		//make a copy and shift matrix
-		var cameraContainer = {
-			world: otherPortalSide.world,
-			matrix: mat4.create(otherPortalSide.matrix)
-		}
-		var centreShift = reflInfo.cubeViewShiftAdjusted;
-		//for testing whether drawing from centre is acceptable approximation for distant portals.
-		//if is, can use static cubemap, (+mips)
-		xyzmove4mat(cameraContainer.matrix, centreShift);
+			//make a copy and shift matrix
+			var cameraContainer = {
+				world: otherPortalSide.world,
+				matrix: mat4.create(otherPortalSide.matrix)
+			}
+			var centreShift = reflInfo.cubeViewShiftAdjusted;
+			//for testing whether drawing from centre is acceptable approximation for distant portals.
+			//if is, can use static cubemap, (+mips)
+			xyzmove4mat(cameraContainer.matrix, centreShift);
 
-		drawPortalCubemap(
-			cubemapViews[cubemapLevel], 
-			frameTime,
-			cameraContainer,
-			otherPortalSide,
-			guiParams.reflector.cmFacesUpdated,
-			guiParams.display.drawTransparentStuff
-			);
+			drawPortalCubemap(
+				cubemapViewCache.getCubemap(portalNum).item, 
+				frameTime,
+				cameraContainer,
+				otherPortalSide,
+				guiParams.reflector.cmFacesUpdated,
+				guiParams.display.drawTransparentStuff
+				);
+		}
 	}
 }
 
