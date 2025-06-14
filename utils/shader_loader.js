@@ -161,6 +161,10 @@ function initShaders(shaderProgs){
 		fullscreenTexturedShowAlphaChan:["fullscreen-vs", "fullscreen-fs-showalpha"],
 		fullscreenTexturedWithDepthmap:["fullscreen-vs", "fullscreen-with-depthmap-fs"],
 		fullscreenTexturedFisheye:["fullscreen-vs", "fullscreen-fs-fisheye"],
+		fullscreenTexturedFisheye2:["fullscreen-vs-quadview", "fullscreen-fs-fisheye2"],	//to make more similar to wide angle camera proj,	
+			//for simpler diff to help porting of quadview
+
+		fullscreenTexturedFisheyeQuadView:["fullscreen-vs-quadview", "fullscreen-fs-fisheye-quadview"],
 		fullscreenTexturedAnaglyph:["fullscreen-vs", "fullscreen-fs-anaglyph"],
 		fullscreenTexturedAnaglyphGm:["fullscreen-vs", "fullscreen-fs-anaglyph-greenmagenta"],
 		fullscreenBennyBoxLite:["fullscreen-vs", "fullscreen-fs-bennybox-lite"],
@@ -170,6 +174,7 @@ function initShaders(shaderProgs){
 		fullscreenBlurBUseAlpha:["fullscreen-vs", "fullscreen-fs-blur-b",[],['USE_ALPHA']],
 		fullscreenBlurBig:["fullscreen-vs", "fullscreen-fs-blur-big"],
 		fullscreenBlur1d:["fullscreen-vs", "fullscreen-fs-blur-1d"],
+		fullscreenBlur1dDdx:["fullscreen-vs", "fullscreen-fs-blur-1d-ddx"],
 		coloredPerVertex:["simple-vs", "simple-fs"],
 		//coloredPerPixel:["perpixel-vs", "perpixel-fs"],		//unused
 		coloredPerPixelTransparentDiscard:["perpixel-transparent-discard-vs", "perpixel-transparent-discard-fs",[],[]],

@@ -23,6 +23,7 @@ out vec2 vTexBlend;
 out vec4 vDebugColor;
 
 out vec2 vZW;	//for custom depth
+out vec4 vP;
 
 void main(void) {
 	// vec4 transformedCoord = uMVMatrix * vec4(aVertexPosition*0.5,1.0);	//todo use 4x3 mat?
@@ -122,4 +123,5 @@ void main(void) {
 
 
 	vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
+	vP = transformedCoord;
 }

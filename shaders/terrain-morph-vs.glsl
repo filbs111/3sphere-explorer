@@ -31,6 +31,7 @@ out vec2 vTexBlend;
 out vec4 vDebugColor;
 
 out vec2 vZW;	//for custom depth
+out vec4 vP;
 
 void main(void) {
 
@@ -211,4 +212,5 @@ void main(void) {
 
 
    	vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
+    vP = transformedCoord;
 }

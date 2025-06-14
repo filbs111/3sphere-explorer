@@ -10,14 +10,14 @@
 	uniform vec4 uColor;	//TODO remove? (should be white, but useful to tint for debug/ coloured reflector)
 	uniform vec4 uFogColor;
 	uniform float uPortalRad;
-	in vec3 vScreenSpaceCoord;
 	uniform vec4 uPortalCameraPos;	//for "special" 
-	uniform vec2 uFNumber;
+	in vec4 vInterpCoords;	//4th component always 0 but makes code simpler
 	uniform mat4 uMVMatrixFSCopy;
 	uniform vec3 uCentrePosScaledFSCopy;
 	uniform mat4 uPortaledMatrix;
 #ifdef CUSTOM_DEPTH
 	in vec2 vZW;
+	in vec4 vP;
 #endif
 
 out vec4 fragColor;
@@ -29,8 +29,7 @@ out vec4 fragColor;
 #ifndef VPROJ_MIX
 		vec3 cubeFragCoords = vPos;
 #else
-		vec2 interpCoords = vScreenSpaceCoord.xy/vScreenSpaceCoord.z;
-		vec4 pointingDirection = normalize(vec4(-uFNumber*interpCoords,1.,0.));
+		vec4 pointingDirection = normalize(-vInterpCoords);
 
 		//a simpler bodge might be to just use simple "movement" of camera thru portal where close to it (shaky regime). blend between the two.
 		vec4 simplePlanarPortalDir = pointingDirection*uPortaledMatrix;
@@ -43,12 +42,11 @@ out vec4 fragColor;
 #endif
 #else
 		//preGammaFragColor.rg*=0.5*(1.+sin(10.*vScreenSpaceCoord));
-		vec2 interpCoords = vScreenSpaceCoord.xy/vScreenSpaceCoord.z;
-		vec2 portalCameraCoords = uPortalCameraPos.xy/uPortalCameraPos.z;	//calculating from uniform every pixel is bad!
-		vec2 screenDifference = uFNumber*interpCoords + portalCameraCoords;
+	//	vec2 portalCameraCoords = uPortalCameraPos.xy/uPortalCameraPos.z;	//calculating from uniform every pixel is bad!
+	//	vec2 screenDifference = uFNumber*interpCoords + portalCameraCoords;
 		
 		vec4 position = vec4(vec3(0.),1.);									//for camera in camera space
-		vec4 pointingDirection = normalize(vec4(-uFNumber*interpCoords,1.,0.));
+		vec4 pointingDirection = normalize(-vInterpCoords);	//TODO why no -ve sign? different to VPROJ_MIX version...
 		
 		//convert these into portal space. TODO do this in vertex shader and benefit from interpolation
 		vec4 posA = position * uMVMatrixFSCopy;		//this is posA in main.js:testRayBallCollision
@@ -109,8 +107,10 @@ out vec4 fragColor;
 #ifdef CUSTOM_DEPTH
 		// here x=w, y=z, but also confusingly switched by pMatrix ! 
 		//TODO if this works, don't bother creating vZW in vert shader.
-		if (vZW.y > -1.){discard;} //other side of world. shouldn't happen much with culling. TODO discard earlier?
-		gl_FragDepth = .3183*atan((vZW.x*2.)/(vZW.y+1.)) + .5;
+	//	if (vZW.y > -1.){discard;} //other side of world. shouldn't happen much with culling. TODO discard earlier?
+	//	gl_FragDepth = .3183*atan((vZW.x*2.)/(vZW.y+1.)) + .5;
+
+	gl_FragDepth = -.3183*atan(vP.w/length(vP.xyz)) + .5;
 #endif
 }
 

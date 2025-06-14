@@ -1,3 +1,10 @@
+var shouldDumpDebug = false;
+var quadplane={	//temp...
+	fx:5,
+	fy:0.9,
+	xadjust:0.6,
+	yadjust:0.35	//maybe initial settings unused
+};
 var shaderPrograms={};
 var debugPortalInfo = {};
 var havePrerenderedCentredCubemaps=false;
@@ -631,7 +638,7 @@ var offsetCam = (function(){
 	var targetForType = {
 		"near 3rd person":[0,-37.5,-25],	//TODO reduce code duplication. do scalar vector product targetForType time?
 		"mid 3rd person":[0,-50,-75],
-		"far 3rd person":[0,-65,-90],
+		"far 3rd person":[0,-60,-85],
 		"really far 3rd person":[0,-75,-125],
 		"cockpit":[0,0,15],
 		"side":[30,0,12.5],
@@ -673,6 +680,9 @@ var offsetCam = (function(){
 
 var lastSeaTime=0;
 function drawScene(frameTime){
+
+	cubemapViewCache.clearCache();	//NOTE putting here breaks stereo 3d through portals (will reuse 1st eye)
+
 	resizecanvas();
 	heapPerfMon.sample();	//suspect not right place for this, better at end
 
@@ -757,7 +767,7 @@ function drawScene(frameTime){
 				rttAnaglyphIntermediateView.framebuffer 
 			);
 			// map to final screen.
-			//this copypasted from end of drawSceneToScreen()
+			//this copypasted from end of startStageRender()
 
 			gl.bindFramebuffer(gl.FRAMEBUFFER, null);	//draw to screen (null)
 			gl.viewport(0, 0, gl.viewportWidth,gl.viewportHeight);
@@ -780,14 +790,14 @@ function drawScene(frameTime){
 			//no centre of perspective shift (rotate cameras inward by eyeTurnIn is not ideal)
 			//TODO shift x-hairs when using turn in or persp shift (eye x-hairs appear to be at screen depth)
 			drawStereoPair(
-				{left:0,top:gl.viewportHeight/2,width:gl.viewportWidth,height:gl.viewportHeight/2},
+				{left:0,top:gl.viewportHeight/2,width:gl.viewportWidth,height:gl.viewportHeight/2}, //TOP
 				{left:0,top:0,width:gl.viewportWidth,height:gl.viewportHeight/2},
 				null
 			);
 			break;
 		case 'sbs':
 			drawStereoPair(
-				{left:0,top:0,width:gl.viewportWidth/2,height:gl.viewportHeight},
+				{left:0,top:0,width:gl.viewportWidth/2,height:gl.viewportHeight},					//LEFT
 				{left:gl.viewportWidth/2,top:0,width:gl.viewportWidth/2,height:gl.viewportHeight},
 				null
 			);
@@ -801,11 +811,11 @@ function drawScene(frameTime){
 			break;
 		case 'off':
 		default:
-			drawSceneToScreen(
-				offsetPlayerCamera, 
-				{left:0,top:0,width:gl.viewportWidth,height:gl.viewportHeight}, 
-				null);
-	} 
+			//TODO ensure quad view also works for stereo mode
+			//TODO ensure resolution of rectilinear image is appropriate for small quadrant
+			//TODO prepare this elsewhere (array of func args?)
+			drawSingleOrQuadViews({left:0,top:0,width:gl.viewportWidth,height:gl.viewportHeight}, null);
+	}
 
 	function drawStereoPair(viewportL, viewportR, outputFb){
 		var savedCam = newIdMatWithQuats();
@@ -814,71 +824,142 @@ function drawScene(frameTime){
 		var savedWorld = offsetCameraContainer.world;
 		moveMatHandlingPortal(offsetCameraContainer, [guiParams.display.eyeSepWorld,0,0]);
 		xyzrotate4mat(offsetPlayerCamera, [0,-guiParams.display.eyeTurnIn,0]);
-		drawSceneToScreen(offsetPlayerCamera, viewportL, outputFb);
+		drawSingleOrQuadViews(viewportL, outputFb);
 
 		setMat4FromToWithQuats(savedCam, offsetPlayerCamera);
 		offsetCameraContainer.world = savedWorld;
 		moveMatHandlingPortal(offsetCameraContainer, [-guiParams.display.eyeSepWorld,0,0]);
 		xyzrotate4mat(offsetPlayerCamera, [0,guiParams.display.eyeTurnIn,0]);
-		drawSceneToScreen(offsetPlayerCamera, viewportR, outputFb);
+
+		cubemapViewCache.clearCache();	//TODO only clear for nearest portals?
+
+		drawSingleOrQuadViews(viewportR, outputFb);
 		//note inefficient currently, since does full screen full render for each eye view.
 		// for top/down split, intermediate render targets could be half screen size
 		// some rendering could be shared between eyes - eg portal cubemaps.
 	}
 
+	function drawSingleOrQuadViews(viewrect, outputFb){
 
-	function drawSceneToScreen(cameraForScene, viewP, sceneFinalOutputFramebuf){
+		mat4.set(offsetPlayerCamera, worldCamera);
+
+		mainCamZoom = guiParams.display.cameraZoom;
+		var aspectRatio = gl.viewportWidth/gl.viewportHeight;
+
+		//TODO update only when required
+		setProjectionMatrix(nonCmapPMatrix, mainCamZoom, 1/aspectRatio, guiParams.display.uVarOne);	//note mouse code assumes 90 deg fov used. TODO fix.
+		setQuadViewProjMatrices(quadViewMatrices, mainCamZoom, 1/aspectRatio);	//only necessary if quad view selected
+
+		updateFovVals();
+
+		if (reverseCamera){
+			nonCmapPMatrix[0]=-nonCmapPMatrix[0];
+			quadViewMatrices.forEach(mm=>{
+				mm[0]=-mm[0];
+				mm[1]=-mm[1];
+				mm[2]=-mm[2];
+				mm[3]=-mm[3];
+			});
+			xyzrotate4mat(worldCamera, (guiParams.display.flipReverseCamera? [Math.PI,0,0]:[0,Math.PI,0] ));	//flip 180  - note repeated later. TODO do once and store copy of camera
+			//TODO check this works once have quad view camera working (perhaps other signs should be flipped...)
+		}
+
+
+		if (guiParams.display.quadView){
+			drawQuadViewsToScreen(offsetPlayerCamera, viewrect, outputFb);	//?? camera should be reversed??
+			mat4.set(nonCmapPMatrix, pMatrix);
+			drawHud();
+		}else{
+			setRttSize( rttStageOneView, viewrect.width, viewrect.height );
+			setRttSize( rttView, viewrect.width, viewrect.height );
+
+			var initialViewRect = {left:0, top:0, width:viewrect.width, height:viewrect.height}
+
+			startStageRender(nonCmapPMatrix, offsetPlayerCamera, rttStageOneView, initialViewRect);
+			var penultimateRenderer = penultimateStageRenderFunc(rttStageOneView, rttView);
+
+			penultimateRenderer.renderFunc(initialViewRect);
+			lastStageRender(viewrect, penultimateRenderer.outBuffer, outputFb);
+			drawHud();
+		}
+	}
+
+	function drawQuadViewsToScreen(camera, viewrect, outputFb){
+		var initialViewRect = {left:0, top:0, width:viewrect.width, height:viewrect.height};
+
+		var quadrantsize = [viewrect.width/2, viewrect.height/2];
+		var quadrants = 
+		[{left:0,top:0,width:quadrantsize[0],height:quadrantsize[1]},							//bottom left
+		{left:quadrantsize[0],top:0,width:quadrantsize[0],height:quadrantsize[1]},				//bottom right
+		{left:0,top:quadrantsize[1],width:quadrantsize[0],height:quadrantsize[1]},				//top left
+		{left:quadrantsize[0],top:quadrantsize[1],width:quadrantsize[0],height:quadrantsize[1]}	//top right
+		];
 		
-	mat4.set(cameraForScene, worldCamera);
+		var penultimateRenderer = penultimateStageRenderFunc(rttStageOneView, rttView);
 
-	mainCamFov = guiParams.display.cameraFov;	//vertical FOV
+		setRttSize( rttStageOneView, viewrect.width, viewrect.height );
+		setRttSize( rttView, viewrect.width, viewrect.height );
+
+		quadrants.forEach((bounds, ii) => {
+			gl.depthFunc(gl.LESS);	//guess gfx fix. TODO put in proper place
+			startStageRender(quadViewMatrices[ii], camera, rttStageOneView, bounds, quadViewData[ii]);
+		});
+
+		gl.depthFunc(gl.ALWAYS);
+		penultimateRenderer.renderFunc(initialViewRect);
+		lastStageRender(viewrect, penultimateRenderer.outBuffer, outputFb);
+	}
+
+	function startStageRender(projMatrix, cameraForScene, destinationBuf, destinationView, qvData){
+		mat4.set(cameraForScene, worldCamera);	//setting world camera to itself?
+/*
+	mainCamZoom = guiParams.display.cameraZoom;
 	var aspectRatio = gl.viewportWidth/gl.viewportHeight;
-	setProjectionMatrix(nonCmapPMatrix, mainCamFov, 1/aspectRatio);	//note mouse code assumes 90 deg fov used. TODO fix.
+
+	//TODO update only when required
+	setProjectionMatrix(nonCmapPMatrix, mainCamZoom, 1/aspectRatio, guiParams.display.uVarOne);	//note mouse code assumes 90 deg fov used. TODO fix.
+	setQuadViewProjMatrices(quadViewMatrices, mainCamZoom, 1/aspectRatio);	//only necessary if quad view selected
+
+	updateFovVals();
+
 	if (reverseCamera){
 		nonCmapPMatrix[0]=-nonCmapPMatrix[0];
+		quadViewMatrices.forEach(mm=>{
+			mm[0]=-mm[0];
+			mm[1]=-mm[1];
+			mm[2]=-mm[2];
+			mm[3]=-mm[3];
+		});
 		xyzrotate4mat(worldCamera, (guiParams.display.flipReverseCamera? [Math.PI,0,0]:[0,Math.PI,0] ));	//flip 180  - note repeated later. TODO do once and store copy of camera
+		//TODO check this works once have quad view camera working (perhaps other signs should be flipped...)
 	}
+	*/
 	
 	mat4.set(worldCamera, invertedWorldCamera);
 	mat4.transpose(invertedWorldCamera);
-	nonCmapCullFunc = generateCullFunc(nonCmapPMatrix);										//todo only update pmatrix, nonCmapCullFunc if input variables have changed
+	nonCmapCullFunc = generateCullFunc(projMatrix);										//todo only update pmatrix, nonCmapCullFunc if input variables have changed
 		
 
-	mat4.set(invertedWorldCamera, portalInCameraCopy);
-		//portalInCamera is calculated in different scope
+	var portalInCameraCopies = [portalInCameraCopy, portalInCameraCopy2, portalInCameraCopy3];
+	portalsForWorld[offsetCameraContainer.world].forEach((portal, ii)=>{
+		var portalInCamera = portalInCameraCopies[ii];
+		mat4.set(invertedWorldCamera, portalInCamera);
+		//portalInCamera is calculated in different scope (in drawWorldScene)
 		//TODO reorganise/tidy code, reduce duplication
-
-	var portals = portalsForWorld[offsetCameraContainer.world];
-	mat4.multiply(portalInCameraCopy, portals[0].matrix); //TODO is offsetCameraContainer.world updated yet?
+		mat4.multiply(portalInCamera, portal.matrix); //TODO is offsetCameraContainer.world updated yet?
 																				//if not may see 1 frame glitch on crossing
-	mat4.transpose(portalInCameraCopy);	//TODO lose this, use indices 3,7,11 instead of 12,13,14 in calcReflectionInfo?
-
-	calcReflectionInfo(portalInCameraCopy,reflectorInfoArr[0], portals[0].shared.radius);
-
-	//for 2nd portal in this world. TODO generalise
-	if (portals.length>1){
-		mat4.set(invertedWorldCamera, portalInCameraCopy2);
-		mat4.multiply(portalInCameraCopy2, portals[1].matrix);
-		mat4.transpose(portalInCameraCopy2);
-		calcReflectionInfo(portalInCameraCopy2,reflectorInfoArr[1], portals[1].shared.radius);
-	}
-	if (portals.length>2){
-		mat4.set(invertedWorldCamera, portalInCameraCopy3);
-		mat4.multiply(portalInCameraCopy3, portals[2].matrix);
-		mat4.transpose(portalInCameraCopy3);
-		calcReflectionInfo(portalInCameraCopy3,reflectorInfoArr[2], portals[2].shared.radius);
-	}
+		mat4.transpose(portalInCamera);	//TODO lose this, use indices 3,7,11 instead of 12,13,14 in calcReflectionInfo?
+		calcReflectionInfo(portalInCamera,reflectorInfoArr[ii], portal.shared.radius);
+	});
 
 	//setup for drawing to screen
 	//gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 	//gl.viewport(viewP.left, viewP.top, viewP.width, viewP.height);
-	mat4.set(nonCmapPMatrix, pMatrix);
+	mat4.set(projMatrix, pMatrix);
 														
-	frustumCull = nonCmapCullFunc;
-	
-	mat4.set(cameraForScene, worldCamera);	//set worldCamera to playerCamera
-	//xyzmove4mat(worldCamera,[0,-0.01,-0.015]);	//3rd person camera
-	//xyzmove4mat(worldCamera,[0,0,0.005]);	//forward camera
+	frustumCull = guiParams.display.quadView? noCullCullFunc: nonCmapCullFunc;	//TODO proper culling func for quad view. for now just draw everything
+
+	//mat4.set(cameraForScene, worldCamera);	//set worldCamera to playerCamera
 
 	if (reverseCamera){
 		gl.cullFace(gl.FRONT);	//todo revert for drawing cubemap faces. or : for PIP camera, render to texture, flip when texture to screen (and if fullscreen reversing camera, use same cullface setting when drawing them (if switching cullface is a slow gl call)
@@ -886,16 +967,24 @@ function drawScene(frameTime){
 	}else{
 		gl.cullFace(gl.BACK);
 	}
-	
-		
-		var sceneDrawingOutputView;
 
-		if (guiParams.display.fisheyeEnabled){
-			var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
-			var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
+		if (!guiParams.display.fisheyeEnabled){
+			return initialRectilinearRender( gl.viewportWidth, gl.viewportHeight, rttStageOneView, rttFisheyeView2);
+		}
+
+			//var fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
+			//var fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
 			
-			var uF = [fx, fy];
 			var uVarOne = guiParams.display.uVarOne;
+
+			var var2 = 10.0/guiParams.display.cameraZoom;
+			var ratio = 1/(gl.viewportWidth/gl.viewportHeight);	
+			var maxyvert = var2;
+			var maxxvert = var2/ratio;
+			var fx = maxxvert /(2.0 + uVarOne*maxyvert*maxyvert);
+			var fy = fx*ratio;
+
+			var uF = [fx, fy];
 			
 			//see shader file for derivation of oversize calculation
 			var sumInvSqs = uF[0]*uF[0] + uF[1]*uF[1];
@@ -911,9 +1000,27 @@ function drawScene(frameTime){
 			//note this is good for a proof of concept/ testing fisheye cam for gameplay, but 4x oversize (basically rendering 8k for 2k result) makes computer quite noisy! should use 2/4 panel/cubemap method if want a large FOV.
 			//if (oversize > 4){console.log("capping oversize");}
 			oversize = Math.min(oversize,4.0);
-			var oversizedViewport = [ 2*Math.floor(oversize*gl.viewportWidth/2),  2*Math.floor(oversize*gl.viewportHeight/2)];
+
+			if (guiParams.display.quadView){
+				//temp - TODO find an appropriate scale given amount of fisheye distortion
+				//so final result is not blocky. too large is inefficient. Also results in "swimming" textures,
+				//though that should be solved by sampling better mipmap level - ideally dependent on screen position,
+				//but uniform offset might be better than nothing
+				// (multiplier here should be *0.5 for zero distortion)
+				//this doesn't work great with FXAA. possibly FXAA, blur should be applied using rectilinear input.
+				oversize = 0.64;
+			}
+
+			var oversizedViewport = [gl.viewportWidth, gl.viewportHeight].map(xx => 2*Math.floor(oversize*xx/2));
 
 			window.fsq = sumInvSqs;	 //so can access elsewhere. TODO organise fisheye stuff
+
+			//FOV presented is different for quad view and regularFisheye2! (TODO make same)
+			//educated guess, seems about right...
+			if (guiParams.display.quadView || guiParams.display.regularFisheye2){
+				window.fsq = uF[1]*uF[1];
+			}
+
 
 			var fisheyeParams={
 				uInvF : uF.map(elem=>1/elem),
@@ -921,45 +1028,63 @@ function drawScene(frameTime){
 				uOversize : oversize
 			}
 						
-			initialRectilinearRender(oversizedViewport[0], oversizedViewport[1], rttFisheyeRectRenderOutput, rttFisheyeRectRenderOutput2);
-		
-			//do fisheye mapping (before possible blur, FXAA)
-			var outView = rttStageOneView;		//just bind to next stage. 
-				//TODO bind rttView if will skip blur stage.
+			var initialRenderOutput = initialRectilinearRender(oversizedViewport[0], oversizedViewport[1], rttFisheyeRectRenderOutput, rttFisheyeRectRenderOutput2);
+				
+			gl.bindFramebuffer(gl.FRAMEBUFFER, destinationBuf.framebuffer);
+			gl.viewport( destinationView.left, destinationView.top, destinationView.width, destinationView.height );
 
-			gl.bindFramebuffer(gl.FRAMEBUFFER, outView.framebuffer);
-			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
-			setRttSize( outView, gl.viewportWidth, gl.viewportHeight );
-
-			bind2dTextureIfRequired(sceneDrawingOutputView.texture);	//old output view.
-			bind2dTextureIfRequired(sceneDrawingOutputView.depthTexture,gl.TEXTURE2);
+			bind2dTextureIfRequired(initialRenderOutput.texture);	//old output view.
+			bind2dTextureIfRequired(initialRenderOutput.depthTexture,gl.TEXTURE2);
 				//^^ not needed if using alpha for blur
 
-			activeProg = shaderPrograms.fullscreenTexturedFisheye;
-			gl.useProgram(activeProg);
+			if (!guiParams.display.quadView){
+				if (guiParams.display.regularFisheye2){
+					activeProg = shaderPrograms.fullscreenTexturedFisheye2;
+					gl.useProgram(activeProg);
+					
+					gl.uniform2fv(activeProg.uniforms.xMultShift, [1.0, 0]);
+					gl.uniform2fv(activeProg.uniforms.yMultShift, [1.0, 0]);
+					gl.uniform1f(activeProg.uniforms.uVarTwo, 10.0/guiParams.display.cameraZoom);
+					gl.uniform1f(activeProg.uniforms.uAspect, gl.viewportWidth/gl.viewportHeight);
+				}else{				
+					activeProg = shaderPrograms.fullscreenTexturedFisheye;
+					gl.useProgram(activeProg);
+				}
+			}else{
+				activeProg = shaderPrograms.fullscreenTexturedFisheyeQuadView;
+				gl.useProgram(activeProg);
+
+				//here require knowing which quadrant is being drawn...
+				gl.uniform2fv(activeProg.uniforms.uInvFadjusted, [1.0/quadplane.fx + quadplane.xadjust, 1.0/quadplane.fy + quadplane.yadjust]);		//bottom left
+				gl.uniform2fv(activeProg.uniforms.xMultShift, [0.5, 0.5*qvData.rightness]);
+				gl.uniform2fv(activeProg.uniforms.yMultShift, [0.5, 0.5*qvData.topness]);
+				//gl.uniform2fv(activeProg.uniforms.xMultShift, [1, 1]);	//different because in WAC project IIRC drawing 4 rectinilear renders to same surf then mapping each separately?
+				//gl.uniform2fv(activeProg.uniforms.yMultShift, [1, 1]);
+
+				gl.uniform2fv(activeProg.uniforms.adjust, [-quadplane.xadjust*qvData.rightness, -quadplane.yadjust*qvData.topness ]);
+
+				gl.uniform1f(activeProg.uniforms.uVarTwo, 10.0/guiParams.display.cameraZoom);
+				gl.uniform1f(activeProg.uniforms.uAspect, gl.viewportWidth/gl.viewportHeight);
+				//gl.uniform1f(activeProg.uniforms.uAspect, quadplane.aspect);
+			}
+
 			enableDisableAttributes(activeProg);
-			gl.cullFace(gl.BACK);
-			
-			//if (activeProg.uniforms.uInvF){	//used for fisheye TODO lose IF?
+
 			gl.uniform2fv(activeProg.uniforms.uInvF, fisheyeParams.uInvF);
-			//}
+			//gl.uniform2fv(activeProg.uniforms.uInvFadjusted, fisheyeParams.uInvF);	//??
+
 			gl.uniform1f(activeProg.uniforms.uVarOne, fisheyeParams.uVarOne);
 			gl.uniform1f(activeProg.uniforms.uOversize, fisheyeParams.uOversize);
-			
+
 			gl.uniform1i(activeProg.uniforms.uSampler, 0);	
 			gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);	
-			gl.uniform2f(activeProg.uniforms.uInvSize, 1/gl.viewportWidth , 1/gl.viewportHeight);		
+			//gl.uniform2f(activeProg.uniforms.uInvSize, 2/gl.viewportWidth , 2/gl.viewportHeight);
+
+			gl.cullFace(gl.BACK);
 			gl.depthFunc(gl.ALWAYS);
 			drawObjectFromBuffers(fsBuffers, activeProg);
-			//gl.depthFunc(gl.LESS);
 
-			sceneDrawingOutputView = outView;
-
-		} else if (["blur",  "blur-b", "blur-b-use-alpha", "blur-big", "2-pass-blur"].includes( guiParams.display.renderViaTexture )){
-			initialRectilinearRender( gl.viewportWidth, gl.viewportHeight, rttStageOneView, rttFisheyeView2);
-		} else{
-			initialRectilinearRender( gl.viewportWidth, gl.viewportHeight, rttStageOneView, rttView);
-		}
+			return;
 		
 		/**
 		 * 
@@ -968,7 +1093,6 @@ function drawScene(frameTime){
 		 * @param {*} traspOutView to set sceneDrawingOutputView if drawing transparent stuff
 		 */
 		function initialRectilinearRender(width, height, initialOutView, traspOutView){
-			sceneDrawingOutputView = initialOutView;
 			gl.bindFramebuffer(gl.FRAMEBUFFER, initialOutView.framebuffer);
 			
 			gl.viewport( 0,0, width, height );
@@ -983,10 +1107,12 @@ function drawScene(frameTime){
 			drawWorldScene(frameTime, false, viewSettings, wSettings);
 			mat4.set(savedCamera, worldCamera);	//set worldCamera back to savedCamera (might have been changed due to rendering portal cubemaps within drawWorldScene)
 
-			if (guiParams.display.drawTransparentStuff){
-				drawTransparentStuff(initialOutView, traspOutView, width, height, wSettings);
-				sceneDrawingOutputView = traspOutView;
+			if (!guiParams.display.drawTransparentStuff){
+				return initialOutView;
 			}
+
+			drawTransparentStuff(initialOutView, traspOutView, width, height, wSettings);
+			return traspOutView;
 		}
 
 		function drawTransparentStuff(fromView, toView, sizeX, sizeY, wSettings){
@@ -1014,47 +1140,76 @@ function drawScene(frameTime){
 			
 			drawWorldScene2(frameTime, wSettings, fromView.depthTexture);	//depth aware drawing stuff like sea
 		}
+	}
 
-		
-		var activeProg;
-		
+	function penultimateStageRenderFunc(screenBufOne, screenBufTwo){		
 		if (["blur",  "blur-b", "blur-b-use-alpha", "blur-big"].includes( guiParams.display.renderViaTexture )){
-			
-			activeProg = guiParams.display.renderViaTexture == "blur" ? shaderPrograms.fullscreenBlur:
-				guiParams.display.renderViaTexture == "blur-b" ? shaderPrograms.fullscreenBlurB :
-				guiParams.display.renderViaTexture == "blur-b-use-alpha" ? shaderPrograms.fullscreenBlurBUseAlpha
-																		:shaderPrograms.fullscreenBlurBig;
-			gl.useProgram(activeProg);
-			enableDisableAttributes(activeProg);
+			var activeProg = guiParams.display.renderViaTexture == "blur" ? shaderPrograms.fullscreenBlur:
+					guiParams.display.renderViaTexture == "blur-b" ? shaderPrograms.fullscreenBlurB :
+					guiParams.display.renderViaTexture == "blur-b-use-alpha" ? shaderPrograms.fullscreenBlurBUseAlpha
+																			:shaderPrograms.fullscreenBlurBig;
+			return {
+				outBuffer : screenBufTwo,
+				renderFunc : function(viewP){
+					gl.useProgram(activeProg);
+					enableDisableAttributes(activeProg);
 
-			var blurScale = guiParams.display.renderViaTexture == "blur-big"? 1 : 2.5;
-			drawBlur(activeProg, sceneDrawingOutputView, rttView, [blurScale/gl.viewportWidth , blurScale/gl.viewportHeight]);
-				//TODO blur constant angle - currently blurs constant pixels, so behaviour depends on display resolution.
+					var blurScale = guiParams.display.renderViaTexture == "blur-big"? 1 : 2.5;
+					drawBlur(activeProg, screenBufOne, screenBufTwo, viewP, [blurScale/gl.viewportWidth , blurScale/gl.viewportHeight]);
+					//TODO blur constant angle - currently blurs constant pixels, so behaviour depends on display resolution.
+				}
+			};
 		}
 
 		//second pass blur iff appropriate
 		if (guiParams.display.renderViaTexture == "2-pass-blur"){
-			//possibly TODO rotating screen, so always sampling vertical or horizontal for both passes
-			//but that would want intermediate buffer to have dimensions transposed.
-			activeProg = shaderPrograms.fullscreenBlur1d;
-			gl.useProgram(activeProg);
-			enableDisableAttributes(activeProg);
-			var savedView = sceneDrawingOutputView;	//TODO better names for these things!
-			//drawBlur(activeProg, sceneDrawingOutputView, rttView, [1/gl.viewportWidth , 1/gl.viewportHeight]);
+			var activeProg = shaderPrograms.fullscreenBlur1d;
+			return {
+				outBuffer: screenBufOne,
+				renderFunc: function(viewP){
+					//possibly TODO rotating screen, so always sampling vertical or horizontal for both passes
+					//but that would want intermediate buffer to have dimensions transposed.
+					activeProg = shaderPrograms.fullscreenBlur1d;
+					gl.useProgram(activeProg);
+					enableDisableAttributes(activeProg);
 
-			//2-pass blur abusing big blur (many samples redundant, but should have same effect)
-			drawBlur(activeProg, sceneDrawingOutputView, rttView, [1/gl.viewportWidth , 0]);
-			drawBlur(activeProg, rttView, savedView, [0 , 1/gl.viewportHeight]);
-				//note hacky use of uInvSizeVec to convey the step vector for samples.
+					//drawBlur(activeProg, screenBufOne, screenBufTwo, [1/gl.viewportWidth , 1/gl.viewportHeight]);
+
+					//2-pass blur abusing big blur (many samples redundant, but should have same effect)
+					drawBlur(activeProg, screenBufOne, screenBufTwo, viewP, [1/gl.viewportWidth , 0]);
+					drawBlur(activeProg, screenBufTwo, screenBufOne, viewP, [0 , 1/gl.viewportHeight]);
+					//note hacky use of uInvSizeVec to convey the step vector for samples.
+				}
+			}
 		}
 
+		if (guiParams.display.renderViaTexture == "1d-blur"){
+			//temporary!
+			var activeProg = shaderPrograms.fullscreenBlur1dDdx;
+			return {
+				outBuffer: screenBufTwo,
+				renderFunc: function(viewP){
+					gl.useProgram(activeProg);
+					enableDisableAttributes(activeProg);
+					drawBlur(activeProg, screenBufOne, screenBufTwo, viewP, [1/gl.viewportWidth , 0]);
+				}
+			}
+		}
 
-		function drawBlur(shaderProg, fromView, destinationView, uInvSizeVec){
+		return {
+			outBuffer: screenBufOne,
+			renderFunc : function(){}
+		};	//TODO for quadrant view, do a copy from quadrant view to quadrant of intermediate buffer
+
+		function drawBlur(shaderProg, fromView, destinationView, viewP, uInvSizeVec){
 			//TODO depth aware blur. for now, simple
 			//draw scene to penultimate screen (before FXAA)
 			gl.bindFramebuffer(gl.FRAMEBUFFER, destinationView.framebuffer);
-			gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
-			setRttSize( destinationView, gl.viewportWidth, gl.viewportHeight );
+			//gl.viewport( 0,0, gl.viewportWidth, gl.viewportHeight );
+
+			gl.viewport(viewP.left, viewP.top, viewP.width, viewP.height);
+
+			//setRttSize( destinationView, gl.viewportWidth, gl.viewportHeight );
 
 			bind2dTextureIfRequired(fromView.texture);	
 			bind2dTextureIfRequired(fromView.depthTexture,gl.TEXTURE2);	//note many blurs don't actually use this.
@@ -1069,16 +1224,15 @@ function drawScene(frameTime){
 			gl.depthFunc(gl.ALWAYS);
 			drawObjectFromBuffers(fsBuffers, shaderProg);
 			//gl.depthFunc(gl.LESS);
-
-			sceneDrawingOutputView = destinationView;
 		}
+	}
 
-		
+	function lastStageRender(viewP, sourceFramebuf, sceneFinalOutputFramebuf){
 		//draw quad to screen using drawn texture
 		gl.bindFramebuffer(gl.FRAMEBUFFER, sceneFinalOutputFramebuf);	//draw to screen (null), or intermediate view in case of anaglyph
 		gl.viewport(viewP.left, viewP.top, viewP.width, viewP.height);	//TODO check whether necessary to keep setting this
 		
-		bind2dTextureIfRequired(sceneDrawingOutputView.texture);	
+		bind2dTextureIfRequired(sourceFramebuf.texture);
 		
 		//draw the simple quad object to the screen
 		switch (guiParams.display.renderLastStage){
@@ -1102,10 +1256,10 @@ function drawScene(frameTime){
 		gl.depthFunc(gl.ALWAYS);		
 		drawObjectFromBuffers(fsBuffers, activeProg);
 		gl.depthFunc(gl.LESS);
-	
-	
-	if (guiParams.display.showHud){
-		
+	}
+
+	function drawHud(){
+		if (!guiParams.display.showHud){return;}
 		//draw target box ?
 		//var activeShaderProgram = shaderPrograms.colored;
 		var activeShaderProgram = shaderPrograms.decal;
@@ -1258,10 +1412,8 @@ function drawScene(frameTime){
 
 		gl.disable(gl.BLEND);
 		gl.enable(gl.DEPTH_TEST);
-	}
 
-	
-	function drawTargetDecal(scale, color, pos, rotation=0, uvPosAndSize = [0,0,1,1]){
+		function drawTargetDecal(scale, color, pos, rotation=0, uvPosAndSize = [0,0,1,1]){
 			//scale*= 0.01/pos[2];
 			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, scale);
 			uniform4fvSetter.setIfDifferent(activeShaderProgram, "uUvCoords", uvPosAndSize);
@@ -1270,30 +1422,62 @@ function drawScene(frameTime){
 			xyzmove4mat(mvMatrix,[0.01*pos[0]/pos[2],0.01*pos[1]/pos[2],0.01]);
 			xyzrotate4mat(mvMatrix, [0,0,rotation]);
 			drawObjectFromPreppedBuffers(quadBuffers, activeShaderProgram);
-	}
+		}
 
-	function drawTargetDecalCharacter(scale, color, pos, charInfo){
-		drawTargetDecal(scale, color, pos, 0, uvPosAndSize = [
-			charInfo.x/512,(1-charInfo.y/512) - charInfo.height/512,
-			charInfo.width/512, charInfo.height/512]);
-			//note could flip quad y to make above simpler (but will use different method anyway)
+		function drawTargetDecalCharacter(scale, color, pos, charInfo){
+			drawTargetDecal(scale, color, pos, 0, uvPosAndSize = [
+				charInfo.x/512,(1-charInfo.y/512) - charInfo.height/512,
+				charInfo.width/512, charInfo.height/512]);
+				//note could flip quad y to make above simpler (but will use different method anyway)
+		}
 	}
-
-	}	//end of function drawSceneToScreen
 
 
 	heapPerfMon.sample();
 	heapPerfMon.delaySample(0);
 }
 
+
+function updateFovVals(){
+	var var1=guiParams.display.uVarOne;
+	var var2 = 10.0/guiParams.display.cameraZoom;
+
+	var ratio = gl.viewportHeight/gl.viewportWidth; //??
+
+	var maxyvert = var2;	//??
+	var maxxvert = var2/ratio;	//screenAspect;	
+
+	//update something in UI to show what fov SHOULD be (might not match currently!!!)
+	var vfov = (360/Math.PI)*Math.atan2(maxyvert , 2.0 + var1*maxyvert*maxyvert);
+	var hfov = (360/Math.PI)*Math.atan2(maxxvert , 2.0 + var1*maxxvert*maxxvert);
+
+	//console.log({vfov,hfov});
+
+	guiParams.display.vFOV = vfov.toFixed(1);
+	guiParams.display.hFOV = hfov.toFixed(1);
+}
+
+
+var printPMatCreation=false;
+
 var mainCamFov = 105;	//degrees.
-function setProjectionMatrix(pMatrix, vFov, ratio, polarity){
+function setProjectionMatrix(pMatrix, cameraZoom, ratio, varOne, quadViewTest){
 	mat4.identity(pMatrix);
 	
-	var fy = Math.tan((Math.PI/180.0)*vFov/2);
-	
-	pMatrix[0] = ratio/fy ;
-	pMatrix[5] = 1.0/fy;
+	var var2 = 10.0/cameraZoom;
+
+	var maxyverta = var2;	//??
+	var maxxverta = var2/ratio;	//screenAspect;
+
+	var fx = (maxxverta /(2.0 + varOne*maxyverta*maxyverta));
+
+	// 0 1 2 3
+	// 4 5 6 7
+	// 8 9 10 11
+	// 12 13 14 15
+
+	pMatrix[0] = 1.0/fx ;
+	pMatrix[5] = 1.0/(fx*ratio);
 	pMatrix[11]	= -1;	//rotate w into z.
 	//pMatrix[14] = -0.00003;	//smaller = more z range. 1/50 gets ~same near clipping result as stereographic/perspective 0.01 near
 	pMatrix[14] = 0;	//with custom depth extension, still discards based on gl_Position w,z, so "disable" that here (setting this to 0 should cause all depths to be 0)
@@ -1301,6 +1485,122 @@ function setProjectionMatrix(pMatrix, vFov, ratio, polarity){
 	
 	pMatrix[10]	= 0;
 	pMatrix[15] = 0;
+	
+	if (printPMatCreation){
+		console.log({"pMatrix standard": pMatrix.slice()});
+	}
+
+	if (quadViewTest){	//TODO don't do this for cubemap stuff
+
+		//initial version just bodged from webgl-wideanglecamera project
+		//TODO sort problem of not rendering behind camera when >180 FOV, seems because of discard in custom depth
+		// calc in frag shader - the depth used should in direction of the "skewed" quarter camera. the current
+		// matrix components affecting depth might be right or wrong - won't render with current discard criteria...
+		//TODO ensure configuration variables are appropriate for confiugured fov, zoom
+		// (this proj does not now have zoom param)
+		// currently is ~2x too big (when uVar1=0, see that centre of perspective shifted, but all, not a quarter of regular view)
+		//TODO draw all 4 quadrants on screen
+		// try rendering all objects/ shaders for each quad vs all quads for each obj/shader
+		// (maybe fewer gl calls, depends if setting pMatrix, viewport is fast)
+		//TODO apply correct fisheye mapping so get result matching existing fisheye (but faster/wider/better quality)
+		//TODO fix portal drawing in quad view mode.
+
+		//mat4.perspective(2*(180/Math.PI)*Math.atan(quadplane.fy), 
+
+		var var1 = guiParams.display.uVarOne;	// * 0.125;	//TODO what multiplier right here? 
+		
+
+		// if (guiParams.indentViews){
+		// 	var2*= 0.9;	//some variable that will modify by UI, to allow showing the curved limits (for real use, should set this to 1.0/remove from code)
+		// }
+	
+		var maxyvert = var2;	//??
+		var maxxvert = var2/ratio;	//screenAspect;
+
+
+		pMatrix[0] = 1/(maxxvert /(2.0 + var1*maxyvert*maxyvert));
+		pMatrix[5] = pMatrix[0]/ratio;
+
+		// var zalpha = 2.0 + var1*(maxxvert*maxxvert + maxyvert*maxyvert);	//basically "mag"
+		// var zc = 2.0 + var1*(maxyvert*maxyvert);	//at the top/bottom of screen
+		// var zk = 2.0 + var1*(maxxvert*maxxvert);	//left/right.
+			//the above could be optimised...
+		
+		//var xadjust = (zalpha -zc)/maxxvert;		//?? appears this is just var1*maxxvert
+		//var yadjust = (zalpha -zk)/maxyvert;		// and this is just var1*maxyvert
+		var xadjust = var1*maxxvert;
+		var yadjust = var1*maxyvert;
+
+		//var qpfx= 1.0/( ( 2.0*zk/maxxvert ) - xadjust );
+			//so this is 1/ ( 2*2/maxxvert + 2*var1*maxxvert - var1*maxxvert))
+			// = 1/ ( 2*2/maxxvert + var1*var1*maxyvert) = maxxvert/(4+var1*maxxvert*maxxvert)
+		var qpfx = maxxvert/(4+var1*maxxvert*maxxvert);
+
+		//var qpfy= 1.0/( ( 2.0*zc/maxyvert ) - yadjust );
+		var qpfy = maxyvert/(4+var1*maxyvert*maxyvert);
+
+		pMatrix[0] = 1/qpfx;	//???
+		pMatrix[5] = 1/qpfy;
+
+		//var camParams = {near:1, far:0};	//does this matter?
+		//var tempPMatrix = mat4.identity();
+		// mat4.perspective(2*(180/Math.PI)*Math.atan(qpfy), qpfx/qpfy, camParams.near, camParams.far, tempPMatrix);
+		// if (printPMatCreation){
+		// 	console.log({"tempPMatrix": tempPMatrix.slice()});
+		// }
+		//pMatrix[0] = tempPMatrix[0];	//??? mat4.perspective switches signs??
+		//pMatrix[5] = tempPMatrix[5];
+
+		//fudge? missed a sign somewhere?
+		//xadjust/=-1;
+		//yadjust/=-1;
+
+
+		//like {topness:1, rightness:-1} for top left quadrant etc
+		//TODO are both z,w columns required if using custom depth?
+		var {topness,rightness}=quadViewTest;
+		pMatrix[1] = xadjust*topness*rightness;
+		//pMatrix[2] = -xadjust*rightness;	//doesn't do much?
+		pMatrix[3] = -xadjust*rightness;
+
+		pMatrix[4] = yadjust*topness*rightness;
+		//pMatrix[6] = -yadjust*topness;	//doesn't do much?
+		pMatrix[7] = -yadjust*topness;
+
+		pMatrix[8] = rightness;
+		pMatrix[9] = topness;
+		//pMatrix[12] = rightness;
+		//pMatrix[13] = topness;
+		if (printPMatCreation){
+			console.log({"pMatrix quadplane": pMatrix.slice()})
+		}
+
+
+		//populate global obj (bodge) to use in quadplane fisheye...
+		quadplane.xadjust = xadjust;
+		quadplane.yadjust = yadjust;
+		quadplane.fx= qpfx;
+		quadplane.fy= qpfy;
+		//fudge? missed a sign somewhere?
+		quadplane.xadjust/=-1;
+		quadplane.yadjust/=-1;
+		//quadplane.aspect = qpfx/qpfy;
+	}
+
+	printPMatCreation=false;
+}
+
+var quadViewData = [
+	{topness:-1,rightness:-1},	//bottom left
+	{topness:-1,rightness:1},	//bottom right
+	{topness:1,rightness:-1},	//top left
+	{topness:1,rightness:1}		//top right
+];
+
+function setQuadViewProjMatrices(quadViewMatrices, vFov, ratio){
+	for(var ii=0;ii<4;ii++){
+		setProjectionMatrix(quadViewMatrices[ii], vFov, ratio, guiParams.display.uVarOne, quadViewData[ii]);
+	}
 }
 
 var sshipWorld=0;	//used for player light
@@ -3043,9 +3343,13 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		drawObjectFromBuffers(cubeBuffers, shaderProg);
 	}
 
+	if (guiParams.reflector.draw !="none"){
+		drawPortalsForMultipleCameraViews(isCubemapView, wSettings, portals, portalMatArr, 
+			portalInCameraArr, worldColors, frameTime, viewSettings, localVecFogColor);
+	}
+}
 
-	//DRAW PORTALS/REFLECTORS
-
+function getReflectorShaderAndMesh(){
 	var activeReflectorShader;
 	switch(guiParams.reflector.mappingType){
 		case 'projection':
@@ -3080,6 +3384,22 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 			break;
 	}
 
+	return {
+		activeReflectorShader,
+		meshToDraw
+	}
+}
+
+
+function drawPortalsForMultipleCameraViews(isCubemapView, wSettings, portals, portalMatArr, 
+	portalInCameraArr, worldColors, frameTime, viewSettings, localVecFogColor){
+	//currently just testing can move to a function and only using for 1 cam view at a time.
+	//TODO pass in multiple camera views and loop through for each portal
+
+	//DRAW PORTALS/REFLECTORS
+	var {activeReflectorShader, meshToDraw} = getReflectorShaderAndMesh();
+	
+
 	//work around drawing portal cubemaps messing up subsequent drawing of portals.
 	//this is a problem likely introduced when moving the portal cubemap drawing code from before main scene, to here at the
 	//end, before using those cubemaps to draw portals. 
@@ -3090,95 +3410,95 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	var savedWorldCamera = mat4.create(worldCamera);
 	var savedFogColor = localVecFogColor;
 
-	//draw multiple portals...
-	if (guiParams.reflector.draw){
-		if (isCubemapView){
-			//draw simple fog coloured spheres, so pop-in less jarring.
-			//TODO draw properly, maybe can make more efficient since view of one portal through another doesn't change much
+	if (isCubemapView){
+		//draw simple fog coloured spheres, so pop-in less jarring.
+		//TODO draw properly, maybe can make more efficient since view of one portal through another doesn't change much
 
-			// TODO don't draw the portal that are looking through.
-			for (var ii=0;ii<portals.length;ii++){
+		// TODO don't draw the portal that are looking through.
+		for (var ii=0;ii<portals.length;ii++){
 
-				var portalRad = 1.02*portals[ii].shared.radius;
+			var portalRad = 1.02*portals[ii].shared.radius;
 
-				//TODO remove this - perhaps just remove calls to it (don't draw portal at all),
-				// and prerender several iterations of each portal (ie portal in portal in portal ... is invisible,
-				// but practically doesn't matter since < pixel size)
-				function drawPlaceholderPortal(){
-					activeShaderProgram = shaderProgramColored;
-					gl.useProgram(activeShaderProgram);
-					performShaderSetup(activeShaderProgram, wSettings);	//?? appears to not help
-		
-					var placeholderPortalMesh = sphereBuffersHiRes;
-					
-					var pColor = worldColors[portals[ii].otherps.world];
-					
-					gl.uniform3f(activeShaderProgram.uniforms.uModelScale, portalRad,portalRad,portalRad);		
-					uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.black);
-					gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, pColor[0], pColor[1], pColor[2]);
-					mat4.set(portalInCameraArr[ii], mvMatrix);mat4.set(portalMatArr[ii], mMatrix);
-					drawObjectFromBuffers(placeholderPortalMesh, activeShaderProgram);
-				}
+			//TODO remove this - perhaps just remove calls to it (don't draw portal at all),
+			// and prerender several iterations of each portal (ie portal in portal in portal ... is invisible,
+			// but practically doesn't matter since < pixel size)
+			function drawPlaceholderPortal(){
+				activeShaderProgram = shaderProgramColored;
+				gl.useProgram(activeShaderProgram);
+				performShaderSetup(activeShaderProgram, wSettings);	//?? appears to not help
+	
+				var placeholderPortalMesh = sphereBuffersHiRes;
+				
+				var pColor = worldColors[portals[ii].otherps.world];
+				
+				gl.uniform3f(activeShaderProgram.uniforms.uModelScale, portalRad,portalRad,portalRad);		
+				uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.black);
+				gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, pColor[0], pColor[1], pColor[2]);
+				mat4.set(portalInCameraArr[ii], mvMatrix);mat4.set(portalMatArr[ii], mMatrix);
+				drawObjectFromBuffers(placeholderPortalMesh, activeShaderProgram);
+			}
 
-				if (frustumCull(portalInCameraArr[ii], portals[ii].shared.radius)){
-					//if don't scale up a bit, invisible because within discard radius!
-					//TODO a shader without discard - should also be emmissive, not lit by world...
+			if (frustumCull(portalInCameraArr[ii], portals[ii].shared.radius)){
+				//if don't scale up a bit, invisible because within discard radius!
+				//TODO a shader without discard - should also be emmissive, not lit by world...
 
-					
-					var otherPortalSide = guiParams.reflector.isPortal ? portals[ii].otherps : 
-						portals[ii];
+				
+				var otherPortalSide = guiParams.reflector.isPortal ? portals[ii].otherps : 
+					portals[ii];
 
-					if (!otherPortalSide.prerenderedView.haveDrawn){
-						drawPlaceholderPortal();
-					}else{
+				if (!otherPortalSide.prerenderedView.haveDrawn){
+					drawPlaceholderPortal();
+				}else{
 
-					var currentTex = getCurrentTex();
-					drawCentredCubemap(otherPortalSide);
+				var currentTex = getCurrentTex();
+				drawCentredCubemap(otherPortalSide);
 
-					//TODO don't calculate these here, since for portal in portal, done for every cubemap face portal in portal is seen in.
-					//there is already reflectorInfoArr, but not currently suitable due to jumbling of portalInCameraArr, portalMatArr relative to this (in order to 
-					// put the portal that want to discard pixels for first - if fix that, can avoid calculation here, just use reflectorInfoArr[ii]
-					var returnObj = {};
-					var transposed = mat4.create(portalInCameraArr[ii]);
-					mat4.transpose(transposed);
-					calcReflectionInfo(transposed, returnObj, portalRad);
+				//TODO don't calculate these here, since for portal in portal, done for every cubemap face portal in portal is seen in.
+				//there is already reflectorInfoArr, but not currently suitable due to jumbling of portalInCameraArr, portalMatArr relative to this (in order to 
+				// put the portal that want to discard pixels for first - if fix that, can avoid calculation here, just use reflectorInfoArr[ii]
+				var returnObj = {};
+				var transposed = mat4.create(portalInCameraArr[ii]);
+				mat4.transpose(transposed);
+				calcReflectionInfo(transposed, returnObj, portalRad);
 
-					debugPortalInfo = {returnObj, ii, portals, reflectorInfoArr, infoForPortals};
+				debugPortalInfo = {returnObj, ii, portals, reflectorInfoArr, infoForPortals};
 
-					returnObj.rad = guiParams.reflector.draw!="none" ? portals[ii].shared.radius : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
+				returnObj.rad = guiParams.reflector.draw!="none" ? portals[ii].shared.radius : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
 
-					drawPortal(activeReflectorShader, portalMatArr[ii], meshToDraw, returnObj, portalInCameraArr[ii],false);
-										
+				drawPortal(activeReflectorShader, portalMatArr[ii], meshToDraw, returnObj, portalInCameraArr[ii],false);
+									
 //					setCubemapTex(currentTex);	//maybe unnecessary
 
-					}
 				}
 			}
-			
-		}else{
-			
-			for (var ii=0;ii<portals.length;ii++){
-				if (frustumCull(portalInCameraArr[ii],reflectorInfoArr[ii].rad)){
-					drawPortalCubemapAtRuntime(pMatrix, portalInCameraArr[ii], frameTime, reflectorInfoArr[ii],ii);
-
-					if (reverseCamera){
-						gl.cullFace(gl.FRONT);
-					}
-	
-					//set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
-					gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
-					gl.viewport( 0,0, viewSettings.width, viewSettings.height );
-					mat4.set(nonCmapPMatrix, pMatrix);	
-					frustumCull = nonCmapCullFunc;
-	
-					mat4.set(savedWorldCamera, worldCamera);
-					localVecFogColor=savedFogColor;
-					drawPortal(activeReflectorShader, portalMatArr[ii], meshToDraw, reflectorInfoArr[ii], portalInCameraArr[ii],true);
-				}
-			}
-			
 		}
+		
+	}else{
+		
+		var savedPMatrix = mat4.create(pMatrix);	//nonCmapPMatrix for non-quadview, will be different for quadrant views
+		var savedFrustumCull = frustumCull;
 
+		for (var ii=0;ii<portals.length;ii++){
+			if (frustumCull(portalInCameraArr[ii],reflectorInfoArr[ii].rad)){
+				drawPortalCubemapAtRuntime(pMatrix, portalInCameraArr[ii], frameTime, reflectorInfoArr[ii],ii);
+
+				if (reverseCamera){
+					gl.cullFace(gl.FRONT);
+				}
+
+				//set things back - TODO don't use globals for stuff so don't have to do this! unsure exactly what need to put back...
+				gl.bindFramebuffer(gl.FRAMEBUFFER, viewSettings.buf);
+				gl.viewport( 0,0, viewSettings.width, viewSettings.height );	//TODO different for quad views
+
+				mat4.set(savedPMatrix, pMatrix);
+				frustumCull = savedFrustumCull;	
+
+				mat4.set(savedWorldCamera, worldCamera);
+				localVecFogColor=savedFogColor;
+				drawPortal(activeReflectorShader, portalMatArr[ii], meshToDraw, reflectorInfoArr[ii], portalInCameraArr[ii],true);
+			}
+		}
+		
 	}
 
 
@@ -3219,10 +3539,21 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 			var fx=-1,fy=-1;
 			if (isInMainCameraView){
 				//todo keep this around. also used in fisheye shader.
-				fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
-				fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
+				//fy = Math.tan(guiParams.display.cameraFov*Math.PI/360);	//todo pull from camera matrix?
+				//fx = fy*gl.viewportWidth/gl.viewportHeight;		//could just pass in one of these, since know uInvSize
+				
+				//TODO don't recalulate/read these so much
+				var var1 = guiParams.display.uVarOne;
+				var var2 = 10.0/guiParams.display.cameraZoom;
+				var ratio = 1/(gl.viewportWidth/gl.viewportHeight);
+				var maxyvert = var2;
+				var maxxvert = var2/ratio;
+				var fx = maxxvert /(2.0 + var1*maxyvert*maxyvert);
+				var fy = fx*ratio;
 			}
 			gl.uniform2f(shaderProgram.uniforms.uFNumber, fx, fy);
+		}
+		if (shaderProgram.uniforms.uCentrePosScaledFSCopy){
 			gl.uniform3fv(shaderProgram.uniforms.uCentrePosScaledFSCopy, reflInfo.centreTanAngleVectorScaled	);
 			
 			if (shaderProgram.uniforms.uPortalRad){	//specific stuff to special
@@ -3485,6 +3816,10 @@ function generateCullFunc(pMat){
 	}
 }
 
+function noCullCullFunc(mat, rad){
+	return true;
+}
+
 var enableDisableAttributes = (function generateEnableDisableAttributesFunc(){
 	
 	var maxNum = 16;
@@ -3738,6 +4073,7 @@ var mvMatrixB = mat4.create();
 
 var pMatrix = mat4.create();
 var nonCmapPMatrix = mat4.create();
+var quadViewMatrices = [...new Array(4)].map(xx=> mat4.identity());
 var playerCamera = newIdMatWithQuats();
 	
 
@@ -3761,7 +4097,8 @@ var portalInCameraCopy2 = mat4.create();
 var portalInCameraCopy3 = mat4.create();
 
 var cmapPMatrix = mat4.create();
-setProjectionMatrix(cmapPMatrix, -90.0, 1.0);	//-90 gets reflection to look right. (different for portal?)
+setProjectionMatrix(cmapPMatrix, -5, 1.0, 0);	//-5 gets reflection to look right. (different for portal?)
+
 var squareFrustumCull = generateCullFunc(cmapPMatrix);
 
 var invertedWorldCamera = mat4.create();
@@ -3792,29 +4129,10 @@ function setMatrixUniforms(shaderProgram) {
 var cubemapViews;
 //cube map code from http://www.humus.name/cubemapviewer.js (slightly modified)
 
-function power_of_2(n) {
-	if (typeof n !== 'number') 
-		return false;
-   
-	return (n >= 1) && (n & (n - 1)) === 0;
-}
 
 function initCubemapFramebuffers(){
-	const urlParams = new URLSearchParams(window.location.search);
-	var manualCubemapSize = Number(urlParams.get('cms'));
-	var cubemapSize = power_of_2(manualCubemapSize) ? manualCubemapSize : 1024;
-										//512 decent for 1080p end result. 1024 bit better. my machine handles 4096, but no point
-										//TODO maybe drop max res if using other method for close to portal rendering.
-	cubemapSize = Math.min(cubemapSize, 4096);	//disallow really big, because causes awful perf.
-	cubemapSize = Math.max(cubemapSize, 64);	//disallow very small.
-	
-	console.log({manualCubemapSize, cubemapSize});
-
-	var numLevels = 4;
-	var cubemapViews = new Array(numLevels);
-	for (var ii=0;ii<numLevels;ii++){
-		cubemapViews[ii]=initCubemapFramebuffer(cubemapSize >> ii);
-	}
+	//only initialising prerendered here. for realtime cubemap rendering now moved to cubemapviewcache.js.
+	//maybe should add to pool here though, if see hitches when initialising framebuffers on the fly.
 
 	for (var world=0;world<portalsForWorld.length; world++){
 		var portalsForThisWorld = portalsForWorld[world];
@@ -3826,8 +4144,18 @@ function initCubemapFramebuffers(){
 	return cubemapViews;
 }
 
-var setCubemapTexLevel = function(level){
-	setCubemapTex(cubemapViews[level].cubemapTexture);
+var setCubemapTexForPortalAndLevel = function(portalIdx, level){
+	var viewFromCache = cubemapViewCache.getCubemap(portalIdx);
+	if (viewFromCache){
+		//console.log({mssg:"returning existing view", viewFromCache});
+		setCubemapTex(viewFromCache.item.cubemapTexture);
+		return false;	//don't need to redraw since got from cache.
+	}
+	viewFromCache = cubemapViewCache.getNewCubemap(portalIdx, level);
+	//console.log({mssg:"returning new view", viewFromCache});	//new from pool OR newly created.
+
+	setCubemapTex(viewFromCache.item.cubemapTexture);
+	return true;
 }
 
 var setCubemapTex, getCurrentTex;
@@ -4131,12 +4459,14 @@ var guiParams={
 	display:{
 		cameraType:"far 3rd person",
 		cameraAttachedTo:"player vehicle",
-		cameraFov:145,
-		uVarOne:-0.015,
+		cameraZoom:2.9,
+		uVarOne:-0.0375,
+		vFOV:"",
+		hFOV:"",
 		flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
 		stereo3d:"off",
-		eyeSepWorld:0.0004,	//half distance between eyes in game world
-		eyeTurnIn:0.002,
+		eyeSepWorld:0.0001,	//half distance between eyes in game world
+		eyeTurnIn:0.003,
 		showHud:true,
 		fisheyeEnabled:true,
 		renderViaTexture:'blur-b-use-alpha',
@@ -4154,7 +4484,9 @@ var guiParams={
 		culling:true,
 		useSpecular:true,
 		specularStrength:0.5,
-		specularPower:20.0
+		specularPower:20.0,
+		quadView:true,
+		regularFisheye2:false
 	},
 	reflector:{
 		draw:'high',
@@ -4312,6 +4644,20 @@ function init(){
 		canvas.requestPointerLock();
 		gui.close();
 	}
+
+	//escape escapes pointer lock and exit fullscreen
+	// - browsers seem to have this already, but electron apparently doesn't!
+	//todo also cancel the logic that does a 1s delayed pointer lock on pressing F to fullscreen!
+	document.addEventListener('keydown', function(event) {
+	  if (event.key === 'Escape' || event.code === 'Escape') {
+		console.log('Escape key was pressed!!');
+		document.exitPointerLock();
+		if (window.electronAPI){
+			console.log("exiting fullscreen");
+			window.electronAPI.exitFullscreen();
+		}
+	  }
+	});
 	
 	var gui = new dat.GUI();
 	gui.addColor(guiParams, 'playerLight').onChange(function(color){
@@ -4398,15 +4744,17 @@ function init(){
 	var displayFolder = gui.addFolder('display');	//control and movement
 	displayFolder.add(guiParams.display, "cameraType", ["cockpit", "near 3rd person", "mid 3rd person", "far 3rd person", "really far 3rd person", "side","none"]);
 	displayFolder.add(guiParams.display, "cameraAttachedTo", ["player vehicle", "turret","none"]);	//"none" acts like drop camera
-	displayFolder.add(guiParams.display, "cameraFov", 60,165,5);
-	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.005);
+	displayFolder.add(guiParams.display, "cameraZoom", 1,10,0.1);
+	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.0125);
+	displayFolder.add(guiParams.display, "vFOV").listen();
+	displayFolder.add(guiParams.display, "hFOV").listen();
 	displayFolder.add(guiParams.display, "flipReverseCamera");
 	displayFolder.add(guiParams.display, "stereo3d", ["off","sbs","sbs-cross","top-bottom","anaglyph","anaglyph-green/magenta"]);
 	displayFolder.add(guiParams.display, "eyeSepWorld", -0.001,0.001,0.0001);
 	displayFolder.add(guiParams.display, "eyeTurnIn", -0.01,0.01,0.0005);
 	displayFolder.add(guiParams.display, "showHud");
 	displayFolder.add(guiParams.display, "fisheyeEnabled");
-	displayFolder.add(guiParams.display, "renderViaTexture", ['basic','blur','blur-b','blur-b-use-alpha','blur-big','2-pass-blur']);
+	displayFolder.add(guiParams.display, "renderViaTexture", ['basic','blur','blur-b','blur-b-use-alpha','blur-big','2-pass-blur','1d-blur']);
 	displayFolder.add(guiParams.display, "renderLastStage", ['simpleCopy','fxaa','fxaaSimple','showAlpha']);
 	displayFolder.add(guiParams.display, "drawTransparentStuff");
 	displayFolder.add(guiParams.display, "voxNmapTest");
@@ -4422,6 +4770,8 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	displayFolder.add(guiParams.display, "useSpecular");
 	displayFolder.add(guiParams.display, "specularStrength", 0,1,0.05);	//currently diffuse colour and distance attenuation applies to both specular and diffuse, keeping nonnegative by having diffuse multiplier 1-specularStrength. therefore range 0-1. TODO different specular, diffuse colours, (instead of float strength), specular maybe shouldn't have distance attenuation same way - possibly correct for point source but want solution for sphere light...
 	displayFolder.add(guiParams.display, "specularPower", 1,20,0.5);
+	displayFolder.add(guiParams.display, "quadView");
+	displayFolder.add(guiParams.display, "regularFisheye2");	
 	displayFolder.add(guiParams, "normalMove", 0,0.02,0.001);
 	
 	var debugFolder = gui.addFolder('debug');
@@ -4535,8 +4885,8 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	
 	initGL();
 
-	initTextureFramebuffer(rttFisheyeRectRenderOutput);
-	initTextureFramebuffer(rttFisheyeRectRenderOutput2);
+	initTextureFramebuffer(rttFisheyeRectRenderOutput, true);
+	initTextureFramebuffer(rttFisheyeRectRenderOutput2, true);
 
 	initTextureFramebuffer(rttView);
 	initTextureFramebuffer(rttStageOneView, true);
@@ -6622,8 +6972,8 @@ function initTextureFramebuffer(view, useNearestFiltering) {
 
 	view.texture = gl.createTexture();
 	gl.bindTexture(gl.TEXTURE_2D, view.texture);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
 
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filterType);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filterType);
@@ -6633,8 +6983,8 @@ function initTextureFramebuffer(view, useNearestFiltering) {
 	gl.bindTexture(gl.TEXTURE_2D, view.depthTexture);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
 	
 
 	gl.bindFramebuffer(gl.FRAMEBUFFER, view.framebuffer);
@@ -6895,30 +7245,32 @@ function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo
 				//dependent on distance, FOV, blur, screen resolution etc, and choose appropriate detail level
 		guiParams.reflector.cubemapDownsize ;
 
-		setCubemapTexLevel(cubemapLevel);	//set texture#1
+		var shouldDrawCubemap = setCubemapTexForPortalAndLevel(portalNum, cubemapLevel);	//set texture#1. 
 
-		gl.cullFace(gl.BACK);	//because might have set to front for mirror reversing/landing camera.
-		mat4.set(cmapPMatrix, pMatrix);
+		if (shouldDrawCubemap){
+			gl.cullFace(gl.BACK);	//because might have set to front for mirror reversing/landing camera.
+			mat4.set(cmapPMatrix, pMatrix);
 			//note though pMatrix is actually global. (TODO don't do that, pass in )
 
-		//make a copy and shift matrix
-		var cameraContainer = {
-			world: otherPortalSide.world,
-			matrix: mat4.create(otherPortalSide.matrix)
-		}
-		var centreShift = reflInfo.cubeViewShiftAdjusted;
-		//for testing whether drawing from centre is acceptable approximation for distant portals.
-		//if is, can use static cubemap, (+mips)
-		xyzmove4mat(cameraContainer.matrix, centreShift);
+			//make a copy and shift matrix
+			var cameraContainer = {
+				world: otherPortalSide.world,
+				matrix: mat4.create(otherPortalSide.matrix)
+			}
+			var centreShift = reflInfo.cubeViewShiftAdjusted;
+			//for testing whether drawing from centre is acceptable approximation for distant portals.
+			//if is, can use static cubemap, (+mips)
+			xyzmove4mat(cameraContainer.matrix, centreShift);
 
-		drawPortalCubemap(
-			cubemapViews[cubemapLevel], 
-			frameTime,
-			cameraContainer,
-			otherPortalSide,
-			guiParams.reflector.cmFacesUpdated,
-			guiParams.display.drawTransparentStuff
-			);
+			drawPortalCubemap(
+				cubemapViewCache.getCubemap(portalNum).item, 
+				frameTime,
+				cameraContainer,
+				otherPortalSide,
+				guiParams.reflector.cmFacesUpdated,
+				guiParams.display.drawTransparentStuff
+				);
+		}
 	}
 }
 

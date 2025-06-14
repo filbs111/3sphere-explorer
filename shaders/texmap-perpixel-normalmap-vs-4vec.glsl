@@ -36,6 +36,7 @@
 	out vec4 vColor;
 #ifdef CUSTOM_DEPTH
 	out vec2 vZW;
+	out vec4 vP;
 #endif
 #ifdef DEPTH_AWARE
 	out vec3 vScreenSpaceCoord;
@@ -47,6 +48,7 @@
 		//vZW = vec2(transformedCoord.z, transformedCoord.w);	
 		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);	//w/z from -1 to 1. 	//note that w, z switched from intuitive expectation. see projection matrix. stuff nearest the camera has, at this point, w~1, stuff far away has w~-1, stuff in the middle (looks smallest) w=0. z at this point is like later w, and with sign change. 0 near/far, -1 in middle.
 		//TODO can this be got efficiently from gl_FragCoord? what is best point to project from? (this is stereographic projection, but something closer to standard (transformedCoord.z, transformedCoord.w) might be worth it if see close range z-fighting for crossing over polygons. 
+		vP = transformedCoord;
 #endif
 		gl_Position = uPMatrix * transformedCoord;
 		vPlayerLightPosTangentSpace = uDropLightPos* vertexMatrix;

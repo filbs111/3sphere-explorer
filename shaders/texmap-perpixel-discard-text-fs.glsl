@@ -36,6 +36,7 @@
 	in vec4 vColor;
 #ifdef CUSTOM_DEPTH
 	in vec2 vZW;
+	in vec4 vP;
 #endif
 
 out vec4 fragColor;
@@ -43,7 +44,8 @@ out vec4 fragColor;
 	void main(void) {
 #ifdef DEPTH_AWARE
 		float currentDepth =  textureProj(uSamplerDepthmap, vec3(.5,.5,1.)*vScreenSpaceCoord.xyz + vec3(.5,.5,0.)*vScreenSpaceCoord.z).r;
-		float newDepth = .3183*atan((vZW.x*2.)/(vZW.y+1.)) + .5;	//this is duplicate of custom depth calculation
+		//float newDepth = .3183*atan((vZW.x*2.)/(vZW.y+1.)) + .5;	//this is duplicate of custom depth calculation
+		float newDepth =-.3183*atan(vP.w/length(vP.xyz)) + .5;
 		if (newDepth>currentDepth){
 			discard;
 		}
@@ -55,8 +57,9 @@ out vec4 fragColor;
 #ifdef CUSTOM_DEPTH
 		// here x=w, y=z, but also confusingly switched by pMatrix ! 
 		//TODO if this works, don't bother creating vZW in vert shader.
-		if (vZW.y > -1.){discard;} //other side of world. shouldn't happen much with culling. TODO discard earlier?
-		float depthVal = .3183*atan((vZW.x*2.)/(vZW.y+1.)) + .5;
+		//if (vZW.y > -1.){discard;} //other side of world. shouldn't happen much with culling. TODO discard earlier?
+		//float depthVal = .3183*atan((vZW.x*2.)/(vZW.y+1.)) + .5;
+		float depthVal =-.3183*atan(vP.w/length(vP.xyz)) + .5;
 		gl_FragDepth = depthVal;
 #endif
 //#endif

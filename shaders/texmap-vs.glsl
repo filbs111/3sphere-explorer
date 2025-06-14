@@ -12,6 +12,7 @@ out vec3 veclight;
 
 #ifdef CUSTOM_DEPTH
 	out vec2 vZW;
+    out vec4 vP;
 #endif
 
 void main(void) {
@@ -20,6 +21,7 @@ void main(void) {
     
 #ifdef CUSTOM_DEPTH
 		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
+        vP = transformedCoord;
 #endif
 
     gl_Position = uPMatrix * transformedCoord;

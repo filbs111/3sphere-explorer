@@ -29,6 +29,7 @@
 	out vec4 adjustedPos;
 #ifdef CUSTOM_DEPTH
 	out vec2 vZW;
+	out vec4 vP;
 #endif
 #ifdef DEPTH_AWARE
 	out vec3 vScreenSpaceCoord;
@@ -37,6 +38,7 @@
 		transformedCoord = uMVMatrix * aVertexPosition;
 #ifdef CUSTOM_DEPTH
 		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
+		vP = transformedCoord;
 #endif
 		gl_Position = uPMatrix * transformedCoord;
 #ifdef DEPTH_AWARE

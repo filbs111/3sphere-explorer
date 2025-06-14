@@ -20,9 +20,10 @@
 
 	uniform vec3 uCentrePosScaled;	//vertproj specific. this is position of cubemap centre point in unprojected model space
 	
-	out vec3 vScreenSpaceCoord;
+	out vec4 vInterpCoords;
 #ifdef CUSTOM_DEPTH
 	out vec2 vZW;
+	out vec4 vP;
 #endif
 
 	void main(void) {
@@ -40,6 +41,7 @@
 		vec4 transformedCoord = uMVMatrix * aVertexPositionNormalized;
 #ifdef CUSTOM_DEPTH
 		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
+		vP = transformedCoord;
 #endif
 #ifdef ATMOS_CONSTANT
 #ifdef VEC_ATMOS_THICK
@@ -161,7 +163,8 @@
 		vPos = uPolarity * (uPosShiftMat*aVertexPositionNormalized).xyz;
 		
 #ifdef SPECIAL
-		vScreenSpaceCoord = gl_Position.xyw;
+		vInterpCoords = vec4(transformedCoord.xyz, 0.0);
+
 		//next up - uniform to contain the camera space position of the portal
 		//and fx/fy. step 1 indicate by colour difference between screen coord and position on screen of portal.
 		//then work out how far from centre line of sighy passed. expect be able to draw concentric circles 
