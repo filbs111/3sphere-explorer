@@ -38,6 +38,13 @@ var cubemapViewCache = (() => {
         cache = [];
     }
 
+    // function clearCacheUpToLevel(maxLevelToClear){
+    //     cache.filter(item => item.level<=maxLevelToClear).forEach(cacheItem => {
+    //         pool[cacheItem.level].push(cacheItem.item);
+    //     });
+    //     cache = cache.filter(item => item.level>maxLevelToClear);
+    // }
+
     function getCubemap(id){
         return cache[id];   //returns cubemap views if have a cubemap stored
     }
@@ -79,6 +86,7 @@ var cubemapViewCache = (() => {
 
     return {
         clearCache,
+        // clearCacheUpToLevel,
         getCubemap,
         getNewCubemap,
         printCacheInfo
