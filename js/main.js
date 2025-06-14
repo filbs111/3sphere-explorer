@@ -1244,6 +1244,8 @@ function drawScene(frameTime){
 				activeProg = shaderPrograms.fullscreenBennyBox;break;
 			case "fxaaSimple":
 				activeProg = shaderPrograms.fullscreenBennyBoxLite;break;
+			case "dither":
+				activeProg = shaderPrograms.fullscreenDither;break;
 		}
 		gl.useProgram(activeProg);
 		enableDisableAttributes(activeProg);
@@ -4755,7 +4757,7 @@ function init(){
 	displayFolder.add(guiParams.display, "showHud");
 	displayFolder.add(guiParams.display, "fisheyeEnabled");
 	displayFolder.add(guiParams.display, "renderViaTexture", ['basic','blur','blur-b','blur-b-use-alpha','blur-big','2-pass-blur','1d-blur']);
-	displayFolder.add(guiParams.display, "renderLastStage", ['simpleCopy','fxaa','fxaaSimple','showAlpha']);
+	displayFolder.add(guiParams.display, "renderLastStage", ['simpleCopy','fxaa','fxaaSimple','showAlpha','dither']);
 	displayFolder.add(guiParams.display, "drawTransparentStuff");
 	displayFolder.add(guiParams.display, "voxNmapTest");
 	displayFolder.add(guiParams.display, "terrainMapProject");

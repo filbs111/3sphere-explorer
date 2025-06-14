@@ -175,6 +175,7 @@ function initShaders(shaderProgs){
 		fullscreenBlurBig:["fullscreen-vs", "fullscreen-fs-blur-big"],
 		fullscreenBlur1d:["fullscreen-vs", "fullscreen-fs-blur-1d"],
 		fullscreenBlur1dDdx:["fullscreen-vs", "fullscreen-fs-blur-1d-ddx"],
+		fullscreenDither:["fullscreen-vs", "fullscreen-fs-dither"],
 		coloredPerVertex:["simple-vs", "simple-fs"],
 		//coloredPerPixel:["perpixel-vs", "perpixel-fs"],		//unused
 		coloredPerPixelTransparentDiscard:["perpixel-transparent-discard-vs", "perpixel-transparent-discard-fs",[],[]],
