@@ -830,6 +830,9 @@ function drawScene(frameTime){
 		offsetCameraContainer.world = savedWorld;
 		moveMatHandlingPortal(offsetCameraContainer, [-guiParams.display.eyeSepWorld,0,0]);
 		xyzrotate4mat(offsetPlayerCamera, [0,guiParams.display.eyeTurnIn,0]);
+
+		cubemapViewCache.clearCache();	//TODO only clear for nearest portals?
+
 		drawSingleOrQuadViews(viewportR, outputFb);
 		//note inefficient currently, since does full screen full render for each eye view.
 		// for top/down split, intermediate render targets could be half screen size
@@ -4462,8 +4465,8 @@ var guiParams={
 		hFOV:"",
 		flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
 		stereo3d:"off",
-		eyeSepWorld:0.0004,	//half distance between eyes in game world
-		eyeTurnIn:0.002,
+		eyeSepWorld:0.0001,	//half distance between eyes in game world
+		eyeTurnIn:0.003,
 		showHud:true,
 		fisheyeEnabled:true,
 		renderViaTexture:'blur-b-use-alpha',
