@@ -3843,16 +3843,19 @@ function generateCullFuncGeneral(pMat){
 		[pMat[3] + pMat[1], pMat[7] + pMat[5], pMat[11] + pMat[9]]	//bottom
 	];
 
-	//TODO normalise planes, use sphere radius
+	//normalise planes
+	planes = planes.map(plane => {
+		var len = Math.sqrt(plane[0]*plane[0] + plane[1]*plane[1] + plane[2]*plane[2]);
+		return plane.map(xx=>xx/len);
+	});
 
 	return function(mat, rad){	//return whether an sphere of radius rad, at a position determined by mat (ie with position [mat[12],mat[13],mat[14],mat[15]]) overlaps the view frustum.
-		
-		var adjustedRad = 0;//easier testing - checks centres of objects.
+		var adjustedRad=rad/Math.sqrt(1+rad*rad);	//IIRC radius of sphere is before projection onto curved surface
 
 		for (var ii=0;ii<planes.length;ii++){
 			var plane = planes[ii];
 			var dotProd = plane[0]*mat[12] + plane[1]*mat[13] + plane[2]*mat[14];
-			if (dotProd<adjustedRad){return false;}
+			if (dotProd<-adjustedRad){return false;}
 		}
 		return true;
 	}
@@ -4528,6 +4531,7 @@ var guiParams={
 		specularStrength:0.5,
 		specularPower:20.0,
 		quadView:true,
+		quadViewCulling:true,
 		regularFisheye2:false
 	},
 	reflector:{
@@ -4813,6 +4817,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	displayFolder.add(guiParams.display, "specularStrength", 0,1,0.05);	//currently diffuse colour and distance attenuation applies to both specular and diffuse, keeping nonnegative by having diffuse multiplier 1-specularStrength. therefore range 0-1. TODO different specular, diffuse colours, (instead of float strength), specular maybe shouldn't have distance attenuation same way - possibly correct for point source but want solution for sphere light...
 	displayFolder.add(guiParams.display, "specularPower", 1,20,0.5);
 	displayFolder.add(guiParams.display, "quadView");
+	displayFolder.add(guiParams.display, "quadViewCulling");
 	displayFolder.add(guiParams.display, "regularFisheye2");	
 	displayFolder.add(guiParams, "normalMove", 0,0.02,0.001);
 	
