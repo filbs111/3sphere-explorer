@@ -902,6 +902,10 @@ function drawScene(frameTime){
 
 		quadrants.forEach((bounds, ii) => {
 			gl.depthFunc(gl.LESS);	//guess gfx fix. TODO put in proper place
+
+			//calculate cull funcs on the fly. TODO recalc if changed.
+			quadviewFrustumCull = generateCullFuncGeneral(quadViewMatrices[ii]);
+
 			startStageRender(quadViewMatrices[ii], camera, rttStageOneView, bounds, quadViewData[ii]);
 		});
 
@@ -957,7 +961,9 @@ function drawScene(frameTime){
 	//gl.viewport(viewP.left, viewP.top, viewP.width, viewP.height);
 	mat4.set(projMatrix, pMatrix);
 														
-	frustumCull = guiParams.display.quadView? noCullCullFunc: nonCmapCullFunc;	//TODO proper culling func for quad view. for now just draw everything
+	frustumCull = guiParams.display.quadView? 
+		quadviewFrustumCull:
+		nonCmapCullFunc;	//TODO proper culling func for quad view. for now just draw everything
 
 	//mat4.set(cameraForScene, worldCamera);	//set worldCamera to playerCamera
 
@@ -3800,6 +3806,7 @@ var Explosion=function(){
 
 //TODO button to toggle culling (so can check that doesn't impact what's drawn)
 var frustumCull;
+var quadviewFrustumCull;
 function generateCullFunc(pMat){
 	var const1 = pMat[5];
 	var const2 = pMat[0];
@@ -3818,6 +3825,39 @@ function generateCullFunc(pMat){
 	}
 }
 
+function generateCullFuncGeneral(pMat){
+	//side of frustum is where resulting x = z.
+	// x = pMat[0]*mat[12] + pMat[4]*mat[13] + pMat[8]*mat[14]
+	// z = pMat[3]*mat[12] + pMat[7]*mat[13] + pMat[11]*mat[14]
+
+	//set these == 
+	// pMat[0]*mat[12] + pMat[4]*mat[13] + pMat[8]*mat[14]  =  pMat[3]*mat[12] + pMat[7]*mat[13] + pMat[11]*mat[14]
+	// mat[12] ( pMat[0] - pMat[3] ) +  mat[13] (pMat[4] - pMat[7]) +   mat[14] (pMat[8] - pMat[11])  = 0
+	//this is plane dot point. magnitude of plane vector determines the adjustedRad corrective factor (effectively should normalise it.)
+
+	var planes = [
+		[pMat[3], pMat[7], pMat[11]],	//behind the camera. dot with forward direction.
+		[pMat[3] - pMat[0], pMat[7] - pMat[4], pMat[11] - pMat[8]],	//right
+		[pMat[3] + pMat[0], pMat[7] + pMat[4], pMat[11] + pMat[8]],	//left
+		[pMat[3] - pMat[1], pMat[7] - pMat[5], pMat[11] - pMat[9]],	//top
+		[pMat[3] + pMat[1], pMat[7] + pMat[5], pMat[11] + pMat[9]]	//bottom
+	];
+
+	//TODO normalise planes, use sphere radius
+
+	return function(mat, rad){	//return whether an sphere of radius rad, at a position determined by mat (ie with position [mat[12],mat[13],mat[14],mat[15]]) overlaps the view frustum.
+		
+		var adjustedRad = 0;//easier testing - checks centres of objects.
+
+		for (var ii=0;ii<planes.length;ii++){
+			var plane = planes[ii];
+			var dotProd = plane[0]*mat[12] + plane[1]*mat[13] + plane[2]*mat[14];
+			if (dotProd<adjustedRad){return false;}
+		}
+		return true;
+	}
+}
+ 
 function noCullCullFunc(mat, rad){
 	return true;
 }
