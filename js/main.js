@@ -726,6 +726,8 @@ var drawMapScene = (function(){
 
 	var mapCameraPMatrix = mat4.create();
 
+	var playerX, playerY;
+
 	return function(frameTime){
 		//draw a map
 		//initially just the current world 3-sphere unwrapped into a fat tetrahedron, so duocylinder terrains appear flat.
@@ -740,6 +742,8 @@ var drawMapScene = (function(){
 
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);	//draw to screen (null)
 		gl.viewport(0, 0, gl.viewportWidth,gl.viewportHeight);
+
+		updatePlayerXY(playerContainer.matrix.slice(12));
 
 		var worldToDrawMapFor = playerContainer.world;
 
@@ -853,12 +857,21 @@ for initial version, don't scroll map, so only need 1 copy of landscape.
 initial version with just landscape and player point, coloured portals sensible.
 in order to draw stuff like boxes, guess scene object list/graph is sensible.
 */
+	function updatePlayerXY(playerPos){
+		playerX = Math.atan2(playerPos[0],playerPos[1]);
+		playerY = Math.atan2(playerPos[2],playerPos[3])
+	}
+
+	function wrapToCirle(angle){
+		return (angle+3*Math.PI)%(2*Math.PI) - Math.PI;
+	}
+
 	function pos4ToMapPos3(fourVec){
 		var squaredPos = fourVec.map(xx=>xx*xx);
 		var lenxy = Math.sqrt( squaredPos[0]+squaredPos[1]);
 		var lenzw = Math.sqrt( squaredPos[2]+squaredPos[3]);
-		var xOut = Math.atan2(fourVec[0],fourVec[1])* lenxy;
-		var yOut = Math.atan2(fourVec[2],fourVec[3])* lenzw;
+		var xOut = wrapToCirle(Math.atan2(fourVec[0],fourVec[1])-playerX)* lenxy;
+		var yOut = wrapToCirle(Math.atan2(fourVec[2],fourVec[3])-playerY)* lenzw;
 		var zOut = Math.atan2( lenzw, lenxy);
 
 		//retain some pringle curvature to reduce map distortion, make more readable.
