@@ -860,6 +860,20 @@ in order to draw stuff like boxes, guess scene object list/graph is sensible.
 		var xOut = Math.atan2(fourVec[0],fourVec[1])* lenxy;
 		var yOut = Math.atan2(fourVec[2],fourVec[3])* lenzw;
 		var zOut = Math.atan2( lenzw, lenxy);
+
+		//retain some pringle curvature to reduce map distortion, make more readable.
+		// perhaps circular curvature is better, but to first order, parabolic/cubic should be equivalent
+		// perhaps can do better by different curvatures for different z. 
+
+		var bendFactor = 0.35;
+		var multiplier1 = bendFactor*bendFactor/2;
+		var multiplier2 = bendFactor*multiplier1/3;	//could be about right amount would like terrain dots evenly spaced on map. would like corners to be 90deg
+			//guess cos ~ 1 - (1/2)*(bx)^2. sin ~ x + (1/6)(bx)^3 
+		var bend = multiplier1*(xOut*xOut - yOut*yOut);
+		zOut += bend;
+		xOut -= multiplier2*xOut*bend;
+		yOut += multiplier2*yOut*bend;
+
 		return [xOut, yOut, zOut];
 	}
 })();
