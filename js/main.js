@@ -751,7 +751,7 @@ var drawMapScene = (function(){
 
 		
 		mat4.set(mapCameraView, spunMapCamera);
-		var mapZRotation = (frameTime/1000) % (2*Math.PI);	//TODO rotate view with player.
+		var mapZRotation = (frameTime/5000) % (2*Math.PI);	//TODO rotate view with player.
 		mat4.rotateZ(spunMapCamera, mapZRotation);
 
 
@@ -767,15 +767,11 @@ var drawMapScene = (function(){
 
 		//draw a set of boxes to indicate the bounds of the fat tetrahedron
 		//draw some things mapped onto this space. initially just display coloured spheres for points. then do distortion in shader.
-
-		//check mapping. draw series of dots for duocylinder centre
-		for (var ang=0;ang<360;ang+=15){
-			var angRadians = Math.PI*ang/180;
-			var fourPosXYLine = [Math.cos(angRadians),Math.sin(angRadians),0,0];
-			var fourPosZWLine = [0,0,Math.cos(angRadians),Math.sin(angRadians)];
-			drawMapPointForFourVec(fourPosXYLine, colorArrs.yellow, 0.015);	//z=w=0. "bottom" line
-			drawMapPointForFourVec(fourPosZWLine, colorArrs.blue, 0.015);	//x=y=0 - "top" line
-		}
+		
+		ringCells.forEach(ring => 
+			ring.mats.forEach(mat => 
+				drawMapPointForFourVec(mat.slice(12), ring.color, 0.015)	
+		));
 
 		//grid in middle
 		var root2 = Math.sqrt(2);
@@ -785,7 +781,6 @@ var drawMapScene = (function(){
 				var ang2Radians = Math.PI*ang2/180;
 				var fourPos = [Math.cos(angRadians),Math.sin(angRadians),Math.cos(ang2Radians),Math.sin(ang2Radians)].map(xx=>xx/root2);
 				drawMapPointForFourVec(fourPos, colorArrs.darkGray, 0.015);
-				drawMapPointForFourVec(fourPosZWLine, colorArrs.blue, 0.015);
 			}
 		}
 
@@ -2292,17 +2287,18 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	
 	
 	var guiBoxes = guiParams.drawShapes.boxes;
-	if (guiBoxes['y=z=0']){drawBoxRing(ringCells[0],colorArrs.red);}
-	if (guiBoxes['x=z=0']){drawBoxRing(ringCells[1],colorArrs.green);}
-	if (guiBoxes['x=y=0']){drawBoxRing(ringCells[2],colorArrs.blue);}
-	if (guiBoxes['z=w=0']){drawBoxRing(ringCells[3],colorArrs.yellow);}
-	if (guiBoxes['y=w=0']){drawBoxRing(ringCells[4],colorArrs.magenta);}
-	if (guiBoxes['x=w=0']){drawBoxRing(ringCells[5],colorArrs.cyan);}
+	if (guiBoxes['y=z=0']){drawBoxRing(0);}
+	if (guiBoxes['x=z=0']){drawBoxRing(1);}
+	if (guiBoxes['x=y=0']){drawBoxRing(2);}
+	if (guiBoxes['z=w=0']){drawBoxRing(3);}
+	if (guiBoxes['y=w=0']){drawBoxRing(4);}
+	if (guiBoxes['x=w=0']){drawBoxRing(5);}
 	
-	function drawBoxRing(ringCellMatData,color){
-		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", color);
+	function drawBoxRing(ringIdx){
+		var ring = ringCells[ringIdx];
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", ring.color);
 		drawArrayOfModels(
-			ringCellMatData,
+			ringCellMatData.mats,
 			(guiParams.display.culling ? boxRad: false),
 			cubeBuffers,
 			activeShaderProgram
