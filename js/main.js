@@ -726,7 +726,7 @@ var drawMapScene = (function(){
 
 	var mapCameraPMatrix = mat4.create();
 
-	var playerX, playerY;
+	var playerI, playerJ, playerMapAngle;
 
 	return function(frameTime){
 		//draw a map
@@ -743,7 +743,7 @@ var drawMapScene = (function(){
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);	//draw to screen (null)
 		gl.viewport(0, 0, gl.viewportWidth,gl.viewportHeight);
 
-		updatePlayerXY(playerContainer.matrix.slice(12));
+		updatePlayerIJ(playerContainer.matrix.slice(12), playerContainer.matrix.slice(8,12));
 
 		var worldToDrawMapFor = playerContainer.world;
 
@@ -755,8 +755,8 @@ var drawMapScene = (function(){
 
 		
 		mat4.set(mapCameraView, spunMapCamera);
-		var mapZRotation = (frameTime/5000) % (2*Math.PI);	//TODO rotate view with player.
-		mat4.rotateZ(spunMapCamera, mapZRotation);
+		//var mapZRotation = (frameTime/5000) % (2*Math.PI);	//TODO rotate view with player.
+		mat4.rotateZ(spunMapCamera, playerMapAngle);
 
 
 		if (logMapStuff){console.log({"mssg":"pMatrix for map", pMatrix})}
@@ -857,9 +857,34 @@ for initial version, don't scroll map, so only need 1 copy of landscape.
 initial version with just landscape and player point, coloured portals sensible.
 in order to draw stuff like boxes, guess scene object list/graph is sensible.
 */
-	function updatePlayerXY(playerPos){
-		playerX = Math.atan2(playerPos[0],playerPos[1]);
-		playerY = Math.atan2(playerPos[2],playerPos[3])
+	function updatePlayerIJ(playerPos, playerForward){
+		var squaredPos = playerPos.map(xx=>xx*xx);
+		playerI = Math.atan2(playerPos[0],playerPos[1]);
+		playerJ = Math.atan2(playerPos[2],playerPos[3]);
+
+		//calculation of player heading?
+		//obvious way is to take player position, take player direction (halfway around world), add small amount of that to
+		//player pos, put that on the map, and look at angle between
+		
+		// however may be a neat way to do this
+		// according to https://www.wolframalpha.com/input?i=derivative+of+atan2%28y%2Cx%29,
+		// there's a neater formulation though - want something like
+		// d/dx(tan^(-1)(x, y)) = -y/(x^2 + y^2)
+		// d/dy(tan^(-1)(x, y)) = x/(x^2 + y^2)
+
+		var lenxy = Math.sqrt( squaredPos[0]+squaredPos[1]);
+		var lenzw = Math.sqrt( squaredPos[2]+squaredPos[3]);
+
+		//for playerI (X on map, but "I" to reduce confusion)
+		// rate of change of playerI with respect to playerPos[0] is -playerPos[1]/(lenxy)
+		// rate of change of playerI with respect to playerPos[1] is playerPos[0]/(lenxy)
+
+		var playerIRateOfChange = (playerForward[1]*playerPos[0] - playerForward[0]*playerPos[1])/lenxy;
+		var playerJRateOfChange = (playerForward[3]*playerPos[2] - playerForward[2]*playerPos[3])/lenzw;
+			//this is rate of change of I,J, but suspect should scale by aspect of unwrapped duocylinder terrain at player's height
+			//however, seems to work pretty well as is, even when not at height 0. perhaps correct!
+
+		playerMapAngle = Math.atan2(playerIRateOfChange, playerJRateOfChange);
 	}
 
 	function wrapToCirle(angle){
@@ -870,8 +895,8 @@ in order to draw stuff like boxes, guess scene object list/graph is sensible.
 		var squaredPos = fourVec.map(xx=>xx*xx);
 		var lenxy = Math.sqrt( squaredPos[0]+squaredPos[1]);
 		var lenzw = Math.sqrt( squaredPos[2]+squaredPos[3]);
-		var xOut = wrapToCirle(Math.atan2(fourVec[0],fourVec[1])-playerX)* lenxy;
-		var yOut = wrapToCirle(Math.atan2(fourVec[2],fourVec[3])-playerY)* lenzw;
+		var xOut = wrapToCirle(Math.atan2(fourVec[0],fourVec[1])-playerI)* lenxy;
+		var yOut = wrapToCirle(Math.atan2(fourVec[2],fourVec[3])-playerJ)* lenzw;
 		var zOut = Math.atan2( lenzw, lenxy);
 
 		//retain some pringle curvature to reduce map distortion, make more readable.
@@ -900,7 +925,6 @@ function drawRegularScene(frameTime){
 	//then can get camera matrices shifted sideways.
 	//also should, for fisheye view, reduce size of intermediate buffer (rectilinear projection)
 	
-	
 	offsetCameraContainer.world = playerContainer.world;
 	
 	if (guiParams.display.cameraAttachedTo == "player vehicle"){
@@ -910,8 +934,6 @@ function drawRegularScene(frameTime){
 		offsetCam.setType(guiParams.display.cameraType);
 		moveMatHandlingPortal(offsetCameraContainer, offsetCam.getVec())
 	}
-
-	
 
 
 	//TODO put this elsewhere - assumes some stuff is in scope though!
