@@ -791,6 +791,12 @@ var drawMapScene = (function(){
 		drawMapPointForFourVec(playerCamera.slice(12), colorArrs.white, 0.02);
 		drawMapPointForFourVec(buildingMatrix.slice(12), colorArrs.red, 0.04);
 
+		bvhObjsForWorld[worldToDrawMapFor].forEach(bvhObj => {
+			drawMapPointForFourVec(bvhObj.mat.slice(12), colorArrs.gray, 0.03);
+				//NOTE can't just use bvhObj.scale because depends on mesh data.
+				//if bounding sphere rad were a property (or bvh mesh which contains bounding sphere) could use that.
+		});
+
 		portalsForWorld[worldToDrawMapFor].forEach(portal => {
 			var pColor = worldColors[portal.otherps.world];
 			var pPos = portal.matrix.slice(12);
