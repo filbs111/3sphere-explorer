@@ -703,6 +703,175 @@ function drawScene(frameTime){
 	
 	smoothGuiParams.update();
 
+	//TODO button press to show/hide map
+	//TODO pause gameplay when show map?
+	if (guiParams.display.showMap){
+		drawMapScene(frameTime);
+	}else{
+		drawRegularScene(frameTime);
+	}
+}
+
+var logMapStuff=false;
+var drawMapScene = (function(){
+	
+	//create a camera view for viewing map from.
+	var mapCameraView = mat4.identity();
+		//since this map view in regular 3d space, can use standard matrix methods instead of custom
+	mat4.translate(mapCameraView, [0,0,-4]);
+
+	mat4.rotateX(mapCameraView, -Math.PI/3);	//elevate camera 60 deg
+
+	var spunMapCamera = mat4.create();
+
+	var mapCameraPMatrix = mat4.create();
+
+	return function(frameTime){
+		//draw a map
+		//initially just the current world 3-sphere unwrapped into a fat tetrahedron, so duocylinder terrains appear flat.
+		//NOTE descent-alikes have a map view like paused god-mode with wireframe shader etc, otherwise like rest of game.
+		//perhaps that's preferable to current unwrapped world idea. Perhaps can have smooth transition between mappings.
+		//TODO option to scroll map such that player in middle
+		//TODO ability to rotate map
+		//TODO ortho option
+		//TODO square stack option, perhaps scaling with current height (TODO show what's above/below neatly
+		//TODO render terrain
+		//TODO render actual meshes on map (not just point)
+
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);	//draw to screen (null)
+		gl.viewport(0, 0, gl.viewportWidth,gl.viewportHeight);
+
+		var worldToDrawMapFor = playerContainer.world;
+
+		gl.clearColor.apply(gl,worldColorsPlain[worldToDrawMapFor]);
+		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+		mapCameraPMatrix = mat4.perspective(100, gl.viewportWidth/gl.viewportHeight, 0.01, 10);	//TODO only set this on viewport change.
+		mat4.set(mapCameraPMatrix, pMatrix);
+
+		
+		mat4.set(mapCameraView, spunMapCamera);
+		var mapZRotation = (frameTime/1000) % (2*Math.PI);	//TODO rotate view with player.
+		mat4.rotateZ(spunMapCamera, mapZRotation);
+
+
+		if (logMapStuff){console.log({"mssg":"pMatrix for map", pMatrix})}
+
+		var activeProg = shaderPrograms.threeSpaceColored;
+		gl.useProgram(activeProg);
+
+		enableDisableAttributes(activeProg);
+		gl.cullFace(gl.BACK);
+		gl.depthFunc(gl.LESS);
+	
+
+		//draw a set of boxes to indicate the bounds of the fat tetrahedron
+		//draw some things mapped onto this space. initially just display coloured spheres for points. then do distortion in shader.
+
+		//check mapping. draw series of dots for duocylinder centre
+		for (var ang=0;ang<360;ang+=15){
+			var angRadians = Math.PI*ang/180;
+			var fourPosXYLine = [Math.cos(angRadians),Math.sin(angRadians),0,0];
+			var fourPosZWLine = [0,0,Math.cos(angRadians),Math.sin(angRadians)];
+			drawMapPointForFourVec(fourPosXYLine, colorArrs.yellow, 0.015);	//z=w=0. "bottom" line
+			drawMapPointForFourVec(fourPosZWLine, colorArrs.blue, 0.015);	//x=y=0 - "top" line
+		}
+
+		//grid in middle
+		var root2 = Math.sqrt(2);
+		for (var ang1=0;ang1<360;ang1+=15){
+			var angRadians = Math.PI*ang1/180;
+			for (var ang2=0;ang2<360;ang2+=15){
+				var ang2Radians = Math.PI*ang2/180;
+				var fourPos = [Math.cos(angRadians),Math.sin(angRadians),Math.cos(ang2Radians),Math.sin(ang2Radians)].map(xx=>xx/root2);
+				drawMapPointForFourVec(fourPos, colorArrs.darkGray, 0.015);
+				drawMapPointForFourVec(fourPosZWLine, colorArrs.blue, 0.015);
+			}
+		}
+
+		drawMapPointForFourVec(playerCamera.slice(12), colorArrs.white, 0.02);
+		drawMapPointForFourVec(buildingMatrix.slice(12), colorArrs.red, 0.04);
+
+		portalsForWorld[worldToDrawMapFor].forEach(portal => {
+			var pColor = worldColors[portal.otherps.world];
+			var pPos = portal.matrix.slice(12);
+			var pRad = portal.shared.radius;	//NOTE not necessarily to scale when rendered in map
+			drawMapPointForFourVec(pPos, pColor, pRad);
+		});
+
+		logMapStuff=false;
+
+		function drawMapPointForFourVec(fourVec, color, rad){
+			drawMapPointAtPosition(pos4ToMapPos3(fourVec), color, rad);
+		}
+
+		//TODO instanced, or don't prep all uniforms when drawing many points of same colour etc.
+		function drawMapPointAtPosition(threePos, color, rad){
+
+			//set mvMatrix given the 3pos. would be simpler to just take 3pos into the shader?
+			mat4.set(spunMapCamera, mvMatrix);
+
+			mat4.translate(mvMatrix, threePos);
+
+
+			//mat4.rotate(mvMatrix, 0,0,1, 10);//??	appears to not work. TODO find how to read the docs for whatever
+									// version of glmatrix is being used!!!!
+			//mat4.rotateZ(mvMatrix, 0.1);	//having here rotates to object itself, not the view.
+
+			if (logMapStuff){console.log({"mssg":"map draw ", threePos, mvMatrix})}
+
+			gl.uniform3fv(activeProg.uniforms.uModelScale, [rad,rad,rad]);
+			uniform4fvSetter.setIfDifferent(activeProg, "uColor", color);
+			drawObjectFromBuffers(cubeBuffers, activeProg)
+		}
+
+	}
+
+/*
+(x,y,z,w) world coords
+
+middle of duocylinder at the top. x=y=0
+
+plane in middle. x^2+y^2 = 0.5, z^2+w^2 = 0
+
+middle of underworld duocylinder at bottom. z=w=0
+
+Z - something like atan2( len(x,y), len(z,w))
+X - something like atan2(x,y)*len(x,y)
+Y - something like atan2(z,w)*len(z,w)
+
+=>
+at top, 	x=y=0, len(x,y)=0, len(z,w)=1 => X=0, Y from -PI to PI
+in middle. len(x,y)=root(0.5), len(z,w)=root(0.5) => Z,Y from -PI/root2 to PI/root2
+at bottom, 	z=w=0, len(x,y)=1, len(z,w)=0 => X from -PI to PI, Y=0
+
+basically set of stack of rectangles forming bloated tetrahedron that looks like a circle viewed from above. 
+can fit these inside a stubby cylinder with height equal to length. the corners of the rectangles form a helix.
+
+mapping objects onto this shape is tricky, especially on the points along the duocylinder axes, unless store as a special object designed to unwrap like this, with points, edges along the duocylinder centreline, or just accept that objects will be displayed as surfaces rather than solid in this case.
+for points horizontally wrapping on landscape, might acheive good display by having up to 4 copies of object/ landscape where crosses edges, and discarding pixels outside the cylinder.
+small mobile objects like the player might be just displayed as simple points.
+ideally should present texture mapping, lighting etc, but simple greybox/ position=colour shading should show example.
+possible want to display as semitransparent. Perhaps good use of Order Independent Transparency.
+NOTE that landscapes that actually wrap around without stitching would be a problem for map, but IIRC avoided this anyway because of how automatic ddx, ddy texture mapping works ( hope didn't solve this with custom sampling!!)
+for initial version, don't scroll map, so only need 1 copy of landscape.
+initial version with just landscape and player point, coloured portals sensible.
+in order to draw stuff like boxes, guess scene object list/graph is sensible.
+*/
+	function pos4ToMapPos3(fourVec){
+		var squaredPos = fourVec.map(xx=>xx*xx);
+		var lenxy = Math.sqrt( squaredPos[0]+squaredPos[1]);
+		var lenzw = Math.sqrt( squaredPos[2]+squaredPos[3]);
+		var xOut = Math.atan2(fourVec[0],fourVec[1])* lenxy;
+		var yOut = Math.atan2(fourVec[2],fourVec[3])* lenzw;
+		var zOut = Math.atan2( lenzw, lenxy);
+		return [xOut, yOut, zOut];
+	}
+})();
+
+
+function drawRegularScene(frameTime){
+
 	//TODO split out screen rendering into function. if stereo3d is enabled, call twice.
 	//initially can just check breaking out releant code to function works.
 	//then can draw same thing twice
@@ -4532,7 +4701,8 @@ var guiParams={
 		specularPower:20.0,
 		quadView:true,
 		quadViewCulling:true,
-		regularFisheye2:false
+		regularFisheye2:false,
+		showMap:false
 	},
 	reflector:{
 		draw:'high',
@@ -4818,7 +4988,8 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	displayFolder.add(guiParams.display, "specularPower", 1,20,0.5);
 	displayFolder.add(guiParams.display, "quadView");
 	displayFolder.add(guiParams.display, "quadViewCulling");
-	displayFolder.add(guiParams.display, "regularFisheye2");	
+	displayFolder.add(guiParams.display, "regularFisheye2");
+	displayFolder.add(guiParams.display, "showMap");
 	displayFolder.add(guiParams, "normalMove", 0,0.02,0.001);
 	
 	var debugFolder = gui.addFolder('debug');
