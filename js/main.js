@@ -772,12 +772,11 @@ var drawMapScene = (function(){
 		gl.useProgram(activeProg);
 		enableDisableAttributes(activeProg);
 
-		//draw a set of boxes to indicate the bounds of the fat tetrahedron
 		//draw some things mapped onto this space. initially just display coloured spheres for points. then do distortion in shader.
 		
 		ringCells.forEach(ring => 
 			ring.mats.forEach(mat => 
-				drawMapPointForFourVec(mat.slice(12), ring.color, 0.015)	
+				drawMapPointForFourVec(mat.slice(12), ring.color, 0.015)
 		));
 
 		//grid in middle
@@ -800,6 +799,10 @@ var drawMapScene = (function(){
 		gl.useProgram(activeProg);
 		enableDisableAttributes(activeProg);
 
+		// ringCells.forEach(ring => 
+		// 	ring.mats.forEach(mat => 
+		// 		drawMapObject2(mat, ring.color, cubeBuffers, 0.1, false)
+		// ));
 		//TODO maybe shop be sship matrix (not camera, and map should be centred on player not camera.)
 		drawMapObject2(playerCamera, colorArrs.white, sphereBuffers, 0.1, false);
 		drawMapObject2(buildingMatrix, colorArrs.red, buildingBuffers, 0.01*guiParams.drawShapes.buildingScale, true);
