@@ -744,10 +744,13 @@ var drawMapScene = (function(){
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);	//draw to screen (null)
 		gl.viewport(0, 0, gl.viewportWidth,gl.viewportHeight);
 
-		updatePlayerIJ(playerContainer.matrix.slice(12), playerContainer.matrix.slice(8,12));
-
 		var worldToDrawMapFor = playerContainer.world;
 
+		updatePlayerIJ(
+			playerContainer.matrix.slice(12),
+			playerContainer.matrix.slice(8,12),
+			guiSettingsForWorld[worldToDrawMapFor].spin
+		);
 		gl.clearColor.apply(gl,worldColorsPlain[worldToDrawMapFor]);
 		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -792,18 +795,19 @@ var drawMapScene = (function(){
 		//drawMapPointForFourVec(playerCamera.slice(12), colorArrs.white, 0.02);
 		//drawMapPointForFourVec(buildingMatrix.slice(12), colorArrs.red, 0.04);
 		
-		activeProg = shaderPrograms.mapShaderOne;
+		//activeProg = shaderPrograms.mapShaderOne;
+		activeProg = shaderPrograms.mapShaderTwo;
 		gl.useProgram(activeProg);
 		enableDisableAttributes(activeProg);
 
 		//TODO maybe shop be sship matrix (not camera, and map should be centred on player not camera.)
-		drawMapObject1(playerCamera, colorArrs.white, sphereBuffers, 0.1, false);
-		drawMapObject1(buildingMatrix, colorArrs.red, buildingBuffers, 0.01*guiParams.drawShapes.buildingScale, true);
-		drawMapObject1(octoFractalMatrix, colorArrs.gray, octoFractalBuffers, 0.01*guiParams.drawShapes.octoFractalScale, true);
+		drawMapObject2(playerCamera, colorArrs.white, sphereBuffers, 0.1, false);
+		drawMapObject2(buildingMatrix, colorArrs.red, buildingBuffers, 0.01*guiParams.drawShapes.buildingScale, true);
+		drawMapObject2(octoFractalMatrix, colorArrs.gray, octoFractalBuffers, 0.01*guiParams.drawShapes.octoFractalScale, true);
 
 		bvhObjsForWorld[worldToDrawMapFor].forEach(bvhObj => {
 			//drawMapPointForFourVec(bvhObj.mat.slice(12), colorArrs.gray, 0.03);
-			drawMapObject1(bvhObj.mat, colorArrs.gray, cubeBuffers, 0.03, false);
+			drawMapObject2(bvhObj.mat, colorArrs.gray, cubeBuffers, 0.03, false);
 				//NOTE can't just use bvhObj.scale because depends on mesh data.
 				//if bounding sphere rad were a property (or bvh mesh which contains bounding sphere) could use that.
 		});
@@ -813,7 +817,7 @@ var drawMapScene = (function(){
 			//var pPos = portal.matrix.slice(12);
 			var pRad = portal.shared.radius;	//NOTE not necessarily to scale when rendered in map
 			//drawMapPointForFourVec(pPos, pColor, pRad);
-			drawMapObject1(portal.matrix, pColor, sphereBuffers, pRad, false);
+			drawMapObject2(portal.matrix, pColor, sphereBuffers, pRad, false);
 		});
 
 		logMapStuff=false;
@@ -861,9 +865,26 @@ var drawMapScene = (function(){
 		//2) draw points relative to fixed object centre point on map. still a problem that whole object will jump 
 		// across map when centre of object does. for small objects this is OK.
 
-		// function drawMapObject2(objMatrix, color, objBuffers, objScale){
-		// 	var objCentreMapAngleCoords = mapAngleCoordsForFourVec(objMatrix.slice(12));
-		// }
+		function drawMapObject2(objMatrix, color, objBuffers, objScale, attachedToDuocylinder){
+			var objCentreMapAngleCoords = mapAngleCoordsForFourVec(objMatrix.slice(12));
+			var cameraMapAngleCoords = [attachedToDuocylinder?playerIWithDuocylinderSpin:playerI , playerJ];
+
+			var relativeMapAngleCoords = [
+				objCentreMapAngleCoords[0] - cameraMapAngleCoords[0],
+				objCentreMapAngleCoords[1] - cameraMapAngleCoords[1]
+			].map(xx=> minusPiToPiWrap(xx));
+			//^^ could do this in vert shader.
+
+			mat4.set(spunMapCamera, mvMatrix); //this is matrix of the map in camera viewing the map
+			gl.uniform1f(activeProg.uniforms.uBendFactor, guiParams.map.bendFactor);
+			gl.uniform2fv(activeProg.uniforms.uObjCentreAngleCoords, objCentreMapAngleCoords);
+			gl.uniform2fv(activeProg.uniforms.uObjCentreRelativeToCameraAngleCoords, relativeMapAngleCoords);
+
+			gl.uniform3fv(activeProg.uniforms.uModelScale, [objScale,objScale,objScale]);
+			uniform4fvSetter.setIfDifferent(activeProg, "uColor", color);
+			mat4.set(objMatrix, mMatrix);	//this is matrix describing object pose in world. drawObjectFromBuffers will send it to v shader
+			drawObjectFromBuffers(objBuffers, activeProg);
+		}
 
 		//3) draw 4 copies of object if necessary (close to map edge).
 		
@@ -949,16 +970,12 @@ in order to draw stuff like boxes, guess scene object list/graph is sensible.
 		playerMapAngle = Math.atan2(playerIRateOfChange, playerJRateOfChange);
 	}
 
-	function wrapToCirle(angle){
-		return (angle+3*Math.PI)%(2*Math.PI) - Math.PI;
-	}
-
 	function pos4ToMapPos3(fourVec){
 		var squaredPos = fourVec.map(xx=>xx*xx);
 		var lenxy = Math.sqrt( squaredPos[0]+squaredPos[1]);
 		var lenzw = Math.sqrt( squaredPos[2]+squaredPos[3]);
-		var xOut = wrapToCirle(Math.atan2(fourVec[0],fourVec[1])-playerI)* lenxy;
-		var yOut = wrapToCirle(Math.atan2(fourVec[2],fourVec[3])-playerJ)* lenzw;
+		var xOut = minusPiToPiWrap(Math.atan2(fourVec[0],fourVec[1])-playerI)* lenxy;
+		var yOut = minusPiToPiWrap(Math.atan2(fourVec[2],fourVec[3])-playerJ)* lenzw;
 		var zOut = Math.atan2( lenzw, lenxy);
 
 		//retain some pringle curvature to reduce map distortion, make more readable.
@@ -975,6 +992,10 @@ in order to draw stuff like boxes, guess scene object list/graph is sensible.
 		yOut += multiplier2*yOut*bend;
 
 		return [xOut, yOut, zOut];
+	}
+
+	function mapAngleCoordsForFourVec(fourVec){
+		return [Math.atan2(fourVec[0],fourVec[1]), Math.atan2(fourVec[2],fourVec[3])].map(xx=>minusPiToPiWrap(xx));
 	}
 })();
 
