@@ -722,7 +722,7 @@ var drawMapScene = (function(){
 
 	var mapCameraPMatrix = mat4.create();
 
-	var playerI, playerJ, playerMapAngle;
+	var playerI, playerJ, playerMapAngle, playerIWithDuocylinderSpin;
 
 	return function(frameTime){
 		//draw a map
@@ -797,13 +797,13 @@ var drawMapScene = (function(){
 		enableDisableAttributes(activeProg);
 
 		//TODO maybe shop be sship matrix (not camera, and map should be centred on player not camera.)
-		drawMapObject1(playerCamera, colorArrs.white, sphereBuffers, 0.1);
-		drawMapObject1(buildingMatrix, colorArrs.red, buildingBuffers, 0.01*guiParams.drawShapes.buildingScale);
-		drawMapObject1(octoFractalMatrix, colorArrs.gray, octoFractalBuffers, 0.01*guiParams.drawShapes.octoFractalScale);
+		drawMapObject1(playerCamera, colorArrs.white, sphereBuffers, 0.1, false);
+		drawMapObject1(buildingMatrix, colorArrs.red, buildingBuffers, 0.01*guiParams.drawShapes.buildingScale, true);
+		drawMapObject1(octoFractalMatrix, colorArrs.gray, octoFractalBuffers, 0.01*guiParams.drawShapes.octoFractalScale, true);
 
 		bvhObjsForWorld[worldToDrawMapFor].forEach(bvhObj => {
 			//drawMapPointForFourVec(bvhObj.mat.slice(12), colorArrs.gray, 0.03);
-			drawMapObject1(bvhObj.mat, colorArrs.gray, cubeBuffers, 0.03);
+			drawMapObject1(bvhObj.mat, colorArrs.gray, cubeBuffers, 0.03, false);
 				//NOTE can't just use bvhObj.scale because depends on mesh data.
 				//if bounding sphere rad were a property (or bvh mesh which contains bounding sphere) could use that.
 		});
@@ -813,7 +813,7 @@ var drawMapScene = (function(){
 			//var pPos = portal.matrix.slice(12);
 			var pRad = portal.shared.radius;	//NOTE not necessarily to scale when rendered in map
 			//drawMapPointForFourVec(pPos, pColor, pRad);
-			drawMapObject1(portal.matrix, pColor, sphereBuffers, pRad);
+			drawMapObject1(portal.matrix, pColor, sphereBuffers, pRad, false);
 		});
 
 		logMapStuff=false;
@@ -846,11 +846,11 @@ var drawMapScene = (function(){
 		//1) simple but likely broken version - put player and object mats as input,
 		//transform each point independently. expect to break on edge of map when verts on opposite sides.
 
-		function drawMapObject1(objMatrix, color, objBuffers, objScale){
+		function drawMapObject1(objMatrix, color, objBuffers, objScale, attachedToDuocylinder){
 			//things that should only need to set once per frame. optimise if use this shader
 			mat4.set(spunMapCamera, mvMatrix); //this is matrix of the map in camera viewing the map
 			gl.uniform1f(activeProg.uniforms.uBendFactor, guiParams.map.bendFactor);
-			gl.uniform2f(activeProg.uniforms.uMapCentreAngleCoords, playerI, playerJ);
+			gl.uniform2f(activeProg.uniforms.uMapCentreAngleCoords, attachedToDuocylinder?playerIWithDuocylinderSpin:playerI , playerJ);
 
 			gl.uniform3fv(activeProg.uniforms.uModelScale, [objScale,objScale,objScale]);
 			uniform4fvSetter.setIfDifferent(activeProg, "uColor", color);
@@ -911,10 +911,18 @@ for initial version, don't scroll map, so only need 1 copy of landscape.
 initial version with just landscape and player point, coloured portals sensible.
 in order to draw stuff like boxes, guess scene object list/graph is sensible.
 */
-	function updatePlayerIJ(playerPos, playerForward){
+	function minusPiToPiWrap(inputNumber){	//because javascript doesn't do mod! https://stackoverflow.com/a/4467559
+		var tau = 2*Math.PI;
+		return ((((inputNumber+Math.PI) % tau) + tau) % tau) - Math.PI;
+	}
+
+	function updatePlayerIJ(playerPos, playerForward, duocylinderSpin){
 		var squaredPos = playerPos.map(xx=>xx*xx);
 		playerI = Math.atan2(playerPos[0],playerPos[1]);
 		playerJ = Math.atan2(playerPos[2],playerPos[3]);
+
+		//modify by duocylinderSpin. (TODO apply only to objects that move with duocylinder)
+		playerIWithDuocylinderSpin=minusPiToPiWrap(playerI+duocylinderSpin);
 
 		//calculation of player heading?
 		//obvious way is to take player position, take player direction (halfway around world), add small amount of that to
