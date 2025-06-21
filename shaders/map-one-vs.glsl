@@ -8,6 +8,7 @@ uniform mat4 uPMatrix;
 uniform vec3 uModelScale;
 uniform vec2 uMapCentreAngleCoords;
 uniform float uBendFactor;
+uniform float uTetrahedronism;
 
 float wrapToMinusPiToPi(float inputAngle){
     return (mod((inputAngle/M_PI) + 1.0, 2.0) - 1.0)*M_PI;   //note could just divide whole thing by PI, reduce distance viewing map from to 
@@ -24,8 +25,9 @@ vec3 convertToFatTetrahedron(vec2 mapAngles, vec4 fourVecPos){
     vec4 squaredPos = fourVecPos*fourVecPos;
     float lenxy = sqrt( squaredPos.x+squaredPos.y);
 	float lenzw = sqrt( squaredPos.z+squaredPos.w);
-	float xOut = mapAngles.x* lenxy;     //would rather use mapAngles.u,v for clarity, but "illegal vector field selection"!!
-    float yOut = mapAngles.y* lenzw;
+    vec2 tetrahedronMulitplier = mix(vec2(.707), vec2(lenxy, lenzw), uTetrahedronism);
+	float xOut = mapAngles.x* tetrahedronMulitplier.x;     //would rather use mapAngles.u,v for clarity, but "illegal vector field selection"!!
+    float yOut = mapAngles.y* tetrahedronMulitplier.y;
 	float zOut = atan( lenzw, lenxy);
 
     //retain some pringle curvature to reduce map distortion, make more readable.
@@ -35,12 +37,8 @@ vec3 convertToFatTetrahedron(vec2 mapAngles, vec4 fourVecPos){
 	float multiplier1 = uBendFactor*uBendFactor*0.5;
 	float multiplier2 = uBendFactor*multiplier1*0.3333;	//could be about right amount would like terrain dots evenly spaced on map. would like corners to be 90deg
 			//guess cos ~ 1 - (1/2)*(bx)^2. sin ~ x + (1/6)(bx)^3 
-	float uBendFactor = multiplier1*(xOut*xOut - yOut*yOut);
-	zOut += uBendFactor;
-	xOut -= multiplier2*xOut*uBendFactor;
-	yOut += multiplier2*yOut*uBendFactor;
-
-	return vec3(xOut, yOut, zOut);
+	float bend = multiplier1*(xOut*xOut - yOut*yOut);
+	return vec3(xOut,yOut,zOut) + bend*vec3(-multiplier2*xOut, multiplier2*yOut, 1.);
 }
 
 void main(void) {

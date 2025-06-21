@@ -829,7 +829,7 @@ var drawMapScene = (function(){
 		logMapStuff=false;
 
 		function drawMapPointForFourVec(fourVec, color, rad){
-			drawMapPointAtPosition(pos4ToMapPos3(fourVec), color, rad);
+			drawMapPointAtPosition(pos4ToMapPos3(fourVec, guiParams.map.tetrahedronism), color, rad);
 		}
 
 		//TODO instanced, or don't prep all uniforms when drawing many points of same colour etc.
@@ -860,6 +860,7 @@ var drawMapScene = (function(){
 			//things that should only need to set once per frame. optimise if use this shader
 			mat4.set(spunMapCamera, mvMatrix); //this is matrix of the map in camera viewing the map
 			gl.uniform1f(activeProg.uniforms.uBendFactor, guiParams.map.bendFactor);
+			gl.uniform1f(activeProg.uniforms.uTetrahedronism, guiParams.map.tetrahedronism);
 			gl.uniform2f(activeProg.uniforms.uMapCentreAngleCoords, attachedToDuocylinder?playerIWithDuocylinderSpin:playerI , playerJ);
 
 			gl.uniform3fv(activeProg.uniforms.uModelScale, [objScale,objScale,objScale]);
@@ -883,6 +884,7 @@ var drawMapScene = (function(){
 
 			mat4.set(spunMapCamera, mvMatrix); //this is matrix of the map in camera viewing the map
 			gl.uniform1f(activeProg.uniforms.uBendFactor, guiParams.map.bendFactor);
+			gl.uniform1f(activeProg.uniforms.uTetrahedronism, guiParams.map.tetrahedronism);
 			gl.uniform2fv(activeProg.uniforms.uObjCentreAngleCoords, objCentreMapAngleCoords);
 			gl.uniform2fv(activeProg.uniforms.uObjCentreRelativeToCameraAngleCoords, relativeMapAngleCoords);
 
@@ -976,12 +978,15 @@ in order to draw stuff like boxes, guess scene object list/graph is sensible.
 		playerMapAngle = Math.atan2(playerIRateOfChange, playerJRateOfChange);
 	}
 
-	function pos4ToMapPos3(fourVec){
+	function pos4ToMapPos3(fourVec, tetrahedronism){
 		var squaredPos = fourVec.map(xx=>xx*xx);
 		var lenxy = Math.sqrt( squaredPos[0]+squaredPos[1]);
 		var lenzw = Math.sqrt( squaredPos[2]+squaredPos[3]);
-		var xOut = minusPiToPiWrap(Math.atan2(fourVec[0],fourVec[1])-playerI)* lenxy;
-		var yOut = minusPiToPiWrap(Math.atan2(fourVec[2],fourVec[3])-playerJ)* lenzw;
+		var uvAngs = [minusPiToPiWrap(Math.atan2(fourVec[0],fourVec[1])-playerI), minusPiToPiWrap(Math.atan2(fourVec[2],fourVec[3])-playerJ)];
+
+		var tetrahedronMultiplier = [lenxy*tetrahedronism + 0.707*(1-tetrahedronism), lenzw*tetrahedronism + 0.707*(1-tetrahedronism)];
+		var xOut = uvAngs[0]* tetrahedronMultiplier[0];
+		var yOut = uvAngs[1]* tetrahedronMultiplier[1];
 		var zOut = Math.atan2( lenzw, lenxy);
 
 		//retain some pringle curvature to reduce map distortion, make more readable.
@@ -991,7 +996,8 @@ in order to draw stuff like boxes, guess scene object list/graph is sensible.
 		var bendFactor = guiParams.map.bendFactor;
 		var multiplier1 = bendFactor*bendFactor/2;
 		var multiplier2 = bendFactor*multiplier1/3;	//could be about right amount would like terrain dots evenly spaced on map. would like corners to be 90deg
-			//guess cos ~ 1 - (1/2)*(bx)^2. sin ~ x + (1/6)(bx)^3 
+			//guess cos ~ 1 - (1/2)*(bx)^2. sin ~ x + (1/6)(bx)^3
+
 		var bend = multiplier1*(xOut*xOut - yOut*yOut);
 		zOut += bend;
 		xOut -= multiplier2*xOut*bend;
@@ -4843,6 +4849,7 @@ var guiParams={
 		show:false,
 		viewDistance:4,
 		bendFactor:0.35,
+		tetrahedronism:1, 
 		shader:"two"
 	},
 	reflector:{
@@ -5136,6 +5143,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	mapFolder.add(guiParams.map, "show");
 	mapFolder.add(guiParams.map, "viewDistance", 2,8,0.1);
 	mapFolder.add(guiParams.map, "bendFactor", 0,1,0.05);
+	mapFolder.add(guiParams.map, "tetrahedronism", 0,1,0.05);
 	mapFolder.add(guiParams.map, "shader", ["one","two"]);
 
 	var debugFolder = gui.addFolder('debug');
