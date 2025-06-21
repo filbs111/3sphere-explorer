@@ -795,22 +795,25 @@ var drawMapScene = (function(){
 		//drawMapPointForFourVec(buildingMatrix.slice(12), colorArrs.red, 0.04);
 		
 		//activeProg = shaderPrograms.mapShaderOne;
-		activeProg = shaderPrograms.mapShaderTwo;
+		activeProg = guiParams.map.shader == "two" ? shaderPrograms.mapShaderTwo : shaderPrograms.mapShaderOne;
 		gl.useProgram(activeProg);
 		enableDisableAttributes(activeProg);
+
+		var mapDrawShader = guiParams.map.shader == "two" ? drawMapObject2 : drawMapObject1;
 
 		// ringCells.forEach(ring => 
 		// 	ring.mats.forEach(mat => 
 		// 		drawMapObject2(mat, ring.color, cubeBuffers, 0.1, false)
 		// ));
+
 		//TODO maybe shop be sship matrix (not camera, and map should be centred on player not camera.)
-		drawMapObject2(playerCamera, colorArrs.white, sphereBuffers, 0.1, false);
-		drawMapObject2(buildingMatrix, colorArrs.red, buildingBuffers, 0.01*guiParams.drawShapes.buildingScale, true);
-		drawMapObject2(octoFractalMatrix, colorArrs.gray, octoFractalBuffers, 0.01*guiParams.drawShapes.octoFractalScale, true);
+		mapDrawShader(playerCamera, colorArrs.white, sphereBuffers, 0.1, false);
+		mapDrawShader(buildingMatrix, colorArrs.red, buildingBuffers, 0.01*guiParams.drawShapes.buildingScale, true);
+		mapDrawShader(octoFractalMatrix, colorArrs.gray, octoFractalBuffers, 0.01*guiParams.drawShapes.octoFractalScale, true);
 
 		bvhObjsForWorld[worldToDrawMapFor].forEach(bvhObj => {
 			//drawMapPointForFourVec(bvhObj.mat.slice(12), colorArrs.gray, 0.03);
-			drawMapObject2(bvhObj.mat, colorArrs.gray, cubeBuffers, 0.03, false);
+			mapDrawShader(bvhObj.mat, colorArrs.gray, cubeBuffers, 0.03, false);
 				//NOTE can't just use bvhObj.scale because depends on mesh data.
 				//if bounding sphere rad were a property (or bvh mesh which contains bounding sphere) could use that.
 		});
@@ -820,7 +823,7 @@ var drawMapScene = (function(){
 			//var pPos = portal.matrix.slice(12);
 			var pRad = portal.shared.radius;	//NOTE not necessarily to scale when rendered in map
 			//drawMapPointForFourVec(pPos, pColor, pRad);
-			drawMapObject2(portal.matrix, pColor, sphereBuffers, pRad, false);
+			mapDrawShader(portal.matrix, pColor, sphereBuffers, pRad, false);
 		});
 
 		logMapStuff=false;
@@ -4839,7 +4842,8 @@ var guiParams={
 	map:{
 		show:false,
 		viewDistance:4,
-		bendFactor:0.35
+		bendFactor:0.35,
+		shader:"two"
 	},
 	reflector:{
 		draw:'high',
@@ -5132,6 +5136,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	mapFolder.add(guiParams.map, "show");
 	mapFolder.add(guiParams.map, "viewDistance", 2,8,0.1);
 	mapFolder.add(guiParams.map, "bendFactor", 0,1,0.05);
+	mapFolder.add(guiParams.map, "shader", ["one","two"]);
 
 	var debugFolder = gui.addFolder('debug');
 	debugFolder.add(guiParams.debug, "closestPoint");
