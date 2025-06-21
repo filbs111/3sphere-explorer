@@ -797,8 +797,9 @@ var drawMapScene = (function(){
 		enableDisableAttributes(activeProg);
 
 		//TODO maybe shop be sship matrix (not camera, and map should be centred on player not camera.)
-		drawMapObject1(playerCamera, colorArrs.white, cubeBuffers, 0.04);
-		drawMapObject1(buildingMatrix, colorArrs.red, cubeBuffers, 0.01*guiParams.drawShapes.buildingScale);
+		drawMapObject1(playerCamera, colorArrs.white, sphereBuffers, 0.1);
+		drawMapObject1(buildingMatrix, colorArrs.red, buildingBuffers, 0.01*guiParams.drawShapes.buildingScale);
+		drawMapObject1(octoFractalMatrix, colorArrs.gray, octoFractalBuffers, 0.01*guiParams.drawShapes.octoFractalScale);
 
 		bvhObjsForWorld[worldToDrawMapFor].forEach(bvhObj => {
 			//drawMapPointForFourVec(bvhObj.mat.slice(12), colorArrs.gray, 0.03);
@@ -4268,7 +4269,9 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 		gl.vertexAttribPointer(shaderProg.attributes.aVertexPosition, 3, gl.FLOAT, false, 4*iSize, 0);
 		gl.vertexAttribPointer(shaderProg.attributes.aVertexColor, numColors, gl.FLOAT, false, 4*iSize, 4*3);
 	}else{
-		gl.vertexAttribPointer(shaderProg.attributes.aVertexPosition, bufferObj.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+		//assume want to skip over colour if present.
+		var iSize = bufferObj.vertexPositionBuffer.itemSize;
+		gl.vertexAttribPointer(shaderProg.attributes.aVertexPosition, 3, gl.FLOAT, false, 4*iSize, 0);
 	}
 	
 	if (bufferObj.vertexNormalBuffer && shaderProg.attributes.aVertexNormal){
