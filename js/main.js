@@ -705,7 +705,7 @@ function drawScene(frameTime){
 
 	//TODO button press to show/hide map
 	//TODO pause gameplay when show map?
-	if (guiParams.display.showMap){
+	if (guiParams.map.show){
 		drawMapScene(frameTime);
 	}else{
 		drawRegularScene(frameTime);
@@ -716,11 +716,7 @@ var logMapStuff=false;
 var drawMapScene = (function(){
 	
 	//create a camera view for viewing map from.
-	var mapCameraView = mat4.identity();
-		//since this map view in regular 3d space, can use standard matrix methods instead of custom
-	mat4.translate(mapCameraView, [0,0,-4]);
-
-	mat4.rotateX(mapCameraView, -Math.PI/3);	//elevate camera 60 deg
+	var mapCameraView = mat4.create();
 
 	var spunMapCamera = mat4.create();
 
@@ -739,6 +735,11 @@ var drawMapScene = (function(){
 		//TODO square stack option, perhaps scaling with current height (TODO show what's above/below neatly
 		//TODO render terrain
 		//TODO render actual meshes on map (not just point)
+
+		mat4.identity(mapCameraView);
+			//since this map view in regular 3d space, can use standard matrix methods instead of custom
+		mat4.translate(mapCameraView, [0,0,-guiParams.map.viewDistance]);
+		mat4.rotateX(mapCameraView, -Math.PI/4);	//elevate camera 45 deg
 
 		gl.bindFramebuffer(gl.FRAMEBUFFER, null);	//draw to screen (null)
 		gl.viewport(0, 0, gl.viewportWidth,gl.viewportHeight);
@@ -4798,8 +4799,11 @@ var guiParams={
 		specularPower:20.0,
 		quadView:true,
 		quadViewCulling:true,
-		regularFisheye2:false,
-		showMap:false
+		regularFisheye2:false
+	},
+	map:{
+		show:false,
+		viewDistance:4
 	},
 	reflector:{
 		draw:'high',
@@ -5086,8 +5090,11 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	displayFolder.add(guiParams.display, "quadView");
 	displayFolder.add(guiParams.display, "quadViewCulling");
 	displayFolder.add(guiParams.display, "regularFisheye2");
-	displayFolder.add(guiParams.display, "showMap");
 	displayFolder.add(guiParams, "normalMove", 0,0.02,0.001);
+
+	var mapFolder = gui.addFolder('map');
+	mapFolder.add(guiParams.map, "show");
+	mapFolder.add(guiParams.map, "viewDistance", 2,8,0.1);
 	
 	var debugFolder = gui.addFolder('debug');
 	debugFolder.add(guiParams.debug, "closestPoint");
