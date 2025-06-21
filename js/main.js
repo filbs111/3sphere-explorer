@@ -2430,7 +2430,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		var ring = ringCells[ringIdx];
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", ring.color);
 		drawArrayOfModels(
-			ringCellMatData.mats,
+			ringCells[ringIdx].mats,
 			(guiParams.display.culling ? boxRad: false),
 			cubeBuffers,
 			activeShaderProgram
