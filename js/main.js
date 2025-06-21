@@ -848,7 +848,7 @@ var drawMapScene = (function(){
 		function drawMapObject1(objMatrix, color, objBuffers, objScale){
 			//things that should only need to set once per frame. optimise if use this shader
 			mat4.set(spunMapCamera, mvMatrix); //this is matrix of the map in camera viewing the map
-			gl.uniform1f(activeProg.uniforms.uBendFactor, 0.35);
+			gl.uniform1f(activeProg.uniforms.uBendFactor, guiParams.map.bendFactor);
 			gl.uniform2f(activeProg.uniforms.uMapCentreAngleCoords, playerI, playerJ);
 
 			gl.uniform3fv(activeProg.uniforms.uModelScale, [objScale,objScale,objScale]);
@@ -956,7 +956,7 @@ in order to draw stuff like boxes, guess scene object list/graph is sensible.
 		// perhaps circular curvature is better, but to first order, parabolic/cubic should be equivalent
 		// perhaps can do better by different curvatures for different z. 
 
-		var bendFactor = 0.35;
+		var bendFactor = guiParams.map.bendFactor;
 		var multiplier1 = bendFactor*bendFactor/2;
 		var multiplier2 = bendFactor*multiplier1/3;	//could be about right amount would like terrain dots evenly spaced on map. would like corners to be 90deg
 			//guess cos ~ 1 - (1/2)*(bx)^2. sin ~ x + (1/6)(bx)^3 
@@ -4803,7 +4803,8 @@ var guiParams={
 	},
 	map:{
 		show:false,
-		viewDistance:4
+		viewDistance:4,
+		bendFactor:0.35
 	},
 	reflector:{
 		draw:'high',
@@ -5095,7 +5096,8 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	var mapFolder = gui.addFolder('map');
 	mapFolder.add(guiParams.map, "show");
 	mapFolder.add(guiParams.map, "viewDistance", 2,8,0.1);
-	
+	mapFolder.add(guiParams.map, "bendFactor", 0,1,0.05);
+
 	var debugFolder = gui.addFolder('debug');
 	debugFolder.add(guiParams.debug, "closestPoint");
 	debugFolder.add(guiParams.debug, "buoys");
