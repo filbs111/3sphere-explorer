@@ -761,13 +761,12 @@ var drawMapScene = (function(){
 
 		if (logMapStuff){console.log({"mssg":"pMatrix for map", pMatrix})}
 
-		var activeProg = shaderPrograms.threeSpaceColored;
-		gl.useProgram(activeProg);
-
-		enableDisableAttributes(activeProg);
 		gl.cullFace(gl.BACK);
 		gl.depthFunc(gl.LESS);
-	
+
+		var activeProg = shaderPrograms.threeSpaceColored;
+		gl.useProgram(activeProg);
+		enableDisableAttributes(activeProg);
 
 		//draw a set of boxes to indicate the bounds of the fat tetrahedron
 		//draw some things mapped onto this space. initially just display coloured spheres for points. then do distortion in shader.
@@ -788,20 +787,31 @@ var drawMapScene = (function(){
 			}
 		}
 
-		drawMapPointForFourVec(playerCamera.slice(12), colorArrs.white, 0.02);
-		drawMapPointForFourVec(buildingMatrix.slice(12), colorArrs.red, 0.04);
+		
+		//drawMapPointForFourVec(playerCamera.slice(12), colorArrs.white, 0.02);
+		//drawMapPointForFourVec(buildingMatrix.slice(12), colorArrs.red, 0.04);
+		
+		activeProg = shaderPrograms.mapShaderOne;
+		gl.useProgram(activeProg);
+		enableDisableAttributes(activeProg);
+
+		//TODO maybe shop be sship matrix (not camera, and map should be centred on player not camera.)
+		drawMapObject1(playerCamera, colorArrs.white, cubeBuffers, 0.04);
+		drawMapObject1(buildingMatrix, colorArrs.red, cubeBuffers, 0.01*guiParams.drawShapes.buildingScale);
 
 		bvhObjsForWorld[worldToDrawMapFor].forEach(bvhObj => {
-			drawMapPointForFourVec(bvhObj.mat.slice(12), colorArrs.gray, 0.03);
+			//drawMapPointForFourVec(bvhObj.mat.slice(12), colorArrs.gray, 0.03);
+			drawMapObject1(bvhObj.mat, colorArrs.gray, cubeBuffers, 0.03);
 				//NOTE can't just use bvhObj.scale because depends on mesh data.
 				//if bounding sphere rad were a property (or bvh mesh which contains bounding sphere) could use that.
 		});
 
 		portalsForWorld[worldToDrawMapFor].forEach(portal => {
 			var pColor = worldColors[portal.otherps.world];
-			var pPos = portal.matrix.slice(12);
+			//var pPos = portal.matrix.slice(12);
 			var pRad = portal.shared.radius;	//NOTE not necessarily to scale when rendered in map
-			drawMapPointForFourVec(pPos, pColor, pRad);
+			//drawMapPointForFourVec(pPos, pColor, pRad);
+			drawMapObject1(portal.matrix, pColor, sphereBuffers, pRad);
 		});
 
 		logMapStuff=false;
@@ -829,6 +839,42 @@ var drawMapScene = (function(){
 			uniform4fvSetter.setIfDifferent(activeProg, "uColor", color);
 			drawObjectFromBuffers(cubeBuffers, activeProg)
 		}
+
+		//drawing object on map "properly"
+		//1) simple but likely broken version - put player and object mats as input,
+		//transform each point independently. expect to break on edge of map when verts on opposite sides.
+
+		function drawMapObject1(objMatrix, color, objBuffers, objScale){
+			//things that should only need to set once per frame. optimise if use this shader
+			mat4.set(spunMapCamera, mvMatrix); //this is matrix of the map in camera viewing the map
+			gl.uniform1f(activeProg.uniforms.uBendFactor, 0.35);
+			gl.uniform2f(activeProg.uniforms.uMapCentreAngleCoords, playerI, playerJ);
+
+			gl.uniform3fv(activeProg.uniforms.uModelScale, [objScale,objScale,objScale]);
+			uniform4fvSetter.setIfDifferent(activeProg, "uColor", color);
+			mat4.set(objMatrix, mMatrix);	//this is matrix describing object pose in world. drawObjectFromBuffers will send it to v shader
+			drawObjectFromBuffers(objBuffers, activeProg);
+		}
+
+		//2) draw points relative to fixed object centre point on map. still a problem that whole object will jump 
+		// across map when centre of object does. for small objects this is OK.
+
+		// function drawMapObject2(objMatrix, color, objBuffers, objScale){
+		// 	var objCentreMapAngleCoords = mapAngleCoordsForFourVec(objMatrix.slice(12));
+		// }
+
+		//3) draw 4 copies of object if necessary (close to map edge).
+		
+		//4) discard pixels outside the map shape.
+		
+		//5) draw 4 objects routinely, find position of object relative to player, 
+		// modulo 2*PI (from 0 to 2*PI). draw shifted by (0 or -2*PI) each axis.
+		// this way can draw a lot of same type of item using 4 instanced draw calls.
+
+		//do for:
+		//standard objects, various terrains.
+		// possibly want to have lower detail versions of objects, though expect not a big problem (game draw cubemaps, quad view,
+		// so drawing lots of verts anyway)
 
 	}
 
