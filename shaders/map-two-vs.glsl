@@ -2,6 +2,10 @@
 #define M_PI 3.141593
 
 in vec3 aVertexPosition;
+#ifdef VERTCOLORS
+    in vec3 aVertexColor;
+    out vec3 vColor;
+#endif
 uniform mat4 uMVMatrix;
 uniform mat4 uMMatrix;
 uniform mat4 uPMatrix;
@@ -55,5 +59,9 @@ void main(void) {
 
     //transform map in frame of output camera
     vec4 transformedCoord = uMVMatrix * vec4(vertexPositionInFatTetrahedron, 1.0);
-    gl_Position = uPMatrix * transformedCoord;    
+    gl_Position = uPMatrix * transformedCoord;
+
+    #ifdef VERTCOLORS
+        vColor=aVertexColor;
+    #endif
 }

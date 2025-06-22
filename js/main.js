@@ -795,36 +795,56 @@ var drawMapScene = (function(){
 		//drawMapPointForFourVec(buildingMatrix.slice(12), colorArrs.red, 0.04);
 		
 		//activeProg = shaderPrograms.mapShaderOne;
-		activeProg = guiParams.map.shader == "two" ? shaderPrograms.mapShaderTwo : shaderPrograms.mapShaderOne;
+
+		var mapShaderChoice = guiParams.map.shader == "two" ? {
+				basicShader: shaderPrograms.mapShaderTwo,
+				vertColorsShader: shaderPrograms.mapShaderTwoVertColors,
+				shaderDrawFunc: drawMapObject2
+			}:{
+				basicShader: shaderPrograms.mapShaderOne,
+				vertColorsShader: shaderPrograms.mapShaderOne,	//TODO implement if bothered, or get rid
+				shaderDrawFunc: drawMapObject1
+			}
+
+		var mapDrawShaderFunc;
+
+		activeProg = mapShaderChoice.basicShader;
 		gl.useProgram(activeProg);
 		enableDisableAttributes(activeProg);
-
-		var mapDrawShader = guiParams.map.shader == "two" ? drawMapObject2 : drawMapObject1;
+		mapDrawShaderFunc = mapShaderChoice.shaderDrawFunc;
 
 		// ringCells.forEach(ring => 
 		// 	ring.mats.forEach(mat => 
 		// 		drawMapObject2(mat, ring.color, cubeBuffers, 0.1, false)
 		// ));
 
-		//TODO maybe shop be sship matrix (not camera, and map should be centred on player not camera.)
-		mapDrawShader(playerCamera, colorArrs.white, sphereBuffers, 0.1, false);
-		mapDrawShader(buildingMatrix, colorArrs.red, buildingBuffers, 0.01*guiParams.drawShapes.buildingScale, true);
-		mapDrawShader(octoFractalMatrix, colorArrs.gray, octoFractalBuffers, 0.01*guiParams.drawShapes.octoFractalScale, true);
-
-		bvhObjsForWorld[worldToDrawMapFor].forEach(bvhObj => {
-			//drawMapPointForFourVec(bvhObj.mat.slice(12), colorArrs.gray, 0.03);
-			mapDrawShader(bvhObj.mat, colorArrs.gray, cubeBuffers, 0.03, false);
-				//NOTE can't just use bvhObj.scale because depends on mesh data.
-				//if bounding sphere rad were a property (or bvh mesh which contains bounding sphere) could use that.
-		});
-
 		portalsForWorld[worldToDrawMapFor].forEach(portal => {
 			var pColor = worldColors[portal.otherps.world];
 			//var pPos = portal.matrix.slice(12);
 			var pRad = portal.shared.radius;	//NOTE not necessarily to scale when rendered in map
 			//drawMapPointForFourVec(pPos, pColor, pRad);
-			mapDrawShader(portal.matrix, pColor, sphereBuffers, pRad, false);
+			mapDrawShaderFunc(portal.matrix, pColor, sphereBuffers, pRad, false);
 		});
+		//TODO maybe shop be sship matrix (not camera, and map should be centred on player not camera.)
+		mapDrawShaderFunc(playerCamera, colorArrs.white, sphereBuffers, 0.05, false);
+
+
+		activeProg = mapShaderChoice.vertColorsShader;
+		gl.useProgram(activeProg);
+		enableDisableAttributes(activeProg);
+		mapDrawShaderFunc = mapShaderChoice.shaderDrawFunc;
+
+		mapDrawShaderFunc(buildingMatrix, colorArrs.red, buildingBuffers, 0.01*guiParams.drawShapes.buildingScale, true);
+		mapDrawShaderFunc(octoFractalMatrix, colorArrs.gray, octoFractalBuffers, 0.01*guiParams.drawShapes.octoFractalScale, true);
+
+		bvhObjsForWorld[worldToDrawMapFor].forEach(bvhObj => {
+			//drawMapPointForFourVec(bvhObj.mat.slice(12), colorArrs.gray, 0.03);
+			mapDrawShaderFunc(bvhObj.mat, colorArrs.gray, cubeBuffers, 0.03, false);
+				//NOTE can't just use bvhObj.scale because depends on mesh data.
+				//if bounding sphere rad were a property (or bvh mesh which contains bounding sphere) could use that.
+		});
+
+		
 
 		logMapStuff=false;
 
