@@ -414,6 +414,7 @@ function initBuffers(){
 		someObjectMatrices.slice(0,3).forEach(someMat => {
 			var scale = 0.0016;
 			bvhObjsForWorld[1].push({
+				mesh: bufferObj,
 				mat: someMat.mat, 
 				transposedMat: someMat.transposedMat, 
 				//bvh:cubeFrameBvh,
@@ -431,6 +432,7 @@ function initBuffers(){
 			someObjectMatrices.slice(4).forEach(someMat => {
 				var scale = 0.025;
 				bvhObjsForWorld[1].push({
+					mesh: bufferObj,
 					mat: someMat.mat, 
 					transposedMat: someMat.transposedMat, 
 					bvh: mushroomBvh,
@@ -455,6 +457,7 @@ function initBuffers(){
 	bvhObjsForWorld[0]=someObjectMatrices.map(someMat => {
 		var scale = 0.4;
 		return {
+			mesh: teapotBuffers,
 			mat: someMat.mat, 
 			transposedMat: someMat.transposedMat, 
 			bvh: teapotBvh,
@@ -466,6 +469,7 @@ function initBuffers(){
 	bvhObjsForWorld[2]=someObjectMatrices.map(someMat => {
 		var scale = 0.2;
 		return {
+			mesh: dodecaFrameBuffers2,
 			mat: someMat.mat, 
 			transposedMat: someMat.transposedMat, 
 			bvh:dodecaFrameBvh2,
@@ -839,7 +843,7 @@ var drawMapScene = (function(){
 
 		bvhObjsForWorld[worldToDrawMapFor].forEach(bvhObj => {
 			//drawMapPointForFourVec(bvhObj.mat.slice(12), colorArrs.gray, 0.03);
-			mapDrawShaderFunc(bvhObj.mat, colorArrs.gray, cubeBuffers, 0.03, false);
+			mapDrawShaderFunc(bvhObj.mat, colorArrs.gray, bvhObj.mesh, bvhObj.scale, false);
 				//NOTE can't just use bvhObj.scale because depends on mesh data.
 				//if bounding sphere rad were a property (or bvh mesh which contains bounding sphere) could use that.
 		});
