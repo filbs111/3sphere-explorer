@@ -707,13 +707,16 @@ function drawScene(frameTime){
 	
 	smoothGuiParams.update();
 
-	//TODO button press to show/hide map
-	//TODO pause gameplay when show map?
-	if (guiParams.map.show){
-		drawMapScene(frameTime);
+	if (guiParams.map.show == "only map"){
+		drawMapScene(frameTime, gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
+	}else if (guiParams.map.show == "overlaid"){
+		drawRegularScene(frameTime);
+		drawMapScene(frameTime, gl.DEPTH_BUFFER_BIT);
 	}else{
 		drawRegularScene(frameTime);
 	}
+	//TODO button press to show/hide map
+	//TODO pause gameplay when show map?
 }
 
 function drawRegularScene(frameTime){

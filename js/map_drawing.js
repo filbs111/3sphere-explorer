@@ -11,7 +11,7 @@ var drawMapScene = (function(){
 
 	var playerI, playerJ, playerMapAngle, playerIWithDuocylinderSpin;
 
-	return function(frameTime){
+	return function(frameTime, glClearBits){
 		//draw a map
 		//initially just the current world 3-sphere unwrapped into a fat tetrahedron, so duocylinder terrains appear flat.
 		//NOTE descent-alikes have a map view like paused god-mode with wireframe shader etc, otherwise like rest of game.
@@ -40,7 +40,7 @@ var drawMapScene = (function(){
 		);
 
 		gl.clearColor.apply(gl,worldColorsPlain[worldToDrawMapFor]);
-		gl.clear(gl.DEPTH_BUFFER_BIT);
+		gl.clear(glClearBits);
 
 		mapCameraPMatrix = mat4.perspective(100, gl.viewportWidth/gl.viewportHeight, 0.01, 10);	//TODO only set this on viewport change.
 		mat4.set(mapCameraPMatrix, pMatrix);
