@@ -192,7 +192,8 @@ function initShaders(shaderProgs){
 		threeSpaceColored:["threespace-vs", "flatcolor-fs"],
 		mapShaderOne:["map-one-vs","flatcolor-fs"],
 		mapShaderTwo:["map-two-vs","flatcolor-fs"],
-		mapShaderTwoVertColors:["map-two-vs","vertcolor-fs",["VERTCOLORS"]]
+		mapShaderTwoVertColors:["map-two-vs","vertcolor-fs",["VERTCOLORS"]],
+		mapShaderTwoFourVecVerts:["map-two-vs","flatcolor-fs",["FOUR_VEC_VERTS"]], //for precalculated 4vec verts for objects
 	};
 	var shaderProgWithVariationsList = {
 		coloredPerPixelDiscard:["perpixel-discard-vs", "perpixel-discard-fs", [],[],true],

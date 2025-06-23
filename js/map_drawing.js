@@ -32,11 +32,12 @@ var drawMapScene = (function(){
 		gl.viewport(0, 0, gl.viewportWidth,gl.viewportHeight);
 
 		var worldToDrawMapFor = playerContainer.world;
+        var settingsForWorld = guiSettingsForWorld[worldToDrawMapFor];
 
 		updatePlayerIJ(
 			playerContainer.matrix.slice(12),
 			playerContainer.matrix.slice(8,12),
-			guiSettingsForWorld[worldToDrawMapFor].spin
+			settingsForWorld.spin
 		);
 
 		gl.clearColor.apply(gl,worldColorsPlain[worldToDrawMapFor]);
@@ -131,7 +132,39 @@ var drawMapScene = (function(){
 				//if bounding sphere rad were a property (or bvh mesh which contains bounding sphere) could use that.
 		});
 
-		
+        
+        //draw terrain.
+        /*
+        activeProg = shaderPrograms.mapShaderTwoFourVecVerts;
+		gl.useProgram(activeProg);
+		enableDisableAttributes(activeProg);
+		//drawMapObject2(mat4.identity(), colorArrs.magenta, duocylinderObjects.grid, 1.0, true);   //grid is repeated.
+        drawMapObject2(mat4.identity(), colorArrs.magenta, duocylinderObjects.voxTerrain3, 1.0, true);
+            //doesn't work properly! what is the format of this terrain data? what frame is it in?:
+        */
+        //^^ doesn't work - terrains aren't stored with 4vec verts. stored as 3d, mapped onto duocylinder by shader
+        // which actually simpifies map view shader 
+        var terrainObj = duocylinderObjects[settingsForWorld.duocylinderModel];
+        //var terrainObj = stonehengeBoxBuffers;
+            //NOTE generally using this 4vec data for drawing map is not viable
+            // because of problems knowing which way to unwrap.
+            // map drawing might for extended objects like this, be done with data in map space.
+            // the same data might also be used in the vert shader for drawing to screen too. but other way around is 
+            // not suitable!
+            // also having trouble getting to work for terrain data anyway( though theoretically, for contained patches,
+            // should work)
+
+            //suspect that some terrains are in 4vec style, some aren't vox might be different...
+
+        //TODO pay attention to range of values of terrain block - might be able to just draw grid of divs+1
+        // rather than divs*2
+        activeProg = shaderPrograms.mapShaderTwoFourVecVerts;
+		gl.useProgram(activeProg);
+		enableDisableAttributes(activeProg);
+
+        drawTerrainOnMap(terrainObj);
+
+
 
 		logMapStuff=false;
 
@@ -195,7 +228,9 @@ var drawMapScene = (function(){
 			gl.uniform2fv(activeProg.uniforms.uObjCentreAngleCoords, objCentreMapAngleCoords);
 			gl.uniform2fv(activeProg.uniforms.uObjCentreRelativeToCameraAngleCoords, relativeMapAngleCoords);
 
-			gl.uniform3fv(activeProg.uniforms.uModelScale, [objScale,objScale,objScale]);
+            if (activeProg.uniforms.uModelScale){
+			    gl.uniform3fv(activeProg.uniforms.uModelScale, [objScale,objScale,objScale]);
+            }
 			uniform4fvSetter.setIfDifferent(activeProg, "uColor", color);
 			mat4.set(objMatrix, mMatrix);	//this is matrix describing object pose in world. drawObjectFromBuffers will send it to v shader
 			drawObjectFromBuffers(objBuffers, activeProg);
@@ -213,6 +248,43 @@ var drawMapScene = (function(){
 		//standard objects, various terrains.
 		// possibly want to have lower detail versions of objects, though expect not a big problem (game draw cubemaps, quad view,
 		// so drawing lots of verts anyway)
+
+
+        function drawTerrainOnMap(terrainObj){
+            if (terrainObj.isStrips){
+            //    return; //TODO handle strip objs differently? might just be slightly different gl call.
+            }
+			uniform4fvSetter.setIfDifferent(activeProg, "uColor", colorArrs.cyan);
+
+
+            var attachedToDuocylinder = true;
+
+            //for now just draw 1 copy
+            var terrainCoords = [0,0];  //TODO draw multiple tiles
+			var cameraMapAngleCoords = [attachedToDuocylinder?playerIWithDuocylinderSpin:playerI , playerJ];
+            var relativeMapAngleCoords = [
+				-cameraMapAngleCoords[0],
+				-cameraMapAngleCoords[1]
+			].map(xx=> minusPiToPiWrap(xx));
+
+            mat4.set(spunMapCamera, mvMatrix); //this is matrix of the map in camera viewing the map
+            mat4.identity(mMatrix); //??
+            
+            //appears that tennisBallLoader creates duocylinders that have axes x=y=0, z=w=0
+            //but this is as expect!!
+
+            //xyzrotate4mat(mMatrix, [0,0,Math.PI]);  //???
+
+            //rotate4mat(mMatrix, 2, 3, Math.PI/2);   //
+
+			gl.uniform1f(activeProg.uniforms.uBendFactor, guiParams.map.bendFactor);
+			gl.uniform1f(activeProg.uniforms.uTetrahedronism, guiParams.map.tetrahedronism);
+
+            gl.uniform2fv(activeProg.uniforms.uObjCentreAngleCoords, terrainCoords);
+			gl.uniform2fv(activeProg.uniforms.uObjCentreRelativeToCameraAngleCoords, relativeMapAngleCoords);
+
+   			drawObjectFromBuffers(terrainObj, activeProg);
+        }
 
 	}
 

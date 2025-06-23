@@ -3984,8 +3984,10 @@ function drawTennisBall(duocylinderObj, shader, depthMap){
 	}
 	
 	//for (var side=0;side<2;side++){	//draw 2 sides
-		for (var xg=0;xg<duocylinderObj.divs;xg+=1){		//
-			for (var yg=0;yg<duocylinderObj.divs;yg+=1){	//TODO precalc cells array better than grids here.
+		//for (var xg=0;xg<duocylinderObj.divs;xg+=1){		//
+		//	for (var yg=0;yg<duocylinderObj.divs;yg+=1){	//TODO precalc cells array better than grids here.
+		for (var xg=0;xg<1;xg+=1){		//
+			for (var yg=0;yg<1;yg+=1){
 				setMatrixUniforms(shader);
 				gl.drawElements(duocylinderObj.isStrips? gl.TRIANGLE_STRIP : gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 				//gl.drawElements(duocylinderObj.isStrips? gl.LINES : gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
@@ -4020,7 +4022,7 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 	}else{
 		//assume want to skip over colour if present.
 		var iSize = bufferObj.vertexPositionBuffer.itemSize;
-		gl.vertexAttribPointer(shaderProg.attributes.aVertexPosition, 3, gl.FLOAT, false, 4*iSize, 0);
+		gl.vertexAttribPointer(shaderProg.attributes.aVertexPosition, iSize, gl.FLOAT, false, 4*iSize, 0);
 	}
 	
 	if (bufferObj.vertexNormalBuffer && shaderProg.attributes.aVertexNormal){
@@ -4101,6 +4103,10 @@ function drawObjectFromPreppedBuffers(bufferObj, shaderProg, skipM){
 		gl.uniformMatrix4fv(shaderProg.uniforms.uMMatrixB, false, mMatrixB);
 	}
 	
+	if (bufferObj.isStrips){
+		gl.drawElements(gl.TRIANGLE_STRIP, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+		return;
+	}
 	gl.drawElements(gl.TRIANGLES, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 	//gl.drawElements(gl.LINES, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 }
