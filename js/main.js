@@ -394,6 +394,7 @@ function initBuffers(){
 		someObjectMatrices.forEach(someMat => {
 			var scale = 0.1;
 			bvhObjsForWorld[3].push({
+				mesh: bufferObj,
 				mat: someMat.mat, 
 				transposedMat: someMat.transposedMat, 
 				bvh: gunBvh,
