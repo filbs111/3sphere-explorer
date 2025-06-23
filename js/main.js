@@ -4848,7 +4848,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	displayFolder.add(guiParams, "normalMove", 0,0.02,0.001);
 
 	var mapFolder = gui.addFolder('map');
-	mapFolder.add(guiParams.map, "show");
+	mapFolder.add(guiParams.map, "show", ["off", "overlaid", "only map"]);
 	mapFolder.add(guiParams.map, "viewDistance", 2,8,0.1);
 	mapFolder.add(guiParams.map, "bendFactor", 0,1,0.05);
 	mapFolder.add(guiParams.map, "tetrahedronism", 0,1,0.05);
