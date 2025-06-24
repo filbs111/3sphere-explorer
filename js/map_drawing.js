@@ -298,9 +298,6 @@ var drawMapScene = (function(){
 		    gl.uniformMatrix4fv(activeProg.uniforms.uMVMatrix, false, mvMatrix);
 		
 
-            // copy code from drawTennisBall() ?
-            // use tricoord input.
-			uniform4fvSetter.setIfDifferent(activeProg, "uColor", colorArrs.orange);
             var attachedToDuocylinder = true;
 
             var terrainCoords = [0,0];  //TODO draw multiple tiles
@@ -315,16 +312,22 @@ var drawMapScene = (function(){
             gl.uniform1f(activeProg.uniforms.uBendFactor, guiParams.map.bendFactor);
 			gl.uniform1f(activeProg.uniforms.uTetrahedronism, guiParams.map.tetrahedronism);
 
-            gl.uniform2fv(activeProg.uniforms.uObjCentreRelativeToCameraAngleCoords, relativeMapAngleCoords);
-
-
             if (logMapStuff){
                 console.log({
                     terrainCoords, cameraMapAngleCoords, relativeMapAngleCoords
                 });
             }
 
-            drawObjFromTricoordBuffers(terrainObj, activeProg);
+            var step = terrainObj.step;
+            var chequercolors = [colorArrs.orange, colorArrs.magenta];
+            for (var ii=0;ii<=terrainObj.divs;ii++){
+                for (var jj=0;jj<=terrainObj.divs;jj++){
+            		gl.uniform4fv(activeProg.uniforms.uColor, chequercolors[(ii+jj)%2]);
+                    gl.uniform2fv(activeProg.uniforms.uObjCentreRelativeToCameraAngleCoords, 
+                        [relativeMapAngleCoords[0]+ii*step , relativeMapAngleCoords[1]+jj*step]);
+                    drawObjFromTricoordBuffers(terrainObj, activeProg);
+                }
+            }
         }
 
         //something similar to drawObjectFromBuffers. TODO generalise/ parameterise?
