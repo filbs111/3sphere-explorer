@@ -34,6 +34,7 @@ loadGridData(proceduralTerrainData);
 function loadGridData(toLoad){
 	var verts = toLoad.vertices;
 	var newverts = [];
+	var tricoords = [];
 	var gridVertdataLen = verts.length;
 	console.log("tball vertexdata length = " +  gridVertdataLen);
 
@@ -47,7 +48,10 @@ function loadGridData(toLoad){
 		var zo = verts[vv+1];
 		var xo = verts[vv+2];
 		
-		var outverts = get4vecfrom3vec(0.25*xo,0.25*yo,0.25*zo);	//scale things down so can use 4x4 grid of these
+		var tricoord = [xo,yo,zo].map(xx=>xx/4);
+		tricoord.forEach(tt => tricoords.push(tt));
+		
+		var outverts = get4vecfrom3vec(tricoord[0],tricoord[1],tricoord[2]);	//scale things down so can use 4x4 grid of these
 		
 		for (var cc=0;cc<4;cc++){
 			newverts.push(outverts[cc]);
@@ -182,7 +186,7 @@ function loadGridData(toLoad){
 			return [ cr * Math.sin(ang1), cr * Math.cos(ang1), sr * Math.sin(ang2), sr * Math.cos(ang2) ];
 		}
 	
-	
+	toLoad.tricoords = tricoords;
 	toLoad.vertices = newverts;
 	toLoad.normals = newnorms;
 	toLoad.binormals = newbinormals;

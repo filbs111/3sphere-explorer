@@ -158,13 +158,18 @@ var drawMapScene = (function(){
 
         //TODO pay attention to range of values of terrain block - might be able to just draw grid of divs+1
         // rather than divs*2
-        activeProg = shaderPrograms.mapShaderTwoFourVecVerts;
-		gl.useProgram(activeProg);
-		enableDisableAttributes(activeProg);
 
-        drawTerrainOnMap(terrainObj);
-
-
+        if (guiParams.map.terrainDrawStyle == "fourvec"){
+            activeProg = shaderPrograms.mapShaderTwoFourVecVerts;
+            gl.useProgram(activeProg);
+            enableDisableAttributes(activeProg);
+            drawTerrainOnMap(terrainObj);
+        }else{
+            activeProg = shaderPrograms.mapTerrainShader;
+            gl.useProgram(activeProg);
+            enableDisableAttributes(activeProg);
+            drawTerrainOnMapUsingTricoords(terrainObj);
+        }
 
 		logMapStuff=false;
 
@@ -251,12 +256,7 @@ var drawMapScene = (function(){
 
 
         function drawTerrainOnMap(terrainObj){
-            if (terrainObj.isStrips){
-            //    return; //TODO handle strip objs differently? might just be slightly different gl call.
-            }
 			uniform4fvSetter.setIfDifferent(activeProg, "uColor", colorArrs.cyan);
-
-
             var attachedToDuocylinder = true;
 
             //for now just draw 1 copy
@@ -283,7 +283,59 @@ var drawMapScene = (function(){
             gl.uniform2fv(activeProg.uniforms.uObjCentreAngleCoords, terrainCoords);
 			gl.uniform2fv(activeProg.uniforms.uObjCentreRelativeToCameraAngleCoords, relativeMapAngleCoords);
 
+            if (logMapStuff){
+                console.log({
+                    terrainCoords, cameraMapAngleCoords, relativeMapAngleCoords
+                });
+            }
+
    			drawObjectFromBuffers(terrainObj, activeProg);
+        }
+
+        function drawTerrainOnMapUsingTricoords(terrainObj){
+            gl.uniformMatrix4fv(activeProg.uniforms.uPMatrix, false, pMatrix);  
+                //TODO set outside this method if reusing to draw multiple terrains    
+		    gl.uniformMatrix4fv(activeProg.uniforms.uMVMatrix, false, mvMatrix);
+		
+
+            // copy code from drawTennisBall() ?
+            // use tricoord input.
+			uniform4fvSetter.setIfDifferent(activeProg, "uColor", colorArrs.orange);
+            var attachedToDuocylinder = true;
+
+            var terrainCoords = [0,0];  //TODO draw multiple tiles
+            var cameraMapAngleCoords = [attachedToDuocylinder?playerIWithDuocylinderSpin:playerI , playerJ];
+            var relativeMapAngleCoords = [
+				-cameraMapAngleCoords[0],
+				-cameraMapAngleCoords[1]
+			].map(xx=> minusPiToPiWrap(xx));
+
+            mat4.set(spunMapCamera, mvMatrix); //this is matrix of the map in camera viewing the map
+
+            gl.uniform1f(activeProg.uniforms.uBendFactor, guiParams.map.bendFactor);
+			gl.uniform1f(activeProg.uniforms.uTetrahedronism, guiParams.map.tetrahedronism);
+
+            gl.uniform2fv(activeProg.uniforms.uObjCentreRelativeToCameraAngleCoords, relativeMapAngleCoords);
+
+
+            if (logMapStuff){
+                console.log({
+                    terrainCoords, cameraMapAngleCoords, relativeMapAngleCoords
+                });
+            }
+
+            drawObjFromTricoordBuffers(terrainObj, activeProg);
+        }
+
+        //something similar to drawObjectFromBuffers. TODO generalise/ parameterise?
+        function drawObjFromTricoordBuffers(duocylinderObj, shader){
+	
+		    gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexTriCoordBuffer);
+		    gl.vertexAttribPointer(shader.attributes.aVertexPosition, duocylinderObj.vertexTriCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
+    
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, duocylinderObj.vertexIndexBuffer);
+
+            gl.drawElements(duocylinderObj.isStrips? gl.TRIANGLE_STRIP : gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
         }
 
 	}

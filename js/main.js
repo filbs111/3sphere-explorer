@@ -4564,7 +4564,8 @@ var guiParams={
 		viewDistance:4,
 		bendFactor:0.35,
 		tetrahedronism:1, 
-		shader:"two"
+		shader:"two",
+		terrainDrawStyle:"tricoord"
 	},
 	reflector:{
 		draw:'high',
@@ -4859,6 +4860,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	mapFolder.add(guiParams.map, "bendFactor", 0,1,0.05);
 	mapFolder.add(guiParams.map, "tetrahedronism", 0,1,0.05);
 	mapFolder.add(guiParams.map, "shader", ["one","two"]);
+	mapFolder.add(guiParams.map, "terrainDrawStyle", ["tricoord","fourvec"]);
 
 	var debugFolder = gui.addFolder('debug');
 	debugFolder.add(guiParams.debug, "closestPoint");
