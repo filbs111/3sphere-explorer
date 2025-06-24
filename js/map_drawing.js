@@ -305,7 +305,14 @@ var drawMapScene = (function(){
             var relativeMapAngleCoords = [
 				-cameraMapAngleCoords[0],
 				-cameraMapAngleCoords[1]
-			].map(xx=> minusPiToPiWrap(xx));
+			].map(xx=> terrainWrap(xx, terrainObj.step));
+
+            //procTerrain map object has x,y range from 0 to step.
+            //therefore, if tiling, starter square corner should be between -PI-step and -PI
+            // other objects - vox terrain, grid etc, appear to have different extents.
+            // TODO precalc extent/corner to do correct offset of corner tile to completely cover map with
+            // (divs+1)x(divs+1) tiles
+
 
             mat4.set(spunMapCamera, mvMatrix); //this is matrix of the map in camera viewing the map
 
@@ -378,6 +385,11 @@ in order to draw stuff like boxes, guess scene object list/graph is sensible.
 		var tau = 2*Math.PI;
 		return ((((inputNumber+Math.PI) % tau) + tau) % tau) - Math.PI;
 	}
+
+    function terrainWrap(inputNumber, step){
+        //wraps to -PI-step to -PI
+        return ((((inputNumber+Math.PI) % step) + step) % step) - step - Math.PI;
+    }
 
 	function updatePlayerIJ(playerPos, playerForward, duocylinderSpin){
 		var squaredPos = playerPos.map(xx=>xx*xx);
