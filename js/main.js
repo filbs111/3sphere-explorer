@@ -15,14 +15,25 @@ var shaderProgramColored,	//these are variables that are set to different shader
 var myDebugStr = "TEST INFO TO GO HERE";
 
 var duocylinderObjects={
-	grid:{divs:4,step:Math.PI/2},
-	terrain:{divs:2,step:Math.PI},
-	procTerrain:{divs:1,step:2*Math.PI,isStrips:true},
+	grid:{divs:4,step:Math.PI/2,minXY:[-0.24999275,-0.00000725]},
+//from console:
+// tballGridDataPantheonStyle.tricoords.filter((_,ii)=>ii%3==0).reduce((a,b)=>Math.min(a,b),Number.MAX_VALUE)
+// -0.24999275
+// tballGridDataPantheonStyle.tricoords.filter((_,ii)=>ii%3==1).reduce((a,b)=>Math.min(a,b),Number.MAX_VALUE)
+// -0.00000725
+	terrain:{divs:2,step:Math.PI,minXY:[-0.25,-0.25]},
+	procTerrain:{divs:1,step:2*Math.PI,isStrips:true,minXY:[0,0]},
 	sea:{divs:1,step:2*Math.PI,isStrips:true},
-	voxTerrain:{divs:2,step:Math.PI},
-	voxTerrain2:{divs:2,step:Math.PI},
-	voxTerrain3:{divs:2,step:Math.PI}
+	voxTerrain:{divs:2,step:Math.PI,minXY:[0, -0.5]},
+// voxTerrainData.voxTerrain.tricoords.filter((_,ii)=>ii%3==0).reduce((a,b)=>Math.min(a,b),Number.MAX_VALUE)
+// -0.004672801704145968
+// voxTerrainData.voxTerrain.tricoords.filter((_,ii)=>ii%3==1).reduce((a,b)=>Math.min(a,b),Number.MAX_VALUE)
+// -0.5001171715557575
+//NOTE minXY vox terrain exact vert position depends how regular grid modified to match up with implicit surface
+//so don't bother with exact min, just use approx vals
 	//voxTerrain:{divs:1,step:2*Math.PI}
+	voxTerrain2:{divs:2,step:Math.PI,minXY:[0,-0.5]},
+	voxTerrain3:{divs:2,step:Math.PI,minXY:[0,-0.5]}	
 	};
 
 var sphereBuffers={};
@@ -3984,10 +3995,8 @@ function drawTennisBall(duocylinderObj, shader, depthMap){
 	}
 	
 	//for (var side=0;side<2;side++){	//draw 2 sides
-		//for (var xg=0;xg<duocylinderObj.divs;xg+=1){		//
-		//	for (var yg=0;yg<duocylinderObj.divs;yg+=1){	//TODO precalc cells array better than grids here.
-		for (var xg=0;xg<1;xg+=1){		//
-			for (var yg=0;yg<1;yg+=1){
+		for (var xg=0;xg<duocylinderObj.divs;xg+=1){		//
+			for (var yg=0;yg<duocylinderObj.divs;yg+=1){	//TODO precalc cells array better than grids here.
 				setMatrixUniforms(shader);
 				gl.drawElements(duocylinderObj.isStrips? gl.TRIANGLE_STRIP : gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 				//gl.drawElements(duocylinderObj.isStrips? gl.LINES : gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);

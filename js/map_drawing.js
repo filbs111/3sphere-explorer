@@ -302,10 +302,13 @@ var drawMapScene = (function(){
 
             var terrainCoords = [0,0];  //TODO draw multiple tiles
             var cameraMapAngleCoords = [attachedToDuocylinder?playerIWithDuocylinderSpin:playerI , playerJ];
+
+            var cornerInRads = terrainObj.minXY.map(xx=>xx*2*Math.PI);
+
             var relativeMapAngleCoords = [
 				-cameraMapAngleCoords[0],
 				-cameraMapAngleCoords[1]
-			].map(xx=> terrainWrap(xx, terrainObj.step));
+			].map((xx,ii)=> terrainWrap(xx + cornerInRads[ii], terrainObj.step)-cornerInRads[ii]);
 
             //procTerrain map object has x,y range from 0 to step.
             //therefore, if tiling, starter square corner should be between -PI-step and -PI
