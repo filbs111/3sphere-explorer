@@ -1,7 +1,12 @@
 #version 300 es
 #define M_PI 3.141593
 
-in vec3 aVertexPosition;
+#ifdef FOUR_VEC_VERTS
+    in vec4 aVertexPosition;
+#else
+    in vec3 aVertexPosition;
+#endif
+
 #ifdef VERTCOLORS
     in vec3 aVertexColor;
     out vec3 vColor;
@@ -48,9 +53,12 @@ vec3 convertToFatTetrahedron(vec2 mapAngles, vec4 fourVecPos){
 }
 
 void main(void) {
+#ifdef FOUR_VEC_VERTS
+    vec4 transformedCoordWorld = uMMatrix * aVertexPosition;
+#else
     vec4 vertexPositionFourvec = (vec4(uModelScale*aVertexPosition, 1.0));
     vec4 transformedCoordWorld = uMMatrix * normalize(vertexPositionFourvec);
-
+#endif
     //translate this into map angle, subtract the map centre position (usually player position) and move by steps of 2*PI so within +/-PI
     vec2 vertexMapAnglesCentred = pos4ToMapAngles(transformedCoordWorld);
 
