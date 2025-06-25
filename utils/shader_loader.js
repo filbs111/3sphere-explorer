@@ -194,6 +194,7 @@ function initShaders(shaderProgs){
 		mapShaderTwo:["map-two-vs","flatcolor-fs"],
 		mapShaderTwoVertColors:["map-two-vs","vertcolor-fs",["VERTCOLORS"]],
 		mapShaderTwoFourVecVerts:["map-two-vs","flatcolor-fs",["FOUR_VEC_VERTS"]], //for precalculated 4vec verts for objects
+		mapTerrainShader:["map-terrain-vs","flatcolor-fs"]	//if have terrain stored "flat" not mapped onto duocylinder...
 	};
 	var shaderProgWithVariationsList = {
 		coloredPerPixelDiscard:["perpixel-discard-vs", "perpixel-discard-fs", [],[],true],
