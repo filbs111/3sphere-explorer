@@ -193,7 +193,6 @@ function initShaders(shaderProgs){
 		mapShaderOne:["map-one-vs","flatcolor-fs"],
 		mapShaderTwo:["map-two-vs","flatcolor-fs"],
 		mapShaderTwoVertColors:["map-two-vs","vertcolor-fs",["VERTCOLORS","DISCARD_OUTSIDE"],["DISCARD_OUTSIDE"]],
-		mapShaderTwoFourVecVerts:["map-two-vs","flatcolor-fs",["FOUR_VEC_VERTS","DISCARD_OUTSIDE"],["DISCARD_OUTSIDE"]], //for precalculated 4vec verts for objects
 		mapTerrainShader:["map-terrain-vs","flatcolor-fs",[],["DISCARD_OUTSIDE"]],	//if have terrain stored "flat" not mapped onto duocylinder...
 		mapTerrainVertColors:["map-terrain-vs","vertcolor-fs",["VERTCOLORS"],["DISCARD_OUTSIDE"]]
 	};

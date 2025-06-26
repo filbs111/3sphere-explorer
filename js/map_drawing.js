@@ -134,16 +134,6 @@ var drawMapScene = (function(){
 
         
         //draw terrain.
-        /*
-        activeProg = shaderPrograms.mapShaderTwoFourVecVerts;
-		gl.useProgram(activeProg);
-		enableDisableAttributes(activeProg);
-		//drawMapObject2(mat4.identity(), colorArrs.magenta, duocylinderObjects.grid, 1.0, true);   //grid is repeated.
-        drawMapObject2(mat4.identity(), colorArrs.magenta, duocylinderObjects.voxTerrain3, 1.0, true);
-            //doesn't work properly! what is the format of this terrain data? what frame is it in?:
-        */
-        //^^ doesn't work - terrains aren't stored with 4vec verts. stored as 3d, mapped onto duocylinder by shader
-        // which actually simpifies map view shader 
         var terrainObj = duocylinderObjects[settingsForWorld.duocylinderModel];
         //var terrainObj = stonehengeBoxBuffers;
             //NOTE generally using this 4vec data for drawing map is not viable
@@ -159,19 +149,13 @@ var drawMapScene = (function(){
         //TODO pay attention to range of values of terrain block - might be able to just draw grid of divs+1
         // rather than divs*2
 
-        if (guiParams.map.terrainDrawStyle == "fourvec"){
-            activeProg = shaderPrograms.mapShaderTwoFourVecVerts;
-            gl.useProgram(activeProg);
+        activeProg = terrainObj.vertexColorBuffer ?
+                shaderPrograms.mapTerrainVertColors:
+                shaderPrograms.mapTerrainShader;
+        gl.useProgram(activeProg);
             enableDisableAttributes(activeProg);
-            drawTerrainOnMap(terrainObj);
-        }else{
-            activeProg = terrainObj.vertexColorBuffer ?
-                 shaderPrograms.mapTerrainVertColors:
-                 shaderPrograms.mapTerrainShader;
-            gl.useProgram(activeProg);
-                enableDisableAttributes(activeProg);
-                drawTerrainOnMapUsingTricoords(terrainObj);
-        }
+            drawTerrainOnMapUsingTricoords(terrainObj);
+        
 
 		logMapStuff=false;
 
