@@ -4569,7 +4569,7 @@ var guiParams={
 		regularFisheye2:false
 	},
 	map:{
-		show:false,
+		show:"off",
 		viewDistance:4,
 		bendFactor:0.35,
 		tetrahedronism:1
