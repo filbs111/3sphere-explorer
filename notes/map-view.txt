@@ -1,0 +1,22 @@
+further work
+
+draw 4 copies of regular objects and discard frags outside map volume, similar to terrain drawing system
+apply darkener to regular view when drawing map superimposed over view. (gl clear depth but not colour. gl rect with transparency?)
+show compass directions (name them! spinward?)
+transition between 3sphere view and map views (folding)
+info text with lines to map objects
+put ALL items on map. scene graph?
+    how to do binned by mesh/shader to reduce gl calls?
+    note the mesh "property" added to bvhobj currently only used for map!
+fxaa
+stereo 3d support - integrate into eye view drawing?
+selection of maps for different worlds, different landscape layers in worlds
+bug : map drawing using vertex colour shader assumes have mesh colours. seems to produce garbage meshes eg teapot, gun. perhaps interpretating some other data as colour. looks ok but technically wrong.
+map looks crap! what to do? 
+    something special so objects at the top/bottom rendered correctly? 
+    just have 2d map view?
+    make map view just regular view with a different shader, god mode?
+    3d lidar mode - can fly around in 3d, but only show surfaces "lit" by player! render a cubemap from player position - basically shadow mapping.
+    map similar to how is (tetrahedron), but bent and aligned so "horizontal" surfaces align wih world where are. 
+    if world big, local map for region around player maybe good idea. but could just do this HUD/AR overlays.
+lower detail versions of objects (though perf appears OK)
