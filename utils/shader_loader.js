@@ -190,7 +190,6 @@ function initShaders(shaderProgs){
 		terrain_l3dt_morph_4d_eff:["terrain-morph-vs", "terrain-textured-fs",["ATMOS_ONE",'CONST_ITERS 4.0',"IS_4D"],[]],
 
 		threeSpaceColored:["threespace-vs", "flatcolor-fs"],
-		mapShaderOne:["map-one-vs","flatcolor-fs"],
 		mapShaderTwo:["map-two-vs","flatcolor-fs"],
 		mapShaderTwoVertColors:["map-two-vs","vertcolor-fs",["VERTCOLORS","DISCARD_OUTSIDE"],["DISCARD_OUTSIDE"]],
 		mapTerrainShader:["map-terrain-vs","flatcolor-fs",[],["DISCARD_OUTSIDE"]],	//if have terrain stored "flat" not mapped onto duocylinder...

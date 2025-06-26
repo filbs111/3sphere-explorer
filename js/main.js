@@ -4572,8 +4572,7 @@ var guiParams={
 		show:false,
 		viewDistance:4,
 		bendFactor:0.35,
-		tetrahedronism:1, 
-		shader:"two"
+		tetrahedronism:1
 	},
 	reflector:{
 		draw:'high',
@@ -4867,7 +4866,6 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	mapFolder.add(guiParams.map, "viewDistance", 2,8,0.1);
 	mapFolder.add(guiParams.map, "bendFactor", 0,1,0.05);
 	mapFolder.add(guiParams.map, "tetrahedronism", 0,1,0.05);
-	mapFolder.add(guiParams.map, "shader", ["one","two"]);
 
 	var debugFolder = gui.addFolder('debug');
 	debugFolder.add(guiParams.debug, "closestPoint");

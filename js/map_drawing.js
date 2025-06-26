@@ -82,16 +82,10 @@ var drawMapScene = (function(){
 		//drawMapPointForFourVec(playerCamera.slice(12), colorArrs.white, 0.02);
 		//drawMapPointForFourVec(buildingMatrix.slice(12), colorArrs.red, 0.04);
 		
-		//activeProg = shaderPrograms.mapShaderOne;
-
-		var mapShaderChoice = guiParams.map.shader == "two" ? {
+		var mapShaderChoice = {
 				basicShader: shaderPrograms.mapShaderTwo,
 				vertColorsShader: shaderPrograms.mapShaderTwoVertColors,
 				shaderDrawFunc: drawMapObject2
-			}:{
-				basicShader: shaderPrograms.mapShaderOne,
-				vertColorsShader: shaderPrograms.mapShaderOne,	//TODO implement if bothered, or get rid
-				shaderDrawFunc: drawMapObject1
 			}
 
 		var mapDrawShaderFunc;
@@ -135,19 +129,6 @@ var drawMapScene = (function(){
         
         //draw terrain.
         var terrainObj = duocylinderObjects[settingsForWorld.duocylinderModel];
-        //var terrainObj = stonehengeBoxBuffers;
-            //NOTE generally using this 4vec data for drawing map is not viable
-            // because of problems knowing which way to unwrap.
-            // map drawing might for extended objects like this, be done with data in map space.
-            // the same data might also be used in the vert shader for drawing to screen too. but other way around is 
-            // not suitable!
-            // also having trouble getting to work for terrain data anyway( though theoretically, for contained patches,
-            // should work)
-
-            //suspect that some terrains are in 4vec style, some aren't vox might be different...
-
-        //TODO pay attention to range of values of terrain block - might be able to just draw grid of divs+1
-        // rather than divs*2
 
         activeProg = terrainObj.vertexColorBuffer ?
                 shaderPrograms.mapTerrainVertColors:
@@ -155,7 +136,6 @@ var drawMapScene = (function(){
         gl.useProgram(activeProg);
             enableDisableAttributes(activeProg);
             drawTerrainOnMapUsingTricoords(terrainObj);
-        
 
 		logMapStuff=false;
 
@@ -187,18 +167,7 @@ var drawMapScene = (function(){
 		//1) simple but likely broken version - put player and object mats as input,
 		//transform each point independently. expect to break on edge of map when verts on opposite sides.
 
-		function drawMapObject1(objMatrix, color, objBuffers, objScale, attachedToDuocylinder){
-			//things that should only need to set once per frame. optimise if use this shader
-			mat4.set(spunMapCamera, mvMatrix); //this is matrix of the map in camera viewing the map
-			gl.uniform1f(activeProg.uniforms.uBendFactor, guiParams.map.bendFactor);
-			gl.uniform1f(activeProg.uniforms.uTetrahedronism, guiParams.map.tetrahedronism);
-			gl.uniform2f(activeProg.uniforms.uMapCentreAngleCoords, attachedToDuocylinder?playerIWithDuocylinderSpin:playerI , playerJ);
-
-			gl.uniform3fv(activeProg.uniforms.uModelScale, [objScale,objScale,objScale]);
-			uniform4fvSetter.setIfDifferent(activeProg, "uColor", color);
-			mat4.set(objMatrix, mMatrix);	//this is matrix describing object pose in world. drawObjectFromBuffers will send it to v shader
-			drawObjectFromBuffers(objBuffers, activeProg);
-		}
+		// (removed)
 
 		//2) draw points relative to fixed object centre point on map. still a problem that whole object will jump 
 		// across map when centre of object does. for small objects this is OK.
@@ -228,18 +197,16 @@ var drawMapScene = (function(){
 		}
 
 		//3) draw 4 copies of object if necessary (close to map edge).
-		
+        // done this for terrain (actually (n+1)*(n+1) copies since terrains are repeated grids.
+		// TODO also for regular objects
+
 		//4) discard pixels outside the map shape.
-		
+		// done this for terrain
+   		// TODO also for regular objects
+
 		//5) draw 4 objects routinely, find position of object relative to player, 
 		// modulo 2*PI (from 0 to 2*PI). draw shifted by (0 or -2*PI) each axis.
 		// this way can draw a lot of same type of item using 4 instanced draw calls.
-
-		//do for:
-		//standard objects, various terrains.
-		// possibly want to have lower detail versions of objects, though expect not a big problem (game draw cubemaps, quad view,
-		// so drawing lots of verts anyway)
-
 
         function drawTerrainOnMap(terrainObj){
 			uniform4fvSetter.setIfDifferent(activeProg, "uColor", colorArrs.cyan);
