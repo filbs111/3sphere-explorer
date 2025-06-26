@@ -165,10 +165,12 @@ var drawMapScene = (function(){
             enableDisableAttributes(activeProg);
             drawTerrainOnMap(terrainObj);
         }else{
-            activeProg = shaderPrograms.mapTerrainShader;
+            activeProg = terrainObj.vertexColorBuffer ?
+                 shaderPrograms.mapTerrainVertColors:
+                 shaderPrograms.mapTerrainShader;
             gl.useProgram(activeProg);
-            enableDisableAttributes(activeProg);
-            drawTerrainOnMapUsingTricoords(terrainObj);
+                enableDisableAttributes(activeProg);
+                drawTerrainOnMapUsingTricoords(terrainObj);
         }
 
 		logMapStuff=false;
@@ -342,10 +344,14 @@ var drawMapScene = (function(){
 
         //something similar to drawObjectFromBuffers. TODO generalise/ parameterise?
         function drawObjFromTricoordBuffers(duocylinderObj, shader){
-	
 		    gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexTriCoordBuffer);
 		    gl.vertexAttribPointer(shader.attributes.aVertexPosition, duocylinderObj.vertexTriCoordBuffer.itemSize, gl.FLOAT, false, 0, 0);
     
+            if (duocylinderObj.vertexColorBuffer && shader.attributes.aVertexColor){
+                gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexColorBuffer);
+                gl.vertexAttribPointer(shader.attributes.aVertexColor, duocylinderObj.vertexColorBuffer.itemSize, gl.FLOAT, false, 0, 0);
+            }
+
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, duocylinderObj.vertexIndexBuffer);
 
             gl.drawElements(duocylinderObj.isStrips? gl.TRIANGLE_STRIP : gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
