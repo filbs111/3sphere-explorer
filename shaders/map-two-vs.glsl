@@ -11,6 +11,11 @@
     in vec3 aVertexColor;
     out vec3 vColor;
 #endif
+
+#ifdef DISCARD_OUTSIDE
+    out vec2 vUnitPos;
+#endif
+
 uniform mat4 uMVMatrix;
 uniform mat4 uMMatrix;
 uniform mat4 uPMatrix;
@@ -64,6 +69,10 @@ void main(void) {
 
     //transform from cube to fat tetrahedron
     vec3 vertexPositionInFatTetrahedron = convertToFatTetrahedron(vertexMapAnglesCentred, transformedCoordWorld);
+
+#ifdef DISCARD_OUTSIDE
+    vUnitPos = vertexMapAnglesCentred.xy/vec2(M_PI);
+#endif
 
     //transform map in frame of output camera
     vec4 transformedCoord = uMVMatrix * vec4(vertexPositionInFatTetrahedron, 1.0);

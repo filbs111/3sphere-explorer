@@ -192,10 +192,10 @@ function initShaders(shaderProgs){
 		threeSpaceColored:["threespace-vs", "flatcolor-fs"],
 		mapShaderOne:["map-one-vs","flatcolor-fs"],
 		mapShaderTwo:["map-two-vs","flatcolor-fs"],
-		mapShaderTwoVertColors:["map-two-vs","vertcolor-fs",["VERTCOLORS"]],
-		mapShaderTwoFourVecVerts:["map-two-vs","flatcolor-fs",["FOUR_VEC_VERTS"]], //for precalculated 4vec verts for objects
-		mapTerrainShader:["map-terrain-vs","flatcolor-fs"],	//if have terrain stored "flat" not mapped onto duocylinder...
-		mapTerrainVertColors:["map-terrain-vs","vertcolor-fs",["VERTCOLORS"]]
+		mapShaderTwoVertColors:["map-two-vs","vertcolor-fs",["VERTCOLORS","DISCARD_OUTSIDE"],["DISCARD_OUTSIDE"]],
+		mapShaderTwoFourVecVerts:["map-two-vs","flatcolor-fs",["FOUR_VEC_VERTS","DISCARD_OUTSIDE"],["DISCARD_OUTSIDE"]], //for precalculated 4vec verts for objects
+		mapTerrainShader:["map-terrain-vs","flatcolor-fs",[],["DISCARD_OUTSIDE"]],	//if have terrain stored "flat" not mapped onto duocylinder...
+		mapTerrainVertColors:["map-terrain-vs","vertcolor-fs",["VERTCOLORS"],["DISCARD_OUTSIDE"]]
 	};
 	var shaderProgWithVariationsList = {
 		coloredPerPixelDiscard:["perpixel-discard-vs", "perpixel-discard-fs", [],[],true],
