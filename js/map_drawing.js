@@ -282,10 +282,9 @@ var drawMapScene = (function(){
             }
 
             var step = terrainObj.step;
-            var chequercolors = [colorArrs.orange, colorArrs.magenta];
+            gl.uniform4fv(activeProg.uniforms.uColor, colorArrs.orange);
             for (var ii=0;ii<=terrainObj.divs;ii++){
                 for (var jj=0;jj<=terrainObj.divs;jj++){
-            		gl.uniform4fv(activeProg.uniforms.uColor, chequercolors[(ii+jj)%2]);
                     gl.uniform2fv(activeProg.uniforms.uObjCentreRelativeToCameraAngleCoords, 
                         [relativeMapAngleCoords[0]+ii*step , relativeMapAngleCoords[1]+jj*step]);
                     drawObjFromTricoordBuffers(terrainObj, activeProg);
