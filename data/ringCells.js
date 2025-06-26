@@ -6,24 +6,24 @@ var ringCells=(function generateRingCells(){
 
 	var ringCellsArr=[];
 	
-	var tmpMatrix = mat4.identity();pushRing();																		//'boxes y=z=0'
-	mat4.identity(tmpMatrix);rotate4mat(tmpMatrix, 0, 1, Math.PI*0.5);pushRing(); 									//'boxes x=z=0'
-	mat4.identity(tmpMatrix);rotate4mat(tmpMatrix, 0, 2, Math.PI*0.5);pushRing();									//'boxes x=y=0'
-	mat4.identity(tmpMatrix);xmove4mat(tmpMatrix, Math.PI*0.5);rotate4mat(tmpMatrix, 0, 1, Math.PI*0.5);pushRing();	//'boxes z=w=0'
-	mat4.identity(tmpMatrix);xmove4mat(tmpMatrix, Math.PI*0.5);rotate4mat(tmpMatrix, 0, 2, Math.PI*0.5);pushRing();	//'boxes y=w=0'
-	mat4.identity(tmpMatrix);ymove4mat(tmpMatrix, Math.PI*0.5);rotate4mat(tmpMatrix, 0, 2, Math.PI*0.5);pushRing();	//'boxes x=w=0'
+	var tmpMatrix = mat4.identity();pushRing(colorArrs.red);																		//'boxes y=z=0'
+	mat4.identity(tmpMatrix);rotate4mat(tmpMatrix, 0, 1, Math.PI*0.5);pushRing(colorArrs.green); 									//'boxes x=z=0'
+	mat4.identity(tmpMatrix);rotate4mat(tmpMatrix, 0, 2, Math.PI*0.5);pushRing(colorArrs.blue);									//'boxes x=y=0'
+	mat4.identity(tmpMatrix);xmove4mat(tmpMatrix, Math.PI*0.5);rotate4mat(tmpMatrix, 0, 1, Math.PI*0.5);pushRing(colorArrs.yellow);	//'boxes z=w=0'
+	mat4.identity(tmpMatrix);xmove4mat(tmpMatrix, Math.PI*0.5);rotate4mat(tmpMatrix, 0, 2, Math.PI*0.5);pushRing(colorArrs.magenta);	//'boxes y=w=0'
+	mat4.identity(tmpMatrix);ymove4mat(tmpMatrix, Math.PI*0.5);rotate4mat(tmpMatrix, 0, 2, Math.PI*0.5);pushRing(colorArrs.cyan);	//'boxes x=w=0'
 
-	function pushRing(){
-		thisRing=[];
+	function pushRing(color){
+		mats=[];
 		xmove4mat(tmpMatrix, startAng);
 		for (var ii=0;ii<numBallsInRing;ii++){
 			xmove4mat(tmpMatrix, angleStep);
-			thisRing.push(mat4.create(tmpMatrix));
+			mats.push(mat4.create(tmpMatrix));
 		}
-		ringCellsArr.push(thisRing);
+		ringCellsArr.push({color, mats});
 	}
 
 	return ringCellsArr;
 })();
 
-var ringCellsT = ringCells.map( ring => ring.map(mtrx => mat4.transpose(mat4.create(mtrx))));
+var ringCellsT = ringCells.map( ring => ring.mats.map(mtrx => mat4.transpose(mat4.create(mtrx))));

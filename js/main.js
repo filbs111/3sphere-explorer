@@ -15,14 +15,25 @@ var shaderProgramColored,	//these are variables that are set to different shader
 var myDebugStr = "TEST INFO TO GO HERE";
 
 var duocylinderObjects={
-	grid:{divs:4,step:Math.PI/2},
-	terrain:{divs:2,step:Math.PI},
-	procTerrain:{divs:1,step:2*Math.PI,isStrips:true},
+	grid:{divs:4,step:Math.PI/2,minXY:[-0.24999275,-0.00000725]},
+//from console:
+// tballGridDataPantheonStyle.tricoords.filter((_,ii)=>ii%3==0).reduce((a,b)=>Math.min(a,b),Number.MAX_VALUE)
+// -0.24999275
+// tballGridDataPantheonStyle.tricoords.filter((_,ii)=>ii%3==1).reduce((a,b)=>Math.min(a,b),Number.MAX_VALUE)
+// -0.00000725
+	terrain:{divs:2,step:Math.PI,minXY:[-0.25,-0.25]},
+	procTerrain:{divs:1,step:2*Math.PI,isStrips:true,minXY:[0,0]},
 	sea:{divs:1,step:2*Math.PI,isStrips:true},
-	voxTerrain:{divs:2,step:Math.PI},
-	voxTerrain2:{divs:2,step:Math.PI},
-	voxTerrain3:{divs:2,step:Math.PI}
+	voxTerrain:{divs:2,step:Math.PI,minXY:[0, -0.5]},
+// voxTerrainData.voxTerrain.tricoords.filter((_,ii)=>ii%3==0).reduce((a,b)=>Math.min(a,b),Number.MAX_VALUE)
+// -0.004672801704145968
+// voxTerrainData.voxTerrain.tricoords.filter((_,ii)=>ii%3==1).reduce((a,b)=>Math.min(a,b),Number.MAX_VALUE)
+// -0.5001171715557575
+//NOTE minXY vox terrain exact vert position depends how regular grid modified to match up with implicit surface
+//so don't bother with exact min, just use approx vals
 	//voxTerrain:{divs:1,step:2*Math.PI}
+	voxTerrain2:{divs:2,step:Math.PI,minXY:[0,-0.5]},
+	voxTerrain3:{divs:2,step:Math.PI,minXY:[0,-0.5]}	
 	};
 
 var sphereBuffers={};
@@ -394,6 +405,7 @@ function initBuffers(){
 		someObjectMatrices.forEach(someMat => {
 			var scale = 0.1;
 			bvhObjsForWorld[3].push({
+				mesh: bufferObj,
 				mat: someMat.mat, 
 				transposedMat: someMat.transposedMat, 
 				bvh: gunBvh,
@@ -414,6 +426,7 @@ function initBuffers(){
 		someObjectMatrices.slice(0,3).forEach(someMat => {
 			var scale = 0.0016;
 			bvhObjsForWorld[1].push({
+				mesh: bufferObj,
 				mat: someMat.mat, 
 				transposedMat: someMat.transposedMat, 
 				//bvh:cubeFrameBvh,
@@ -431,6 +444,7 @@ function initBuffers(){
 			someObjectMatrices.slice(4).forEach(someMat => {
 				var scale = 0.025;
 				bvhObjsForWorld[1].push({
+					mesh: bufferObj,
 					mat: someMat.mat, 
 					transposedMat: someMat.transposedMat, 
 					bvh: mushroomBvh,
@@ -455,6 +469,7 @@ function initBuffers(){
 	bvhObjsForWorld[0]=someObjectMatrices.map(someMat => {
 		var scale = 0.4;
 		return {
+			mesh: teapotBuffers,
 			mat: someMat.mat, 
 			transposedMat: someMat.transposedMat, 
 			bvh: teapotBvh,
@@ -466,6 +481,7 @@ function initBuffers(){
 	bvhObjsForWorld[2]=someObjectMatrices.map(someMat => {
 		var scale = 0.2;
 		return {
+			mesh: dodecaFrameBuffers2,
 			mat: someMat.mat, 
 			transposedMat: someMat.transposedMat, 
 			bvh:dodecaFrameBvh2,
@@ -703,12 +719,25 @@ function drawScene(frameTime){
 	
 	smoothGuiParams.update();
 
+	if (guiParams.map.show == "only map"){
+		drawMapScene(frameTime, gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
+	}else if (guiParams.map.show == "overlaid"){
+		drawRegularScene(frameTime);
+		drawMapScene(frameTime, gl.DEPTH_BUFFER_BIT);
+	}else{
+		drawRegularScene(frameTime);
+	}
+	//TODO button press to show/hide map
+	//TODO pause gameplay when show map?
+}
+
+function drawRegularScene(frameTime){
+
 	//TODO split out screen rendering into function. if stereo3d is enabled, call twice.
 	//initially can just check breaking out releant code to function works.
 	//then can draw same thing twice
 	//then can get camera matrices shifted sideways.
 	//also should, for fisheye view, reduce size of intermediate buffer (rectilinear projection)
-	
 	
 	offsetCameraContainer.world = playerContainer.world;
 	
@@ -719,8 +748,6 @@ function drawScene(frameTime){
 		offsetCam.setType(guiParams.display.cameraType);
 		moveMatHandlingPortal(offsetCameraContainer, offsetCam.getVec())
 	}
-
-	
 
 
 	//TODO put this elsewhere - assumes some stuff is in scope though!
@@ -2123,17 +2150,18 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	
 	
 	var guiBoxes = guiParams.drawShapes.boxes;
-	if (guiBoxes['y=z=0']){drawBoxRing(ringCells[0],colorArrs.red);}
-	if (guiBoxes['x=z=0']){drawBoxRing(ringCells[1],colorArrs.green);}
-	if (guiBoxes['x=y=0']){drawBoxRing(ringCells[2],colorArrs.blue);}
-	if (guiBoxes['z=w=0']){drawBoxRing(ringCells[3],colorArrs.yellow);}
-	if (guiBoxes['y=w=0']){drawBoxRing(ringCells[4],colorArrs.magenta);}
-	if (guiBoxes['x=w=0']){drawBoxRing(ringCells[5],colorArrs.cyan);}
+	if (guiBoxes['y=z=0']){drawBoxRing(0);}
+	if (guiBoxes['x=z=0']){drawBoxRing(1);}
+	if (guiBoxes['x=y=0']){drawBoxRing(2);}
+	if (guiBoxes['z=w=0']){drawBoxRing(3);}
+	if (guiBoxes['y=w=0']){drawBoxRing(4);}
+	if (guiBoxes['x=w=0']){drawBoxRing(5);}
 	
-	function drawBoxRing(ringCellMatData,color){
-		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", color);
+	function drawBoxRing(ringIdx){
+		var ring = ringCells[ringIdx];
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", ring.color);
 		drawArrayOfModels(
-			ringCellMatData,
+			ringCells[ringIdx].mats,
 			(guiParams.display.culling ? boxRad: false),
 			cubeBuffers,
 			activeShaderProgram
@@ -4001,7 +4029,9 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 		gl.vertexAttribPointer(shaderProg.attributes.aVertexPosition, 3, gl.FLOAT, false, 4*iSize, 0);
 		gl.vertexAttribPointer(shaderProg.attributes.aVertexColor, numColors, gl.FLOAT, false, 4*iSize, 4*3);
 	}else{
-		gl.vertexAttribPointer(shaderProg.attributes.aVertexPosition, bufferObj.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+		//assume want to skip over colour if present.
+		var iSize = bufferObj.vertexPositionBuffer.itemSize;
+		gl.vertexAttribPointer(shaderProg.attributes.aVertexPosition, iSize, gl.FLOAT, false, 4*iSize, 0);
 	}
 	
 	if (bufferObj.vertexNormalBuffer && shaderProg.attributes.aVertexNormal){
@@ -4082,6 +4112,10 @@ function drawObjectFromPreppedBuffers(bufferObj, shaderProg, skipM){
 		gl.uniformMatrix4fv(shaderProg.uniforms.uMMatrixB, false, mMatrixB);
 	}
 	
+	if (bufferObj.isStrips){
+		gl.drawElements(gl.TRIANGLE_STRIP, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+		return;
+	}
 	gl.drawElements(gl.TRIANGLES, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 	//gl.drawElements(gl.LINES, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 }
@@ -4534,6 +4568,12 @@ var guiParams={
 		quadViewCulling:true,
 		regularFisheye2:false
 	},
+	map:{
+		show:"off",
+		viewDistance:4,
+		bendFactor:0.35,
+		tetrahedronism:1
+	},
 	reflector:{
 		draw:'high',
 		cmFacesUpdated:6,
@@ -4818,9 +4858,15 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	displayFolder.add(guiParams.display, "specularPower", 1,20,0.5);
 	displayFolder.add(guiParams.display, "quadView");
 	displayFolder.add(guiParams.display, "quadViewCulling");
-	displayFolder.add(guiParams.display, "regularFisheye2");	
+	displayFolder.add(guiParams.display, "regularFisheye2");
 	displayFolder.add(guiParams, "normalMove", 0,0.02,0.001);
-	
+
+	var mapFolder = gui.addFolder('map');
+	mapFolder.add(guiParams.map, "show", ["off", "overlaid", "only map"]);
+	mapFolder.add(guiParams.map, "viewDistance", 2,8,0.1);
+	mapFolder.add(guiParams.map, "bendFactor", 0,1,0.05);
+	mapFolder.add(guiParams.map, "tetrahedronism", 0,1,0.05);
+
 	var debugFolder = gui.addFolder('debug');
 	debugFolder.add(guiParams.debug, "closestPoint");
 	debugFolder.add(guiParams.debug, "buoys");
