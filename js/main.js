@@ -6339,11 +6339,7 @@ var iterateMechanics = (function iterateMechanics(){
 					return;
 				}
 
-				var projectedPosInObjFrame = projectTo3dWithScale(bulletPosVec, objInfo.scale);
-				var projectedPosEndInObjFrame = projectTo3dWithScale(bulletPosEndVec, objInfo.scale);
-
-				//if (bvhSphereOverlapTest(projectedPosInObjFrame, 0.01, objInfo.bvh)){
-				if (bvhRayOverlapTest(projectedPosInObjFrame, projectedPosEndInObjFrame, objInfo.bvh)){
+				if (bvhRayCollision(bulletPosVec, bulletPosEndVec, objInfo).collided){
 					detonateBullet(bullet, false, [0.3,0.3,0.8]);
 				}
 			});
@@ -6371,7 +6367,7 @@ var iterateMechanics = (function iterateMechanics(){
 						var weightedAverageStartPosObjFrame = performWeightedAverage(projectedPosInObjFrame.result, projectedLastPosInObjFrame.result);
 						var weightedAverageEndPosObjFrame = performWeightedAverage(projectedPosEndInObjFrame.result, projectedLastPosEndInObjFrame.result);
 
-						if (bvhRayOverlapTest(weightedAverageStartPosObjFrame, weightedAverageEndPosObjFrame, bvh)){
+						if (bvhRayOverlapTest(weightedAverageStartPosObjFrame, weightedAverageEndPosObjFrame, bvh).collided){
 							detonateBullet(bullet, false, [0.3,0.3,0.8]);
 						}
 					}
@@ -6425,12 +6421,6 @@ var iterateMechanics = (function iterateMechanics(){
 				mat4.multiplyVec4(matrixTransposed, posInFrame, posInFrame);
 				return posInFrame;
 			}
-
-			function projectTo3dWithScale(posInFrame, objectScale){
-				var projectedPosInObjFrame = posInFrame.slice(0,3).map(val => val/(objectScale*posInFrame[3]));
-				return projectedPosInObjFrame;
-			}
-			
 
 			var cellIdxForBullet = getGridId.forPoint(bulletPos);
 			
@@ -7749,4 +7739,9 @@ function moveMatHandlingPortal(matContainer, offsetVec){
 	}
 	//console.log("ruled out portal camera traversal");
 	xyzmove4mat(inputMatrix, offsetVec);
+}
+
+function projectTo3dWithScale(posInFrame, objectScale){
+	var projectedPosInObjFrame = posInFrame.slice(0,3).map(val => val/(objectScale*posInFrame[3]));
+	return projectedPosInObjFrame;
 }
