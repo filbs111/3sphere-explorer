@@ -746,7 +746,30 @@ function drawRegularScene(frameTime){
 		//mat4.set(playerCamera, offsetPlayerCamera);	
 		
 		offsetCam.setType(guiParams.display.cameraType);
-		moveMatHandlingPortal(offsetCameraContainer, offsetCam.getVec())
+		//TODO is camera interpolation combined with matrix movement a problem?
+
+		
+		//camera collision
+		//really ray collision should be check both sides of the portal, 
+		//but for basic version, move without portal jump, just check starting side of portal.
+		//provided stuff camera collides with not close to portal, should work fine.
+		var desiredCameraMoveVec = offsetCam.getVec();
+		var tempMat4 = mat4.create(offsetCameraContainer.matrix);
+		var cameraRayStartPos = tempMat4.slice(12);
+		xyzmove4mat(tempMat4, desiredCameraMoveVec);
+		var cameraRayEndPos = tempMat4.slice(12);
+
+		var bvhCollideResult = rayBvhCollision(cameraRayStartPos, cameraRayEndPos, offsetCameraContainer.world);
+		var toMoveFraction = bvhCollideResult.closestFractionAlong - 0.05;
+			//remove some amount to move camera away from being exactly on collided surface.
+			//the number here should be relative to total expected length
+			//and also collision should really by a sphere (won't work well for glancing collision as is)
+
+		var cameraToMoveVec = desiredCameraMoveVec.map(xx=> xx*toMoveFraction );
+			//NOTE ideally should account for being a great circle - the fraction returned by bvh collision
+			//is in projected flat space. however, for small objects/rays relative to world, not big problem
+
+		moveMatHandlingPortal(offsetCameraContainer, cameraToMoveVec);
 	}
 
 
@@ -6315,34 +6338,10 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			}
 
-			//collision with bvh objects
-			var possiblities = bvhObjsForWorld[bullet.world];
-			
-			if (guiParams.debug.worldBvhCollisionTest){
-				//find possible collisions where 4d aabb of the bounding sphere of the object overlaps
-				//the 4d aabb of the line
-				var lineAABB = aabb4DForLine(bulletPos, newBulletPos);
-				possiblities = bvhObjsForWorld[bullet.world].filter(objInfo => 
-					aabbsOverlap4d(lineAABB, objInfo.aabb4d));
+			var bvhCollisionResult = rayBvhCollision(bulletPos, newBulletPos, bullet.world);
+			if (bvhCollisionResult.collided){
+				detonateBullet(bullet, false, [0.3,0.3,0.8]);
 			}
-
-			possiblities.forEach(objInfo => {
-				//transform bullet into object frame (similar logic to boxes etc), applying scale factor.
-
-				var bulletPosVec = getPosInMatrixFrame(bulletPos, objInfo.transposedMat);
-				var bulletPosEndVec = getPosInMatrixFrame(newBulletPos, objInfo.transposedMat);
-
-				//reject if bullet start or end is in other hemisphere to object checking collision with.
-				//NOTE this is a stopgap measure - when using world BVH, or long ray collision with world object bounds,
-				// won't be necessary to do this.
-				if (bulletPosVec[3]<=0 || bulletPosEndVec[3]<=0){
-					return;
-				}
-
-				if (bvhRayCollision(bulletPosVec, bulletPosEndVec, objInfo).collided){
-					detonateBullet(bullet, false, [0.3,0.3,0.8]);
-				}
-			});
 
 			//ray collision with bendy objects. NOTE this isn't quite right
 			if (guiParams.drawShapes.viaduct != 'none' && bridgeBuffers.isLoaded){
@@ -6414,12 +6413,6 @@ var iterateMechanics = (function iterateMechanics(){
 					positive: true,
 					result: projectTo3dWithScale(posInFrame,objectScale)
 				}
-			}
-				
-			function getPosInMatrixFrame(inputPos, matrixTransposed){
-				var posInFrame = vec4.create(inputPos);					//todo reuse vector
-				mat4.multiplyVec4(matrixTransposed, posInFrame, posInFrame);
-				return posInFrame;
 			}
 
 			var cellIdxForBullet = getGridId.forPoint(bulletPos);
@@ -7744,4 +7737,10 @@ function moveMatHandlingPortal(matContainer, offsetVec){
 function projectTo3dWithScale(posInFrame, objectScale){
 	var projectedPosInObjFrame = posInFrame.slice(0,3).map(val => val/(objectScale*posInFrame[3]));
 	return projectedPosInObjFrame;
+}
+
+function getPosInMatrixFrame(inputPos, matrixTransposed){
+	var posInFrame = vec4.create(inputPos);					//todo reuse vector
+	mat4.multiplyVec4(matrixTransposed, posInFrame, posInFrame);
+	return posInFrame;
 }
