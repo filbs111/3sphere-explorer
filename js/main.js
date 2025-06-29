@@ -76,6 +76,7 @@ var lucyBvh={};
 var mushroomBuffers={};
 var mushroomBvh={};
 var octoFractalBuffers={};
+var octoFractalBvh={};
 var bridgeBuffers={};
 var bridgeBvh={}
 var thrusterBuffers={};
@@ -472,8 +473,23 @@ function initBuffers(){
 			});
 		}, 6);
 
-
-	loadBuffersFromObj2Or3File(octoFractalBuffers, "./data/miscobjs/fractal-octahedron4.obj3", loadBufferData, 6);
+	loadBuffersFromObj2Or3File(octoFractalBuffers, "./data/miscobjs/fractal-octahedron4.obj3", (bufferObj, sourceData) => {
+			loadBufferData(bufferObj, sourceData);
+			createBvhFrom3dObjectData(sourceData, octoFractalBvh, 6);
+			var transposedMat = mat4.create(octoFractalMatrix);
+			mat4.transpose(transposedMat);
+			[{mat:octoFractalMatrix, transposedMat}].forEach(someMat => {
+				var scale = 0.2;
+				bvhObjsForWorld[1].push({
+					mesh: bufferObj,
+					mat: someMat.mat, 
+					transposedMat: someMat.transposedMat, 
+					bvh: octoFractalBvh,
+					aabb4d: aabb4DForSphere(someMat.mat.slice(12), scale*octoFractalBvh.boundingSphereRadius),
+					scale
+				});
+			});
+		}, 6);
 
 	loadBuffersFromObj2Or3File(bridgeBuffers, "./data/miscobjs/bridgexmy2.obj3", (bufferObj, sourceData) => {
 		loadBufferData(bufferObj, sourceData);
@@ -2744,32 +2760,11 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		moveMatHandlingPortal(offsetCameraContainer, offsetCam.getVec());
 	}
 
-	if (guiParams.drawShapes.octoFractal && octoFractalBuffers.isLoaded){
-		//using same shader as above. avoid re-setting stuff. TODO avoid more.
-		var desiredProgram = shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ];
-		if (activeShaderProgram != desiredProgram){
-			activeShaderProgram = desiredProgram;
-			shaderSetup(activeShaderProgram);
-		}
-
-		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
-
-		modelScale = 0.01*guiParams.drawShapes.octoFractalScale;
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
-		mat4.set(invertedWorldCamera, mvMatrix);
-		rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
-		mat4.multiply(mvMatrix,octoFractalMatrix);
-
-		mat4.identity(mMatrix);rotate4mat(mMatrix, 0, 1, duocylinderSpin);
-		mat4.multiply(mMatrix, octoFractalMatrix);
-		drawObjectFromBuffers(octoFractalBuffers, activeShaderProgram);
-	}
-
-
 	[
 		{buffersToDraw:lucyBuffers, bvh:lucyBvh, shaderGroup:shaderPrograms.coloredPerPixelDiscardVertexColored}, 
 		{buffersToDraw:mushroomBuffers, bvh:mushroomBvh, shaderGroup:shaderPrograms.coloredPerPixelDiscardVertexColored},
-		{buffersToDraw:buildingBuffers, bvh:buildingBvh, shaderGroup:shaderPrograms.coloredPerPixelDiscardVertexColoredTexmap, tex:bricktex}
+		{buffersToDraw:buildingBuffers, bvh:buildingBvh, shaderGroup:shaderPrograms.coloredPerPixelDiscardVertexColoredTexmap, tex:bricktex},
+		{buffersToDraw:octoFractalBuffers, bvh:octoFractalBvh, shaderGroup:shaderPrograms.coloredPerPixelDiscardVertexColored},
 	].forEach(info => {
 		var objs = bvhObjsForWorld[worldA].filter(objInfo=> objInfo.bvh == info.bvh);	//TODO prefilter
 		if (objs.length >0){
@@ -4530,9 +4525,6 @@ var guiParams={
 		singleBufferRoads:false,
 		frigate:true,
 		frigateScale:5,
-		building:true,
-		octoFractal:true,
-		octoFractalScale:20,
 		viaduct: 'none'
 	},
 	'random boxes':{
@@ -4826,9 +4818,6 @@ function init(){
 	drawShapesFolder.add(guiParams.drawShapes,"singleBufferRoads");
 	drawShapesFolder.add(guiParams.drawShapes,"frigate");
 	drawShapesFolder.add(guiParams.drawShapes,"frigateScale",0.1,20.0,0.1);
-	drawShapesFolder.add(guiParams.drawShapes,"building");
-	drawShapesFolder.add(guiParams.drawShapes,"octoFractal");
-	drawShapesFolder.add(guiParams.drawShapes,"octoFractalScale",0.1,20.0,0.1);
 	drawShapesFolder.add(guiParams.drawShapes,"viaduct", ['none','individual','instanced']);
 
 	var polytopesFolder = gui.addFolder('polytopes');
@@ -5736,8 +5725,7 @@ var iterateMechanics = (function iterateMechanics(){
 			if (guiParams.drawShapes.roads || guiParams.drawShapes.singleBufferRoads){
 				processBoxCollisionsForBoxInfoAllPoints(duocylinderBoxInfo.roads);
 			}
-			processOctoFractalCollision();	//after boxes to reuse whoosh noise (assume not close to both at same time)
-			processTriangleObjectCollision();
+			processTriangleObjectCollision();	//after boxes to reuse whoosh noise (assume not close to both at same time)
 
 			//whoosh for boxes, using result from closest point calculation done inside collision function
 			var distanceForBoxNoise = 100;
@@ -5919,93 +5907,6 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			}
 
-			function processOctoFractalCollision(){
-				collidePlayerWithObjectByClosestPointFunc(
-					0.01*guiParams.drawShapes.octoFractalScale,
-					octoFractalMatrix,
-					debugDraw.mats[7],
-					point => octoFractalUtils.getClosestPoint(point,3), 
-					octoFractalUtils.getLastPen,
-					myAudioPlayer.setWhooshSoundOctoFractal
-				);
-			}
-
-			function collidePlayerWithObjectByClosestPointFunc(objectScale, objectMatrix, debugPointMat, closestPointFunc, getLastPenFunc, setSoundFunc){
-				var relativeMat = mat4.create();	//TODO reuse
-	
-				//get player position in frame of objectMatrix
-				//note full matrix rotation is maybe not needed here. only vector output is wanted.		
-				mat4.set(playerMatrixTransposedDCRefFrame, relativeMat);
-				mat4.multiply(relativeMat, objectMatrix);
-				
-				var relativePos = [relativeMat[3], relativeMat[7], relativeMat[11], relativeMat[15]];	//need last one?
-	
-				if (relativePos[3]<0){
-					return;	//don't bother if in other half of the world. TODO tighter early discard (compare with number other than 0.)
-				}
-
-				var bSize = objectScale;
-				var pSize = settings.playerBallRad;
-
-				var playerInObjectFrame = relativePos.slice(0,3);
-				var pointScaledInObjectFrame = playerInObjectFrame.map(x => x/bSize);	//*relativePos[3]));
-
-				var closestPointInObjectFrame = closestPointFunc(pointScaledInObjectFrame);
-				var closestPointScaledBack = closestPointInObjectFrame.map(x=>-x*bSize);
-
-				mat4.set(objectMatrix, debugPointMat);
-								
-				xyzmove4mat(debugPointMat, closestPointScaledBack);
-
-				//take difference between position, closest point 
-				//calculate by taking difference between input, output points in 3d, or 4D from matrices. result approx same for small distances,
-				//and 4d version would not be exact as is, because the closest point used is not accurate (is calculated for 3d flat space)
-				var displacement = pointScaledInObjectFrame.map((xx,ii)=>xx - closestPointInObjectFrame[ii] );
-				var displacementSq = displacement.reduce((accum, xx) => accum+xx*xx, 0);
-				var displacementLength = Math.sqrt(displacementSq);
-				var scaledDisplacementLen = bSize*displacementLength;
-				currentPen = pSize - scaledDisplacementLen; //note will fall over if player centre inside sponge!
-
-				var penChange = currentPen - getLastPenFunc(currentPen);
-				var reactionForce = Math.max(50*currentPen + 1000*penChange, 0);
-
-				mat4.set(playerMatrixTransposedDCRefFrame, tmpRelativeMat);
-				mat4.multiply(tmpRelativeMat, debugPointMat);
-				distanceForNoise = distBetween4mats(tmpRelativeMat, identMat);
-					//TODO can this result be reused in the if statement below?
-				var soundSize = 0.002;
-				panForNoise = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));
-				setSoundHelper(setSoundFunc, distanceForNoise, panForNoise, spd);
-
-				if (currentPen > 0 && reactionForce> 0){	//penetration
-
-					//var reactionNormal=displacement.map(elem => elem/scaledDisplacementLen);
-
-					
-					var relativeMatC = mat4.create(playerMatrixTransposedDCRefFrame);
-
-					//commented out version more similar to box collision, which seems overcomplicated -
-					//var tempMat = mat4.create();
-					//mat4.set(objectMatrix, tempMat);
-					//xyzmove4mat(tempMat, [-relativePos[0],-relativePos[1],-relativePos[2]]);	//player's position in sponge frame
-					//xyzmove4mat(tempMat, reactionNormal);	//shifted by the reaction normal!
-					//mat4.multiply(relativeMatC, tempMat);
-					//mat4.set(debugPointMat, tempMat);	//TODO alternative version something like this. should scale by distance
-
-					mat4.multiply(relativeMatC, debugPointMat);
-
-					var relativePosC = relativeMatC.slice(12);
-					//normalise. note could just assume that length is player radius, or matches existing calculation for penetration etc, to simplify.
-					var relativePosCLength = Math.sqrt(1-relativePosC[3]*relativePosC[3]);	//assume matrix SO4
-					var relativePosCNormalised = relativePosC.map(x=>x/relativePosCLength);
-					var forcePlayerFrame = relativePosCNormalised.map(elem => elem*reactionForce);
-					for (var cc=0;cc<3;cc++){
-						playerVelVec[cc]+=forcePlayerFrame[cc];
-					}
-				}
-			}
-
-			
 			function processTriangleObjectCollision(){
 				var closestRoughSqDistanceFound = Number.POSITIVE_INFINITY;
 				var distanceResults=[];
@@ -6232,20 +6133,6 @@ var iterateMechanics = (function iterateMechanics(){
 			//todo 2 another simple optimisation - sphere check by xyzw distance. previous check only if passes
 			//todo 3 heirarchical bounding boxes or gridding system!
 			
-
-			//octohedron fractal
-			if (guiParams.drawShapes.octoFractal){
-				mat4.multiplyVec4(transposedOctoFractalMatrix, bulletPosDCF4V, tmpVec4);
-				if (tmpVec4[3]>0){
-					var homogenous = tmpVec4.slice(0,3).map(xx=>xx/tmpVec4[3]);
-					var bSize = 0.01*guiParams.drawShapes.octoFractalScale;
-					var scaledInput = homogenous.map(x=>x/bSize);
-
-					if (octoFractalUtils.isInside(scaledInput, 3)){
-						detonateBullet(bullet, true, [0.3,0.3,0.3,1]);
-					}
-				}
-			}
 
 			//box rings
 			var guiBoxes= guiParams.drawShapes.boxes;

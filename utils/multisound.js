@@ -173,9 +173,6 @@ var myAudioPlayer = (function(){
 		setWhooshSoundBox: function(settings){
 			if (whooshSoundBoxInstance){whooshSoundBoxInstance.setAll(settings);}
 		},
-		setWhooshSoundOctoFractal: function(settings){
-			if (whooshSoundOctoFractalInstance){whooshSoundOctoFractalInstance.setAll(settings);}
-		},
 		setWhooshSoundTriangleMesh: function(settings){
 			if (whooshSoundTriangleMeshInstance){whooshSoundTriangleMeshInstance.setAll(settings);}
 		},
