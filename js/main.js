@@ -740,14 +740,37 @@ function drawRegularScene(frameTime){
 		//really ray collision should be check both sides of the portal, 
 		//but for basic version, move without portal jump, just check starting side of portal.
 		//provided stuff camera collides with not close to portal, should work fine.
-		var desiredCameraMoveVec = offsetCam.getVec();
+
+		// smooth distance of camera from player as function of distance of collision in movement direction
+		// eg when back into a wall
+
+		//supposed acheive this by something liek spline running over simple kinked version: 
+		// average ( min(desired, measured+k), min(desired, measured-k))
+		//outcome: 
+		//measured < desired-k : distance = measured 
+		//then parabolic smoothed.
+		//measured > desired+k : distance = desired
+
+		//turns out both these transitions are visible. TODO something better!
+
+		var desiredCameraMoveVec = offsetCam.getVec();		
+		var kOverDesired = 0.1;
+		var testDistOverDesired = 1+kOverDesired;
+		var testCameraMoveVec = desiredCameraMoveVec.map(xx=>xx*testDistOverDesired);
+
 		var tempMat4 = mat4.create(offsetCameraContainer.matrix);
 		var cameraRayStartPos = tempMat4.slice(12);
-		xyzmove4mat(tempMat4, desiredCameraMoveVec);
+		xyzmove4mat(tempMat4, testCameraMoveVec);
 		var cameraRayEndPos = tempMat4.slice(12);
 
 		var bvhCollideResult = rayBvhCollision(cameraRayStartPos, cameraRayEndPos, offsetCameraContainer.world);
-		var toMoveFraction = bvhCollideResult.closestFractionAlong - 0.05;
+
+		var resultAsFractionOfDesired = bvhCollideResult.closestFractionAlong*testDistOverDesired;
+		var smoothed = (
+			Math.min(resultAsFractionOfDesired-kOverDesired, 1)+
+			Math.min(resultAsFractionOfDesired+kOverDesired, 1))/2;
+
+		var toMoveFraction = smoothed - 0.05;
 			//remove some amount to move camera away from being exactly on collided surface.
 			//the number here should be relative to total expected length
 			//and also collision should really by a sphere (won't work well for glancing collision as is)
