@@ -2719,6 +2719,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		{buffersToDraw:buildingBuffers, bvh:buildingBvh, shader:shaderPrograms.coloredPerPixelDiscardVertexColoredTexmap[ guiParams.display.atmosShader ], tex:bricktex},
 		{buffersToDraw:octoFractalBuffers, bvh:octoFractalBvh, shader:shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ]},
 		{buffersToDraw:gunBuffers, bvh:gunBvh, shader:shaderProgramColored},
+		{buffersToDraw:teapotBuffers, bvh:teapotBvh, shader:shaderProgramColored},
 	].forEach(info => {
 		var objs = bvhObjsForWorld[worldA].filter(objInfo=> objInfo.bvh == info.bvh);	//TODO prefilter
 		if (objs.length >0){
@@ -2928,18 +2929,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	}
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
 
-
-	var teapots = bvhObjsForWorld[worldA].filter(objInfo=> objInfo.bvh == teapotBvh);	//TODO prefilter
-	if (teapots.length >0){
-		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.gray);
-		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0.1,0.3);	//some emission
-		drawArrayOfModels2(
-			teapots,
-			teapotBuffers,
-			activeShaderProgram);
-	}
-
-	
 	
 	bvhObjsForWorld[worldA]
 		.filter(objInfo=> objInfo.bvh == pillarBvh)	//TODO prefilter
