@@ -131,7 +131,6 @@ var myAudioPlayer = (function(){
 	var whooshSound;
 	var whooshSoundInstance;
 	var whooshSoundBoxInstance;
-	var whooshSoundMengerInstance;
 	var whooshSoundOctoFractalInstance;
 	var whooshSoundTriangleMeshInstance;
 
@@ -139,7 +138,6 @@ var myAudioPlayer = (function(){
 		console.log("attempting to play whoosh sound");
 		whooshSoundInstance=whooshSound.play(0,0,true);
 		whooshSoundBoxInstance=whooshSound.play(0,0,true);
-		whooshSoundMengerInstance=whooshSound.play(0,0,true);
 		whooshSoundOctoFractalInstance=whooshSound.play(0,0,true);
 		whooshSoundTriangleMeshInstance=whooshSound.play(0,0,true);
 	}
@@ -174,9 +172,6 @@ var myAudioPlayer = (function(){
 		},
 		setWhooshSoundBox: function(settings){
 			if (whooshSoundBoxInstance){whooshSoundBoxInstance.setAll(settings);}
-		},
-		setWhooshSoundMenger: function(settings){
-			if (whooshSoundMengerInstance){whooshSoundMengerInstance.setAll(settings);}
 		},
 		setWhooshSoundOctoFractal: function(settings){
 			if (whooshSoundOctoFractalInstance){whooshSoundOctoFractalInstance.setAll(settings);}

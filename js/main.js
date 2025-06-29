@@ -70,6 +70,7 @@ var icoballBuffers={};
 var hyperboloidBuffers={};
 var meshSphereBuffers={};
 var buildingBuffers={};
+var buildingBvh={};
 var lucyBuffers={};
 var lucyBvh={};
 var mushroomBuffers={};
@@ -419,7 +420,24 @@ function initBuffers(){
 	loadBuffersFromObj2Or3File(frigateBuffers, "./data/frigate/frigate.obj2", loadBufferData);
 
 	loadBuffersFromObjFile(meshSphereBuffers, "./data/miscobjs/mesh-sphere.obj", loadBufferData);
-	loadBuffersFromObj5File(buildingBuffers, "./data/miscobjs/menger-texmap2.obj5", loadBufferData, 6);
+	loadBuffersFromObj5File(buildingBuffers, "./data/miscobjs/menger-texmap2.obj5", (bufferObj, sourceData) => {
+		loadBufferData(bufferObj, sourceData);
+		createBvhFrom3dObjectData(sourceData, buildingBvh, 6);
+		var transposedMat = mat4.create(buildingMatrix);
+		mat4.transpose(transposedMat);
+		[{mat:buildingMatrix, transposedMat}].forEach(someMat => {
+			var scale = 0.1;
+			bvhObjsForWorld[1].push({
+				mesh: bufferObj,
+				mat: someMat.mat, 
+				transposedMat: someMat.transposedMat, 
+				bvh: buildingBvh,
+				aabb4d: aabb4DForSphere(someMat.mat.slice(12), scale*buildingBvh.boundingSphereRadius),
+				scale
+			});
+		});
+	}, 6);
+	
 	loadBuffersFromObj5File(lucyBuffers, "./data/miscobjs/lucy-withvertcolor.obj5", (bufferObj, sourceData) => {
 		loadBufferData(bufferObj, sourceData);
 		createBvhFrom3dObjectData(sourceData, lucyBvh, 6);
@@ -2726,26 +2744,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		moveMatHandlingPortal(offsetCameraContainer, offsetCam.getVec());
 	}
 
-
-	if (guiParams.drawShapes.building && buildingBuffers.isLoaded){
-		activeShaderProgram = shaderPrograms.coloredPerPixelDiscardVertexColoredTexmap[ guiParams.display.atmosShader ];
-		shaderSetup(activeShaderProgram);
-
-		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
-
-		modelScale = 0.01*guiParams.drawShapes.buildingScale;
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
-		mat4.set(invertedWorldCamera, mvMatrix);
-		rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
-		mat4.multiply(mvMatrix,buildingMatrix);
-
-		mat4.identity(mMatrix);rotate4mat(mMatrix, 0, 1, duocylinderSpin);
-		mat4.multiply(mMatrix, buildingMatrix);
-
-		bind2dTextureIfRequired(bricktex);	//??
-		drawObjectFromBuffers(buildingBuffers, activeShaderProgram);
-	}
-
 	if (guiParams.drawShapes.octoFractal && octoFractalBuffers.isLoaded){
 		//using same shader as above. avoid re-setting stuff. TODO avoid more.
 		var desiredProgram = shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ];
@@ -2768,19 +2766,30 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	}
 
 
-	[{buffersToDraw:lucyBuffers, bvh:lucyBvh}, {buffersToDraw:mushroomBuffers, bvh: mushroomBvh}].forEach(info => {
+	[
+		{buffersToDraw:lucyBuffers, bvh:lucyBvh, shaderGroup:shaderPrograms.coloredPerPixelDiscardVertexColored}, 
+		{buffersToDraw:mushroomBuffers, bvh:mushroomBvh, shaderGroup:shaderPrograms.coloredPerPixelDiscardVertexColored},
+		{buffersToDraw:buildingBuffers, bvh:buildingBvh, shaderGroup:shaderPrograms.coloredPerPixelDiscardVertexColoredTexmap, tex:bricktex}
+	].forEach(info => {
 		var objs = bvhObjsForWorld[worldA].filter(objInfo=> objInfo.bvh == info.bvh);	//TODO prefilter
 		if (objs.length >0){
-		var desiredProgram = shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ];
-		if (activeShaderProgram != desiredProgram){
-			activeShaderProgram = desiredProgram;
-			shaderSetup(activeShaderProgram);
-		}
-		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
-		drawArrayOfModels2(
-			objs,
-			info.buffersToDraw,
-			activeShaderProgram);
+			var desiredProgram = info.shaderGroup[ guiParams.display.atmosShader ];
+			if (activeShaderProgram != desiredProgram){
+				activeShaderProgram = desiredProgram;
+				shaderSetup(activeShaderProgram);
+			}
+			uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
+
+			if (info.tex){
+				bind2dTextureIfRequired(info.tex);
+			}
+
+			//TODO include duocylinder spin?
+
+			drawArrayOfModels2(
+				objs,
+				info.buffersToDraw,
+				activeShaderProgram);
 		}
 	});
 
@@ -4522,7 +4531,6 @@ var guiParams={
 		frigate:true,
 		frigateScale:5,
 		building:true,
-		buildingScale:10,
 		octoFractal:true,
 		octoFractalScale:20,
 		viaduct: 'none'
@@ -4819,7 +4827,6 @@ function init(){
 	drawShapesFolder.add(guiParams.drawShapes,"frigate");
 	drawShapesFolder.add(guiParams.drawShapes,"frigateScale",0.1,20.0,0.1);
 	drawShapesFolder.add(guiParams.drawShapes,"building");
-	drawShapesFolder.add(guiParams.drawShapes,"buildingScale",0.1,20.0,0.1);
 	drawShapesFolder.add(guiParams.drawShapes,"octoFractal");
 	drawShapesFolder.add(guiParams.drawShapes,"octoFractalScale",0.1,20.0,0.1);
 	drawShapesFolder.add(guiParams.drawShapes,"viaduct", ['none','individual','instanced']);
@@ -5729,8 +5736,7 @@ var iterateMechanics = (function iterateMechanics(){
 			if (guiParams.drawShapes.roads || guiParams.drawShapes.singleBufferRoads){
 				processBoxCollisionsForBoxInfoAllPoints(duocylinderBoxInfo.roads);
 			}
-			processMengerSpongeCollision();	//after boxes to reuse whoosh noise (assume not close to both at same time)
-			processOctoFractalCollision();
+			processOctoFractalCollision();	//after boxes to reuse whoosh noise (assume not close to both at same time)
 			processTriangleObjectCollision();
 
 			//whoosh for boxes, using result from closest point calculation done inside collision function
@@ -5911,17 +5917,6 @@ var iterateMechanics = (function iterateMechanics(){
 					}
 					}	//end if bArray (defined)
 				}
-			}
-			
-			function processMengerSpongeCollision(){
-				collidePlayerWithObjectByClosestPointFunc(
-					0.01*guiParams.drawShapes.buildingScale,
-					buildingMatrix,
-					debugDraw.mats[6],
-					point => mengerUtils.getClosestPoint(point, 2),
-					mengerUtils.getLastPen,
-					myAudioPlayer.setWhooshSoundMenger
-				);
 			}
 
 			function processOctoFractalCollision(){
@@ -6237,26 +6232,6 @@ var iterateMechanics = (function iterateMechanics(){
 			//todo 2 another simple optimisation - sphere check by xyzw distance. previous check only if passes
 			//todo 3 heirarchical bounding boxes or gridding system!
 			
-			//menger sponge. 
-			if (guiParams.drawShapes.building){
-				//test with box collision
-				
-				//var bSize = 0.01*guiParams.drawShapes.buildingScale;
-				//var critSize = 1/Math.sqrt(1+3*bSize*bSize);
-				//boxCollideCheck(transposedBuildingMatrix,bSize,critSize,bulletPosDCF4V, true);
-
-				mat4.multiplyVec4(transposedBuildingMatrix, bulletPosDCF4V, tmpVec4);
-
-				if (tmpVec4[3]>0){
-					var homogenous = tmpVec4.slice(0,3).map(xx=>xx/tmpVec4[3]);
-					var bSize = 0.01*guiParams.drawShapes.buildingScale;
-					var scaledInput = homogenous.map(x=>x/bSize);
-
-					if (mengerUtils.isInside(scaledInput,2)){
-						detonateBullet(bullet, true, [0.3,0.3,0.3,1]);
-					}
-				}
-			}
 
 			//octohedron fractal
 			if (guiParams.drawShapes.octoFractal){
