@@ -401,95 +401,48 @@ function initBuffers(){
 	});
 	loadBuffersFromObj2Or3File(sshipBuffers, "./data/spaceship/sship-pointyc-tidy1-uv3-2020b-cockpit1b-yz-2020-10-04.obj2", loadBufferData);
 
-	loadBuffersFromObj2Or3File(gunBuffers, "./data/cannon/cannon-pointz-yz.obj2", (bufferObj, sourceData) => {
-		loadBufferData(bufferObj, sourceData);
-		createBvhFrom3dObjectData(sourceData, gunBvh);
-		someObjectMatrices.forEach(someMat => {
-			var scale = 0.1;
-			bvhObjsForWorld[3].push({
-				mesh: bufferObj,
-				mat: someMat.mat, 
-				transposedMat: someMat.transposedMat, 
-				bvh: gunBvh,
-				aabb4d: aabb4DForSphere(someMat.mat.slice(12), scale*gunBvh.boundingSphereRadius),
-				scale
-			});
-		});
-	});
+	var gunWorldData = someObjectMatrices.map(xx=> {
+		return {mat: xx.mat, transposedMat: xx.transposedMat, world:3}});
+	loadObjThenAddBvhToLevels(loadBuffersFromObj2Or3File, "./data/cannon/cannon-pointz-yz.obj2",
+		gunBuffers, gunBvh, 0.1, gunWorldData, 3);
 
 	loadBuffersFromObj2Or3File(su57Buffers, "./data/miscobjs/t50/su57yz-4a.obj2", loadBufferData);
 	loadBuffersFromObj2Or3File(frigateBuffers, "./data/frigate/frigate.obj2", loadBufferData);
 
 	loadBuffersFromObjFile(meshSphereBuffers, "./data/miscobjs/mesh-sphere.obj", loadBufferData);
-	loadBuffersFromObj5File(buildingBuffers, "./data/miscobjs/menger-texmap2.obj5", (bufferObj, sourceData) => {
-		loadBufferData(bufferObj, sourceData);
-		createBvhFrom3dObjectData(sourceData, buildingBvh, 6);
-		var transposedMat = mat4.create(buildingMatrix);
-		mat4.transpose(transposedMat);
-		[{mat:buildingMatrix, transposedMat}].forEach(someMat => {
-			var scale = 0.1;
-			bvhObjsForWorld[1].push({
-				mesh: bufferObj,
-				mat: someMat.mat, 
-				transposedMat: someMat.transposedMat, 
-				bvh: buildingBvh,
-				aabb4d: aabb4DForSphere(someMat.mat.slice(12), scale*buildingBvh.boundingSphereRadius),
-				scale
-			});
-		});
-	}, 6);
 	
-	loadBuffersFromObj5File(lucyBuffers, "./data/miscobjs/lucy-withvertcolor.obj5", (bufferObj, sourceData) => {
-		loadBufferData(bufferObj, sourceData);
-		createBvhFrom3dObjectData(sourceData, lucyBvh, 6);
-		someObjectMatrices.slice(0,3).forEach(someMat => {
-			var scale = 0.0016;
-			bvhObjsForWorld[1].push({
-				mesh: bufferObj,
-				mat: someMat.mat, 
-				transposedMat: someMat.transposedMat, 
-				//bvh:cubeFrameBvh,
-				//scale:0.4
-				bvh: lucyBvh,
-				aabb4d: aabb4DForSphere(someMat.mat.slice(12), scale*lucyBvh.boundingSphereRadius),
-				scale
-			});
-		});
-	}, 6);
+	loadObjThenAddBvhToLevels(loadBuffersFromObj5File, "./data/miscobjs/menger-texmap2.obj5",
+		buildingBuffers, buildingBvh, 0.1, [{mat:buildingMatrix, transposedMat: makeTransposedMat(buildingMatrix), world:1}],6);
+	
+	var lucyWorldData = someObjectMatrices.slice(0,3).map(xx=> {
+		return {mat: xx.mat, transposedMat: xx.transposedMat, world:1}});
+	loadObjThenAddBvhToLevels(loadBuffersFromObj5File, "./data/miscobjs/lucy-withvertcolor.obj5",
+		lucyBuffers, lucyBvh, 0.0016, lucyWorldData,6);
+	
+	var mushroomWorldData = someObjectMatrices.slice(4).map(xx=> {
+		return {mat: xx.mat, transposedMat: xx.transposedMat, world:1}});
+	loadObjThenAddBvhToLevels(loadBuffersFromObj5File, "./data/miscobjs/Pleurotus_eryngii-2-in-a-new-blend-file.obj5",
+		mushroomBuffers, mushroomBvh, 0.025, mushroomWorldData,6);
 
-	loadBuffersFromObj5File(mushroomBuffers, "./data/miscobjs/Pleurotus_eryngii-2-in-a-new-blend-file.obj5", (bufferObj, sourceData) => {
+	loadObjThenAddBvhToLevels(loadBuffersFromObj2Or3File, "./data/miscobjs/fractal-octahedron4.obj3",
+		octoFractalBuffers, octoFractalBvh, 0.2, [{mat:octoFractalMatrix, transposedMat: makeTransposedMat(octoFractalMatrix), world:1}],6);
+
+	function loadObjThenAddBvhToLevels(objLoader, objFile, objBuffers, objBvh, scale, worldAndMatArr, vertAttrs){
+		objLoader(objBuffers, objFile, (bufferObj, sourceData) => {
 			loadBufferData(bufferObj, sourceData);
-			createBvhFrom3dObjectData(sourceData, mushroomBvh, 6);
-			someObjectMatrices.slice(4).forEach(someMat => {
-				var scale = 0.025;
-				bvhObjsForWorld[1].push({
+			createBvhFrom3dObjectData(sourceData, objBvh, vertAttrs);
+			worldAndMatArr.forEach(worldAndMat => {
+				bvhObjsForWorld[worldAndMat.world].push({
 					mesh: bufferObj,
-					mat: someMat.mat, 
-					transposedMat: someMat.transposedMat, 
-					bvh: mushroomBvh,
-					aabb4d: aabb4DForSphere(someMat.mat.slice(12), scale*mushroomBvh.boundingSphereRadius),
+					mat: worldAndMat.mat, 
+					transposedMat: worldAndMat.transposedMat, 
+					bvh: objBvh,
+					aabb4d: aabb4DForSphere(worldAndMat.mat.slice(12), scale*objBvh.boundingSphereRadius),
 					scale
 				});
 			});
-		}, 6);
-
-	loadBuffersFromObj2Or3File(octoFractalBuffers, "./data/miscobjs/fractal-octahedron4.obj3", (bufferObj, sourceData) => {
-			loadBufferData(bufferObj, sourceData);
-			createBvhFrom3dObjectData(sourceData, octoFractalBvh, 6);
-			var transposedMat = mat4.create(octoFractalMatrix);
-			mat4.transpose(transposedMat);
-			[{mat:octoFractalMatrix, transposedMat}].forEach(someMat => {
-				var scale = 0.2;
-				bvhObjsForWorld[1].push({
-					mesh: bufferObj,
-					mat: someMat.mat, 
-					transposedMat: someMat.transposedMat, 
-					bvh: octoFractalBvh,
-					aabb4d: aabb4DForSphere(someMat.mat.slice(12), scale*octoFractalBvh.boundingSphereRadius),
-					scale
-				});
-			});
-		}, 6);
+		}, vertAttrs);
+	}
 
 	loadBuffersFromObj2Or3File(bridgeBuffers, "./data/miscobjs/bridgexmy2.obj3", (bufferObj, sourceData) => {
 		loadBufferData(bufferObj, sourceData);
@@ -2761,14 +2714,15 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	}
 
 	[
-		{buffersToDraw:lucyBuffers, bvh:lucyBvh, shaderGroup:shaderPrograms.coloredPerPixelDiscardVertexColored}, 
-		{buffersToDraw:mushroomBuffers, bvh:mushroomBvh, shaderGroup:shaderPrograms.coloredPerPixelDiscardVertexColored},
-		{buffersToDraw:buildingBuffers, bvh:buildingBvh, shaderGroup:shaderPrograms.coloredPerPixelDiscardVertexColoredTexmap, tex:bricktex},
-		{buffersToDraw:octoFractalBuffers, bvh:octoFractalBvh, shaderGroup:shaderPrograms.coloredPerPixelDiscardVertexColored},
+		{buffersToDraw:lucyBuffers, bvh:lucyBvh, shader:shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ]}, 
+		{buffersToDraw:mushroomBuffers, bvh:mushroomBvh, shader:shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ]},
+		{buffersToDraw:buildingBuffers, bvh:buildingBvh, shader:shaderPrograms.coloredPerPixelDiscardVertexColoredTexmap[ guiParams.display.atmosShader ], tex:bricktex},
+		{buffersToDraw:octoFractalBuffers, bvh:octoFractalBvh, shader:shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ]},
+		{buffersToDraw:gunBuffers, bvh:gunBvh, shader:shaderProgramColored},
 	].forEach(info => {
 		var objs = bvhObjsForWorld[worldA].filter(objInfo=> objInfo.bvh == info.bvh);	//TODO prefilter
 		if (objs.length >0){
-			var desiredProgram = info.shaderGroup[ guiParams.display.atmosShader ];
+			var desiredProgram = info.shader;
 			if (activeShaderProgram != desiredProgram){
 				activeShaderProgram = desiredProgram;
 				shaderSetup(activeShaderProgram);
@@ -2777,6 +2731,10 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 			if (info.tex){
 				bind2dTextureIfRequired(info.tex);
+			}
+
+			if (activeShaderProgram.uniforms.uEmitColor){
+				gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);
 			}
 
 			//TODO include duocylinder spin?
@@ -2991,16 +2949,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 			mat4.multiply(mvMatrix,objInfo.mat);
 			mat4.set(objInfo.mat, mMatrix);	
 			drawObjectFromBuffers(pillarBuffers, activeShaderProgram);
-		});
-	bvhObjsForWorld[worldA]
-		.filter(objInfo=> objInfo.bvh == gunBvh)	//TODO prefilter
-			//TODO vert colours or texture bake (already use baked texture for guns on player object)
-		.forEach(objInfo => {
-			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, objInfo.scale,objInfo.scale,objInfo.scale);
-			mat4.set(invertedWorldCamera, mvMatrix);
-			mat4.multiply(mvMatrix,objInfo.mat);
-			mat4.set(objInfo.mat, mMatrix);	
-			drawObjectFromBuffers(gunBuffers, activeShaderProgram);
 		});
 
 	//NOTE this is inefficient but is just debug drawing (could make fast by instancing.)
