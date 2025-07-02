@@ -1254,7 +1254,7 @@ function drawRegularScene(frameTime){
 		gl.enable(gl.BLEND);
 		gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);	
 
-		var standardDecalScale = [0.001,0.001,0];
+		var standardDecalScale = [0.002,0.002,0];
 		//direction of flight
 		if (playerVelVec[2] > 0.1){	//??
 			bind2dTextureIfRequired(hudTexturePlus);		//todo texture atlas for all hud 
@@ -1362,10 +1362,10 @@ function drawRegularScene(frameTime){
 			bind2dTextureIfRequired(fontTexture);
 
 			//drawText("World " + playerContainer.world, 0.6, 0.15, 1); //(below) centre of screen, suitable if flash up on cross portal
-			drawText("World " + playerContainer.world, 3, 1.5, 1,1); //bottom left. note scales with FOV!
+			drawText("World " + playerContainer.world, 2.5, 1.5, 0.45, 1.5); //bottom left. note scales with FOV!
 
 			portalTexts.forEach(pp=>{
-				drawText(pp.text, pp.pos[0], pp.pos[1], pp.pos[2], 0.3);
+				drawText(pp.text, pp.pos[0], pp.pos[1], pp.pos[2], 1);
 			});
 
 			function drawText(textToDraw, xpos, ypos, zpos, size){
