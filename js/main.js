@@ -1349,6 +1349,26 @@ function drawRegularScene(frameTime){
 			}
 		}
 
+		if (guiParams.debug.hudTest){
+			//draw point to side
+			drawTargetDecal(standardDecalScale, colorArrs.red, adjustedDirectionForFisheye([1,0,0]), 0);
+			drawTargetDecal(standardDecalScale, colorArrs.red, adjustedDirectionForFisheye([-1,0,0]), 0);
+			drawTargetDecal(standardDecalScale, colorArrs.red, adjustedDirectionForFisheye([0,1,0]), 0);
+			drawTargetDecal(standardDecalScale, colorArrs.red, adjustedDirectionForFisheye([0,-1,0]), 0);
+			//15 deg increments to left
+			for (var angl=0;angl<=120;angl+=15){
+				var rads = Math.PI*angl/180;
+				var cosa = Math.cos(rads);
+				var sina = Math.sin(rads);
+				drawTargetDecal(standardDecalScale, colorArrs.orange, adjustedDirectionForFisheye([-sina,0,-cosa]), 0);
+			}
+			//diagonal?
+			drawTargetDecal(standardDecalScale, colorArrs.green, adjustedDirectionForFisheye([1,0,-1]), 0);
+			drawTargetDecal(standardDecalScale, colorArrs.green, adjustedDirectionForFisheye([-1,0,-1]), 0);
+			drawTargetDecal(standardDecalScale, colorArrs.green, adjustedDirectionForFisheye([0,1,-1]), 0);
+			drawTargetDecal(standardDecalScale, colorArrs.green, adjustedDirectionForFisheye([0,-1,-1]), 0);
+		}
+
 		if (guiParams.debug.textWorldNum){
 			//drawing of text
 			//TODO efficient - currently many draw calls. could instance render, or create a mesh of multiple quads
@@ -1398,7 +1418,7 @@ function drawRegularScene(frameTime){
 			//TODO don't do this per character!
 			// or fix HUD mapping
 			var possq = pos.map(xx=>xx*xx);
-			if (!skipCulling && possq[2]*15 < possq[0]+possq[1]){
+			if (!(skipCulling || guiParams.debug.hudTest) && possq[2]*15 < possq[0]+possq[1]){
 				return;
 			}
 
@@ -1415,7 +1435,7 @@ function drawRegularScene(frameTime){
 		function drawTargetDecalCharacter(scale, color, pos, charInfo){
 			drawTargetDecal(scale, color, pos, 0, uvPosAndSize = [
 				charInfo.x/512,(1-charInfo.y/512) - charInfo.height/512,
-				charInfo.width/512, charInfo.height/512]);
+				charInfo.width/512, charInfo.height/512], skipCulling = true);
 				//note could flip quad y to make above simpler (but will use different method anyway)
 		}
 	}
@@ -3020,7 +3040,28 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		}
 	}
 
+	if (guiParams.debug.hudTest){
+		//draw a ring of boxes around player to help debug HUD (try to get hud points to match up with things on screen)
+		var savedActiveProg = activeShaderProgram;	//todo push things onto a to draw list, minimise shader switching
+		activeShaderProgram = shaderProgramTexmap;
+		gl.useProgram(activeShaderProgram);
+		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.multiply(mvMatrix,worldCamera);
+		var testSize = 0.0001;
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, testSize,testSize,testSize);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.darkGray);
 
+		var fifteenDegs = Math.PI*15/180;
+		xyzmove4mat(mvMatrix,[0,0,0.01]);
+		for (var ii=0;ii<8;ii++){
+			drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
+			xyzmove4mat(mvMatrix,[0,0,-0.01]);
+			xyzrotate4mat(mvMatrix,[0,fifteenDegs,0]);
+			xyzmove4mat(mvMatrix,[0,0,0.01]);
+		}
+		activeShaderProgram = savedActiveProg;
+		gl.useProgram(activeShaderProgram);
+	}
 	
 	var drawFunc = {
 		"spaceship" : drawSpaceship,
@@ -4488,6 +4529,7 @@ var guiParams={
 		test1:false
 	},
 	debug:{
+		hudTest:false,
 		closestPoint:false,
 		buoys:false,
 		nmapUseShader2:true,
@@ -4767,6 +4809,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	mapFolder.add(guiParams.map, "tetrahedronism", 0,1,0.05);
 
 	var debugFolder = gui.addFolder('debug');
+	debugFolder.add(guiParams.debug, "hudTest");
 	debugFolder.add(guiParams.debug, "closestPoint");
 	debugFolder.add(guiParams.debug, "buoys");
 	debugFolder.add(guiParams.debug, "nmapUseShader2");
