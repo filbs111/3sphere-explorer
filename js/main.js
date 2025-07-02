@@ -712,10 +712,11 @@ function drawRegularScene(frameTime){
 	}
 
 
-
-	var portalsForThisWorldX = portalsForWorld[offsetCameraContainer.world];
-	for (var ii=0;ii<portalsForThisWorldX.length;ii++){
-		reflectorInfoArr[ii].rad = guiParams.reflector.draw!="none" ? portalsForThisWorldX[ii].shared.radius : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
+	function recalculateReflectorInfoArray(){
+		var portalsForThisWorldX = portalsForWorld[offsetCameraContainer.world];
+		for (var ii=0;ii<portalsForThisWorldX.length;ii++){
+			reflectorInfoArr[ii].rad = guiParams.reflector.draw!="none" ? portalsForThisWorldX[ii].shared.radius : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
+		}
 	}
 
 	switch(guiParams.display.stereo3d ) {
@@ -811,6 +812,8 @@ function drawRegularScene(frameTime){
 	}
 
 	function drawSingleOrQuadViews(viewrect, outputFb){
+
+		recalculateReflectorInfoArray();
 
 		mat4.set(offsetPlayerCamera, worldCamera);
 
