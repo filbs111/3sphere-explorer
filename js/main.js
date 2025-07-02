@@ -1257,8 +1257,9 @@ function drawRegularScene(frameTime){
 		var standardDecalScale = [0.002,0.002,0];
 		//direction of flight
 		if (playerVelVec[2] > 0.1){	//??
-			bind2dTextureIfRequired(hudTexturePlus);		//todo texture atlas for all hud 
-			drawTargetDecal(standardDecalScale, colorArrs.hudFlightDir, adjustedDirectionForFisheye(playerVelVec));
+			bind2dTextureIfRequired(hudTexturePlus);		//todo texture atlas for all hud
+			var reversed = playerVelVec.map(x=>-x);
+			drawTargetDecal(standardDecalScale, colorArrs.hudFlightDir, adjustedDirectionForFisheye(reversed));
 		}
 		bind2dTextureIfRequired(hudTexture);	
 		
