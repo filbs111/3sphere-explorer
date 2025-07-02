@@ -1392,7 +1392,16 @@ function drawRegularScene(frameTime){
 		gl.disable(gl.BLEND);
 		gl.enable(gl.DEPTH_TEST);
 
-		function drawTargetDecal(scale, color, pos, rotation=0, uvPosAndSize = [0,0,1,1]){
+		function drawTargetDecal(scale, color, pos, rotation=0, uvPosAndSize = [0,0,1,1], skipCulling=false){
+
+			//discard if too far from centre of screen because calculation errors significant
+			//TODO don't do this per character!
+			// or fix HUD mapping
+			var possq = pos.map(xx=>xx*xx);
+			if (!skipCulling && possq[2]*15 < possq[0]+possq[1]){
+				return;
+			}
+
 			//scale*= 0.01/pos[2];
 			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, scale);
 			uniform4fvSetter.setIfDifferent(activeShaderProgram, "uUvCoords", uvPosAndSize);
