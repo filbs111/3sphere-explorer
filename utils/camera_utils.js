@@ -22,23 +22,69 @@ var offsetCam = (function(){
 	offsetVec = offsetVecTarget;
 	offsetVecReverse = offsetVecTargetReverse;
 
-	var mult1=0.985;
+	var mult1=0.98;
 	var mult2=1-mult1;
 	
+    var desiredCamMoveVec=[0,0,0];  //?
+    var smoothedDesiredCamMoveVec=[0,0,0]
+
+    var smoothedCurrentVec = [0,0,0];
+    var lastType;
+    var lastReverse=true;
+
+    var haveSwitchedCam=false;
+    var camItsToDo = 0;
+
+    function setType(){
+        var currentType = guiParams.display.cameraType;
+        var currentReverse = reverseCamera;
+        if (lastType == currentType && currentReverse == lastReverse){return;}
+        if (currentReverse != lastReverse){haveSwitchedCam=true;}
+        lastType = currentType;
+        lastReverse = currentReverse;
+        desiredCamMoveVec = (currentReverse? targetForTypeReverse:targetForType)[currentType].map(x=>sshipModelScale*x);
+    }
+
 	return {
 		getVec: function (){
-			return reverseCamera ? offsetVecReverse : offsetVec;
+			return desiredCamMoveVec;
 		},
-		setType: function(type){
-			offsetVecTarget = targetForType[type].map(x=>sshipModelScale*x);
-			offsetVecTargetReverse = targetForTypeReverse[type].map(x=>sshipModelScale*x);
+		setType,
+		addIts: function(numIts){
+            camItsToDo+=numIts;
 		},
-		iterate: function(){
-			for (var cc=0;cc<3;cc++){
-				offsetVec[cc] = offsetVec[cc]*mult1+offsetVecTarget[cc]*mult2;
-				offsetVecReverse[cc] = offsetVecReverse[cc]*mult1+offsetVecTargetReverse[cc]*mult2;
-			}
-		}
+        getSmoothedWithCamCollision(offsetCameraContainer){
+            setType();
+            
+            if (haveSwitchedCam){
+                smoothedDesiredCamMoveVec = desiredCamMoveVec;
+            }
+
+            var collidedVec = getCameraToMoveVecWithCameraCollision(offsetCameraContainer, smoothedDesiredCamMoveVec);
+
+            if (haveSwitchedCam){
+                smoothedCurrentVec = collidedVec;
+                haveSwitchedCam=false;
+            }
+
+            for (var it=0;it<camItsToDo;it++){
+                for (var cc=0;cc<3;cc++){
+                    smoothedDesiredCamMoveVec[cc] = smoothedDesiredCamMoveVec[cc]*mult1+desiredCamMoveVec[cc]*mult2;
+                    smoothedCurrentVec[cc] = smoothedCurrentVec[cc]*mult1+collidedVec[cc]*mult2;
+                }
+            }
+            camItsToDo=0;
+
+            var collidedVecLenSq = collidedVec.reduce((accum, current) => accum + current*current, 0);
+            var smoothedCurrentVecLenSq = smoothedCurrentVec.reduce((accum, current) => accum + current*current, 0);
+
+            if (collidedVecLenSq<smoothedCurrentVecLenSq){
+                //don't smooth cam if would mean is inside an object
+                smoothedCurrentVec = collidedVec;
+            }
+
+            return smoothedCurrentVec;
+        }
 	}
 })();
 

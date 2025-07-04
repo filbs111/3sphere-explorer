@@ -686,10 +686,8 @@ function drawRegularScene(frameTime){
 		setMat4FromToWithQuats(playerCameraInterp, offsetPlayerCamera);	
 		//mat4.set(playerCamera, offsetPlayerCamera);	
 		
-		offsetCam.setType(guiParams.display.cameraType);
 		//TODO is camera interpolation combined with matrix movement a problem?
-
-		var cameraToMoveVec = getCameraToMoveVecWithCameraCollision(offsetCameraContainer, offsetCam.getVec());
+		var cameraToMoveVec = offsetCam.getSmoothedWithCamCollision(offsetCameraContainer);
 		moveMatHandlingPortal(offsetCameraContainer, cameraToMoveVec);
 	}
 
@@ -2676,7 +2674,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		xyzrotate4mat(offsetPlayerCamera, [0,turretSpin + Math.PI,0]);
 		xyzrotate4mat(offsetPlayerCamera, [turretElev,0,0]);
 
-		offsetCam.setType(guiParams.display.cameraType);
+		offsetCam.setType();
 		moveMatHandlingPortal(offsetCameraContainer, offsetCam.getVec());
 	}
 
@@ -5147,8 +5145,8 @@ var iterateMechanics = (function iterateMechanics(){
 		for (var ii=0;ii<numSteps;ii++){
 			stepSpeed();
 			gunHeat*=gunHeatMultiplier;
-			offsetCam.iterate();
 		}
+		offsetCam.addIts(numSteps);
 		
 		//TODO check whether this calculation is redundant (done elsewhere)
 		mat4.set(playerCamera, worldCamera);	//TODO check whether playerCamera is main camera or spaceship, decide where microphone should be
