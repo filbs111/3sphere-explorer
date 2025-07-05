@@ -124,13 +124,27 @@ function createBvhFrom3dObjectData(sourceData, bvhToPopulate, vertAttrs=3){
     }
 }
 
+//TODO: 
+// 1) find the collision point
+// 2) find how far (eg fraction) along the ray - conversion to great circle fraction can be done
+// outside this, because this func works in projected "flat" space, doesn't know scale of object
+// 3) make a swept sphere test. this is harder because not spheres in projected space...
+
+function bvhRayCollision(rayStart4Vec, rayEnd4Vec, objInfo){
+    var projectedPosInObjFrame = projectTo3dWithScale(rayStart4Vec, objInfo.scale);
+    var projectedPosEndInObjFrame = projectTo3dWithScale(rayEnd4Vec, objInfo.scale);
+    return bvhRayOverlapTest(projectedPosInObjFrame, projectedPosEndInObjFrame, objInfo.bvh);   
+}
+
 function bvhRayOverlapTest(rayStart, rayEnd, bvh){
     var tempVec3 = [...new Array(3)];
     var rayAABB = [Math.min, Math.max].map(minmaxfunc => {
-        return tempVec3.map( (unused,ii) => {return minmaxfunc(rayStart[ii], rayEnd[ii]);});
+        return tempVec3.map( (_,ii) => {return minmaxfunc(rayStart[ii], rayEnd[ii]);});
     });
     
     var possibles = collisionTestBvh(rayAABB, bvh.tris);
+    var closestFractionAlong = 1;    //1 is useful since eg for camera collision want to move full dist if no collide
+    var collided = false;
 
     for (var ii=0;ii< possibles.length; ii++){
         var thisTri = possibles[ii];
@@ -153,11 +167,18 @@ function bvhRayOverlapTest(rayStart, rayEnd, bvh){
                 var withinTri = thisTri.edgeData.reduce( (accum, edge) =>
                     accum && dotProduct(pointOnPlane, edge.normal)<=edge.distFromOrigin, true);
 
-                if(withinTri){return true;}
+                if(withinTri){
+                    collided = true;
+                    var thisFractionAlong = startDistFromPlane/(startDistFromPlane-endDistFromPlane);
+                    closestFractionAlong = Math.min(closestFractionAlong, thisFractionAlong);
+                }
             }
         }
     }
-    return false;
+    return {
+        collided,
+        closestFractionAlong
+    };
 }
 
 //this returns possible colliding bvh nodes in the group.
@@ -628,4 +649,42 @@ function minMaxDistanceFromPointToBoundingSphere(pointPos, spherePos, sphereRad)
     var circleAngRad = Math.atan(sphereRad);    //TODO precalculate?
     return [Math.max(0,angDifference-circleAngRad), angDifference+circleAngRad];
         //TODO maybe remove the max(0, here since may work without anyway
+}
+
+function rayBvhCollision(rayStart, rayEnd, world){
+    var possiblities = bvhObjsForWorld[world];
+    
+    if (guiParams.debug.worldBvhCollisionTest){
+        //find possible collisions where 4d aabb of the bounding sphere of the object overlaps
+        //the 4d aabb of the line
+        var lineAABB = aabb4DForLine(rayStart, rayEnd);
+        possiblities = bvhObjsForWorld[world].filter(objInfo => 
+            aabbsOverlap4d(lineAABB, objInfo.aabb4d));
+    }
+
+    var collided = false;
+    var closestFractionAlong = 1;
+
+    possiblities.forEach(objInfo => {
+        //transform ray into object frame (similar logic to boxes etc), applying scale factor.
+
+        var rayPosVec = getPosInMatrixFrame(rayStart, objInfo.transposedMat);
+        var rayPosEndVec = getPosInMatrixFrame(rayEnd, objInfo.transposedMat);
+
+        //reject if ray start or end is in other hemisphere to object checking collision with.
+        //NOTE this is a stopgap measure - when using world BVH, or long ray collision with world object bounds,
+        // won't be necessary to do this.
+        if (rayPosVec[3]<=0 || rayPosEndVec[3]<=0){
+            return;
+        }
+
+        var result = bvhRayCollision(rayPosVec, rayPosEndVec, objInfo);
+        collided = collided || result.collided;
+        closestFractionAlong = Math.min(closestFractionAlong, result.closestFractionAlong);
+    });
+
+    return {
+        collided,
+        closestFractionAlong
+    }
 }

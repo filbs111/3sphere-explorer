@@ -54,12 +54,6 @@ var debugDraw = (function(){
 		//terrain nearest point
 		drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[5], colorArrs.red, 0.02);
 
-        //menger sponge
-        drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[6], colorArrs.red, 0.01);
-
-        //octo fractal
-        drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[7], colorArrs.red, 0.01);
-
         //triangle objs
         drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[8], 
             [colorArrs.red,colorArrs.green,colorArrs.blue][triObjClosestPointType], 0.01);

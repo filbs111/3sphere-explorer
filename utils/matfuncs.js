@@ -378,3 +378,9 @@ function logMatInTable(mat){
 	var toLog = [...Array(4).keys()].map(ii => matArr.slice(ii*4, ii*4+4));
 	console.table(toLog);
 }
+
+function makeTransposedMat(mat){
+	var transposedMat = mat4.create(mat);
+	mat4.transpose(transposedMat);
+	return transposedMat;
+}

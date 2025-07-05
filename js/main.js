@@ -70,11 +70,13 @@ var icoballBuffers={};
 var hyperboloidBuffers={};
 var meshSphereBuffers={};
 var buildingBuffers={};
+var buildingBvh={};
 var lucyBuffers={};
 var lucyBvh={};
 var mushroomBuffers={};
 var mushroomBvh={};
 var octoFractalBuffers={};
+var octoFractalBvh={};
 var bridgeBuffers={};
 var bridgeBvh={}
 var thrusterBuffers={};
@@ -399,63 +401,48 @@ function initBuffers(){
 	});
 	loadBuffersFromObj2Or3File(sshipBuffers, "./data/spaceship/sship-pointyc-tidy1-uv3-2020b-cockpit1b-yz-2020-10-04.obj2", loadBufferData);
 
-	loadBuffersFromObj2Or3File(gunBuffers, "./data/cannon/cannon-pointz-yz.obj2", (bufferObj, sourceData) => {
-		loadBufferData(bufferObj, sourceData);
-		createBvhFrom3dObjectData(sourceData, gunBvh);
-		someObjectMatrices.forEach(someMat => {
-			var scale = 0.1;
-			bvhObjsForWorld[3].push({
-				mesh: bufferObj,
-				mat: someMat.mat, 
-				transposedMat: someMat.transposedMat, 
-				bvh: gunBvh,
-				aabb4d: aabb4DForSphere(someMat.mat.slice(12), scale*gunBvh.boundingSphereRadius),
-				scale
-			});
-		});
-	});
+	var gunWorldData = someObjectMatrices.map(xx=> {
+		return {mat: xx.mat, transposedMat: xx.transposedMat, world:3}});
+	loadObjThenAddBvhToLevels(loadBuffersFromObj2Or3File, "./data/cannon/cannon-pointz-yz.obj2",
+		gunBuffers, gunBvh, 0.1, gunWorldData, 3);
 
 	loadBuffersFromObj2Or3File(su57Buffers, "./data/miscobjs/t50/su57yz-4a.obj2", loadBufferData);
 	loadBuffersFromObj2Or3File(frigateBuffers, "./data/frigate/frigate.obj2", loadBufferData);
 
 	loadBuffersFromObjFile(meshSphereBuffers, "./data/miscobjs/mesh-sphere.obj", loadBufferData);
-	loadBuffersFromObj5File(buildingBuffers, "./data/miscobjs/menger-texmap2.obj5", loadBufferData, 6);
-	loadBuffersFromObj5File(lucyBuffers, "./data/miscobjs/lucy-withvertcolor.obj5", (bufferObj, sourceData) => {
-		loadBufferData(bufferObj, sourceData);
-		createBvhFrom3dObjectData(sourceData, lucyBvh, 6);
-		someObjectMatrices.slice(0,3).forEach(someMat => {
-			var scale = 0.0016;
-			bvhObjsForWorld[1].push({
-				mesh: bufferObj,
-				mat: someMat.mat, 
-				transposedMat: someMat.transposedMat, 
-				//bvh:cubeFrameBvh,
-				//scale:0.4
-				bvh: lucyBvh,
-				aabb4d: aabb4DForSphere(someMat.mat.slice(12), scale*lucyBvh.boundingSphereRadius),
-				scale
-			});
-		});
-	}, 6);
+	
+	loadObjThenAddBvhToLevels(loadBuffersFromObj5File, "./data/miscobjs/menger-texmap2.obj5",
+		buildingBuffers, buildingBvh, 0.1, [{mat:buildingMatrix, transposedMat: makeTransposedMat(buildingMatrix), world:1}],6);
+	
+	var lucyWorldData = someObjectMatrices.slice(0,3).map(xx=> {
+		return {mat: xx.mat, transposedMat: xx.transposedMat, world:1}});
+	loadObjThenAddBvhToLevels(loadBuffersFromObj5File, "./data/miscobjs/lucy-withvertcolor.obj5",
+		lucyBuffers, lucyBvh, 0.0016, lucyWorldData,6);
+	
+	var mushroomWorldData = someObjectMatrices.slice(4).map(xx=> {
+		return {mat: xx.mat, transposedMat: xx.transposedMat, world:1}});
+	loadObjThenAddBvhToLevels(loadBuffersFromObj5File, "./data/miscobjs/Pleurotus_eryngii-2-in-a-new-blend-file.obj5",
+		mushroomBuffers, mushroomBvh, 0.025, mushroomWorldData,6);
 
-	loadBuffersFromObj5File(mushroomBuffers, "./data/miscobjs/Pleurotus_eryngii-2-in-a-new-blend-file.obj5", (bufferObj, sourceData) => {
+	loadObjThenAddBvhToLevels(loadBuffersFromObj2Or3File, "./data/miscobjs/fractal-octahedron4.obj3",
+		octoFractalBuffers, octoFractalBvh, 0.2, [{mat:octoFractalMatrix, transposedMat: makeTransposedMat(octoFractalMatrix), world:1}],6);
+
+	function loadObjThenAddBvhToLevels(objLoader, objFile, objBuffers, objBvh, scale, worldAndMatArr, vertAttrs){
+		objLoader(objBuffers, objFile, (bufferObj, sourceData) => {
 			loadBufferData(bufferObj, sourceData);
-			createBvhFrom3dObjectData(sourceData, mushroomBvh, 6);
-			someObjectMatrices.slice(4).forEach(someMat => {
-				var scale = 0.025;
-				bvhObjsForWorld[1].push({
+			createBvhFrom3dObjectData(sourceData, objBvh, vertAttrs);
+			worldAndMatArr.forEach(worldAndMat => {
+				bvhObjsForWorld[worldAndMat.world].push({
 					mesh: bufferObj,
-					mat: someMat.mat, 
-					transposedMat: someMat.transposedMat, 
-					bvh: mushroomBvh,
-					aabb4d: aabb4DForSphere(someMat.mat.slice(12), scale*mushroomBvh.boundingSphereRadius),
+					mat: worldAndMat.mat, 
+					transposedMat: worldAndMat.transposedMat, 
+					bvh: objBvh,
+					aabb4d: aabb4DForSphere(worldAndMat.mat.slice(12), scale*objBvh.boundingSphereRadius),
 					scale
 				});
 			});
-		}, 6);
-
-
-	loadBuffersFromObj2Or3File(octoFractalBuffers, "./data/miscobjs/fractal-octahedron4.obj3", loadBufferData, 6);
+		}, vertAttrs);
+	}
 
 	loadBuffersFromObj2Or3File(bridgeBuffers, "./data/miscobjs/bridgexmy2.obj3", (bufferObj, sourceData) => {
 		loadBufferData(bufferObj, sourceData);
@@ -648,52 +635,6 @@ function calcReflectionInfo(toReflect,resultsObj, reflectorRad){
 
 var gunHeat = 0;
 
-var offsetCam = (function(){
-	var offsetVec;
-	var offsetVecReverse;
-	var targetForType = {
-		"near 3rd person":[0,-37.5,-25],	//TODO reduce code duplication. do scalar vector product targetForType time?
-		"mid 3rd person":[0,-50,-75],
-		"far 3rd person":[0,-60,-85],
-		"really far 3rd person":[0,-75,-125],
-		"cockpit":[0,0,15],
-		"side":[30,0,12.5],
-		"none":[0,0,0]
-	}
-	var targetForTypeReverse = {
-		"near 3rd person":[0,-37.5,25],
-		"mid 3rd person":[0,-37.5,37.5],
-		"far 3rd person":[0,-100,150],
-		"really far 3rd person":[0,-75,125],
-		"cockpit":[0,0,-50],
-		"side":[30,0,12.5],
-		"none":[0,0,0]
-	}
-	var offsetVecTarget = targetForType["far 3rd person"].map(x=>sshipModelScale*x);
-	var offsetVecTargetReverse = targetForTypeReverse["far 3rd person"].map(x=>sshipModelScale*x);
-	offsetVec = offsetVecTarget;
-	offsetVecReverse = offsetVecTargetReverse;
-
-	var mult1=0.985;
-	var mult2=1-mult1;
-	
-	return {
-		getVec: function (){
-			return reverseCamera ? offsetVecReverse : offsetVec;
-		},
-		setType: function(type){
-			offsetVecTarget = targetForType[type].map(x=>sshipModelScale*x);
-			offsetVecTargetReverse = targetForTypeReverse[type].map(x=>sshipModelScale*x);
-		},
-		iterate: function(){
-			for (var cc=0;cc<3;cc++){
-				offsetVec[cc] = offsetVec[cc]*mult1+offsetVecTarget[cc]*mult2;
-				offsetVecReverse[cc] = offsetVecReverse[cc]*mult1+offsetVecTargetReverse[cc]*mult2;
-			}
-		}
-	}
-})();
-
 var lastSeaTime=0;
 function drawScene(frameTime){
 
@@ -745,8 +686,9 @@ function drawRegularScene(frameTime){
 		setMat4FromToWithQuats(playerCameraInterp, offsetPlayerCamera);	
 		//mat4.set(playerCamera, offsetPlayerCamera);	
 		
-		offsetCam.setType(guiParams.display.cameraType);
-		moveMatHandlingPortal(offsetCameraContainer, offsetCam.getVec())
+		//TODO is camera interpolation combined with matrix movement a problem?
+		var cameraToMoveVec = offsetCam.getSmoothedWithCamCollision(offsetCameraContainer);
+		moveMatHandlingPortal(offsetCameraContainer, cameraToMoveVec);
 	}
 
 
@@ -768,10 +710,11 @@ function drawRegularScene(frameTime){
 	}
 
 
-
-	var portalsForThisWorldX = portalsForWorld[offsetCameraContainer.world];
-	for (var ii=0;ii<portalsForThisWorldX.length;ii++){
-		reflectorInfoArr[ii].rad = guiParams.reflector.draw!="none" ? portalsForThisWorldX[ii].shared.radius : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
+	function recalculateReflectorInfoArray(){
+		var portalsForThisWorldX = portalsForWorld[offsetCameraContainer.world];
+		for (var ii=0;ii<portalsForThisWorldX.length;ii++){
+			reflectorInfoArr[ii].rad = guiParams.reflector.draw!="none" ? portalsForThisWorldX[ii].shared.radius : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
+		}
 	}
 
 	switch(guiParams.display.stereo3d ) {
@@ -867,6 +810,8 @@ function drawRegularScene(frameTime){
 	}
 
 	function drawSingleOrQuadViews(viewrect, outputFb){
+
+		recalculateReflectorInfoArray();
 
 		mat4.set(offsetPlayerCamera, worldCamera);
 
@@ -1310,11 +1255,12 @@ function drawRegularScene(frameTime){
 		gl.enable(gl.BLEND);
 		gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);	
 
-		var standardDecalScale = [0.001,0.001,0];
+		var standardDecalScale = [0.002,0.002,0];
 		//direction of flight
 		if (playerVelVec[2] > 0.1){	//??
-			bind2dTextureIfRequired(hudTexturePlus);		//todo texture atlas for all hud 
-			drawTargetDecal(standardDecalScale, colorArrs.hudFlightDir, adjustedDirectionForFisheye(playerVelVec));
+			bind2dTextureIfRequired(hudTexturePlus);		//todo texture atlas for all hud
+			var reversed = playerVelVec.map(x=>-x);
+			drawTargetDecal(standardDecalScale, colorArrs.hudFlightDir, adjustedDirectionForFisheye(reversed));
 		}
 		bind2dTextureIfRequired(hudTexture);	
 		
@@ -1405,6 +1351,26 @@ function drawRegularScene(frameTime){
 			}
 		}
 
+		if (guiParams.debug.hudTest){
+			//draw point to side
+			drawTargetDecal(standardDecalScale, colorArrs.red, adjustedDirectionForFisheye([1,0,0]), 0);
+			drawTargetDecal(standardDecalScale, colorArrs.red, adjustedDirectionForFisheye([-1,0,0]), 0);
+			drawTargetDecal(standardDecalScale, colorArrs.red, adjustedDirectionForFisheye([0,1,0]), 0);
+			drawTargetDecal(standardDecalScale, colorArrs.red, adjustedDirectionForFisheye([0,-1,0]), 0);
+			//15 deg increments to left
+			for (var angl=0;angl<=120;angl+=15){
+				var rads = Math.PI*angl/180;
+				var cosa = Math.cos(rads);
+				var sina = Math.sin(rads);
+				drawTargetDecal(standardDecalScale, colorArrs.orange, adjustedDirectionForFisheye([-sina,0,-cosa]), 0);
+			}
+			//diagonal?
+			drawTargetDecal(standardDecalScale, colorArrs.green, adjustedDirectionForFisheye([1,0,-1]), 0);
+			drawTargetDecal(standardDecalScale, colorArrs.green, adjustedDirectionForFisheye([-1,0,-1]), 0);
+			drawTargetDecal(standardDecalScale, colorArrs.green, adjustedDirectionForFisheye([0,1,-1]), 0);
+			drawTargetDecal(standardDecalScale, colorArrs.green, adjustedDirectionForFisheye([0,-1,-1]), 0);
+		}
+
 		if (guiParams.debug.textWorldNum){
 			//drawing of text
 			//TODO efficient - currently many draw calls. could instance render, or create a mesh of multiple quads
@@ -1418,10 +1384,10 @@ function drawRegularScene(frameTime){
 			bind2dTextureIfRequired(fontTexture);
 
 			//drawText("World " + playerContainer.world, 0.6, 0.15, 1); //(below) centre of screen, suitable if flash up on cross portal
-			drawText("World " + playerContainer.world, 3, 1.5, 1,1); //bottom left. note scales with FOV!
+			drawText("World " + playerContainer.world, 2.5, 1.5, 0.45, 1.5); //bottom left. note scales with FOV!
 
 			portalTexts.forEach(pp=>{
-				drawText(pp.text, pp.pos[0], pp.pos[1], pp.pos[2], 0.3);
+				drawText(pp.text, pp.pos[0], pp.pos[1], pp.pos[2], 1);
 			});
 
 			function drawText(textToDraw, xpos, ypos, zpos, size){
@@ -1448,7 +1414,16 @@ function drawRegularScene(frameTime){
 		gl.disable(gl.BLEND);
 		gl.enable(gl.DEPTH_TEST);
 
-		function drawTargetDecal(scale, color, pos, rotation=0, uvPosAndSize = [0,0,1,1]){
+		function drawTargetDecal(scale, color, pos, rotation=0, uvPosAndSize = [0,0,1,1], skipCulling=false){
+
+			//discard if too far from centre of screen because calculation errors significant
+			//TODO don't do this per character!
+			// or fix HUD mapping
+			var possq = pos.map(xx=>xx*xx);
+			if (!(skipCulling || guiParams.debug.hudTest) && possq[2]*15 < possq[0]+possq[1]){
+				return;
+			}
+
 			//scale*= 0.01/pos[2];
 			gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, scale);
 			uniform4fvSetter.setIfDifferent(activeShaderProgram, "uUvCoords", uvPosAndSize);
@@ -1462,7 +1437,7 @@ function drawRegularScene(frameTime){
 		function drawTargetDecalCharacter(scale, color, pos, charInfo){
 			drawTargetDecal(scale, color, pos, 0, uvPosAndSize = [
 				charInfo.x/512,(1-charInfo.y/512) - charInfo.height/512,
-				charInfo.width/512, charInfo.height/512]);
+				charInfo.width/512, charInfo.height/512], skipCulling = true);
 				//note could flip quad y to make above simpler (but will use different method anyway)
 		}
 	}
@@ -2699,65 +2674,41 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		xyzrotate4mat(offsetPlayerCamera, [0,turretSpin + Math.PI,0]);
 		xyzrotate4mat(offsetPlayerCamera, [turretElev,0,0]);
 
-		offsetCam.setType(guiParams.display.cameraType);
+		offsetCam.setType();
 		moveMatHandlingPortal(offsetCameraContainer, offsetCam.getVec());
 	}
 
-
-	if (guiParams.drawShapes.building && buildingBuffers.isLoaded){
-		activeShaderProgram = shaderPrograms.coloredPerPixelDiscardVertexColoredTexmap[ guiParams.display.atmosShader ];
-		shaderSetup(activeShaderProgram);
-
-		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
-
-		modelScale = 0.01*guiParams.drawShapes.buildingScale;
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
-		mat4.set(invertedWorldCamera, mvMatrix);
-		rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
-		mat4.multiply(mvMatrix,buildingMatrix);
-
-		mat4.identity(mMatrix);rotate4mat(mMatrix, 0, 1, duocylinderSpin);
-		mat4.multiply(mMatrix, buildingMatrix);
-
-		bind2dTextureIfRequired(bricktex);	//??
-		drawObjectFromBuffers(buildingBuffers, activeShaderProgram);
-	}
-
-	if (guiParams.drawShapes.octoFractal && octoFractalBuffers.isLoaded){
-		//using same shader as above. avoid re-setting stuff. TODO avoid more.
-		var desiredProgram = shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ];
-		if (activeShaderProgram != desiredProgram){
-			activeShaderProgram = desiredProgram;
-			shaderSetup(activeShaderProgram);
-		}
-
-		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
-
-		modelScale = 0.01*guiParams.drawShapes.octoFractalScale;
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
-		mat4.set(invertedWorldCamera, mvMatrix);
-		rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
-		mat4.multiply(mvMatrix,octoFractalMatrix);
-
-		mat4.identity(mMatrix);rotate4mat(mMatrix, 0, 1, duocylinderSpin);
-		mat4.multiply(mMatrix, octoFractalMatrix);
-		drawObjectFromBuffers(octoFractalBuffers, activeShaderProgram);
-	}
-
-
-	[{buffersToDraw:lucyBuffers, bvh:lucyBvh}, {buffersToDraw:mushroomBuffers, bvh: mushroomBvh}].forEach(info => {
+	[
+		{buffersToDraw:lucyBuffers, bvh:lucyBvh, shader:shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ]}, 
+		{buffersToDraw:mushroomBuffers, bvh:mushroomBvh, shader:shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ]},
+		{buffersToDraw:buildingBuffers, bvh:buildingBvh, shader:shaderPrograms.coloredPerPixelDiscardVertexColoredTexmap[ guiParams.display.atmosShader ], tex:bricktex},
+		{buffersToDraw:octoFractalBuffers, bvh:octoFractalBvh, shader:shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ]},
+		{buffersToDraw:gunBuffers, bvh:gunBvh, shader:shaderProgramColored},
+		{buffersToDraw:teapotBuffers, bvh:teapotBvh, shader:shaderProgramColored},
+	].forEach(info => {
 		var objs = bvhObjsForWorld[worldA].filter(objInfo=> objInfo.bvh == info.bvh);	//TODO prefilter
 		if (objs.length >0){
-		var desiredProgram = shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ];
-		if (activeShaderProgram != desiredProgram){
-			activeShaderProgram = desiredProgram;
-			shaderSetup(activeShaderProgram);
-		}
-		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
-		drawArrayOfModels2(
-			objs,
-			info.buffersToDraw,
-			activeShaderProgram);
+			var desiredProgram = info.shader;
+			if (activeShaderProgram != desiredProgram){
+				activeShaderProgram = desiredProgram;
+				shaderSetup(activeShaderProgram);
+			}
+			uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
+
+			if (info.tex){
+				bind2dTextureIfRequired(info.tex);
+			}
+
+			if (activeShaderProgram.uniforms.uEmitColor){
+				gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);
+			}
+
+			//TODO include duocylinder spin?
+
+			drawArrayOfModels2(
+				objs,
+				info.buffersToDraw,
+				activeShaderProgram);
 		}
 	});
 
@@ -2943,18 +2894,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	}
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
 
-
-	var teapots = bvhObjsForWorld[worldA].filter(objInfo=> objInfo.bvh == teapotBvh);	//TODO prefilter
-	if (teapots.length >0){
-		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.gray);
-		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0.1,0.3);	//some emission
-		drawArrayOfModels2(
-			teapots,
-			teapotBuffers,
-			activeShaderProgram);
-	}
-
-	
 	
 	bvhObjsForWorld[worldA]
 		.filter(objInfo=> objInfo.bvh == pillarBvh)	//TODO prefilter
@@ -2964,16 +2903,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 			mat4.multiply(mvMatrix,objInfo.mat);
 			mat4.set(objInfo.mat, mMatrix);	
 			drawObjectFromBuffers(pillarBuffers, activeShaderProgram);
-		});
-	bvhObjsForWorld[worldA]
-		.filter(objInfo=> objInfo.bvh == gunBvh)	//TODO prefilter
-			//TODO vert colours or texture bake (already use baked texture for guns on player object)
-		.forEach(objInfo => {
-			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, objInfo.scale,objInfo.scale,objInfo.scale);
-			mat4.set(invertedWorldCamera, mvMatrix);
-			mat4.multiply(mvMatrix,objInfo.mat);
-			mat4.set(objInfo.mat, mMatrix);	
-			drawObjectFromBuffers(gunBuffers, activeShaderProgram);
 		});
 
 	//NOTE this is inefficient but is just debug drawing (could make fast by instancing.)
@@ -3113,7 +3042,28 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		}
 	}
 
+	if (guiParams.debug.hudTest){
+		//draw a ring of boxes around player to help debug HUD (try to get hud points to match up with things on screen)
+		var savedActiveProg = activeShaderProgram;	//todo push things onto a to draw list, minimise shader switching
+		activeShaderProgram = shaderProgramTexmap;
+		gl.useProgram(activeShaderProgram);
+		mat4.set(invertedWorldCamera, mvMatrix);
+		mat4.multiply(mvMatrix,worldCamera);
+		var testSize = 0.0001;
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, testSize,testSize,testSize);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.darkGray);
 
+		var fifteenDegs = Math.PI*15/180;
+		xyzmove4mat(mvMatrix,[0,0,0.01]);
+		for (var ii=0;ii<8;ii++){
+			drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
+			xyzmove4mat(mvMatrix,[0,0,-0.01]);
+			xyzrotate4mat(mvMatrix,[0,fifteenDegs,0]);
+			xyzmove4mat(mvMatrix,[0,0,0.01]);
+		}
+		activeShaderProgram = savedActiveProg;
+		gl.useProgram(activeShaderProgram);
+	}
 	
 	var drawFunc = {
 		"spaceship" : drawSpaceship,
@@ -4498,10 +4448,6 @@ var guiParams={
 		singleBufferRoads:false,
 		frigate:true,
 		frigateScale:5,
-		building:true,
-		buildingScale:10,
-		octoFractal:true,
-		octoFractalScale:20,
 		viaduct: 'none'
 	},
 	'random boxes':{
@@ -4538,8 +4484,8 @@ var guiParams={
 	display:{
 		cameraType:"far 3rd person",
 		cameraAttachedTo:"player vehicle",
-		cameraZoom:2.9,
-		uVarOne:-0.0375,
+		cameraZoom:2.2,
+		uVarOne:-0.0425,
 		vFOV:"",
 		hFOV:"",
 		flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
@@ -4585,6 +4531,7 @@ var guiParams={
 		test1:false
 	},
 	debug:{
+		hudTest:false,
 		closestPoint:false,
 		buoys:false,
 		nmapUseShader2:true,
@@ -4795,10 +4742,6 @@ function init(){
 	drawShapesFolder.add(guiParams.drawShapes,"singleBufferRoads");
 	drawShapesFolder.add(guiParams.drawShapes,"frigate");
 	drawShapesFolder.add(guiParams.drawShapes,"frigateScale",0.1,20.0,0.1);
-	drawShapesFolder.add(guiParams.drawShapes,"building");
-	drawShapesFolder.add(guiParams.drawShapes,"buildingScale",0.1,20.0,0.1);
-	drawShapesFolder.add(guiParams.drawShapes,"octoFractal");
-	drawShapesFolder.add(guiParams.drawShapes,"octoFractalScale",0.1,20.0,0.1);
 	drawShapesFolder.add(guiParams.drawShapes,"viaduct", ['none','individual','instanced']);
 
 	var polytopesFolder = gui.addFolder('polytopes');
@@ -4828,10 +4771,10 @@ function init(){
 	controlFolder.add(guiParams.control, 'smoothMouse', 0, 1000,50);
 	
 	var displayFolder = gui.addFolder('display');	//control and movement
-	displayFolder.add(guiParams.display, "cameraType", ["cockpit", "near 3rd person", "mid 3rd person", "far 3rd person", "really far 3rd person", "side","none"]);
+	displayFolder.add(guiParams.display, "cameraType", ["cockpit", "near 3rd person", "far 3rd person", "really far 3rd person", "side","none"]);
 	displayFolder.add(guiParams.display, "cameraAttachedTo", ["player vehicle", "turret","none"]);	//"none" acts like drop camera
-	displayFolder.add(guiParams.display, "cameraZoom", 1,10,0.1);
-	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.0125);
+	displayFolder.add(guiParams.display, "cameraZoom", 1,5,0.1);
+	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.0025);
 	displayFolder.add(guiParams.display, "vFOV").listen();
 	displayFolder.add(guiParams.display, "hFOV").listen();
 	displayFolder.add(guiParams.display, "flipReverseCamera");
@@ -4868,6 +4811,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	mapFolder.add(guiParams.map, "tetrahedronism", 0,1,0.05);
 
 	var debugFolder = gui.addFolder('debug');
+	debugFolder.add(guiParams.debug, "hudTest");
 	debugFolder.add(guiParams.debug, "closestPoint");
 	debugFolder.add(guiParams.debug, "buoys");
 	debugFolder.add(guiParams.debug, "nmapUseShader2");
@@ -5201,8 +5145,8 @@ var iterateMechanics = (function iterateMechanics(){
 		for (var ii=0;ii<numSteps;ii++){
 			stepSpeed();
 			gunHeat*=gunHeatMultiplier;
-			offsetCam.iterate();
 		}
+		offsetCam.addIts(numSteps);
 		
 		//TODO check whether this calculation is redundant (done elsewhere)
 		mat4.set(playerCamera, worldCamera);	//TODO check whether playerCamera is main camera or spaceship, decide where microphone should be
@@ -5706,9 +5650,7 @@ var iterateMechanics = (function iterateMechanics(){
 			if (guiParams.drawShapes.roads || guiParams.drawShapes.singleBufferRoads){
 				processBoxCollisionsForBoxInfoAllPoints(duocylinderBoxInfo.roads);
 			}
-			processMengerSpongeCollision();	//after boxes to reuse whoosh noise (assume not close to both at same time)
-			processOctoFractalCollision();
-			processTriangleObjectCollision();
+			processTriangleObjectCollision();	//after boxes to reuse whoosh noise (assume not close to both at same time)
 
 			//whoosh for boxes, using result from closest point calculation done inside collision function
 			var distanceForBoxNoise = 100;
@@ -5889,105 +5831,7 @@ var iterateMechanics = (function iterateMechanics(){
 					}	//end if bArray (defined)
 				}
 			}
-			
-			function processMengerSpongeCollision(){
-				collidePlayerWithObjectByClosestPointFunc(
-					0.01*guiParams.drawShapes.buildingScale,
-					buildingMatrix,
-					debugDraw.mats[6],
-					point => mengerUtils.getClosestPoint(point, 2),
-					mengerUtils.getLastPen,
-					myAudioPlayer.setWhooshSoundMenger
-				);
-			}
 
-			function processOctoFractalCollision(){
-				collidePlayerWithObjectByClosestPointFunc(
-					0.01*guiParams.drawShapes.octoFractalScale,
-					octoFractalMatrix,
-					debugDraw.mats[7],
-					point => octoFractalUtils.getClosestPoint(point,3), 
-					octoFractalUtils.getLastPen,
-					myAudioPlayer.setWhooshSoundOctoFractal
-				);
-			}
-
-			function collidePlayerWithObjectByClosestPointFunc(objectScale, objectMatrix, debugPointMat, closestPointFunc, getLastPenFunc, setSoundFunc){
-				var relativeMat = mat4.create();	//TODO reuse
-	
-				//get player position in frame of objectMatrix
-				//note full matrix rotation is maybe not needed here. only vector output is wanted.		
-				mat4.set(playerMatrixTransposedDCRefFrame, relativeMat);
-				mat4.multiply(relativeMat, objectMatrix);
-				
-				var relativePos = [relativeMat[3], relativeMat[7], relativeMat[11], relativeMat[15]];	//need last one?
-	
-				if (relativePos[3]<0){
-					return;	//don't bother if in other half of the world. TODO tighter early discard (compare with number other than 0.)
-				}
-
-				var bSize = objectScale;
-				var pSize = settings.playerBallRad;
-
-				var playerInObjectFrame = relativePos.slice(0,3);
-				var pointScaledInObjectFrame = playerInObjectFrame.map(x => x/bSize);	//*relativePos[3]));
-
-				var closestPointInObjectFrame = closestPointFunc(pointScaledInObjectFrame);
-				var closestPointScaledBack = closestPointInObjectFrame.map(x=>-x*bSize);
-
-				mat4.set(objectMatrix, debugPointMat);
-								
-				xyzmove4mat(debugPointMat, closestPointScaledBack);
-
-				//take difference between position, closest point 
-				//calculate by taking difference between input, output points in 3d, or 4D from matrices. result approx same for small distances,
-				//and 4d version would not be exact as is, because the closest point used is not accurate (is calculated for 3d flat space)
-				var displacement = pointScaledInObjectFrame.map((xx,ii)=>xx - closestPointInObjectFrame[ii] );
-				var displacementSq = displacement.reduce((accum, xx) => accum+xx*xx, 0);
-				var displacementLength = Math.sqrt(displacementSq);
-				var scaledDisplacementLen = bSize*displacementLength;
-				currentPen = pSize - scaledDisplacementLen; //note will fall over if player centre inside sponge!
-
-				var penChange = currentPen - getLastPenFunc(currentPen);
-				var reactionForce = Math.max(50*currentPen + 1000*penChange, 0);
-
-				mat4.set(playerMatrixTransposedDCRefFrame, tmpRelativeMat);
-				mat4.multiply(tmpRelativeMat, debugPointMat);
-				distanceForNoise = distBetween4mats(tmpRelativeMat, identMat);
-					//TODO can this result be reused in the if statement below?
-				var soundSize = 0.002;
-				panForNoise = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));
-				setSoundHelper(setSoundFunc, distanceForNoise, panForNoise, spd);
-
-				if (currentPen > 0 && reactionForce> 0){	//penetration
-
-					//var reactionNormal=displacement.map(elem => elem/scaledDisplacementLen);
-
-					
-					var relativeMatC = mat4.create(playerMatrixTransposedDCRefFrame);
-
-					//commented out version more similar to box collision, which seems overcomplicated -
-					//var tempMat = mat4.create();
-					//mat4.set(objectMatrix, tempMat);
-					//xyzmove4mat(tempMat, [-relativePos[0],-relativePos[1],-relativePos[2]]);	//player's position in sponge frame
-					//xyzmove4mat(tempMat, reactionNormal);	//shifted by the reaction normal!
-					//mat4.multiply(relativeMatC, tempMat);
-					//mat4.set(debugPointMat, tempMat);	//TODO alternative version something like this. should scale by distance
-
-					mat4.multiply(relativeMatC, debugPointMat);
-
-					var relativePosC = relativeMatC.slice(12);
-					//normalise. note could just assume that length is player radius, or matches existing calculation for penetration etc, to simplify.
-					var relativePosCLength = Math.sqrt(1-relativePosC[3]*relativePosC[3]);	//assume matrix SO4
-					var relativePosCNormalised = relativePosC.map(x=>x/relativePosCLength);
-					var forcePlayerFrame = relativePosCNormalised.map(elem => elem*reactionForce);
-					for (var cc=0;cc<3;cc++){
-						playerVelVec[cc]+=forcePlayerFrame[cc];
-					}
-				}
-			}
-
-			
 			function processTriangleObjectCollision(){
 				var closestRoughSqDistanceFound = Number.POSITIVE_INFINITY;
 				var distanceResults=[];
@@ -6214,40 +6058,6 @@ var iterateMechanics = (function iterateMechanics(){
 			//todo 2 another simple optimisation - sphere check by xyzw distance. previous check only if passes
 			//todo 3 heirarchical bounding boxes or gridding system!
 			
-			//menger sponge. 
-			if (guiParams.drawShapes.building){
-				//test with box collision
-				
-				//var bSize = 0.01*guiParams.drawShapes.buildingScale;
-				//var critSize = 1/Math.sqrt(1+3*bSize*bSize);
-				//boxCollideCheck(transposedBuildingMatrix,bSize,critSize,bulletPosDCF4V, true);
-
-				mat4.multiplyVec4(transposedBuildingMatrix, bulletPosDCF4V, tmpVec4);
-
-				if (tmpVec4[3]>0){
-					var homogenous = tmpVec4.slice(0,3).map(xx=>xx/tmpVec4[3]);
-					var bSize = 0.01*guiParams.drawShapes.buildingScale;
-					var scaledInput = homogenous.map(x=>x/bSize);
-
-					if (mengerUtils.isInside(scaledInput,2)){
-						detonateBullet(bullet, true, [0.3,0.3,0.3,1]);
-					}
-				}
-			}
-
-			//octohedron fractal
-			if (guiParams.drawShapes.octoFractal){
-				mat4.multiplyVec4(transposedOctoFractalMatrix, bulletPosDCF4V, tmpVec4);
-				if (tmpVec4[3]>0){
-					var homogenous = tmpVec4.slice(0,3).map(xx=>xx/tmpVec4[3]);
-					var bSize = 0.01*guiParams.drawShapes.octoFractalScale;
-					var scaledInput = homogenous.map(x=>x/bSize);
-
-					if (octoFractalUtils.isInside(scaledInput, 3)){
-						detonateBullet(bullet, true, [0.3,0.3,0.3,1]);
-					}
-				}
-			}
 
 			//box rings
 			var guiBoxes= guiParams.drawShapes.boxes;
@@ -6315,38 +6125,10 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			}
 
-			//collision with bvh objects
-			var possiblities = bvhObjsForWorld[bullet.world];
-			
-			if (guiParams.debug.worldBvhCollisionTest){
-				//find possible collisions where 4d aabb of the bounding sphere of the object overlaps
-				//the 4d aabb of the line
-				var lineAABB = aabb4DForLine(bulletPos, newBulletPos);
-				possiblities = bvhObjsForWorld[bullet.world].filter(objInfo => 
-					aabbsOverlap4d(lineAABB, objInfo.aabb4d));
+			var bvhCollisionResult = rayBvhCollision(bulletPos, newBulletPos, bullet.world);
+			if (bvhCollisionResult.collided){
+				detonateBullet(bullet, false, [0.3,0.3,0.8]);
 			}
-
-			possiblities.forEach(objInfo => {
-				//transform bullet into object frame (similar logic to boxes etc), applying scale factor.
-
-				var bulletPosVec = getPosInMatrixFrame(bulletPos, objInfo.transposedMat);
-				var bulletPosEndVec = getPosInMatrixFrame(newBulletPos, objInfo.transposedMat);
-
-				//reject if bullet start or end is in other hemisphere to object checking collision with.
-				//NOTE this is a stopgap measure - when using world BVH, or long ray collision with world object bounds,
-				// won't be necessary to do this.
-				if (bulletPosVec[3]<=0 || bulletPosEndVec[3]<=0){
-					return;
-				}
-
-				var projectedPosInObjFrame = projectTo3dWithScale(bulletPosVec, objInfo.scale);
-				var projectedPosEndInObjFrame = projectTo3dWithScale(bulletPosEndVec, objInfo.scale);
-
-				//if (bvhSphereOverlapTest(projectedPosInObjFrame, 0.01, objInfo.bvh)){
-				if (bvhRayOverlapTest(projectedPosInObjFrame, projectedPosEndInObjFrame, objInfo.bvh)){
-					detonateBullet(bullet, false, [0.3,0.3,0.8]);
-				}
-			});
 
 			//ray collision with bendy objects. NOTE this isn't quite right
 			if (guiParams.drawShapes.viaduct != 'none' && bridgeBuffers.isLoaded){
@@ -6371,7 +6153,7 @@ var iterateMechanics = (function iterateMechanics(){
 						var weightedAverageStartPosObjFrame = performWeightedAverage(projectedPosInObjFrame.result, projectedLastPosInObjFrame.result);
 						var weightedAverageEndPosObjFrame = performWeightedAverage(projectedPosEndInObjFrame.result, projectedLastPosEndInObjFrame.result);
 
-						if (bvhRayOverlapTest(weightedAverageStartPosObjFrame, weightedAverageEndPosObjFrame, bvh)){
+						if (bvhRayOverlapTest(weightedAverageStartPosObjFrame, weightedAverageEndPosObjFrame, bvh).collided){
 							detonateBullet(bullet, false, [0.3,0.3,0.8]);
 						}
 					}
@@ -6419,18 +6201,6 @@ var iterateMechanics = (function iterateMechanics(){
 					result: projectTo3dWithScale(posInFrame,objectScale)
 				}
 			}
-				
-			function getPosInMatrixFrame(inputPos, matrixTransposed){
-				var posInFrame = vec4.create(inputPos);					//todo reuse vector
-				mat4.multiplyVec4(matrixTransposed, posInFrame, posInFrame);
-				return posInFrame;
-			}
-
-			function projectTo3dWithScale(posInFrame, objectScale){
-				var projectedPosInObjFrame = posInFrame.slice(0,3).map(val => val/(objectScale*posInFrame[3]));
-				return projectedPosInObjFrame;
-			}
-			
 
 			var cellIdxForBullet = getGridId.forPoint(bulletPos);
 			
@@ -7749,4 +7519,15 @@ function moveMatHandlingPortal(matContainer, offsetVec){
 	}
 	//console.log("ruled out portal camera traversal");
 	xyzmove4mat(inputMatrix, offsetVec);
+}
+
+function projectTo3dWithScale(posInFrame, objectScale){
+	var projectedPosInObjFrame = posInFrame.slice(0,3).map(val => val/(objectScale*posInFrame[3]));
+	return projectedPosInObjFrame;
+}
+
+function getPosInMatrixFrame(inputPos, matrixTransposed){
+	var posInFrame = vec4.create(inputPos);					//todo reuse vector
+	mat4.multiplyVec4(matrixTransposed, posInFrame, posInFrame);
+	return posInFrame;
 }
