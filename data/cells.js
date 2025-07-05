@@ -224,7 +224,6 @@ returnObj.d5=rotationStack;	//override.
 
 //try 120-cell
 var dodecaMove = Math.PI/5;
-var dodecaMove2 = Math.PI/3;
 var movedir;
 rotationStack=[];
 generatorRotations = [];

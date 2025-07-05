@@ -81,6 +81,9 @@ var bridgeBuffers={};
 var bridgeBvh={}
 var thrusterBuffers={};
 
+var polytopeBvhObjs={};
+var dodecaScale=0.515;	//guess TODO use right value (0.5 is too small)
+
 //var sshipModelScale=0.0001;
 var sshipModelScale=0.00005;
 var duocylinderSurfaceBoxScale = 0.025;
@@ -450,9 +453,19 @@ function initBuffers(){
 
 	//TODO array for each object type? include direct reference to rendering info (instead of matching bvh later)
 
-
-
-
+	//add for polytope cells.
+	polytopeBvhObjs.d120 = cellMatData.d120[0].map(mat => {
+		var transposedMat = mat4.create(mat);
+		mat4.transpose(transposedMat);
+		return {
+			mesh: null,	//use old rendering for now.
+			mat, 
+			transposedMat, 
+			bvh: dodecaFrameBvh2,	//TODO without outer polys?
+			aabb4d: aabb4DForSphere(mat.slice(12), dodecaScale*dodecaFrameBvh2.boundingSphereRadius),
+			scale:dodecaScale
+		}
+	});
 
 	var thisMatT;
 	for (var ii=0;ii<maxRandBoxes;ii++){
@@ -4987,20 +5000,6 @@ for (var ii=0;ii<4;ii++){
 	tetraInnerPlanesToCheck.push(innerPlanes);
 }
 
-//move outside since used in collision and drawing (TODO collide/draw methods on dodeca object)
-var dodecaScale=0.515;	//guess TODO use right value (0.5 is too small)
-
-var dodecaPlanesToCheck = [];
-var dodecaDirs = [];	//a,b - really these are orthoganal directions with dodecaPlanesToCheck vectors. todo combo into matrix.
-dodecaPlanesToCheck.push([0,1,0]);
-dodecaDirs.push([[1,0,0],[0,0,1]]);
-var yValDirection = 1/Math.sqrt(5);
-var xzValDirection = 2*yValDirection;
-for (var ang=0;ang<5;ang++){
-	var angRad = ang*Math.PI/2.5;
-	dodecaPlanesToCheck.push([xzValDirection*Math.cos(angRad), yValDirection, xzValDirection*Math.sin(angRad)]);
-	dodecaDirs.push([[-yValDirection*Math.cos(angRad),xzValDirection, -yValDirection*Math.sin(angRad)], [Math.sin(angRad),0,-Math.cos(angRad)]]);
-}
 
 var debugRoll=0
 
@@ -5807,75 +5806,84 @@ var iterateMechanics = (function iterateMechanics(){
 				var closestRoughSqDistanceFound = Number.POSITIVE_INFINITY;
 				var distanceResults=[];
 
-				var possibleObjects = bvhObjsForWorld[playerContainer.world];
-				if (guiParams.debug.worldBvhCollisionTestPlayer){
-					//find set of candiate objects by their bounding spheres - 
-					//provided each object has something solid within its bounding sphere
-					//any each object has a maximum and minimum possible distance from a given point
-					//the find the minimum maximum distance for all objects.
-					//any object with a minimum distance above this is NOT the closest so can skip testing for.
-					//which in practice is likely to be the bulk of objects. 
-					var objsWithMinMaxDistances = bvhObjsForWorld[playerContainer.world].map(objInfo => {return {
-						objInfo,
-						minMaxDist: minMaxDistanceFromPointToBoundingSphere(playerPos, objInfo.mat.slice(12), objInfo.scale*objInfo.bvh.boundingSphereRadius)
-					}});
-					var maxPossibleDistance = objsWithMinMaxDistances.map(xx=>xx.minMaxDist[1]).reduce((a,b)=>Math.min(a,b), 0.1);
-					possibleObjects = objsWithMinMaxDistances
-						.filter(xx=>xx.minMaxDist[0]<=maxPossibleDistance)
-						.map(xx=>xx.objInfo);
+
+				processPossibles(bvhObjsForWorld[playerContainer.world]);
+
+				if (guiParams["draw 120-cell"]){
+					processPossibles(polytopeBvhObjs.d120);
+				}
+				
+				function processPossibles(possibleObjects){
+					if (guiParams.debug.worldBvhCollisionTestPlayer){
+						//find set of candiate objects by their bounding spheres - 
+						//provided each object has something solid within its bounding sphere
+						//any each object has a maximum and minimum possible distance from a given point
+						//the find the minimum maximum distance for all objects.
+						//any object with a minimum distance above this is NOT the closest so can skip testing for.
+						//which in practice is likely to be the bulk of objects. 
+						var objsWithMinMaxDistances = possibleObjects.map(objInfo => {return {
+							objInfo,
+							minMaxDist: minMaxDistanceFromPointToBoundingSphere(playerPos, objInfo.mat.slice(12), objInfo.scale*objInfo.bvh.boundingSphereRadius)
+						}});
+						var maxPossibleDistance = objsWithMinMaxDistances.map(xx=>xx.minMaxDist[1]).reduce((a,b)=>Math.min(a,b), 0.1);
+						possibleObjects = objsWithMinMaxDistances
+							.filter(xx=>xx.minMaxDist[0]<=maxPossibleDistance)
+							.map(xx=>xx.objInfo);
+					}
+
+					possibleObjects.forEach(objInfo =>
+					{
+						var transposedObjMat = objInfo.transposedMat;
+						var objMat = objInfo.mat;
+						var objBvh = objInfo.bvh;
+						var objScale = objInfo.scale;
+
+						var playerPosVec = vec4.create(playerPos);
+						mat4.multiplyVec4(transposedObjMat, playerPosVec, playerPosVec);
+						
+						if (playerPosVec[3]<=0.5){	//TODO tighter bounding sphere.
+							return;
+						}						
+
+						var projectedPosInObjFrame = playerPosVec.slice(0,3).map(val => val/(objScale*playerPosVec[3]));
+
+						//var closestPointResult = closestPointBvhBruteForce(projectedPosInObjFrame, objBvh);
+						var closestPointResult = closestPointBvhEfficient(projectedPosInObjFrame, objBvh);
+
+						var closestPointInObjectFrame = closestPointResult.closestPoint;
+						
+						//get distance from player.
+						//TODO return from above, or combine with closestPointBvh / use world level bvh?
+
+						var vectorToPlayerInObjectSpace = vectorDifference(projectedPosInObjFrame, closestPointInObjectFrame);
+						var roughDistanceSqFromPlayer = dotProduct(vectorToPlayerInObjectSpace,vectorToPlayerInObjectSpace)
+											*objScale*objScale;	//multiplying by scale with view to using multiple scales
+
+						distanceResults.push(roughDistanceSqFromPlayer);
+
+						//TODO only do this once found closest point, object (otherwise doing unnecessary matrix calcs unless
+						//first object has closest point.)
+						if (roughDistanceSqFromPlayer<closestRoughSqDistanceFound){
+							triObjClosestPointType = closestPointResult.closestPointType;
+
+							closestRoughSqDistanceFound = roughDistanceSqFromPlayer;
+
+							var positionInProjectedSpace = closestPointInObjectFrame.map(val => val*objScale);					
+							//var veclen = Math.hypot.apply(null, positionInProjectedSpace);
+							var veclen = Math.sqrt(positionInProjectedSpace.reduce((accum, xx)=>accum+xx*xx, 0));
+							var scalarAngleDifference = Math.atan(veclen);
+
+
+							var correction = -scalarAngleDifference/veclen;
+							var angleToMove = positionInProjectedSpace.map(val => val*correction);
+
+							//draw object - position at object centre, then move by vec to point in object space.
+							mat4.set(objMat, debugDraw.mats[8]);
+							xyzmove4mat(debugDraw.mats[8], angleToMove);	//draw x on closest vertex
+						}
+					});
 				}
 
-				possibleObjects.forEach(objInfo =>
-				{
-					var transposedObjMat = objInfo.transposedMat;
-					var objMat = objInfo.mat;
-					var objBvh = objInfo.bvh;
-					var objScale = objInfo.scale;
-
-					var playerPosVec = vec4.create(playerPos);
-					mat4.multiplyVec4(transposedObjMat, playerPosVec, playerPosVec);
-					
-					if (playerPosVec[3]<=0.5){	//TODO tighter bounding sphere.
-						return;
-					}						
-
-					var projectedPosInObjFrame = playerPosVec.slice(0,3).map(val => val/(objScale*playerPosVec[3]));
-
-					//var closestPointResult = closestPointBvhBruteForce(projectedPosInObjFrame, objBvh);
-					var closestPointResult = closestPointBvhEfficient(projectedPosInObjFrame, objBvh);
-
-					var closestPointInObjectFrame = closestPointResult.closestPoint;
-					
-					//get distance from player.
-					//TODO return from above, or combine with closestPointBvh / use world level bvh?
-
-					var vectorToPlayerInObjectSpace = vectorDifference(projectedPosInObjFrame, closestPointInObjectFrame);
-					var roughDistanceSqFromPlayer = dotProduct(vectorToPlayerInObjectSpace,vectorToPlayerInObjectSpace)
-										*objScale*objScale;	//multiplying by scale with view to using multiple scales
-
-					distanceResults.push(roughDistanceSqFromPlayer);
-
-					//TODO only do this once found closest point, object (otherwise doing unnecessary matrix calcs unless
-					//first object has closest point.)
-					if (roughDistanceSqFromPlayer<closestRoughSqDistanceFound){
-						triObjClosestPointType = closestPointResult.closestPointType;
-
-						closestRoughSqDistanceFound = roughDistanceSqFromPlayer;
-
-						var positionInProjectedSpace = closestPointInObjectFrame.map(val => val*objScale);					
-						//var veclen = Math.hypot.apply(null, positionInProjectedSpace);
-						var veclen = Math.sqrt(positionInProjectedSpace.reduce((accum, xx)=>accum+xx*xx, 0));
-						var scalarAngleDifference = Math.atan(veclen);
-
-
-						var correction = -scalarAngleDifference/veclen;
-						var angleToMove = positionInProjectedSpace.map(val => val*correction);
-
-						//draw object - position at object centre, then move by vec to point in object space.
-						mat4.set(objMat, debugDraw.mats[8]);
-						xyzmove4mat(debugDraw.mats[8], angleToMove);	//draw x on closest vertex
-					}
-				});
 
 				//TODO handle possibility that returned early and debugDraw.mats[8] is not set.
 
@@ -6279,78 +6287,6 @@ var iterateMechanics = (function iterateMechanics(){
 								projectedPosAbs[1]+projectedPosAbs[2]>2*projectedPosAbs[0]+0.8){
 								detonateBullet(bullet);
 							}
-						}
-					}
-				}
-			}
-			
-			if (guiParams["draw 120-cell"]){
-				//dodecohedron collision. 
-				//initially, sphere check
-				// for convenience, make 1 dodeca, make quite big
-				// then outer dodeca collision (6 abs checks)
-				// then calculate which of abs value along axes is smallest,
-				// apply reflection along some axis depending on sign??
-				// then apply 5 inner thing checks
-				
-				var dodecaScaleFudge = dodecaScale * (0.4/0.505);	//TODO where do numbers come from!!
-												//possibly this is sqrt(0.63) and 0.63 is (1+2/sqrt(5))/3;
-				var critVal = 1/Math.sqrt(1+dodecaScaleFudge*dodecaScaleFudge);
-				
-				var cellMats=cellMatData.d120[0];	//some sort index
-
-				var idsToCheck = cellMatData.d120GridArrayArray[cellIdxForBullet];
-				
-				for (ii in idsToCheck){	//single element of array for convenience
-					var dd=idsToCheck[ii];
-
-					var thisMat = cellMats[dd];
-					var dotProd = thisMat[12]*bulletMatrix[12] + thisMat[13]*bulletMatrix[13] +
-							thisMat[14]*bulletMatrix[14] + thisMat[15]*bulletMatrix[15];
-
-					if (dotProd>critVal){
-						mat4.set(bulletMatrixTransposed, relativeMat);
-						mat4.multiply(relativeMat, cellMats[dd]);
-						
-						var projectedPos = [relativeMat[3],relativeMat[7],relativeMat[11]].map(val => val/(dodecaScale*relativeMat[15]));
-						
-						var selection = -1;
-						var best = 0;
-						for (var ii in dodecaPlanesToCheck){
-							var toPlane = planeCheck(dodecaPlanesToCheck[ii],projectedPos);
-							if (Math.abs(toPlane) > Math.abs(best)){
-								best = toPlane;
-								selection = ii;
-							}
-						}
-						
-						if (Math.abs(best) > 0.63){
-							continue;
-						}
-						
-						//inner plane check
-						var isInsidePrism = true;
-						var dirsArr = dodecaDirs[selection];
-						var dirA=dirsArr[0];
-						var dirB=dirsArr[1];
-						
-						//dot product of directions with 
-						var dotA = dirA[0]*projectedPos[0] + dirA[1]*projectedPos[1] + dirA[2]*projectedPos[2];  
-						var dotB = dirB[0]*projectedPos[0] + dirB[1]*projectedPos[1] + dirB[2]*projectedPos[2];  
-						
-						dotA = best>0 ? dotA:-dotA;	//????
-						
-						for (var ang=0;ang<5;ang++){	//note doing this in other order (eg 0,2,4,1,5) with early exit could be quicker
-							var angRad = ang*Math.PI/2.5;
-							var myDotP = dotA*Math.cos(angRad) + dotB*Math.sin(angRad);
-							if (myDotP>0.31){isInsidePrism=false;}
-						}
-						if (!isInsidePrism){detonateBullet(bullet);}
-						
-						
-						//todo reuse tetra version / general dot product function!
-						function planeCheck(planeVec,pos){
-							return pos[0]*planeVec[0] + pos[1]*planeVec[1] +pos[2]*planeVec[2];
 						}
 					}
 				}

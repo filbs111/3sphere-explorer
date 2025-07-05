@@ -652,8 +652,16 @@ function minMaxDistanceFromPointToBoundingSphere(pointPos, spherePos, sphereRad)
 }
 
 function rayBvhCollision(rayStart, rayEnd, world){
-    var possiblities = bvhObjsForWorld[world];
-    
+
+    var collided = false;
+    var closestFractionAlong = 1;
+
+    processPossibles(bvhObjsForWorld[world]);
+
+    if (guiParams["draw 120-cell"]){
+        processPossibles(polytopeBvhObjs.d120);
+    }
+
     if (guiParams.debug.worldBvhCollisionTest){
         //find possible collisions where 4d aabb of the bounding sphere of the object overlaps
         //the 4d aabb of the line
@@ -662,26 +670,25 @@ function rayBvhCollision(rayStart, rayEnd, world){
             aabbsOverlap4d(lineAABB, objInfo.aabb4d));
     }
 
-    var collided = false;
-    var closestFractionAlong = 1;
+    function processPossibles(possiblities){
+        possiblities.forEach(objInfo => {
+            //transform ray into object frame (similar logic to boxes etc), applying scale factor.
 
-    possiblities.forEach(objInfo => {
-        //transform ray into object frame (similar logic to boxes etc), applying scale factor.
+            var rayPosVec = getPosInMatrixFrame(rayStart, objInfo.transposedMat);
+            var rayPosEndVec = getPosInMatrixFrame(rayEnd, objInfo.transposedMat);
 
-        var rayPosVec = getPosInMatrixFrame(rayStart, objInfo.transposedMat);
-        var rayPosEndVec = getPosInMatrixFrame(rayEnd, objInfo.transposedMat);
+            //reject if ray start or end is in other hemisphere to object checking collision with.
+            //NOTE this is a stopgap measure - when using world BVH, or long ray collision with world object bounds,
+            // won't be necessary to do this.
+            if (rayPosVec[3]<=0 || rayPosEndVec[3]<=0){
+                return;
+            }
 
-        //reject if ray start or end is in other hemisphere to object checking collision with.
-        //NOTE this is a stopgap measure - when using world BVH, or long ray collision with world object bounds,
-        // won't be necessary to do this.
-        if (rayPosVec[3]<=0 || rayPosEndVec[3]<=0){
-            return;
-        }
-
-        var result = bvhRayCollision(rayPosVec, rayPosEndVec, objInfo);
-        collided = collided || result.collided;
-        closestFractionAlong = Math.min(closestFractionAlong, result.closestFractionAlong);
-    });
+            var result = bvhRayCollision(rayPosVec, rayPosEndVec, objInfo);
+            collided = collided || result.collided;
+            closestFractionAlong = Math.min(closestFractionAlong, result.closestFractionAlong);
+        });
+    }
 
     return {
         collided,
