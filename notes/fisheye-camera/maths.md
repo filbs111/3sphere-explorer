@@ -145,3 +145,20 @@ u = (4t / (tt + 4)) / root (1 - (4t / (tt + 4)^2)
 
 
 ... suspect will come out as stereographic proj formula
+
+
+
+-----------------------
+
+working from p,s unit vector, to enable negative direction (rather than using a single number u = p/s)
+
+t ( p,s ) is relatively simple
+
+p,s (t) ? 
+
+already have p,
+
+but calculation of s=root(1-pp) is not sufficient - need to pick sign of s!
+ which we can do - a critical value of t can be found by projecting from phi below circle
+ centre through middle of circle.
+ => 1+1/phi

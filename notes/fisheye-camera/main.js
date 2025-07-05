@@ -15,33 +15,35 @@ var scale = 300;
 var circleCentre = [2,2];
 var circleRad = 1;
 
-var phi = 0.3;
-
-let rangesliderU = document.getElementById("sliderRangeU");
-let outputU = document.getElementById("showValU");
-outputU.innerHTML = rangesliderU.value;
+let rangesliderUAng = document.getElementById("sliderRangeUAng");
+let outputUAng = document.getElementById("showValUAng");
+outputUAng.innerHTML = rangesliderUAng.value;
 let rangesliderPhi = document.getElementById("sliderRangePhi");
 let outputPhi = document.getElementById("showValPhi");
 outputPhi.innerHTML = rangesliderPhi.value;
 
-var u = parseFloat(rangesliderU.value);
+var uAng = parseFloat(rangesliderUAng.value);
 var phi = parseFloat(rangesliderPhi.value);
-renderCanvas(u,phi);
+renderCanvas(uAng,phi);
 
-rangesliderU.oninput = function () {
-    outputU.innerHTML = this.value;
-    u = parseFloat(this.value);
-    renderCanvas(u,phi);
+rangesliderUAng.oninput = function () {
+    outputUAng.innerHTML = this.value;
+    uAng = parseFloat(this.value);
+    renderCanvas(uAng,phi);
 }
 
 rangesliderPhi.oninput = function () {
     outputPhi.innerHTML = this.value;
     phi = parseFloat(this.value);
-    renderCanvas(u,phi);
+    renderCanvas(uAng,phi);
 }
 
 
-function renderCanvas(u, phi){
+function renderCanvas(uAng, phi){
+
+    var p = Math.sin(uAng);
+    var s = Math.cos(uAng);
+    var u = p/s;
 
     //u is position on initial rectilinear render. (1,u) represents position of thing in world
 
@@ -67,13 +69,9 @@ function renderCanvas(u, phi){
     //moved down by phi
     drawMarker([2,2+phi], 0.02);
 
-    //from centre of circle to (1,u)
-    drawLineScaled([2,2], [2+u,1]);
+    drawLineScaled([2,2], [2+p,2-s]);
 
     //this crosses circle at (u,1) scaled by 1/sqry(1+usq)
-    var crosspoint = [u,1].map(xx => xx / Math.sqrt(1 + u*u));
-    var p = crosspoint[0];
-    var s = crosspoint[1];
     drawMarker([2+p,2-s], 0.02);
 
     //horizontal line to this point
@@ -87,24 +85,27 @@ function renderCanvas(u, phi){
     drawLineScaled([2,2+phi], [2+t,1]);
 
     //calculation of u from t
+    var dirFromTResult = dirVecFromT(t);
+    var uAngFromT = Math.atan2(dirFromTResult[1],dirFromTResult[0]);
+        //works unless direction too far back (so t does not project onto top line)
+    
+    var dirFromStereographic = dirVecFromTStereographic(t, phi);
+    var uAngFromTStereographic = Math.atan2(dirFromStereographic[1],dirFromStereographic[0]);
+
     var uFromTResult = uFromT(t);
 
-    //calculation of u from t that works for stereographic projection (phi=1)
-    //this is pretty bad approximation
-    var approxUFromT = (1-phi) * t + phi*uFromTStereographic(t);
-    var discrepencyPercent = 100*(approxUFromT-uFromTResult)/uFromTResult
-
-    //this is more reasonable approximation. perhaps what's used in game
+    //this is reasonable approximation for small uAng. blows up close to 90 deg. perhaps what's used in game
     var approxUFromT2 = uFromTApprox(t,phi);
     var discrepencyPercent2= 100*(approxUFromT2-uFromTResult)/uFromTResult
     
     var reversedApprox = tFromUApproxReverse(approxUFromT2, phi);
 
     console.log({
+        uAng,
         t,
+        uAngFromT,
+        uAngFromTStereographic,
         uFromTResult,
-        approxUFromT,
-        discrepencyPercent,
         approxUFromT2,
         discrepencyPercent2,
         reversedApprox
@@ -129,17 +130,26 @@ function drawAnnotation(pos, text){
 }
 
 function uFromT(t){
-    //from notes.
+    var dirVec = dirVecFromT(t);
+    var u = dirVec[1]/dirVec[0];
 
+    return u;
+}
+
+function dirVecFromT(t){
+    //from notes.
     var M = (1+phi)/t;
     var onePlusMSq = 1 + M*M;
     var phiMOverOnePlusMSq = phi*M/onePlusMSq;
 
     var p = phiMOverOnePlusMSq + Math.sqrt( (1-phi*phi)/onePlusMSq + phiMOverOnePlusMSq*phiMOverOnePlusMSq);
-    var s = Math.sqrt(1-p*p);
-    var t = p/s;
+    var s = Math.sqrt(1-p*p);   //but how to do for reverse direction with -s?
 
-    return t;
+        //inelegant test. TODO better way to calculate s?
+    var critical_t = 1+ 1/phi;
+    if (t>critical_t){s=-s}
+
+    return [s,p];
 }
 
 function uFromTStereographic(t){ //phi=1
@@ -164,9 +174,31 @@ function uFromTStereographic(t){ //phi=1
     return 4*t/(4-t*t);
 }
 
+function dirVecFromTStereographic(t, phi){    
+    // var M = 2/t;
+    // var onePlusMSq = 1 + M*M;
+    // var phiMOverOnePlusMSq = M/onePlusMSq;
+    // var p = 2*phiMOverOnePlusMSq;
+    // var s = Math.sqrt(1-p*p);
+
+    //express in t
+
+    //var phiMOverOnePlusMSq = (2/t)/(1 + 4/tt)    = 2t / (tt+4)
+    var p = 4*t / (t*t + 4);
+    var s = Math.sqrt(1-p*p);
+
+    if (t>2){
+        s=-s;
+    }
+
+    return [s,p];
+}
+
+
 function uFromTApprox(t, phi){
     return 4*t/(4-phi*t*t);
 }
+
 
 function tFromUApproxReverse(u, phi){
     // u = 4*t/(4-phi*t*t)
