@@ -431,16 +431,7 @@ function initBuffers(){
 		objLoader(objBuffers, objFile, (bufferObj, sourceData) => {
 			loadBufferData(bufferObj, sourceData);
 			createBvhFrom3dObjectData(sourceData, objBvh, vertAttrs);
-			worldAndMatArr.forEach(worldAndMat => {
-				bvhObjsForWorld[worldAndMat.world].push({
-					mesh: bufferObj,
-					mat: worldAndMat.mat, 
-					transposedMat: worldAndMat.transposedMat, 
-					bvh: objBvh,
-					aabb4d: aabb4DForSphere(worldAndMat.mat.slice(12), scale*objBvh.boundingSphereRadius),
-					scale
-				});
-			});
+			addManyObjectsToWorlds(worldAndMatArr, bufferObj, objBvh, scale);
 		}, vertAttrs);
 	}
 
@@ -453,29 +444,9 @@ function initBuffers(){
 
 
 	//now bvhs ready, create the following which references them.
-	bvhObjsForWorld[0]=someObjectMatrices.map(someMat => {
-		var scale = 0.4;
-		return {
-			mesh: teapotBuffers,
-			mat: someMat.mat, 
-			transposedMat: someMat.transposedMat, 
-			bvh: teapotBvh,
-			aabb4d: aabb4DForSphere(someMat.mat.slice(12), scale*teapotBvh.boundingSphereRadius),
-			scale
-		};
-	});
 
-	bvhObjsForWorld[2]=someObjectMatrices.map(someMat => {
-		var scale = 0.2;
-		return {
-			mesh: dodecaFrameBuffers2,
-			mat: someMat.mat, 
-			transposedMat: someMat.transposedMat, 
-			bvh:dodecaFrameBvh2,
-			aabb4d: aabb4DForSphere(someMat.mat.slice(12), scale*dodecaFrameBvh2.boundingSphereRadius),
-			scale
-		};
-	});
+	addManyObjectsToWorld(0, someObjectMatrices, teapotBuffers, teapotBvh, 0.4);
+	addManyObjectsToWorld(2, someObjectMatrices, dodecaFrameBuffers2, dodecaFrameBvh2, 0.2);
 
 	//TODO array for each object type? include direct reference to rendering info (instead of matching bvh later)
 
@@ -7531,3 +7502,22 @@ function getPosInMatrixFrame(inputPos, matrixTransposed){
 	mat4.multiplyVec4(matrixTransposed, posInFrame, posInFrame);
 	return posInFrame;
 }
+
+function addManyObjectsToWorld(world, matArr, bufferObj, objBvh, scale){
+	var matAndWorldData = matArr.map(xx=> {return {mat:xx.mat, transposedMat:xx.transposedMat, world}});
+	addManyObjectsToWorlds(matAndWorldData, bufferObj, objBvh, scale);
+}
+
+function addManyObjectsToWorlds(matAndWorldData, bufferObj, objBvh, scale){
+	matAndWorldData.forEach(matAndWorld => {
+		bvhObjsForWorld[matAndWorld.world].push({
+			mesh: bufferObj,
+			mat: matAndWorld.mat, 
+			transposedMat: matAndWorld.transposedMat, 
+			bvh: objBvh,
+			aabb4d: aabb4DForSphere(matAndWorld.mat.slice(12), scale*objBvh.boundingSphereRadius),
+			scale
+		});
+	});
+}
+
