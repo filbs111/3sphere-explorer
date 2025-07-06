@@ -460,26 +460,12 @@ function initBuffers(){
 
 	//TODO array for each object type? include direct reference to rendering info (instead of matching bvh later)
 
-	//add for polytope cells.
-	polytopeBvhObjs.d600 = worldBvhObjFromObjList(cellMatData.d600[0].map(mat => {
-		var transposedMat = mat4.create(mat);
-		mat4.transpose(transposedMat);
-		var scale = sixhundredCellScale;
-		return {
-			mesh: null,	//use old rendering for now.
-			mat,
-			transposedMat,
-			bvh: tetraFrameBvh,
-			AABB: aabb4DForSphere(mat.slice(12), scale*tetraFrameBvh.boundingSphereRadius),
-			scale
-		}
-	}));
-	
 	addManyObjectsToWorld(4, cellMatData.d8, cubeBuffers, cubeFrameBvh, eightCellScale);
 	addManyObjectsToWorld(5, cellMatData.d16, tetraFrameSubdivBuffers, tetraFrameBvh, sixteenCellScale);
 	addManyObjectsToWorld(6, cellMatData.d24.cells, octoFrameSubdivBuffers, octoFrameBvh, 1);
 	addManyObjectsToWorld(7, cellMatData.d5, tetraFrameSubdivBuffers, tetraFrameBvh, 2*Math.acos(-0.25));
 	addManyObjectsToWorld(8, cellMatData.d120[0], dodecaFrameBuffers, dodecaFrameBvh2, dodecaScale);
+	addManyObjectsToWorld(9, cellMatData.d600[0], tetraFrameSubdivBuffers, tetraFrameBvh, sixhundredCellScale);
 
 	var thisMatT;
 	for (var ii=0;ii<maxRandBoxes;ii++){
@@ -2480,31 +2466,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,mMatrix);
 	}
-	
-	var sortId = sortIdForMatrix(worldCamera);	//look up sort order for cells
-	
+		
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.darkGray);
-
-	var polytopes = {
-		"draw 600-cell": {
-			mats: cellMatData.d600[sortId],
-			cullRad: guiParams.display.culling ? 0.355: false,
-			scale: sixhundredCellScale,
-			buffers: guiParams["subdiv frames"]? tetraFrameSubdivBuffers: tetraFrameBuffers
-		}
-	};
-
-	Object.entries(polytopes).forEach(entry => {
-		const [key, value] = entry;
-		if (guiParams[key]){
-			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, value.scale,value.scale,value.scale);
-			drawArrayOfModels(
-				value.mats,
-				value.cullRad,
-				value.buffers
-			);	
-		}
-	});
 
 	var cubeFrames = bvhObjsForWorld[worldA].objList.filter(objInfo=> objInfo.bvh == cubeFrameBvh)	//TODO prefilter
 	if (cubeFrames.length>0){
@@ -4394,11 +4357,12 @@ var guiParams={
 		{fogColor:'#7496a0',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
 		{fogColor:'#bbbbbb',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
 		{fogColor:'#111111',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
-		{fogColor:'#444444',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
-		{fogColor:'#888888',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
-		{fogColor:'#aaaaaa',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
-		{fogColor:'#884444',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
-		{fogColor:'#442222',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}
+		{fogColor:'#444444',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}, //4
+		{fogColor:'#888888',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}, //5
+		{fogColor:'#aaaaaa',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}, //6
+		{fogColor:'#884444',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}, //7
+		{fogColor:'#442222',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},	//8
+		{fogColor:'#664444',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}	//9
 	],
 	drawShapes:{
 		boxes:{
@@ -4430,8 +4394,6 @@ var guiParams={
 		drawType:'instanced speckles',
 		numToMove:0
 	},
-	"subdiv frames":true,
-	"draw 600-cell":false,
 	"player model":"spaceship",
 	target:{
 		type:"none",
@@ -4707,9 +4669,6 @@ function init(){
 	drawShapesFolder.add(guiParams.drawShapes,"frigateScale",0.1,20.0,0.1);
 	drawShapesFolder.add(guiParams.drawShapes,"viaduct", ['none','individual','instanced']);
 
-	var polytopesFolder = gui.addFolder('polytopes');
-	polytopesFolder.add(guiParams,"subdiv frames");
-	polytopesFolder.add(guiParams,"draw 600-cell");
 	gui.add(guiParams,"player model", ["spaceship","plane","ball"]);
 	
 	var targetFolder = gui.addFolder('target');
@@ -5779,10 +5738,6 @@ var iterateMechanics = (function iterateMechanics(){
 
 
 				processPossibles(bvhObjsForWorld[playerContainer.world].objList);
-
-				if (guiParams["draw 600-cell"]){
-					processPossibles(polytopeBvhObjs.d600.objList);
-				}
 				
 				function processPossibles(possibleObjects){
 					if (guiParams.debug.worldBvhCollisionTestPlayer){
