@@ -487,22 +487,10 @@ function initBuffers(){
 			scale:dodecaScale
 		}
 	}));
-	polytopeBvhObjs.d24 = worldBvhObjFromObjList(cellMatData.d24.cells.map(mat => {
-		var transposedMat = mat4.create(mat);
-		mat4.transpose(transposedMat);
-		var scale = 1;
-		return {
-			mesh: null,	//use old rendering for now.
-			mat,
-			transposedMat,
-			bvh: octoFrameBvh,
-			AABB: aabb4DForSphere(mat.slice(12), scale*octoFrameBvh.boundingSphereRadius),
-			scale
-		}
-	}));
 	
 	addManyObjectsToWorld(4, cellMatData.d8, cubeBuffers, cubeFrameBvh, eightCellScale);
 	addManyObjectsToWorld(5, cellMatData.d16, tetraFrameSubdivBuffers, tetraFrameBvh, sixteenCellScale);
+	addManyObjectsToWorld(6, cellMatData.d24.cells, octoFrameSubdivBuffers, octoFrameBvh, 1);
 
 	var thisMatT;
 	for (var ii=0;ii<maxRandBoxes;ii++){
@@ -2509,12 +2497,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.darkGray);
 
 	var polytopes = {
-		"draw 24-cell": {
-			mats: cellMatData.d24.cells,
-			cullRad: guiParams.display.culling ? 1: false,
-			scale: 1,
-			buffers: guiParams["subdiv frames"] ? octoFrameSubdivBuffers : octoFrameBuffers
-		},
 		"draw 5-cell": {
 			mats: cellMatData.d5,
 			cullRad: false,
@@ -2558,6 +2540,10 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	var tetraFrames = bvhObjsForWorld[worldA].objList.filter(objInfo=> objInfo.bvh == tetraFrameBvh)	//TODO prefilter
 	if (tetraFrames.length>0){
 		drawArrayOfModels2(tetraFrames, tetraFrameBuffers, activeShaderProgram);
+	}
+	var octoFrames = bvhObjsForWorld[worldA].objList.filter(objInfo=> objInfo.bvh == octoFrameBvh)	//TODO prefilter
+	if (octoFrames.length>0){
+		drawArrayOfModels2(octoFrames, octoFrameSubdivBuffers, activeShaderProgram);
 	}
 	
 	//todo this should take buffers, shaders and call prepBuffersForDrawing, drawObjectFromPreppedBuffers
@@ -4432,7 +4418,8 @@ var guiParams={
 		{fogColor:'#bbbbbb',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
 		{fogColor:'#111111',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
 		{fogColor:'#444444',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
-		{fogColor:'#888888',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}
+		{fogColor:'#888888',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
+		{fogColor:'#aaaaaa',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}
 	],
 	drawShapes:{
 		boxes:{
@@ -4466,8 +4453,6 @@ var guiParams={
 	},
 	"draw 5-cell":false,
 	"subdiv frames":true,
-	"draw 16-cell":false,
-	"draw 24-cell":false,
 	"draw 120-cell":false,
 	"draw 600-cell":false,
 	"player model":"spaceship",
@@ -4747,9 +4732,7 @@ function init(){
 
 	var polytopesFolder = gui.addFolder('polytopes');
 	polytopesFolder.add(guiParams,"draw 5-cell");
-	polytopesFolder.add(guiParams,"draw 16-cell");
 	polytopesFolder.add(guiParams,"subdiv frames");
-	polytopesFolder.add(guiParams,"draw 24-cell");
 	polytopesFolder.add(guiParams,"draw 120-cell");
 	polytopesFolder.add(guiParams,"draw 600-cell");
 	gui.add(guiParams,"player model", ["spaceship","plane","ball"]);
@@ -5827,9 +5810,6 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 				if (guiParams["draw 120-cell"]){
 					processPossibles(polytopeBvhObjs.d120.objList);
-				}
-				if (guiParams["draw 24-cell"]){
-					processPossibles(polytopeBvhObjs.d24.objList);
 				}
 				
 				function processPossibles(possibleObjects){
