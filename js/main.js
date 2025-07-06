@@ -51,7 +51,8 @@ var cubeFrameBuffers={};
 var cubeFrameBvh={}
 var cubeFrameSubdivBuffers={};
 var octoFrameBuffers={};
-var octoFrameSubdivBuffers={};		
+var octoFrameSubdivBuffers={};
+var octoFrameBvh={};	
 var tetraFrameBuffers={};
 var tetraFrameSubdivBuffers={};		
 var dodecaFrameBuffers={};
@@ -393,6 +394,7 @@ function initBuffers(){
 	//generate bounding volume heirarchy for teapot triangles.
 	createBvhFrom3dObjectData(teapotObject, teapotBvh);
 	createBvhFrom3dObjectData(cubeFrameBlenderObject, cubeFrameBvh);
+	createBvhFrom3dObjectData(octoFrameSubdivObject, octoFrameBvh);	//suspect subdiv efficient with bvh
 	createBvhFrom3dObjectData(dodecaFrameBlenderObject2, dodecaFrameBvh2);
 	
 	loadBufferData(icoballBuffers, icoballObj);
@@ -459,11 +461,24 @@ function initBuffers(){
 		mat4.transpose(transposedMat);
 		return {
 			mesh: null,	//use old rendering for now.
-			mat, 
-			transposedMat, 
+			mat,
+			transposedMat,
 			bvh: dodecaFrameBvh2,	//TODO without outer polys?
 			aabb4d: aabb4DForSphere(mat.slice(12), dodecaScale*dodecaFrameBvh2.boundingSphereRadius),
 			scale:dodecaScale
+		}
+	});
+	polytopeBvhObjs.d24 = cellMatData.d24.cells.map(mat => {
+		var transposedMat = mat4.create(mat);
+		mat4.transpose(transposedMat);
+		var scale = 1;
+		return {
+			mesh: null,	//use old rendering for now.
+			mat,
+			transposedMat,
+			bvh: octoFrameBvh,
+			aabb4d: aabb4DForSphere(mat.slice(12), scale*octoFrameBvh.boundingSphereRadius),
+			scale
 		}
 	});
 
@@ -2495,7 +2510,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		"draw 24-cell": {
 			mats: cellMatData.d24.cells,
 			cullRad: guiParams.display.culling ? 1: false,
-			scale: guiParams["24-cell scale"],
+			scale: 1,
 			buffers: guiParams["subdiv frames"] ? octoFrameSubdivBuffers : octoFrameBuffers
 		},
 		"draw 5-cell": {
@@ -4448,7 +4463,6 @@ var guiParams={
 	"8-cell scale":0.3,		//0.5 to tesselate
 	"draw 16-cell":false,
 	"draw 24-cell":false,
-	"24-cell scale":1,
 	"draw 120-cell":false,
 	"draw 600-cell":false,
 	"player model":"spaceship",
@@ -4736,7 +4750,6 @@ function init(){
 	polytopesFolder.add(guiParams,"draw 16-cell");
 	polytopesFolder.add(guiParams,"subdiv frames");
 	polytopesFolder.add(guiParams,"draw 24-cell");
-	polytopesFolder.add(guiParams,"24-cell scale",0.05,2.0,0.05);
 	polytopesFolder.add(guiParams,"draw 120-cell");
 	polytopesFolder.add(guiParams,"draw 600-cell");
 	gui.add(guiParams,"player model", ["spaceship","plane","ball"]);
@@ -5812,6 +5825,9 @@ var iterateMechanics = (function iterateMechanics(){
 				if (guiParams["draw 120-cell"]){
 					processPossibles(polytopeBvhObjs.d120);
 				}
+				if (guiParams["draw 24-cell"]){
+					processPossibles(polytopeBvhObjs.d24);
+				}
 				
 				function processPossibles(possibleObjects){
 					if (guiParams.debug.worldBvhCollisionTestPlayer){
@@ -6259,36 +6275,6 @@ var iterateMechanics = (function iterateMechanics(){
 				var critVal = 1/Math.sqrt(1+cellScale*cellScale*3);
 				for (dd in matsArr){
 					checkTetraCollisionForMatAndVals(matsArr[dd], critVal, cellScale);
-				}
-			}
-
-			//octohedron collision
-			if (guiParams["draw 24-cell"]){
-				var cellSize24 = guiParams["24-cell scale"];
-				var critVal = 1/Math.sqrt(1+cellSize24*cellSize24);
-
-				for (dd in cellMatData.d24.cells){
-					var thisMat = cellMatData.d24.cells[dd];
-					var dotProd = thisMat[12]*bulletMatrix[12] + thisMat[13]*bulletMatrix[13] +
-						thisMat[14]*bulletMatrix[14] + thisMat[15]*bulletMatrix[15];
-
-					if (dotProd>critVal){
-						mat4.set(bulletMatrixTransposed, relativeMat);
-						mat4.multiply(relativeMat, thisMat);
-
-						//todo speed up. division for all vec parts not necessary
-						//change number inside if rhs comparison
-						//also should apply multiplier to 0.8 for inner check.
-						var projectedPosAbs = [relativeMat[3],relativeMat[7],relativeMat[11]].map(val => Math.abs(val)/(cellSize24*relativeMat[15]));
-						if (projectedPosAbs[0]+projectedPosAbs[1]+projectedPosAbs[2] < 1){
-							//inside octohedron. frame is octohedron minus small octohedron extruded.
-							if (projectedPosAbs[0]+projectedPosAbs[1]>2*projectedPosAbs[2]+0.8 ||
-								projectedPosAbs[0]+projectedPosAbs[2]>2*projectedPosAbs[1]+0.8 ||
-								projectedPosAbs[1]+projectedPosAbs[2]>2*projectedPosAbs[0]+0.8){
-								detonateBullet(bullet);
-							}
-						}
-					}
 				}
 			}
 		}
