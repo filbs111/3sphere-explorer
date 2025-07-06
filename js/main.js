@@ -87,6 +87,7 @@ var polytopeBvhObjs={};
 var dodecaScale=0.515;	//guess TODO use right value (0.5 is too small)
 var eightCellScale=0.9;	//1 for full tesseletion, but adding some gap makes more obvious what cells are
 var sixteenCellScale= 4/Math.sqrt(6);	//in the model, vertices are 0.75*sqrt(2) from the centre, and want to scale to tan(PI/3)=sqrt(3)	
+var sixhundredCellScale = 0.386;	//todo use correct scale
 
 //var sshipModelScale=0.0001;
 var sshipModelScale=0.00005;
@@ -460,6 +461,19 @@ function initBuffers(){
 	//TODO array for each object type? include direct reference to rendering info (instead of matching bvh later)
 
 	//add for polytope cells.
+	polytopeBvhObjs.d600 = cellMatData.d600[0].map(mat => {
+		var transposedMat = mat4.create(mat);
+		mat4.transpose(transposedMat);
+		var scale = sixhundredCellScale;
+		return {
+			mesh: null,	//use old rendering for now.
+			mat,
+			transposedMat,
+			bvh: tetraFrameBvh,
+			aabb4d: aabb4DForSphere(mat.slice(12), scale*tetraFrameBvh.boundingSphereRadius),
+			scale
+		}
+	});
 	polytopeBvhObjs.d120 = cellMatData.d120[0].map(mat => {
 		var transposedMat = mat4.create(mat);
 		mat4.transpose(transposedMat);
@@ -2550,7 +2564,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		"draw 600-cell": {
 			mats: cellMatData.d600[sortId],
 			cullRad: guiParams.display.culling ? 0.355: false,
-			scale: 0.386, //todo use correct scale
+			scale: sixhundredCellScale,
 			buffers: guiParams["subdiv frames"]? tetraFrameSubdivBuffers: tetraFrameBuffers
 		}
 	};
@@ -5838,6 +5852,9 @@ var iterateMechanics = (function iterateMechanics(){
 
 				processPossibles(bvhObjsForWorld[playerContainer.world]);
 
+				if (guiParams["draw 600-cell"]){
+					processPossibles(polytopeBvhObjs.d600);
+				}
 				if (guiParams["draw 120-cell"]){
 					processPossibles(polytopeBvhObjs.d120);
 				}
@@ -6198,76 +6215,6 @@ var iterateMechanics = (function iterateMechanics(){
 				return {
 					positive: true,
 					result: projectTo3dWithScale(posInFrame,objectScale)
-				}
-			}
-
-			var cellIdxForBullet = getGridId.forPoint(bulletPos);
-			
-			if (guiParams["draw 600-cell"]){
-				var idsToCheck = cellMatData.d600GridArrayArray[cellIdxForBullet];
-				checkTetraCollisionForArrayAndArrayIds(0.386/(4/Math.sqrt(6)), cellMatData.d600[0], idsToCheck);
-			}
-			
-			function checkTetraCollisionForMatAndVals(thisMat,critVal,cellScale){
-				var dotProd = thisMat[12]*bulletMatrix[12] + thisMat[13]*bulletMatrix[13] +
-				thisMat[14]*bulletMatrix[14] + thisMat[15]*bulletMatrix[15];
-
-				if (dotProd>critVal){
-					mat4.set(bulletMatrixTransposed, relativeMat);
-					mat4.multiply(relativeMat, thisMat);		
-
-					var projectedPos = [relativeMat[3],relativeMat[7],relativeMat[11]].map(val => val/(cellScale*relativeMat[15]));
-					
-					//initially just find a corner
-					//seems is triangular pyramid, with "top" in 1-axis direction
-					//seems 0 - axis parrallel to one base edge
-					//1 - "up"
-					//2 - other base axis
-					// ie top point = (0,sqrt(3),0)
-					// therefore inside has to be above base ( pos[2] > -0.33*root(3) = 1/root(3)
-												
-					var isInside = true;
-					
-					var selection = -1;
-					var best = 1;
-					
-					//identify which quarter of tetrahedron are in (therefore which outer plane, set of 3 inner planes to check against.
-					for (var ii=0;ii<4;ii++){
-						var toPlane = planeCheck(tetraPlanesToCheck[ii],projectedPos);
-						if (toPlane < best){
-							best = toPlane;
-							selection = ii;
-						}
-					}
-					
-					if (best < -1){
-						isInside = false;
-					}
-					
-					//check is not inside all 3 inner planes for relevant quarter.
-					var innerPlanes = tetraInnerPlanesToCheck[selection];
-					if (planeCheck(innerPlanes[0],projectedPos) >-1 &&
-						planeCheck(innerPlanes[1],projectedPos) >-1 &&
-						planeCheck(innerPlanes[2],projectedPos) >-1){
-							isInside = false;
-					}
-					
-					if (isInside){
-						detonateBullet(bullet);
-					}
-					
-					//todo 4th number for comparison value - means can still work if plane thru origin.
-					function planeCheck(planeVec,pos){
-						return pos[0]*planeVec[0] + pos[1]*planeVec[1] +pos[2]*planeVec[2];
-					}
-				}
-			}
-
-			function checkTetraCollisionForArrayAndArrayIds(cellScale, matsArr, arrIds){
-				var critVal = 1/Math.sqrt(1+cellScale*cellScale*3);
-				for (ii in arrIds){
-					var dd=arrIds[ii];
-					checkTetraCollisionForMatAndVals(matsArr[dd], critVal, cellScale);
 				}
 			}
 		}
