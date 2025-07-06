@@ -667,6 +667,9 @@ function rayBvhCollision(rayStart, rayEnd, world){
     if (guiParams["draw 16-cell"]){
         processPossibles(polytopeBvhObjs.d16);
     }
+    if (guiParams["draw 8-cell"]){
+        processPossibles(polytopeBvhObjs.d8);
+    }
 
     if (guiParams.debug.worldBvhCollisionTest){
         //find possible collisions where 4d aabb of the bounding sphere of the object overlaps

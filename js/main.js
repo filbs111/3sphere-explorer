@@ -85,6 +85,7 @@ var thrusterBuffers={};
 
 var polytopeBvhObjs={};
 var dodecaScale=0.515;	//guess TODO use right value (0.5 is too small)
+var eightCellScale=0.9;	//1 for full tesseletion, but adding some gap makes more obvious what cells are
 var sixteenCellScale= 4/Math.sqrt(6);	//in the model, vertices are 0.75*sqrt(2) from the centre, and want to scale to tan(PI/3)=sqrt(3)	
 
 //var sshipModelScale=0.0001;
@@ -494,6 +495,19 @@ function initBuffers(){
 			transposedMat,
 			bvh: tetraFrameBvh,
 			aabb4d: aabb4DForSphere(mat.slice(12), scale*tetraFrameBvh.boundingSphereRadius),
+			scale
+		}
+	});
+	polytopeBvhObjs.d8 = cellMatData.d8.map(mat => {
+		var transposedMat = mat4.create(mat);
+		mat4.transpose(transposedMat);
+		var scale = eightCellScale;
+		return {
+			mesh: null,	//use old rendering for now.
+			mat,
+			transposedMat,
+			bvh: cubeFrameBvh,
+			aabb4d: aabb4DForSphere(mat.slice(12), scale*cubeFrameBvh.boundingSphereRadius),
 			scale
 		}
 	});
@@ -2498,29 +2512,21 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		mat4.multiply(mvMatrix,mMatrix);
 	}
 	
-	//draw blender object - a csg cube minus sphere. draw 8 cells for tesseract.
-	var modelScale = smoothGuiParams.get("8-cell scale");
-
 	var sortId = sortIdForMatrix(worldCamera);	//look up sort order for cells
-
-	if (guiParams["draw 8-cell net"]){
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
-		draw8cellnet(activeShaderProgram, modelScale);
-	}
 	
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.darkGray);
 
 	var polytopes = {
 		"draw 8-cell": {
-			mats:cellMatData.d8, 
-			cullRad:guiParams.display.culling ? Math.sqrt(3): false, 
-			scale:modelScale, 
-			buffers: guiParams["subdiv frames"] ? cubeFrameSubdivBuffers: cubeFrameBuffers 
+			mats:cellMatData.d8,
+			cullRad:guiParams.display.culling ? Math.sqrt(3): false,
+			scale: eightCellScale,
+			buffers: guiParams["subdiv frames"] ? cubeFrameSubdivBuffers: cubeFrameBuffers
 		},
 		"draw 16-cell": {
-			mats:cellMatData.d16, 
-			cullRad:guiParams.display.culling ? 1.73: false, 
-			scale: sixteenCellScale,		
+			mats:cellMatData.d16,
+			cullRad:guiParams.display.culling ? 1.73: false,
+			scale: sixteenCellScale,
 			buffers: guiParams["subdiv frames"]? tetraFrameSubdivBuffers: tetraFrameBuffers
 		},
 		"draw 24-cell": {
@@ -4475,8 +4481,6 @@ var guiParams={
 	"draw 5-cell":false,
 	"subdiv frames":true,
 	"draw 8-cell":false,
-	"draw 8-cell net":false,
-	"8-cell scale":0.3,		//0.5 to tesselate
 	"draw 16-cell":false,
 	"draw 24-cell":false,
 	"draw 120-cell":false,
@@ -4566,8 +4570,6 @@ var guiParams={
 };
 
 var guiSettingsForWorld = guiParams.worlds;
-
-smoothGuiParams.add("8-cell scale", guiParams, "8-cell scale");
 
 var settings = {
 	playerBallRad:0.003,
@@ -4761,8 +4763,6 @@ function init(){
 	var polytopesFolder = gui.addFolder('polytopes');
 	polytopesFolder.add(guiParams,"draw 5-cell");
 	polytopesFolder.add(guiParams,"draw 8-cell");
-	polytopesFolder.add(guiParams,"draw 8-cell net");
-	polytopesFolder.add(guiParams,"8-cell scale",0.05,1.0,0.05);
 	polytopesFolder.add(guiParams,"draw 16-cell");
 	polytopesFolder.add(guiParams,"subdiv frames");
 	polytopesFolder.add(guiParams,"draw 24-cell");
@@ -5847,6 +5847,9 @@ var iterateMechanics = (function iterateMechanics(){
 				if (guiParams["draw 16-cell"]){
 					processPossibles(polytopeBvhObjs.d16);
 				}
+				if (guiParams["draw 8-cell"]){
+					processPossibles(polytopeBvhObjs.d8);
+				}
 				
 				function processPossibles(possibleObjects){
 					if (guiParams.debug.worldBvhCollisionTestPlayer){
@@ -6121,24 +6124,6 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			}
 			
-			//similar thing for 8-cell frames
-			var cellSize = guiParams["8-cell scale"];
-			if (guiParams["draw 8-cell"]){
-				for (dd in cellMatData.d8){
-					mat4.set(bulletMatrixTransposed, relativeMat);
-					mat4.multiply(relativeMat, cellMatData.d8[dd]);											
-					if (relativeMat[15]>0){
-						var projectedPosAbs = [relativeMat[3],relativeMat[7],relativeMat[11]].map(val => Math.abs(val)/(cellSize*relativeMat[15]));
-						if (Math.max(projectedPosAbs[0],projectedPosAbs[1],projectedPosAbs[2])<1){
-							var count=projectedPosAbs.reduce((sum,val) => val>0.8?sum+1:sum,0);
-							if (count>1){
-								detonateBullet(bullet);
-							}
-						}
-					}
-				}
-			}
-
 			var bvhCollisionResult = rayBvhCollision(bulletPos, newBulletPos, bullet.world);
 			if (bvhCollisionResult.collided){
 				detonateBullet(bullet, false, [0.3,0.3,0.8]);
@@ -6285,14 +6270,8 @@ var iterateMechanics = (function iterateMechanics(){
 					checkTetraCollisionForMatAndVals(matsArr[dd], critVal, cellScale);
 				}
 			}
-
-			function checkTetraCollisionForArray(cellScale, matsArr){
-				var critVal = 1/Math.sqrt(1+cellScale*cellScale*3);
-				for (dd in matsArr){
-					checkTetraCollisionForMatAndVals(matsArr[dd], critVal, cellScale);
-				}
-			}
 		}
+
 		function detonateBullet(bullet, moveWithDuocylinder, color=[1,1,1,1]){	//TODO what scope does this have? best practice???
 
 			if (!bullet.active){console.log("attempting to destroy bullet that is already destroyed.");return;}
@@ -7457,4 +7436,3 @@ function addManyObjectsToWorlds(matAndWorldData, bufferObj, objBvh, scale){
 		});
 	});
 }
-
