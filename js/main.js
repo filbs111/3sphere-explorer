@@ -500,21 +500,9 @@ function initBuffers(){
 			scale
 		}
 	}));
-	polytopeBvhObjs.d16 = worldBvhObjFromObjList(cellMatData.d16.map(mat => {
-		var transposedMat = mat4.create(mat);
-		mat4.transpose(transposedMat);
-		var scale = sixteenCellScale;
-		return {
-			mesh: null,	//use old rendering for now.
-			mat,
-			transposedMat,
-			bvh: tetraFrameBvh,
-			AABB: aabb4DForSphere(mat.slice(12), scale*tetraFrameBvh.boundingSphereRadius),
-			scale
-		}
-	}));
 	
 	addManyObjectsToWorld(4, cellMatData.d8, cubeBuffers, cubeFrameBvh, eightCellScale);
+	addManyObjectsToWorld(5, cellMatData.d16, tetraFrameSubdivBuffers, tetraFrameBvh, sixteenCellScale);
 
 	var thisMatT;
 	for (var ii=0;ii<maxRandBoxes;ii++){
@@ -1420,7 +1408,7 @@ function drawRegularScene(frameTime){
 			drawText("World " + playerContainer.world, 2.5, 1.5, 0.45, 1.5); //bottom left. note scales with FOV!
 
 			portalTexts.forEach(pp=>{
-				drawText(pp.text, pp.pos[0], pp.pos[1], pp.pos[2], 1);
+				drawText(pp.text, pp.pos[0], pp.pos[1], pp.pos[2], 0.6);
 			});
 
 			function drawText(textToDraw, xpos, ypos, zpos, size){
@@ -2521,12 +2509,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.darkGray);
 
 	var polytopes = {
-		"draw 16-cell": {
-			mats:cellMatData.d16,
-			cullRad:guiParams.display.culling ? 1.73: false,
-			scale: sixteenCellScale,
-			buffers: guiParams["subdiv frames"]? tetraFrameSubdivBuffers: tetraFrameBuffers
-		},
 		"draw 24-cell": {
 			mats: cellMatData.d24.cells,
 			cullRad: guiParams.display.culling ? 1: false,
@@ -2572,6 +2554,10 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	var dodecaFrames = bvhObjsForWorld[worldA].objList.filter(objInfo=> objInfo.bvh == dodecaFrameBvh2)	//TODO prefilter
 	if (dodecaFrames.length>0){
 		drawArrayOfModels2(dodecaFrames, dodecaFrameBuffers2, activeShaderProgram);
+	}
+	var tetraFrames = bvhObjsForWorld[worldA].objList.filter(objInfo=> objInfo.bvh == tetraFrameBvh)	//TODO prefilter
+	if (tetraFrames.length>0){
+		drawArrayOfModels2(tetraFrames, tetraFrameBuffers, activeShaderProgram);
 	}
 	
 	//todo this should take buffers, shaders and call prepBuffersForDrawing, drawObjectFromPreppedBuffers
@@ -4445,7 +4431,8 @@ var guiParams={
 		{fogColor:'#7496a0',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
 		{fogColor:'#bbbbbb',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
 		{fogColor:'#111111',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
-		{fogColor:'#444444',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}
+		{fogColor:'#444444',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
+		{fogColor:'#888888',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}
 	],
 	drawShapes:{
 		boxes:{
@@ -5843,9 +5830,6 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 				if (guiParams["draw 24-cell"]){
 					processPossibles(polytopeBvhObjs.d24.objList);
-				}
-				if (guiParams["draw 16-cell"]){
-					processPossibles(polytopeBvhObjs.d16.objList);
 				}
 				
 				function processPossibles(possibleObjects){

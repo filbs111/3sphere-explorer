@@ -1,6 +1,6 @@
 var portalsForWorld = (()=>{
 
-    var portalsForWorld = [[],[],[],[],[]];
+    var portalsForWorld = [[],[],[],[],[],[]];
     
     function addPortalPair(worldOne, worldTwo, radius, color){
         var matOne = newIdMatWithQuats();
@@ -21,6 +21,7 @@ var portalsForWorld = (()=>{
     
 
     addPortalPair(3, 4, 0.075, [0.5,0.5,0.1,1.0]);
+    addPortalPair(4, 5, 0.075, [0.5,0.5,0.1,1.0]);
     
 
 
@@ -34,6 +35,8 @@ var portalsForWorld = (()=>{
 
     xyzmove4mat( portalsForWorld[3][1].matrix, [0.2,0,0]);
 
+    xyzmove4mat( portalsForWorld[4][1].matrix, [0,0,0.2]);
+    xyzmove4mat( portalsForWorld[5][0].matrix, [0.4,0,0.4]);
 
     //portal from world 4 to world 4:
     //addPortalPair(3, 3, 0.075, [0.5,0.5,0.5,1.0]);
