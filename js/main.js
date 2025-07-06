@@ -491,6 +491,7 @@ function initBuffers(){
 	addManyObjectsToWorld(4, cellMatData.d8, cubeBuffers, cubeFrameBvh, eightCellScale);
 	addManyObjectsToWorld(5, cellMatData.d16, tetraFrameSubdivBuffers, tetraFrameBvh, sixteenCellScale);
 	addManyObjectsToWorld(6, cellMatData.d24.cells, octoFrameSubdivBuffers, octoFrameBvh, 1);
+	addManyObjectsToWorld(7, cellMatData.d5, tetraFrameSubdivBuffers, tetraFrameBvh, 2*Math.acos(-0.25));
 
 	var thisMatT;
 	for (var ii=0;ii<maxRandBoxes;ii++){
@@ -2497,12 +2498,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.darkGray);
 
 	var polytopes = {
-		"draw 5-cell": {
-			mats: cellMatData.d5,
-			cullRad: false,
-			scale: 2*Math.acos(-0.25),
-			buffers: guiParams["subdiv frames"] ? tetraFrameSubdivBuffers : tetraFrameBuffers
-		},
 		"draw 120-cell": {
 			mats: cellMatData.d120[sortId],
 			cullRad: (guiParams.display.culling ?  dodecaScale*(0.4/0.515): false),
@@ -4419,7 +4414,8 @@ var guiParams={
 		{fogColor:'#111111',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
 		{fogColor:'#444444',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
 		{fogColor:'#888888',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
-		{fogColor:'#aaaaaa',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}
+		{fogColor:'#aaaaaa',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
+		{fogColor:'#884444',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}
 	],
 	drawShapes:{
 		boxes:{
@@ -4451,7 +4447,6 @@ var guiParams={
 		drawType:'instanced speckles',
 		numToMove:0
 	},
-	"draw 5-cell":false,
 	"subdiv frames":true,
 	"draw 120-cell":false,
 	"draw 600-cell":false,
@@ -4731,7 +4726,6 @@ function init(){
 	drawShapesFolder.add(guiParams.drawShapes,"viaduct", ['none','individual','instanced']);
 
 	var polytopesFolder = gui.addFolder('polytopes');
-	polytopesFolder.add(guiParams,"draw 5-cell");
 	polytopesFolder.add(guiParams,"subdiv frames");
 	polytopesFolder.add(guiParams,"draw 120-cell");
 	polytopesFolder.add(guiParams,"draw 600-cell");
