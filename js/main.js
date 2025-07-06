@@ -55,6 +55,7 @@ var octoFrameSubdivBuffers={};
 var octoFrameBvh={};	
 var tetraFrameBuffers={};
 var tetraFrameSubdivBuffers={};		
+var tetraFrameBvh={};
 var dodecaFrameBuffers={};
 var dodecaFrameBuffers2={};	//without outer faces cut off
 var dodecaFrameBvh2={};
@@ -84,6 +85,7 @@ var thrusterBuffers={};
 
 var polytopeBvhObjs={};
 var dodecaScale=0.515;	//guess TODO use right value (0.5 is too small)
+var sixteenCellScale= 4/Math.sqrt(6);	//in the model, vertices are 0.75*sqrt(2) from the centre, and want to scale to tan(PI/3)=sqrt(3)	
 
 //var sshipModelScale=0.0001;
 var sshipModelScale=0.00005;
@@ -394,6 +396,7 @@ function initBuffers(){
 	//generate bounding volume heirarchy for teapot triangles.
 	createBvhFrom3dObjectData(teapotObject, teapotBvh);
 	createBvhFrom3dObjectData(cubeFrameBlenderObject, cubeFrameBvh);
+	createBvhFrom3dObjectData(tetraFrameSubdivObject, tetraFrameBvh);
 	createBvhFrom3dObjectData(octoFrameSubdivObject, octoFrameBvh);	//suspect subdiv efficient with bvh
 	createBvhFrom3dObjectData(dodecaFrameBlenderObject2, dodecaFrameBvh2);
 	
@@ -478,6 +481,19 @@ function initBuffers(){
 			transposedMat,
 			bvh: octoFrameBvh,
 			aabb4d: aabb4DForSphere(mat.slice(12), scale*octoFrameBvh.boundingSphereRadius),
+			scale
+		}
+	});
+	polytopeBvhObjs.d16 = cellMatData.d16.map(mat => {
+		var transposedMat = mat4.create(mat);
+		mat4.transpose(transposedMat);
+		var scale = sixteenCellScale;
+		return {
+			mesh: null,	//use old rendering for now.
+			mat,
+			transposedMat,
+			bvh: tetraFrameBvh,
+			aabb4d: aabb4DForSphere(mat.slice(12), scale*tetraFrameBvh.boundingSphereRadius),
 			scale
 		}
 	});
@@ -2504,7 +2520,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		"draw 16-cell": {
 			mats:cellMatData.d16, 
 			cullRad:guiParams.display.culling ? 1.73: false, 
-			scale: 4/Math.sqrt(6),	//in the model, vertices are 0.75*sqrt(2) from the centre, and want to scale to tan(PI/3)=sqrt(3)		
+			scale: sixteenCellScale,		
 			buffers: guiParams["subdiv frames"]? tetraFrameSubdivBuffers: tetraFrameBuffers
 		},
 		"draw 24-cell": {
@@ -5828,6 +5844,9 @@ var iterateMechanics = (function iterateMechanics(){
 				if (guiParams["draw 24-cell"]){
 					processPossibles(polytopeBvhObjs.d24);
 				}
+				if (guiParams["draw 16-cell"]){
+					processPossibles(polytopeBvhObjs.d16);
+				}
 				
 				function processPossibles(possibleObjects){
 					if (guiParams.debug.worldBvhCollisionTestPlayer){
@@ -6199,10 +6218,6 @@ var iterateMechanics = (function iterateMechanics(){
 
 			var cellIdxForBullet = getGridId.forPoint(bulletPos);
 			
-			//tetrahedron. (16-cell and 600-cell)
-			if (guiParams["draw 16-cell"]){
-				checkTetraCollisionForArray(1, cellMatData.d16);
-			}
 			if (guiParams["draw 600-cell"]){
 				var idsToCheck = cellMatData.d600GridArrayArray[cellIdxForBullet];
 				checkTetraCollisionForArrayAndArrayIds(0.386/(4/Math.sqrt(6)), cellMatData.d600[0], idsToCheck);
