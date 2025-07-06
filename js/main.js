@@ -455,8 +455,8 @@ function initBuffers(){
 
 	//now bvhs ready, create the following which references them.
 
-	addManyObjectsToWorld(0, someObjectMatrices, teapotBuffers, teapotBvh, 0.4);
-	addManyObjectsToWorld(2, someObjectMatrices, dodecaFrameBuffers2, dodecaFrameBvh2, 0.2);
+	addManyObjectsToWorld2(0, someObjectMatrices, teapotBuffers, teapotBvh, 0.4);
+	addManyObjectsToWorld2(2, someObjectMatrices, dodecaFrameBuffers2, dodecaFrameBvh2, 0.2);
 
 	//TODO array for each object type? include direct reference to rendering info (instead of matching bvh later)
 
@@ -513,19 +513,8 @@ function initBuffers(){
 			scale
 		}
 	}));
-	polytopeBvhObjs.d8 = worldBvhObjFromObjList(cellMatData.d8.map(mat => {
-		var transposedMat = mat4.create(mat);
-		mat4.transpose(transposedMat);
-		var scale = eightCellScale;
-		return {
-			mesh: null,	//use old rendering for now.
-			mat,
-			transposedMat,
-			bvh: cubeFrameBvh,
-			AABB: aabb4DForSphere(mat.slice(12), scale*cubeFrameBvh.boundingSphereRadius),
-			scale
-		}
-	}));
+	
+	addManyObjectsToWorld(4, cellMatData.d8, cubeBuffers, cubeFrameBvh, eightCellScale);
 
 	var thisMatT;
 	for (var ii=0;ii<maxRandBoxes;ii++){
@@ -2532,12 +2521,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.darkGray);
 
 	var polytopes = {
-		"draw 8-cell": {
-			mats:cellMatData.d8,
-			cullRad:guiParams.display.culling ? Math.sqrt(3): false,
-			scale: eightCellScale,
-			buffers: guiParams["subdiv frames"] ? cubeFrameSubdivBuffers: cubeFrameBuffers
-		},
 		"draw 16-cell": {
 			mats:cellMatData.d16,
 			cullRad:guiParams.display.culling ? 1.73: false,
@@ -4150,7 +4133,7 @@ var portalMats = [firstPortalSide.matrix, firstPortalSide.otherps.matrix];	//doe
 
 var playerCameraInterp = newIdMatWithQuats();
 var offsetPlayerCamera = newIdMatWithQuats();
-var playerContainer = {matrix:playerCamera, world:1}
+var playerContainer = {matrix:playerCamera, world:3}
 
 xyzmove4mat(playerCamera,[0,-0.4,0.1]);	//move start point towards problem area where collision distance testing many objs = slowdown
 
@@ -4461,7 +4444,8 @@ var guiParams={
 		{fogColor:'#2f9a16',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:true,seaLevel:0,seaPeakiness:0.0},
 		{fogColor:'#7496a0',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
 		{fogColor:'#bbbbbb',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
-		{fogColor:'#111111',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}
+		{fogColor:'#111111',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
+		{fogColor:'#444444',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}
 	],
 	drawShapes:{
 		boxes:{
@@ -4495,7 +4479,6 @@ var guiParams={
 	},
 	"draw 5-cell":false,
 	"subdiv frames":true,
-	"draw 8-cell":false,
 	"draw 16-cell":false,
 	"draw 24-cell":false,
 	"draw 120-cell":false,
@@ -4777,7 +4760,6 @@ function init(){
 
 	var polytopesFolder = gui.addFolder('polytopes');
 	polytopesFolder.add(guiParams,"draw 5-cell");
-	polytopesFolder.add(guiParams,"draw 8-cell");
 	polytopesFolder.add(guiParams,"draw 16-cell");
 	polytopesFolder.add(guiParams,"subdiv frames");
 	polytopesFolder.add(guiParams,"draw 24-cell");
@@ -5864,9 +5846,6 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 				if (guiParams["draw 16-cell"]){
 					processPossibles(polytopeBvhObjs.d16.objList);
-				}
-				if (guiParams["draw 8-cell"]){
-					processPossibles(polytopeBvhObjs.d8.objList);
 				}
 				
 				function processPossibles(possibleObjects){
@@ -7367,8 +7346,18 @@ function getPosInMatrixFrame(inputPos, matrixTransposed){
 	return posInFrame;
 }
 
+
 function addManyObjectsToWorld(world, matArr, bufferObj, objBvh, scale){
-	var matAndWorldData = matArr.map(xx=> {return {mat:xx.mat, transposedMat:xx.transposedMat, world}});
+	var matAndWorldData = matArr.map(mat=> {
+		var transposedMat = mat4.create(mat);
+		mat4.transpose(transposedMat);
+		return {mat, transposedMat, world}
+	});
+	addManyObjectsToWorlds(matAndWorldData, bufferObj, objBvh, scale);
+}
+
+function addManyObjectsToWorld2(world, matInfoArr, bufferObj, objBvh, scale){
+	var matAndWorldData = matInfoArr.map(xx=> {return {mat:xx.mat, transposedMat:xx.transposedMat, world}});
 	addManyObjectsToWorlds(matAndWorldData, bufferObj, objBvh, scale);
 }
 
@@ -7397,4 +7386,5 @@ function addManyObjectsToWorlds(matAndWorldData, bufferObj, objBvh, scale){
 	touchedWorlds.forEach(ww => {
 		bvhObjsForWorld[ww] = worldBvhObjFromObjList(bvhObjsForWorld[ww].objList);
 	});
+
 }
