@@ -674,15 +674,16 @@ function rayBvhCollision(rayStart, rayEnd, world){
         processPossibles(polytopeBvhObjs.d8);
     }
 
-    if (guiParams.debug.worldBvhCollisionTest){
-        //find possible collisions where 4d aabb of the bounding sphere of the object overlaps
-        //the 4d aabb of the line
-        var lineAABB = aabb4DForLine(rayStart, rayEnd);
-        possiblities = bvhObjsForWorld[world].filter(objInfo => 
-            aabbsOverlap4d(lineAABB, objInfo.aabb4d));
-    }
-
     function processPossibles(possiblities){
+
+        if (guiParams.debug.worldBvhCollisionTest){
+            //find possible collisions where 4d aabb of the bounding sphere of the object overlaps
+            //the 4d aabb of the line
+            var lineAABB = aabb4DForLine(rayStart, rayEnd);
+            possiblities = possiblities.filter(objInfo => 
+                aabbsOverlap4d(lineAABB, objInfo.AABB));
+        }
+
         possiblities.forEach(objInfo => {
             //transform ray into object frame (similar logic to boxes etc), applying scale factor.
 
