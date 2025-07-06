@@ -736,9 +736,6 @@ function rayBvhCollision(rayStart, rayEnd, world){
     if (guiParams["draw 600-cell"]){
         processObjs(polytopeBvhObjs.d600);
     }
-    if (guiParams["draw 120-cell"]){
-        processObjs(polytopeBvhObjs.d120);
-    }
 
     function processObjs(worldBvh){
 

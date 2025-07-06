@@ -109,4 +109,4 @@ var explosionParticleArrs = (function(numworlds){
     }
 
     return arrToReturn;
-})(8);
+})(9);
