@@ -461,7 +461,7 @@ function initBuffers(){
 	//TODO array for each object type? include direct reference to rendering info (instead of matching bvh later)
 
 	//add for polytope cells.
-	polytopeBvhObjs.d600 = cellMatData.d600[0].map(mat => {
+	polytopeBvhObjs.d600 = worldBvhObjFromObjList(cellMatData.d600[0].map(mat => {
 		var transposedMat = mat4.create(mat);
 		mat4.transpose(transposedMat);
 		var scale = sixhundredCellScale;
@@ -470,11 +470,12 @@ function initBuffers(){
 			mat,
 			transposedMat,
 			bvh: tetraFrameBvh,
-			aabb4d: aabb4DForSphere(mat.slice(12), scale*tetraFrameBvh.boundingSphereRadius),
+			AABB: aabb4DForSphere(mat.slice(12), scale*tetraFrameBvh.boundingSphereRadius),
 			scale
 		}
-	});
-	polytopeBvhObjs.d120 = cellMatData.d120[0].map(mat => {
+	}));
+
+	polytopeBvhObjs.d120 = worldBvhObjFromObjList(cellMatData.d120[0].map(mat => {
 		var transposedMat = mat4.create(mat);
 		mat4.transpose(transposedMat);
 		return {
@@ -482,11 +483,11 @@ function initBuffers(){
 			mat,
 			transposedMat,
 			bvh: dodecaFrameBvh2,	//TODO without outer polys?
-			aabb4d: aabb4DForSphere(mat.slice(12), dodecaScale*dodecaFrameBvh2.boundingSphereRadius),
+			AABB: aabb4DForSphere(mat.slice(12), dodecaScale*dodecaFrameBvh2.boundingSphereRadius),
 			scale:dodecaScale
 		}
-	});
-	polytopeBvhObjs.d24 = cellMatData.d24.cells.map(mat => {
+	}));
+	polytopeBvhObjs.d24 = worldBvhObjFromObjList(cellMatData.d24.cells.map(mat => {
 		var transposedMat = mat4.create(mat);
 		mat4.transpose(transposedMat);
 		var scale = 1;
@@ -495,11 +496,11 @@ function initBuffers(){
 			mat,
 			transposedMat,
 			bvh: octoFrameBvh,
-			aabb4d: aabb4DForSphere(mat.slice(12), scale*octoFrameBvh.boundingSphereRadius),
+			AABB: aabb4DForSphere(mat.slice(12), scale*octoFrameBvh.boundingSphereRadius),
 			scale
 		}
-	});
-	polytopeBvhObjs.d16 = cellMatData.d16.map(mat => {
+	}));
+	polytopeBvhObjs.d16 = worldBvhObjFromObjList(cellMatData.d16.map(mat => {
 		var transposedMat = mat4.create(mat);
 		mat4.transpose(transposedMat);
 		var scale = sixteenCellScale;
@@ -508,11 +509,11 @@ function initBuffers(){
 			mat,
 			transposedMat,
 			bvh: tetraFrameBvh,
-			aabb4d: aabb4DForSphere(mat.slice(12), scale*tetraFrameBvh.boundingSphereRadius),
+			AABB: aabb4DForSphere(mat.slice(12), scale*tetraFrameBvh.boundingSphereRadius),
 			scale
 		}
-	});
-	polytopeBvhObjs.d8 = cellMatData.d8.map(mat => {
+	}));
+	polytopeBvhObjs.d8 = worldBvhObjFromObjList(cellMatData.d8.map(mat => {
 		var transposedMat = mat4.create(mat);
 		mat4.transpose(transposedMat);
 		var scale = eightCellScale;
@@ -521,10 +522,10 @@ function initBuffers(){
 			mat,
 			transposedMat,
 			bvh: cubeFrameBvh,
-			aabb4d: aabb4DForSphere(mat.slice(12), scale*cubeFrameBvh.boundingSphereRadius),
+			AABB: aabb4DForSphere(mat.slice(12), scale*cubeFrameBvh.boundingSphereRadius),
 			scale
 		}
-	});
+	}));
 
 	var thisMatT;
 	for (var ii=0;ii<maxRandBoxes;ii++){
@@ -2581,11 +2582,11 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		}
 	});
 
-	var cubeFrames = bvhObjsForWorld[worldA].filter(objInfo=> objInfo.bvh == cubeFrameBvh)	//TODO prefilter
+	var cubeFrames = bvhObjsForWorld[worldA].objList.filter(objInfo=> objInfo.bvh == cubeFrameBvh)	//TODO prefilter
 	if (cubeFrames.length>0){
 		drawArrayOfModels2(cubeFrames, cubeFrameBuffers, activeShaderProgram);
 	}
-	var dodecaFrames = bvhObjsForWorld[worldA].filter(objInfo=> objInfo.bvh == dodecaFrameBvh2)	//TODO prefilter
+	var dodecaFrames = bvhObjsForWorld[worldA].objList.filter(objInfo=> objInfo.bvh == dodecaFrameBvh2)	//TODO prefilter
 	if (dodecaFrames.length>0){
 		drawArrayOfModels2(dodecaFrames, dodecaFrameBuffers2, activeShaderProgram);
 	}
@@ -2721,7 +2722,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		{buffersToDraw:gunBuffers, bvh:gunBvh, shader:shaderProgramColored},
 		{buffersToDraw:teapotBuffers, bvh:teapotBvh, shader:shaderProgramColored},
 	].forEach(info => {
-		var objs = bvhObjsForWorld[worldA].filter(objInfo=> objInfo.bvh == info.bvh);	//TODO prefilter
+		var objs = bvhObjsForWorld[worldA].objList.filter(objInfo=> objInfo.bvh == info.bvh);	//TODO prefilter
 		if (objs.length >0){
 			var desiredProgram = info.shader;
 			if (activeShaderProgram != desiredProgram){
@@ -2930,7 +2931,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
 
 	
-	bvhObjsForWorld[worldA]
+	bvhObjsForWorld[worldA].objList
 		.filter(objInfo=> objInfo.bvh == pillarBvh)	//TODO prefilter
 		.forEach(objInfo => {
 			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, objInfo.scale,objInfo.scale,objInfo.scale);
@@ -2943,7 +2944,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	//NOTE this is inefficient but is just debug drawing (could make fast by instancing.)
 	if (guiParams.debug.bvhBoundingSpheres){
 		prepBuffersForDrawing(sphereBuffersHiRes, activeShaderProgram);
-		bvhObjsForWorld[worldA].forEach(bvhObj => {
+		bvhObjsForWorld[worldA].objList.forEach(bvhObj => {
 			var modelScale = bvhObj.scale * bvhObj.bvh.boundingSphereRadius;
 			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
 			mat4.set(invertedWorldCamera, mvMatrix);
@@ -4574,8 +4575,8 @@ var guiParams={
 		textTextBox:false,
 		textWorldNum:true,
 		bvhBoundingSpheres:false,
-		worldBvhCollisionTest:true,
-		worldBvhCollisionTestPlayer:true
+		worldBvhCollisionTest:"none",
+		worldBvhCollisionTestPlayer:true,
 	},
 	audio:{
 		volume:0.2,
@@ -4630,7 +4631,7 @@ var someObjectMatrices = (() => {
 	})
 })();
 
-var bvhObjsForWorld=guiParams.worlds.map(xx=>[]);	//will create once bvhs created
+var bvhObjsForWorld=guiParams.worlds.map(xx=>{return {objList:[],worldBvh:null}});	//will create once bvhs created
 
 var explodingBoxMatrix = someObjectMatrices[0].mat;
 
@@ -4856,7 +4857,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	debugFolder.add(guiParams.debug, "textTextBox");
 	debugFolder.add(guiParams.debug, "textWorldNum");
 	debugFolder.add(guiParams.debug, "bvhBoundingSpheres");
-	debugFolder.add(guiParams.debug, "worldBvhCollisionTest");
+	debugFolder.add(guiParams.debug, "worldBvhCollisionTest", ["none", "simpleFilter", "worldBvh"]);
 	debugFolder.add(guiParams.debug, "worldBvhCollisionTestPlayer");
 
 	var audioFolder = gui.addFolder('audio');
@@ -5850,22 +5851,22 @@ var iterateMechanics = (function iterateMechanics(){
 				var distanceResults=[];
 
 
-				processPossibles(bvhObjsForWorld[playerContainer.world]);
+				processPossibles(bvhObjsForWorld[playerContainer.world].objList);
 
 				if (guiParams["draw 600-cell"]){
-					processPossibles(polytopeBvhObjs.d600);
+					processPossibles(polytopeBvhObjs.d600.objList);
 				}
 				if (guiParams["draw 120-cell"]){
-					processPossibles(polytopeBvhObjs.d120);
+					processPossibles(polytopeBvhObjs.d120.objList);
 				}
 				if (guiParams["draw 24-cell"]){
-					processPossibles(polytopeBvhObjs.d24);
+					processPossibles(polytopeBvhObjs.d24.objList);
 				}
 				if (guiParams["draw 16-cell"]){
-					processPossibles(polytopeBvhObjs.d16);
+					processPossibles(polytopeBvhObjs.d16.objList);
 				}
 				if (guiParams["draw 8-cell"]){
-					processPossibles(polytopeBvhObjs.d8);
+					processPossibles(polytopeBvhObjs.d8.objList);
 				}
 				
 				function processPossibles(possibleObjects){
@@ -7372,14 +7373,28 @@ function addManyObjectsToWorld(world, matArr, bufferObj, objBvh, scale){
 }
 
 function addManyObjectsToWorlds(matAndWorldData, bufferObj, objBvh, scale){
+
+	var touchedWorlds = new Set();
+
 	matAndWorldData.forEach(matAndWorld => {
-		bvhObjsForWorld[matAndWorld.world].push({
+		bvhObjsForWorld[matAndWorld.world].objList.push({
 			mesh: bufferObj,
 			mat: matAndWorld.mat, 
 			transposedMat: matAndWorld.transposedMat, 
 			bvh: objBvh,
-			aabb4d: aabb4DForSphere(matAndWorld.mat.slice(12), scale*objBvh.boundingSphereRadius),
+			AABB: aabb4DForSphere(matAndWorld.mat.slice(12), scale*objBvh.boundingSphereRadius),
 			scale
 		});
+		touchedWorlds.add(matAndWorld.world);
+	});
+
+	//because loading happens whenever, regenerate bvh when object added.
+		//this is crappy. improvements?
+		//  1) wait for all objs loaded before start game
+		//	2) put bvh bounding sphere info with object data so can create bvh before object fully loaded
+		//  3) fast bvh insert
+
+	touchedWorlds.forEach(ww => {
+		bvhObjsForWorld[ww] = worldBvhObjFromObjList(bvhObjsForWorld[ww].objList);
 	});
 }

@@ -45,7 +45,7 @@ function createBvhFrom3dObjectData(sourceData, bvhToPopulate, vertAttrs=3){
 
         var normalisedBoxCentre = minAABB.map( (minval, ii) => {return (minval + maxAABB[ii])/boundingSphereDiam;} );  //between -1, 1
         var centreMorton = morton3(normalisedBoxCentre);
-        //TODO calculate centre position so can morton/hilbert order for grouping into tree...
+        //var centreHilbert = hilbert3(normalisedBoxCentre);
 
         //calculate triangle normal.
         var edgeVecs = [
@@ -74,53 +74,77 @@ function createBvhFrom3dObjectData(sourceData, bvhToPopulate, vertAttrs=3){
             distFromOrigin,
             edgeData,
             AABB: [minAABB, maxAABB],
-            centreMorton    //note only used for ordering. TODO remove once used?
+            centreMorton,    //note only used for ordering. TODO remove once used?
+            //centreHilbert
         }
     });
 
     trisWithAABB.sort((a,b) => a.centreMorton - b.centreMorton);  //sort by morton code.
+    //trisWithAABB.sort((a,b) => a.centreHilbert - b.centreHilbert);  //sort by hilbert code.
 
     bvhToPopulate.verts = verts;    //suspect only require vertex data.
-    bvhToPopulate.tris = generateBvh(trisWithAABB, 16)
+    bvhToPopulate.tris = generateBvh(trisWithAABB, temp3vec, 16);
     bvhToPopulate.isLoaded = true;
     return;
+}
 
-    function generateBvh(items, groupSize){
-        console.log({items});
+function worldBvhObjFromObjList(objList){
+    return {
+        objList,
+        worldBvh: generateWorldBvh(objList)
+    }
+}
 
-        if (items.length < 2){  //TODO why is length ever 0?
-            //console.log("returning because items of length: " + items.length);
-            //console.log(items);
-            return items[0];
-        }
-    
-        var groups = arrayToGroups(items, groupSize);
-        console.log("NUM GROUPS:" + groups.length);
-        console.log({groups});
+function generateWorldBvh(bvhObjects){
+    //each object has an AABB already. add 4d morton code
+    // and construct bvh
+    bvhObjects.forEach(bvhObj => {
+        bvhObj.centreMorton4d = morton4(bvhObj.mat.slice(12));
+    });
+    bvhObjects.sort((a,b) => a.centreMorton4d - b.centreMorton4d);
 
-        var nextLayerUp = groups.map(group => {
-            
-            var minAABBPoints = temp3Vec.map( (_,component) => group.map(item => item.AABB[0][component]));
-            var minAABB = minAABBPoints.map( minAABBPointsForComponent => Math.min.apply(null, minAABBPointsForComponent));
+    var worldBvh = generateBvh(bvhObjects, temp4vec, 4);
+    return worldBvh;
+}
+
+function generateBvh(items, tempVec, groupSize){
+    console.log({items});
+
+    if (items.length < 2){  //TODO why is length ever 0?
+        //console.log("returning because items of length: " + items.length);
+        //console.log(items);
+        return items[0];
+    }
+
+    var groups = arrayToGroups(items, groupSize);
+    console.log("NUM GROUPS:" + groups.length);
+    console.log({groups});
+
+    var nextLayerUp = groups.map(group => {
+        
+        var minAABBPoints = tempVec.map( (_,component) => group.map(item => item.AABB[0][component]));
+        var minAABB = minAABBPoints.map( minAABBPointsForComponent => Math.min.apply(null, minAABBPointsForComponent));
+
+        var maxAABBPoints = tempVec.map( (_,component) => group.map(item => item.AABB[1][component]));
+        var maxAABB = maxAABBPoints.map( maxAABBPointsForComponent => Math.max.apply(null, maxAABBPointsForComponent));
+
+        // var morton = [
+        //     Math.min.apply(null, group.map(item => item.morton[0])),
+        //     Math.max.apply(null, group.map(item => item.morton[1]))
+        // ];
+        // morton for AABB corners. maybe useful for fast coarse AABB check (only compare single value, but false positives)
+
+        var toReturn = {
+            group,
+            AABB: [minAABB, maxAABB],
+            // morton
+        };
+        return toReturn;
+    });
+
+    return generateBvh(nextLayerUp, tempVec, groupSize);
+}
     
-            var maxAABBPoints = temp3Vec.map( (_,component) => group.map(item => item.AABB[1][component]));
-            var maxAABB = maxAABBPoints.map( maxAABBPointsForComponent => Math.max.apply(null, maxAABBPointsForComponent));
-    
-            // var morton = [
-            //     Math.min.apply(null, group.map(item => item.morton[0])),
-            //     Math.max.apply(null, group.map(item => item.morton[1]))
-            // ];
-            // morton for AABB corners. maybe useful for fast coarse AABB check (only compare single value, but false positives)
-    
-            var toReturn = {
-                group,
-                AABB: [minAABB, maxAABB],
-                // morton
-            };
-            return toReturn;
-        });
-    
-        return generateBvh(nextLayerUp, groupSize);
     }
 }
 
@@ -566,6 +590,57 @@ function morton3(threevec){
     return morton;
 }
 
+function morton4(fourvec){
+    //might be slow and crap! 
+    var bitarrays = fourvec.map(xx => {
+
+        var intnum = (xx+1)*128;
+        intnum = Math.min(intnum, 255);  //because could be 256 before this? 
+        intnum = Math.max(intnum, 0);
+        var bits = [...Array(8)].map((x,i)=>intnum>>i&1);
+            //least to most significant 8 bits
+
+        return bits
+    } );
+
+    var morton 
+        = (bitarrays[0][7] << 31)
+        + (bitarrays[1][7] << 30)
+        + (bitarrays[2][7] << 29)
+        + (bitarrays[3][7] << 28)
+        + (bitarrays[0][6] << 27)
+        + (bitarrays[1][6] << 26)
+        + (bitarrays[2][6] << 25)
+        + (bitarrays[3][6] << 24)
+        + (bitarrays[0][5] << 23)
+        + (bitarrays[1][5] << 22)
+        + (bitarrays[2][5] << 21)
+        + (bitarrays[3][5] << 20)
+        + (bitarrays[0][4] << 19)
+        + (bitarrays[1][4] << 18)
+        + (bitarrays[2][4] << 17)
+        + (bitarrays[3][4] << 16)
+        + (bitarrays[0][3] << 15)
+        + (bitarrays[1][3] << 14)
+        + (bitarrays[2][3] << 13)
+        + (bitarrays[3][3] << 12)
+        + (bitarrays[0][2] << 11)
+        + (bitarrays[1][2] << 10)
+        + (bitarrays[2][2] << 9)
+        + (bitarrays[3][2] << 8)
+        + (bitarrays[0][1] << 7)
+        + (bitarrays[1][1] << 6)
+        + (bitarrays[2][1] << 5)
+        + (bitarrays[3][1] << 4)
+        + (bitarrays[0][0] << 3)
+        + (bitarrays[1][0] << 2)
+        + (bitarrays[2][0] << 1)
+        + (bitarrays[3][0]);
+
+    //return morton;
+    return morton^ 0x80000000;
+}
+
 var temp3vec = [...new Array(3)];
 var temp4vec = [...new Array(4)];
 
@@ -656,32 +731,39 @@ function rayBvhCollision(rayStart, rayEnd, world){
     var collided = false;
     var closestFractionAlong = 1;
 
-    processPossibles(bvhObjsForWorld[world]);
+    processObjs(bvhObjsForWorld[world]);
 
     if (guiParams["draw 600-cell"]){
-        processPossibles(polytopeBvhObjs.d600);
+        processObjs(polytopeBvhObjs.d600);
     }
     if (guiParams["draw 120-cell"]){
-        processPossibles(polytopeBvhObjs.d120);
+        processObjs(polytopeBvhObjs.d120);
     }
     if (guiParams["draw 24-cell"]){
-        processPossibles(polytopeBvhObjs.d24);
+        processObjs(polytopeBvhObjs.d24);
     }
     if (guiParams["draw 16-cell"]){
-        processPossibles(polytopeBvhObjs.d16);
+        processObjs(polytopeBvhObjs.d16);
     }
     if (guiParams["draw 8-cell"]){
-        processPossibles(polytopeBvhObjs.d8);
+        processObjs(polytopeBvhObjs.d8);
     }
 
-    function processPossibles(possiblities){
+    function processObjs(worldBvh){
 
-        if (guiParams.debug.worldBvhCollisionTest){
-            //find possible collisions where 4d aabb of the bounding sphere of the object overlaps
-            //the 4d aabb of the line
-            var lineAABB = aabb4DForLine(rayStart, rayEnd);
+        var possiblities=worldBvh.objList;
+
+        var lineAABB = aabb4DForLine(rayStart, rayEnd);
+
+        if (guiParams.debug.worldBvhCollisionTest != "simpleFilter"){
             possiblities = possiblities.filter(objInfo => 
                 aabbsOverlap4d(lineAABB, objInfo.AABB));
+        }
+
+        //this performs worse than "none" option!
+        //TODO bring back grid system?
+        if (guiParams.debug.worldBvhCollisionTest == "worldBvh"){
+            possiblities = collisionTestBvh(lineAABB, worldBvh.worldBvh);
         }
 
         possiblities.forEach(objInfo => {
