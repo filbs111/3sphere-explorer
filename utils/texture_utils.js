@@ -108,9 +108,9 @@ TODO if performance gain significant, make this better. (better best fit pallett
 function setupCompressedTextureFromImagedata(u8data, compressedTexToSetUp, mipLevel, mipTexSize){
     var u32data = new Uint32Array(u8data.buffer);
 
-    console.log(u8data);
-    console.log(u32data);   //see that u32data[0] =  256*256*256*u8data[0] + 256*256*u8data[1] + 256*u8data[2] + u8data[3]
-                        //and can use this to modify or read whole pixel (4 channels) in 1 go
+    // console.log(u8data);
+    // console.log(u32data);   //see that u32data[0] =  256*256*256*u8data[0] + 256*256*u8data[1] + 256*u8data[2] + u8data[3]
+    //                     //and can use this to modify or read whole pixel (4 channels) in 1 go
 
     timeMeasure("start");
 

@@ -9,8 +9,7 @@ function getFourHeights(aaFloor,bbFloor){
 	//seems that NaN gets in here (aa,bb)
 	if ( aaFloor<0 || bbFloor<0 || aaCeil<0 || bbCeil<0 || aaFloor>=procTerrainSize || bbFloor>=procTerrainSize || aaCeil>=procTerrainSize || bbCeil>=procTerrainSize){
 	//	console.log("bad input!");
-		console.log({aaFloor:aaFloor, bbFloor:bbFloor, aaCeil:aaCeil, bbCeil:bbCeil, procTerrainSize:procTerrainSize});
-		//this results in a bug so return something! seems that is looking up index 256
+		console.log({aaFloor, bbFloor, aaCeil, bbCeil, procTerrainSize});
 		return -1;	//returning this will cause problems.
 	}
 	
@@ -75,8 +74,8 @@ function terrainGetHeightFor4VecPos(vec, duocylinderSpin){	//returns point in pr
 	var bb=decentMod(multiplier*(b + duocylinderSpin),procTerrainSize);
 	
 	if (vec[0]!=vec[0] || vec[1]!=vec[1] || vec[2]!=vec[2]){	//things can go wrong here with fast collision with boxes
-		console.log("NaN vector input to terrainGetHeightFor4VecPos");
-		console.log(vec);
+//		console.log("NaN vector input to terrainGetHeightFor4VecPos");		//happens a lot!
+//		console.log(vec);
 		return {a:0, b:0 , h:-1};	//todo what should return here? 
 	}
 	if (aa!=aa || bb!=bb){
@@ -490,7 +489,7 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 	function lookupIndex(xx,yy){
 		return xx+(gridSize+1)*yy;
 	}
-	return {vertices:vertices, normals:normals, binormals:binormals, tangents:tangents, uvcoords:uvcoords, colors:colors, 
+	return {vertices, normals, binormals, tangents, uvcoords, colors, 
 		//faces:indices
 		faces:indices_b
 	};
