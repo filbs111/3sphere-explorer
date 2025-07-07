@@ -5767,7 +5767,7 @@ var iterateMechanics = (function iterateMechanics(){
 						var playerPosVec = vec4.create(playerPos);
 						mat4.multiplyVec4(transposedObjMat, playerPosVec, playerPosVec);
 						
-						if (playerPosVec[3]<=0.5){	//TODO tighter bounding sphere.
+						if (playerPosVec[3]<=0.3){
 							return;
 						}						
 
