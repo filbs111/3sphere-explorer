@@ -1,4 +1,6 @@
 var shouldDumpDebug = false;
+var shouldDumpDebug2 = false;
+
 var quadplane={	//temp...
 	fx:5,
 	fy:0.9,
@@ -4469,7 +4471,7 @@ var guiParams={
 		textTextBox:false,
 		textWorldNum:true,
 		bvhBoundingSpheres:false,
-		worldBvhCollisionTest:"none",
+		worldBvhCollisionTest:"simpleFilter",
 		worldBvhCollisionTestPlayer:true,
 	},
 	audio:{
@@ -4525,7 +4527,7 @@ var someObjectMatrices = (() => {
 	})
 })();
 
-var bvhObjsForWorld=guiParams.worlds.map(xx=>{return {objList:[],worldBvh:null}});	//will create once bvhs created
+var bvhObjsForWorld=guiParams.worlds.map(xx=>{return {objList:[],worldBvh:null,grids:null}});	//will create once bvhs created
 
 var explodingBoxMatrix = someObjectMatrices[0].mat;
 
@@ -4743,7 +4745,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	debugFolder.add(guiParams.debug, "textTextBox");
 	debugFolder.add(guiParams.debug, "textWorldNum");
 	debugFolder.add(guiParams.debug, "bvhBoundingSpheres");
-	debugFolder.add(guiParams.debug, "worldBvhCollisionTest", ["none", "simpleFilter", "worldBvh"]);
+	debugFolder.add(guiParams.debug, "worldBvhCollisionTest", ["none", "simpleFilter", "worldBvh", "grid"]);
 	debugFolder.add(guiParams.debug, "worldBvhCollisionTestPlayer");
 
 	var audioFolder = gui.addFolder('audio');

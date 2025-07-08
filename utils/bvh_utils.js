@@ -91,7 +91,8 @@ function createBvhFrom3dObjectData(sourceData, bvhToPopulate, vertAttrs=3){
 function worldBvhObjFromObjList(objList){
     return {
         objList,
-        worldBvh: generateWorldBvh(objList)
+        worldBvh: generateWorldBvh(objList),
+        grids: generateGridArrayArray(objList, 0.02)
     }
 }
 
@@ -739,15 +740,26 @@ function rayBvhCollision(rayStart, rayEnd, world){
 
         var lineAABB = aabb4DForLine(rayStart, rayEnd);
 
-        if (guiParams.debug.worldBvhCollisionTest != "simpleFilter"){
-            possiblities = possiblities.filter(objInfo => 
-                aabbsOverlap4d(lineAABB, objInfo.AABB));
-        }
-
         //this performs worse than "none" option!
         //TODO bring back grid system?
         if (guiParams.debug.worldBvhCollisionTest == "worldBvh"){
             possiblities = collisionTestBvh(lineAABB, worldBvh.worldBvh);
+        }
+
+        if (guiParams.debug.worldBvhCollisionTest == "grid"){
+            var cellIdxForBullet = getGridId.forPoint(rayStart);    //could take average start, end, not need as much padding.
+            possiblities = worldBvh.grids ? worldBvh.grids[cellIdxForBullet] : [];
+        }
+
+        if (guiParams.debug.worldBvhCollisionTest != "none"){
+            possiblities = possiblities.filter(objInfo => 
+                aabbsOverlap4d(lineAABB, objInfo.AABB));
+        }
+        //TODO simple sphere collision test? more discerning than AABB filter and faster?
+
+        if (shouldDumpDebug2){
+            console.log(possiblities.length);
+            shouldDumpDebug2=false;
         }
 
         possiblities.forEach(objInfo => {
