@@ -92,7 +92,17 @@ function worldBvhObjFromObjList(objList){
     return {
         objList,
         worldBvh: generateWorldBvh(objList),
-        grids: generateGridArrayArray(objList, 0.02)
+        grids: generateGridArrayArray(objList, 0)    //NOTE current grid system can miss large objects
+            // collisions, and the padding is unneeded since doesn't work as proposed next:
+            //TODO better grid system to look up, for an object of size lequal to padding, with centre 
+            // in a given grid square, all the objects it could be colliding with. 
+            // however, seems most bad perf is due to the individual object bvh test, not this broad 
+            // filter. therefore better to concentrate on:
+            // *intermediate tighter bounds test eg bounding sphere check convex hull
+            // *speeding up obj level bvh test
+            // *grouping eg bullets to test many against same object simultaneously
+            //      including bullets tested against many instances of a given object!
+            // *doing line collision detection for multiple frames (assumes constant velocity, fiddly)
     }
 }
 
@@ -222,6 +232,22 @@ function collisionTestBvh(aabb, bvh){
         );
     
     return filteredGroup.map(group2 => collisionTestBvh(aabb, group2)).flat();
+}
+function collisionTestBvh4d(aabb, bvh){
+    
+    if (!bvh.group){ //is a leaf node
+        //console.log("returning because bvh has no group");
+        //console.log(bvh);
+
+        return bvh;
+    }
+
+    var filteredGroup =  bvh.group.filter(
+            item =>
+            aabbsOverlap4d(aabb, item.AABB)
+        );
+    
+    return filteredGroup.map(group2 => collisionTestBvh4d(aabb, group2)).flat();
 }
 
 var triObjClosestPointType=0; //0=vert, 1=edge, 2=face
@@ -743,15 +769,17 @@ function rayBvhCollision(rayStart, rayEnd, world){
         //this performs worse than "none" option!
         //TODO bring back grid system?
         if (guiParams.debug.worldBvhCollisionTest == "worldBvh"){
-            possiblities = collisionTestBvh(lineAABB, worldBvh.worldBvh);
+            possiblities = collisionTestBvh4d(lineAABB, worldBvh.worldBvh);
         }
 
         if (guiParams.debug.worldBvhCollisionTest == "grid"){
             var cellIdxForBullet = getGridId.forPoint(rayStart);    //could take average start, end, not need as much padding.
             possiblities = worldBvh.grids ? worldBvh.grids[cellIdxForBullet] : [];
+            possiblities = possiblities.filter(objInfo => 
+                aabbsOverlap4d(lineAABB, objInfo.AABB));
         }
 
-        if (guiParams.debug.worldBvhCollisionTest != "none"){
+        if (guiParams.debug.worldBvhCollisionTest == "simpleFilter"){
             possiblities = possiblities.filter(objInfo => 
                 aabbsOverlap4d(lineAABB, objInfo.AABB));
         }
