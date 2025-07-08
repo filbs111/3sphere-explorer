@@ -4471,7 +4471,8 @@ var guiParams={
 		textTextBox:false,
 		textWorldNum:true,
 		bvhBoundingSpheres:false,
-		worldBvhCollisionTest:"simpleFilter",
+		worldCollisionTest1:"worldBvh",
+		worldCollisionTest2:"sphere",
 		worldBvhCollisionTestPlayer:true,
 	},
 	audio:{
@@ -4745,7 +4746,8 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	debugFolder.add(guiParams.debug, "textTextBox");
 	debugFolder.add(guiParams.debug, "textWorldNum");
 	debugFolder.add(guiParams.debug, "bvhBoundingSpheres");
-	debugFolder.add(guiParams.debug, "worldBvhCollisionTest", ["none", "simpleFilter", "worldBvh", "grid"]);
+	debugFolder.add(guiParams.debug, "worldCollisionTest1", ["none", "worldBvh", "grid"]);
+	debugFolder.add(guiParams.debug, "worldCollisionTest2", ["none", "aabb", "sphere"]);
 	debugFolder.add(guiParams.debug, "worldBvhCollisionTestPlayer");
 
 	var audioFolder = gui.addFolder('audio');

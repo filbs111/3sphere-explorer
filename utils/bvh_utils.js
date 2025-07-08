@@ -90,7 +90,7 @@ function createBvhFrom3dObjectData(sourceData, bvhToPopulate, vertAttrs=3){
 
 function worldBvhObjFromObjList(objList){
     return {
-        objList,
+        objList: createObListWithCosAndSin(objList),
         worldBvh: generateWorldBvh(objList),
         grids: generateGridArrayArray(objList, 0)    //NOTE current grid system can miss large objects
             // collisions, and the padding is unneeded since doesn't work as proposed next:
@@ -768,25 +768,42 @@ function rayBvhCollision(rayStart, rayEnd, world){
 
         //this performs worse than "none" option!
         //TODO bring back grid system?
-        if (guiParams.debug.worldBvhCollisionTest == "worldBvh"){
+        if (guiParams.debug.worldCollisionTest1 == "worldBvh"){
             possiblities = collisionTestBvh4d(lineAABB, worldBvh.worldBvh);
         }
-
-        if (guiParams.debug.worldBvhCollisionTest == "grid"){
+        if (guiParams.debug.worldCollisionTest1 == "grid"){
             var cellIdxForBullet = getGridId.forPoint(rayStart);    //could take average start, end, not need as much padding.
             possiblities = worldBvh.grids ? worldBvh.grids[cellIdxForBullet] : [];
-            possiblities = possiblities.filter(objInfo => 
-                aabbsOverlap4d(lineAABB, objInfo.AABB));
         }
 
-        if (guiParams.debug.worldBvhCollisionTest == "simpleFilter"){
+        var firstStagePossibles = possiblities.length;
+
+        if (guiParams.debug.worldCollisionTest2 == "aabb"){
             possiblities = possiblities.filter(objInfo => 
                 aabbsOverlap4d(lineAABB, objInfo.AABB));
         }
-        //TODO simple sphere collision test? more discerning than AABB filter and faster?
+        if (guiParams.debug.worldCollisionTest2 == "sphere"){
+            //TODO more discerning than AABB filter and faster?
+            var bulletSphereRad = 0.01; //radians. what should this be? 
+            var bulletSphere = {
+                position: rayStart, //TODO use middle?
+                cosAng:Math.cos(bulletSphereRad),
+                sinAng:Math.sin(bulletSphereRad)
+            };  //TODO precalculate this, or make it depend on bullet speed
+            possiblities = possiblities.filter(objInfo => 
+                collisionTestSimpleSpheres2(bulletSphere,
+                    {
+                        cosAng: objInfo.cosAng,
+                        sinAng: objInfo.sinAng,
+                        position: objInfo.mat.slice(12) //store as dedicated field on objInfo?
+                    }));
+        }
 
         if (shouldDumpDebug2){
-            console.log(possiblities.length);
+            console.log({
+                first: firstStagePossibles,
+                second: possiblities.length
+            });
             shouldDumpDebug2=false;
         }
 
@@ -813,4 +830,24 @@ function rayBvhCollision(rayStart, rayEnd, world){
         collided,
         closestFractionAlong
     }
+}
+
+//not really bvh stuff:
+
+function createObListWithCosAndSin(objList){
+    return objList.map(oo => 
+    {
+        var rad = oo.scale * oo.bvh.boundingSphereRadius;
+        var ang = Math.atan(rad);
+        oo.cosAng = Math.cos(ang);  //TODO replace trig with sqrt etc (but speed here unimportant)
+        oo.sinAng = Math.sin(ang);
+        return oo;
+    });
+}
+
+function collisionTestSimpleSpheres2(sphere1, sphere2){    //faster still, avoids cos call from Simple1
+    //using compound angle formula cos(A+B) = cosAcosB - sinAsinB
+    var compondCosAngle = sphere1.cosAng*sphere2.cosAng - sphere1.sinAng*sphere2.sinAng;
+    var dotProd = dotProduct4(sphere1.position, sphere2.position);
+    return dotProd>compondCosAngle;
 }
