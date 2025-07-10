@@ -119,7 +119,7 @@ var drawMapScene = (function(){
 		mapDrawShaderFunc(buildingMatrix, colorArrs.red, buildingBuffers, 0.01*guiParams.drawShapes.buildingScale, true);
 		mapDrawShaderFunc(octoFractalMatrix, colorArrs.gray, octoFractalBuffers, 0.01*guiParams.drawShapes.octoFractalScale, true);
 
-		bvhObjsForWorld[worldToDrawMapFor].forEach(bvhObj => {
+		bvhObjsForWorld[worldToDrawMapFor].objList.forEach(bvhObj => {
 			//drawMapPointForFourVec(bvhObj.mat.slice(12), colorArrs.gray, 0.03);
 			mapDrawShaderFunc(bvhObj.mat, colorArrs.gray, bvhObj.mesh, bvhObj.scale, false);
 				//NOTE can't just use bvhObj.scale because depends on mesh data.
