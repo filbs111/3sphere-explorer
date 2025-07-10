@@ -155,9 +155,7 @@ function generateBvh(items, tempVec, groupSize){
 
     return generateBvh(nextLayerUp, tempVec, groupSize);
 }
-    
-    }
-}
+
 
 //TODO: 
 // 1) find the collision point
