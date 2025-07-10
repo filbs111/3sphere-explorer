@@ -5738,11 +5738,10 @@ var iterateMechanics = (function iterateMechanics(){
 
 			function processTriangleObjectCollision(){
 				var closestRoughSqDistanceFound = Number.POSITIVE_INFINITY;
-				var distanceResults=[];
-
 
 				processPossibles(bvhObjsForWorld[playerContainer.world].objList);
 				
+
 				function processPossibles(possibleObjects){
 					if (guiParams.debug.worldBvhCollisionTestPlayer){
 						//find set of candiate objects by their bounding spheres - 
@@ -5761,10 +5760,11 @@ var iterateMechanics = (function iterateMechanics(){
 							.map(xx=>xx.objInfo);
 					}
 
+					var bestResult = false;
+
 					possibleObjects.forEach(objInfo =>
 					{
 						var transposedObjMat = objInfo.transposedMat;
-						var objMat = objInfo.mat;
 						var objBvh = objInfo.bvh;
 						var objScale = objInfo.scale;
 
@@ -5789,29 +5789,31 @@ var iterateMechanics = (function iterateMechanics(){
 						var roughDistanceSqFromPlayer = dotProduct(vectorToPlayerInObjectSpace,vectorToPlayerInObjectSpace)
 											*objScale*objScale;	//multiplying by scale with view to using multiple scales
 
-						distanceResults.push(roughDistanceSqFromPlayer);
-
-						//TODO only do this once found closest point, object (otherwise doing unnecessary matrix calcs unless
-						//first object has closest point.)
 						if (roughDistanceSqFromPlayer<closestRoughSqDistanceFound){
-							triObjClosestPointType = closestPointResult.closestPointType;
-
+							bestResult = {
+								closestPointResult,
+								objInfo
+							}
 							closestRoughSqDistanceFound = roughDistanceSqFromPlayer;
-
-							var positionInProjectedSpace = closestPointInObjectFrame.map(val => val*objScale);					
-							//var veclen = Math.hypot.apply(null, positionInProjectedSpace);
-							var veclen = Math.sqrt(positionInProjectedSpace.reduce((accum, xx)=>accum+xx*xx, 0));
-							var scalarAngleDifference = Math.atan(veclen);
-
-
-							var correction = -scalarAngleDifference/veclen;
-							var angleToMove = positionInProjectedSpace.map(val => val*correction);
-
-							//draw object - position at object centre, then move by vec to point in object space.
-							mat4.set(objMat, debugDraw.mats[8]);
-							xyzmove4mat(debugDraw.mats[8], angleToMove);	//draw x on closest vertex
 						}
 					});
+
+					if (bestResult){
+						var closestPointResult= bestResult.closestPointResult;
+						triObjClosestPointType = closestPointResult.closestPointType;
+
+						var closestPointInObjectFrame = closestPointResult.closestPoint;
+						var positionInProjectedSpace = closestPointInObjectFrame.map(val => val*bestResult.objInfo.scale);
+						var veclen = Math.sqrt(positionInProjectedSpace.reduce((accum, xx)=>accum+xx*xx, 0));
+						var scalarAngleDifference = Math.atan(veclen);
+
+						var correction = -scalarAngleDifference/veclen;
+						var angleToMove = positionInProjectedSpace.map(val => val*correction);
+
+						//draw object - position at object centre, then move by vec to point in object space.
+						mat4.set(bestResult.objInfo.mat, debugDraw.mats[8]);
+						xyzmove4mat(debugDraw.mats[8], angleToMove);	//draw x on closest vertex
+					}
 				}
 
 
