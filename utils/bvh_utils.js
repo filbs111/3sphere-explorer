@@ -426,20 +426,43 @@ function collisionTestPossibleClosest2(fromPoint, bvhGroup, lowestAccepted){
 
 
 
+// function aabbMinMaxDistanceFromPoint(fromPoint, aabb){
+//     var greatestPossibleSq=0;
+//     var lowestPossibleSq=0;
+
+//     for (var cc=0;cc<3;cc++){
+//         var aabbRangeRelativeToPoint = [fromPoint[cc]-aabb[0][cc] , fromPoint[cc]-aabb[1][cc]]; 
+//         var absAabbRangeRelativeToPoint = aabbRangeRelativeToPoint.map(xx => Math.abs(xx));
+//         var greatestPossibleThisComponent = Math.max( absAabbRangeRelativeToPoint[0], absAabbRangeRelativeToPoint[1]);
+//         var lowestPossibleThisComponent = Math.min( absAabbRangeRelativeToPoint[0], absAabbRangeRelativeToPoint[1]);
+//         if (aabbRangeRelativeToPoint[0]*aabbRangeRelativeToPoint[1]<0){
+//             lowestPossibleThisComponent=0;
+//         }
+//         greatestPossibleSq+=greatestPossibleThisComponent*greatestPossibleThisComponent;
+//         lowestPossibleSq+=lowestPossibleThisComponent*lowestPossibleThisComponent;
+//     }
+//     return [lowestPossibleSq, greatestPossibleSq];
+// }
+
+//equivalent to above but harder to read, ~2x speed!
+
 function aabbMinMaxDistanceFromPoint(fromPoint, aabb){
     var greatestPossibleSq=0;
     var lowestPossibleSq=0;
 
     for (var cc=0;cc<3;cc++){
-        var aabbRangeRelativeToPoint = [fromPoint[cc]-aabb[0][cc] , fromPoint[cc]-aabb[1][cc]]; 
-        var absAabbRangeRelativeToPoint = aabbRangeRelativeToPoint.map(xx => Math.abs(xx));
-        var greatestPossibleThisComponent = Math.max( absAabbRangeRelativeToPoint[0], absAabbRangeRelativeToPoint[1]);
-        var lowestPossibleThisComponent = Math.min( absAabbRangeRelativeToPoint[0], absAabbRangeRelativeToPoint[1]);
-        if (aabbRangeRelativeToPoint[0]*aabbRangeRelativeToPoint[1]<0){
-            lowestPossibleThisComponent=0;
-        }
-        greatestPossibleSq+=greatestPossibleThisComponent*greatestPossibleThisComponent;
-        lowestPossibleSq+=lowestPossibleThisComponent*lowestPossibleThisComponent;
+        var aabbRangeRelativeToPoint = [aabb[0][cc]-fromPoint[cc] , aabb[1][cc]-fromPoint[cc]];
+
+        var spaceToRight = aabbRangeRelativeToPoint[0];
+        var spaceToLeft = -aabbRangeRelativeToPoint[1];
+        var closest = Math.max(0, Math.max(spaceToLeft, spaceToRight));
+
+        var farToRight = aabbRangeRelativeToPoint[1];
+        var farToLeft = -aabbRangeRelativeToPoint[0];
+        var furthest = Math.max(farToRight, farToLeft);
+
+        greatestPossibleSq+=furthest*furthest;
+        lowestPossibleSq+=closest*closest;
     }
     return [lowestPossibleSq, greatestPossibleSq];
 }
