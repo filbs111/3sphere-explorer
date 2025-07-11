@@ -276,7 +276,7 @@ function closestPointForTris(fromPoint, verts, tris){
     //closest in 3d projected space is likely good enough for smaller objects 
     // can check how close matches precise 4d version.
 
-    var closestsq = Number.MAX_VALUE;
+    var closestSq = Number.MAX_VALUE;
     var closestPointType = 0;
     var chosenVectorToClosestPoint=[0,0,0]; //expect to be set! but hit bug with vectorSum if don't initialise?
 
@@ -284,9 +284,8 @@ function closestPointForTris(fromPoint, verts, tris){
     // can do this by separating axis test
     tris.forEach(tri => {
         
-        var greatestSeparation = Number.NEGATIVE_INFINITY;
+        var greatestSeparationSq = Number.NEGATIVE_INFINITY;
         var chosenPointTypeThisFace = -1;
-        //var greatestSeparationSq = 0;
         var vectorToClosestPoint;
         var triPoints = tri.triangleIndices.map(pp => verts[pp]);
         //SAT test for verts? 
@@ -299,27 +298,20 @@ function closestPointForTris(fromPoint, verts, tris){
         triPoints.forEach(pp => {
             var vecToCorner = vectorDifference(pp, fromPoint);
             var vecToCornerLenSq = dotProduct(vecToCorner, vecToCorner);
-            var vecToCornerLen = Math.sqrt(vecToCornerLenSq);
             //loop over all points, find minimum in this direction (for point in question this calc can is unnecessary, but do 
             // for all 3 points for simplicity)
             var dotProds = triPoints.map(qq=> dotProduct(vecToCorner, qq) );
-            var leastDotProd = Math.min.apply(null, dotProds);
+            var leastDotProd = dotProds.reduce((accum,current)=>Math.min(accum,current),Number.MAX_VALUE);
             var leastDistance = leastDotProd-dotProduct(vecToCorner, fromPoint);
             //AFAICT this can only be the greatest separating axis (and outside triangle) if that's between 0 and vecToCorner^2
             //but can just find the greatest separation without checking.
             
-            var absoluteDistance = leastDistance /vecToCornerLen;
-            if (absoluteDistance>greatestSeparation){
-                greatestSeparation=absoluteDistance;
+            var absoluteDistanceSq = leastDistance*leastDistance /vecToCornerLenSq;
+            if (leastDistance> 0 && absoluteDistanceSq>greatestSeparationSq){
+                greatestSeparationSq=absoluteDistanceSq;
                 vectorToClosestPoint = vecToCorner;
                 chosenPointTypeThisFace = 0;
             }
-
-            //var absoluteDistanceSq = leastDistance*leastDistance /vecToCornerLenSq;   //TODO use this to avoid sqrt
-            // if (leastDistance> 0 && absoluteDistanceSq>greatestSeparationSq){
-            //     greatestSeparationSq=absoluteDistanceSq;
-            //     vectorToClosestPoint = vecToCorner;
-            // }
         });
 
         //edges and normal
@@ -328,8 +320,8 @@ function closestPointForTris(fromPoint, verts, tris){
 
         //plane separation.
         //TODO skip this if outside any edge?
-        if (Math.abs(distToPlane)>greatestSeparation){  //TODO is abs necessary if always outside objects?
-            greatestSeparation = Math.abs(distToPlane);
+        if (distToPlane*distToPlane>greatestSeparationSq){
+            greatestSeparationSq = distToPlane*distToPlane;
             vectorToClosestPoint = vecToPlane;
             chosenPointTypeThisFace = 2;
         }
@@ -343,18 +335,17 @@ function closestPointForTris(fromPoint, verts, tris){
             if (distInEdgeDir>0){
                 var totalDistSq = distInEdgeDir*distInEdgeDir + distToPlane*distToPlane;
                 var vecInEdgeDir = edgeData.normal.map(xx=> xx*distInEdgeDir);
-                if (totalDistSq>greatestSeparation*greatestSeparation){
-                    greatestSeparation = Math.sqrt(totalDistSq);    //TODO avoid sqrt, keep as square?
+                if (totalDistSq>greatestSeparationSq){
+                    greatestSeparationSq = totalDistSq;
                     vectorToClosestPoint = vectorDifference(vecToPlane, vecInEdgeDir);
                     chosenPointTypeThisFace = 1;
                 }
             }
         }
 
-        //TODO avoid squaring here.
-        if (greatestSeparation*greatestSeparation < closestsq){
+        if (greatestSeparationSq < closestSq){
             chosenVectorToClosestPoint = vectorToClosestPoint;
-            closestsq = greatestSeparation*greatestSeparation;
+            closestSq = greatestSeparationSq;
             closestPointType = chosenPointTypeThisFace;
         }
     });
