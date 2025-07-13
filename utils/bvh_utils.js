@@ -517,23 +517,18 @@ function aabbMinMaxDistanceFromPoint(fromPoint, aabb){
 // }
 
 function aabbsOverlap(aabb1, aabb2){
-    var intersection = true;
-    for (var ii=0;ii<3;ii++){
-            //leftmost of each span left of the rightmost of the other
-        var thisAxisIntersects = aabb1[0][ii] < aabb2[1][ii] && aabb2[0][ii] < aabb1[1][ii];
-        intersection = intersection && thisAxisIntersects;
-    }
-    return intersection;
+    //leftmost of each span left of the rightmost of the other
+    return aabb1[0][0] < aabb2[1][0] && aabb2[0][0] < aabb1[1][0]
+        && aabb1[0][1] < aabb2[1][1] && aabb2[0][1] < aabb1[1][1]
+        && aabb1[0][2] < aabb2[1][2] && aabb2[0][2] < aabb1[1][2];
 }
 
 function aabbsOverlap4d(aabb1, aabb2){
-    var intersection = true;
-    for (var ii=0;ii<4;ii++){
-            //leftmost of each span left of the rightmost of the other
-        var thisAxisIntersects = aabb1[0][ii] < aabb2[1][ii] && aabb2[0][ii] < aabb1[1][ii];
-        intersection = intersection && thisAxisIntersects;
-    }
-    return intersection;
+    //leftmost of each span left of the rightmost of the other
+    return aabb1[0][0] < aabb2[1][0] && aabb2[0][0] < aabb1[1][0]
+        && aabb1[0][1] < aabb2[1][1] && aabb2[0][1] < aabb1[1][1]
+        && aabb1[0][2] < aabb2[1][2] && aabb2[0][2] < aabb1[1][2]
+        && aabb1[0][3] < aabb2[1][3] && aabb2[0][3] < aabb1[1][3];
 }
 
 function pointSignedDistanceFromPlane(point, plane){
