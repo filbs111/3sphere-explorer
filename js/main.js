@@ -5780,21 +5780,23 @@ var iterateMechanics = (function iterateMechanics(){
 						//var closestPointResult = closestPointBvhBruteForce(projectedPosInObjFrame, objBvh);
 						var closestPointResult = closestPointBvhEfficient(projectedPosInObjFrame, objBvh);
 
-						var closestPointInObjectFrame = closestPointResult.closestPoint;
-						
-						//get distance from player.
-						//TODO return from above, or combine with closestPointBvh / use world level bvh?
+						if (closestPointResult){
+							var closestPointInObjectFrame = closestPointResult.closestPoint;
+							
+							//get distance from player.
+							//TODO return from above, or combine with closestPointBvh / use world level bvh?
 
-						var vectorToPlayerInObjectSpace = vectorDifference(projectedPosInObjFrame, closestPointInObjectFrame);
-						var roughDistanceSqFromPlayer = dotProduct(vectorToPlayerInObjectSpace,vectorToPlayerInObjectSpace)
-											*objScale*objScale;	//multiplying by scale with view to using multiple scales
+							var vectorToPlayerInObjectSpace = vectorDifference(projectedPosInObjFrame, closestPointInObjectFrame);
+							var roughDistanceSqFromPlayer = dotProduct(vectorToPlayerInObjectSpace,vectorToPlayerInObjectSpace)
+												*objScale*objScale;	//multiplying by scale with view to using multiple scales
 
-						if (roughDistanceSqFromPlayer<closestRoughSqDistanceFound){
-							bestResult = {
-								closestPointResult,
-								objInfo
+							if (roughDistanceSqFromPlayer<closestRoughSqDistanceFound){
+								bestResult = {
+									closestPointResult,
+									objInfo
+								}
+								closestRoughSqDistanceFound = roughDistanceSqFromPlayer;
 							}
-							closestRoughSqDistanceFound = roughDistanceSqFromPlayer;
 						}
 					});
 

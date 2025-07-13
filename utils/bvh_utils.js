@@ -277,9 +277,16 @@ function closestPointBvhBruteForce(fromPoint, bvh){
 }
 
 function closestPointBvhEfficient(fromPoint, bvh){
-    //var possibles = collisionTestPossibleClosest(fromPoint, bvh.tris, Number.POSITIVE_INFINITY);
-    var possibles = collisionTestPossibleClosest2(fromPoint, [bvh.tris], Number.POSITIVE_INFINITY);
-    return closestPointForTris(fromPoint, bvh.verts, possibles); 
+    //var possibles = collisionTestPossibleClosest2(fromPoint, [bvh.tris], Number.POSITIVE_INFINITY);
+    var possibles = collisionTestPossibleClosest2(fromPoint, [bvh.tris], 0.1);  //NOTE currently doing flypast noise+collision in 
+        // same collision/closest point calc, but if need more speed, might do tighter collision check. noise
+        // check likely can be less frequent than collision check.
+
+    if (possibles.length == 0){
+        return false;
+    }
+
+    return closestPointForTris(fromPoint, bvh.verts, possibles);
 }
 
 
