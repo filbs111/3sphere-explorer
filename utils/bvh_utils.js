@@ -216,21 +216,23 @@ function bvhRayOverlapTest(rayStart, rayEnd, bvh){
 
 //this returns possible colliding bvh nodes in the group.
 function collisionTestBvh(aabb, bvh){
-    
-    if (!bvh.group){ //is a leaf node
-        //console.log("returning because bvh has no group");
-        //console.log(bvh);
+    var picked=[];
+    innerTest(bvh);
+    return picked;
 
-        return bvh;
-    }
-
-    var filteredGroup =  bvh.group.filter(
+    function innerTest(bvhInner){
+        if (!bvhInner.group){
+            picked.push(bvhInner);
+            return;
+        }
+        var filteredGroup =  bvhInner.group.filter(
             item =>
             aabbsOverlap(aabb, item.AABB)
         );
-    
-    return filteredGroup.map(group2 => collisionTestBvh(aabb, group2)).flat();
+        filteredGroup.forEach(gg => innerTest(gg));
+    }
 }
+
 function collisionTestBvh4d(aabb, bvh){
     
     if (!bvh.group){ //is a leaf node
