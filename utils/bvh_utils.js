@@ -248,6 +248,24 @@ function collisionTestBvh4d(aabb, bvh){
     return filteredGroup.map(group2 => collisionTestBvh4d(aabb, group2)).flat();
 }
 
+function collisionTestBvh4d2(aabb, bvh){
+    var picked=[];
+    innerTest(bvh);
+    return picked;
+
+    function innerTest(bvhInner){
+        if (!bvhInner.group){
+            picked.push(bvhInner);
+            return;
+        }
+        var filteredGroup =  bvhInner.group.filter(
+            item =>
+            aabbsOverlap4d(aabb, item.AABB)
+        );
+        filteredGroup.forEach(gg => innerTest(gg));
+    }
+}
+
 var triObjClosestPointType=0; //0=vert, 1=edge, 2=face
 
 function closestPointBvhBruteForce(fromPoint, bvh){
@@ -782,6 +800,9 @@ function rayBvhCollision(rayStart, rayEnd, world){
         //TODO bring back grid system?
         if (guiParams.debug.worldCollisionTest1 == "worldBvh"){
             possiblities = collisionTestBvh4d(lineAABB, worldBvh.worldBvh);
+        }
+        if (guiParams.debug.worldCollisionTest1 == "worldBvh2"){
+            possiblities = collisionTestBvh4d2(lineAABB, worldBvh.worldBvh);
         }
         if (guiParams.debug.worldCollisionTest1 == "grid"){
             var cellIdxForBullet = getGridId.forPoint(rayStart);    //could take average start, end, not need as much padding.

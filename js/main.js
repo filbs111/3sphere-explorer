@@ -4471,7 +4471,7 @@ var guiParams={
 		textTextBox:false,
 		textWorldNum:true,
 		bvhBoundingSpheres:false,
-		worldCollisionTest1:"worldBvh",
+		worldCollisionTest1:"worldBvh2",
 		worldCollisionTest2:"sphere",
 		worldBvhCollisionTestPlayer:true,
 	},
@@ -4746,7 +4746,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	debugFolder.add(guiParams.debug, "textTextBox");
 	debugFolder.add(guiParams.debug, "textWorldNum");
 	debugFolder.add(guiParams.debug, "bvhBoundingSpheres");
-	debugFolder.add(guiParams.debug, "worldCollisionTest1", ["none", "worldBvh", "grid"]);
+	debugFolder.add(guiParams.debug, "worldCollisionTest1", ["none", "worldBvh", "worldBvh2", "grid"]);
 	debugFolder.add(guiParams.debug, "worldCollisionTest2", ["none", "aabb", "sphere"]);
 	debugFolder.add(guiParams.debug, "worldBvhCollisionTestPlayer");
 
