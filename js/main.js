@@ -4474,6 +4474,7 @@ var guiParams={
 		worldCollisionTest1:"worldBvh2",
 		worldCollisionTest2:"sphere",
 		worldBvhCollisionTestPlayer:true,
+		timestep:5
 	},
 	audio:{
 		volume:0.2,
@@ -4749,6 +4750,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	debugFolder.add(guiParams.debug, "worldCollisionTest1", ["none", "worldBvh", "worldBvh2", "grid"]);
 	debugFolder.add(guiParams.debug, "worldCollisionTest2", ["none", "aabb", "sphere"]);
 	debugFolder.add(guiParams.debug, "worldBvhCollisionTestPlayer");
+	debugFolder.add(guiParams.debug, "timestep",2,40,1);
 
 	var audioFolder = gui.addFolder('audio');
 	audioFolder.add(guiParams.audio, "volume", 0,1,0.1).onChange(MySound.setGlobalVolume);
@@ -4947,7 +4949,7 @@ var iterateMechanics = (function iterateMechanics(){
 	var playerAngVelVec = [0,0,0];
 	
 	var timeTracker =0;
-	var timeStep = 5;	//5ms => 200 steps/s! this is small to prevent tunelling. TODO better collision system that does not require this!
+	var timeStep = guiParams.debug.timestep;	//5ms => 200 steps/s! this is small to prevent tunelling. TODO better collision system that does not require this!
 	var timeStepMultiplier = timeStep/10;	//because stepSpeed initially tuned for timeStep=10;
 	var angVelDampMultiplier=Math.pow(0.85, timeStep/10);
 	var gunHeatMultiplier = Math.pow(0.995, timeStep/10);
@@ -4971,6 +4973,16 @@ var iterateMechanics = (function iterateMechanics(){
 
 	return function(frameTime){
 		
+		//update timestep stuff to test effect of changing timestep ================
+		//TODO remove
+		timeStep = guiParams.debug.timestep;	//5ms => 200 steps/s! this is small to prevent tunelling. TODO better collision system that does not require this!
+		timeStepMultiplier = timeStep/10;	//because stepSpeed initially tuned for timeStep=10;
+		angVelDampMultiplier=Math.pow(0.85, timeStep/10);
+		gunHeatMultiplier = Math.pow(0.995, timeStep/10);
+		thrust = 0.001*timeStep;	//TODO make keyboard/gamepad fair! currently thrust, moveSpeed config independent!
+		autoFireCountdownStartVal=Math.ceil(5 / (timeStep/10));
+		//==========================================================================
+
 		reverseCamera=keyThing.keystate(82) || (mouseInfo.buttons & 4); 	//R or middle mouse click
 		
 		activeGp=getGamepad();
