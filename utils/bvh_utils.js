@@ -89,9 +89,27 @@ function createBvhFrom3dObjectData(sourceData, bvhToPopulate, vertAttrs=3){
 }
 
 function worldBvhObjFromObjList(objList){
+    augmentObListWithCosAndSin(objList);
+
+    objList.forEach(bvhObj => {
+        var inputPos = bvhObj.mat.slice(12);
+        var outputMorton = morton4(Array.from(inputPos));
+
+        bvhObj.centreMorton4d = outputMorton;
+
+        bvhObj.hilbert = hilbert4(inputPos);
+    });
+
+    objList.sort((a,b) => a.centreMorton4d - b.centreMorton4d);
+    var worldBvh = generateBvh(objList, temp4vec, 4);
+    
+    objList.sort((a,b) => a.hilbert - b.hilbert);
+    var worldBvhHilbert = generateBvh(objList, temp4vec, 4);
+
     return {
-        objList: createObListWithCosAndSin(objList),
-        worldBvh: generateWorldBvh(objList),
+        objList,
+        worldBvh,
+        worldBvhHilbert,
         grids: generateGridArrayArray(objList, 0)    //NOTE current grid system can miss large objects
             // collisions, and the padding is unneeded since doesn't work as proposed next:
             //TODO better grid system to look up, for an object of size lequal to padding, with centre 
@@ -106,17 +124,6 @@ function worldBvhObjFromObjList(objList){
     }
 }
 
-function generateWorldBvh(bvhObjects){
-    //each object has an AABB already. add 4d morton code
-    // and construct bvh
-    bvhObjects.forEach(bvhObj => {
-        bvhObj.centreMorton4d = morton4(bvhObj.mat.slice(12));
-    });
-    bvhObjects.sort((a,b) => a.centreMorton4d - b.centreMorton4d);
-
-    var worldBvh = generateBvh(bvhObjects, temp4vec, 4);
-    return worldBvh;
-}
 
 function generateBvh(items, tempVec, groupSize){
     console.log({items});
@@ -139,6 +146,7 @@ function generateBvh(items, tempVec, groupSize){
         var maxAABBPoints = tempVec.map( (_,component) => group.map(item => item.AABB[1][component]));
         var maxAABB = maxAABBPoints.map( maxAABBPointsForComponent => Math.max.apply(null, maxAABBPointsForComponent));
 
+        
         // var morton = [
         //     Math.min.apply(null, group.map(item => item.morton[0])),
         //     Math.max.apply(null, group.map(item => item.morton[1]))
@@ -808,6 +816,9 @@ function rayBvhCollision(rayStart, rayEnd, world){
         if (guiParams.debug.worldCollisionTest1 == "worldBvh2"){
             possiblities = collisionTestBvh4d2(lineAABB, worldBvh.worldBvh);
         }
+        if (guiParams.debug.worldCollisionTest1 == "worldBvhHilbert"){
+            possiblities = collisionTestBvh4d2(lineAABB, worldBvh.worldBvhHilbert);
+        }
         if (guiParams.debug.worldCollisionTest1 == "grid"){
             var cellIdxForBullet = getGridId.forPoint(rayStart);    //could take average start, end, not need as much padding.
             possiblities = worldBvh.grids ? worldBvh.grids[cellIdxForBullet] : [];
@@ -871,14 +882,13 @@ function rayBvhCollision(rayStart, rayEnd, world){
 
 //not really bvh stuff:
 
-function createObListWithCosAndSin(objList){
-    return objList.map(oo => 
+function augmentObListWithCosAndSin(objList){
+    return objList.forEach(oo => 
     {
         var rad = oo.scale * oo.bvh.boundingSphereRadius;
         var ang = Math.atan(rad);
         oo.cosAng = Math.cos(ang);  //TODO replace trig with sqrt etc (but speed here unimportant)
         oo.sinAng = Math.sin(ang);
-        return oo;
     });
 }
 
