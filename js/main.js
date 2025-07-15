@@ -4747,7 +4747,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	debugFolder.add(guiParams.debug, "textTextBox");
 	debugFolder.add(guiParams.debug, "textWorldNum");
 	debugFolder.add(guiParams.debug, "bvhBoundingSpheres");
-	debugFolder.add(guiParams.debug, "worldCollisionTest1", ["none", "worldBvh", "worldBvh2", "worldBvhHilbert", "grid"]);
+	debugFolder.add(guiParams.debug, "worldCollisionTest1", ["none", "worldBvh", "worldBvh2", "worldBvhHilbert", "grid", "bvhVsBvh"]);
 	debugFolder.add(guiParams.debug, "worldCollisionTest2", ["none", "aabb", "sphere"]);
 	debugFolder.add(guiParams.debug, "worldBvhCollisionTestPlayer");
 	debugFolder.add(guiParams.debug, "timestep",2,40,1);
@@ -6032,9 +6032,11 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			}
 			
-			var bvhCollisionResult = rayBvhCollision(bulletPos, newBulletPos, bullet.world);
-			if (bvhCollisionResult.collided){
-				detonateBullet(bullet, false, [0.3,0.3,0.8]);
+			if (guiParams.debug.worldCollisionTest1 != "bvhVsBvh"){
+				var bvhCollisionResult = rayBvhCollision(bulletPos, newBulletPos, bullet.world);
+				if (bvhCollisionResult.collided){
+					detonateBullet(bullet, false, [0.3,0.3,0.8]);
+				}
 			}
 
 			//ray collision with bendy objects. NOTE this isn't quite right
@@ -6141,7 +6143,144 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		var singleStepMove = timeStep*moveSpeed;
 		if (numSteps>0){
+			var tempBulletMatrix = mat4.create();
 			for (var ii=0;ii<numSteps;ii++){	//TODO make more performant
+
+				//checking many bullets against bvh objects. 
+				if (guiParams.debug.worldCollisionTest1 == "bvhVsBvh"){
+					//augment bullets with info needed for bullet ray collision.
+					// TODO don't recalculate this in checkBulletCollision.
+					
+					var bulletsInWorlds = bvhObjsForWorld.map(xx=>[]);
+
+					bullets.forEach(bullet => {
+						if (!bullet.active){return;}
+						var rayStart = bullet.matrix.slice(12);
+						mat4.set(bullet.matrix, tempBulletMatrix);
+						xyzmove4mat(tempBulletMatrix,scalarvectorprod(singleStepMove,bullet.vel));
+						var rayEnd = tempBulletMatrix.slice(12);
+						bullet.AABB = aabb4DForLine(rayStart, rayEnd);
+						bulletsInWorlds[bullet.world].push(bullet);
+						bullet.rayStart = rayStart;
+						bullet.rayEnd = rayEnd;
+					});
+					
+					bulletsInWorlds.forEach((bullets,ww) => {
+
+						if (bullets.length == 0){
+							return;	//FWIW bvh generation doesn't handle 0 items
+						}
+
+						var bulletBvh = generateBvh(bullets, temp4vec, 4);	//create bvh of bullet rays
+							// TODO improve perf for creation time. 
+							// TODO order items to reduce surf area heuristic etc (eg morton order)
+
+						//check bullets bvh vs world bvh, generate list of possibles for each bullet
+						for (var b of bullets){
+							b.possibles = [];
+
+							//brute force implementation to make sure other stuff works 
+							//bvhObjsForWorld[b.world].objList.forEach(oo => b.possibles.push(oo));
+
+							//next most brainless implementation -
+							// use the world bvh per bullet (equivalent to existing bullet vs bvh code)
+
+							//b.possibles = collisionTestBvh4d2(b.AABB, bvhObjsForWorld[b.world].worldBvhHilbert);
+						}
+						
+						// traverse bullet and world bvhs in alternating way 
+
+						var descendWorldBvhNext = 1;
+
+						//console.log("doing interleaved bvh test for world " + ww);
+						innerTest(bulletBvh, bvhObjsForWorld[ww].worldBvhHilbert);
+
+						function innerTest(bulletBvh, worldBvh){
+							descendWorldBvhNext = 1-descendWorldBvhNext;
+							if (!bulletBvh.group){
+								if (!worldBvh.group){
+									bulletBvh.possibles.push(worldBvh);	//here bvhs are a single bullet and object
+									//console.log("adding");
+									return;
+								}
+							}
+
+							if (!bulletBvh.group || (worldBvh.group && descendWorldBvhNext)){
+								//TODO can this be simplified given that !bulletBvh.group && !worldBvh.group == false (or would have returned earlier)
+								
+								//console.log("descending world bvh");
+
+								var filteredGroup =  worldBvh.group.filter(
+									item =>
+									aabbsOverlap4d(bulletBvh.AABB, item.AABB)
+								);
+								filteredGroup.forEach(gg => innerTest(bulletBvh,gg));
+								return;
+							}else{
+								//console.log("descending bullet bvh");
+
+								var filteredGroup =  bulletBvh.group.filter(
+									item =>
+									aabbsOverlap4d(item.AABB, worldBvh.AABB)
+								);
+								filteredGroup.forEach(gg => innerTest(gg,worldBvh));
+								return;
+							}
+						}
+
+
+						//process possibles for each bullet (same as non-grouped bullet mode.)
+						//TODO do this as go along, so don't need to store possibles?
+
+						for (var bullet of bullets){
+							var possibles = bullet.possibles;
+								//TODO (optional) filtering of possibles by sphere etc
+
+							var bulletSphereRad = 0.01; //radians. what should this be? 
+							var bulletSphere = {
+								position: bullet.rayStart, //TODO use middle?
+								cosAng:Math.cos(bulletSphereRad),
+								sinAng:Math.sin(bulletSphereRad)
+							};  //TODO precalculate this, or make it depend on bullet speed
+							possibles = possibles.filter(objInfo => 
+								collisionTestSimpleSpheres2(bulletSphere,
+									{
+										cosAng: objInfo.cosAng,
+										sinAng: objInfo.sinAng,
+										position: objInfo.mat.slice(12) //store as dedicated field on objInfo?
+									}));
+
+							var collided = false;
+							possibles.forEach(objInfo => {
+								//transform ray into object frame (similar logic to boxes etc), applying scale factor.
+
+								var rayPosVec = getPosInMatrixFrame(bullet.rayStart, objInfo.transposedMat);
+								var rayPosEndVec = getPosInMatrixFrame(bullet.rayEnd, objInfo.transposedMat);
+
+								//reject if ray start or end is in other hemisphere to object checking collision with.
+								//NOTE this is a stopgap measure - when using world BVH, or long ray collision with world object bounds,
+								// won't be necessary to do this.
+								if (rayPosVec[3]<=0 || rayPosEndVec[3]<=0){
+									return;
+								}
+
+								var result = bvhRayCollision(rayPosVec, rayPosEndVec, objInfo);
+								collided = collided || result.collided;
+							//	closestFractionAlong = Math.min(closestFractionAlong, result.closestFractionAlong);
+							});
+
+							if (collided){
+								detonateBullet(bullet, false, [0.3,0.3,0.8]);
+							}
+						};
+
+
+					});
+
+					
+				}
+
+				// bullet movement and non-grouped collision
 				for (var b of bullets){
 					if (b.active){	//TODO just delete/unlink removed objects
 						checkBulletCollision(b, singleStepMove);

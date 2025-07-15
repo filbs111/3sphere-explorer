@@ -126,7 +126,7 @@ function worldBvhObjFromObjList(objList){
 
 
 function generateBvh(items, tempVec, groupSize){
-    console.log({items});
+    //console.log({items});
 
     if (items.length < 2){  //TODO why is length ever 0?
         //console.log("returning because items of length: " + items.length);
@@ -135,8 +135,8 @@ function generateBvh(items, tempVec, groupSize){
     }
 
     var groups = arrayToGroups(items, groupSize);
-    console.log("NUM GROUPS:" + groups.length);
-    console.log({groups});
+    //console.log("NUM GROUPS:" + groups.length);
+    //console.log({groups});
 
     var nextLayerUp = groups.map(group => {
         
