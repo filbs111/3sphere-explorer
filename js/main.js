@@ -5212,14 +5212,18 @@ var iterateMechanics = (function iterateMechanics(){
 				//other rotation
 				var gpRotate=[];
 				var fixedRotateAmount = 10*rotateSpeed;
-				gpRotate[0] = Math.abs(axes[gpSettings.pitchAxis])>gpSettings.deadZone ? fixedRotateAmount*gpSettings.pitchMultiplier*axes[gpSettings.pitchAxis] : 0; //pitch
-				gpRotate[1] = Math.abs(axes[gpSettings.turnAxis])>gpSettings.deadZone ? fixedRotateAmount*gpSettings.turnMultiplier*axes[gpSettings.turnAxis] : 0; //turn
+				gpRotate[0] = gpSettings.pitch(activeGp, fixedRotateAmount);
+				gpRotate[1] = gpSettings.turn(activeGp, fixedRotateAmount);
 				gpRotate[2] = 0;	//moved to code above
 					
 				magsq = gpRotate.reduce((total, val) => total+ val*val, 0);
-				var magpow = Math.pow(50*magsq,1.5);	//TODO handle fact that max values separately maxed out, so currently turns faster in diagonal direction.
 				
-				lastPlayerAngMove = scalarvectorprod(100000*magpow*timeStepMultiplier,gpRotate);
+				//var magpow = Math.pow(50*magsq,1.5);	//TODO handle fact that max values separately maxed out, so currently turns faster in diagonal direction.
+				//lastPlayerAngMove = scalarvectorprod(100000*magpow*timeStepMultiplier,gpRotate);
+					//arguably above nicer for gamepad, better supports precise movement
+
+				var magpow = Math.pow(1*magsq,0.25);
+				lastPlayerAngMove = scalarvectorprod(100*magpow*timeStepMultiplier,gpRotate);
 				rotatePlayer(lastPlayerAngMove);	//TODO add rotational momentum - not direct rotate
 			}
 			
