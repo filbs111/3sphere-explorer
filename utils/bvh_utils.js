@@ -962,3 +962,37 @@ function collisionTestSimpleSpheres2(sphere1, sphere2){    //faster still, avoid
     var dotProd = dotProduct4(sphere1.position, sphere2.position);
     return dotProd>compondCosAngle;
 }
+
+
+// function bvhSurfaceAreaHeuristic(bvh){
+//     var thisSurf = surfOfAABB(bvh.AABB);
+    
+//     if (!bvh.group){
+//         return thisSurf;
+//     }
+
+//     var surfOfGroups = bvh.group.reduce((cumul,xx) => cumul+ bvhSurfaceAreaHeuristic(xx), 0);
+
+//     return surfOfGroups+thisSurf;
+// }
+// function surfOfAABB(aabb){
+//     var sides = aabb[0].map((xx,ii) => aabb[1][ii]-xx);
+//     return 2*(sides[0]*sides[1] + sides[1]*sides[2] + sides[2]*sides[0]);
+// }
+
+// function bvhSurfaceAreaHeuristic4d(bvh){
+//     var thisSurf = surfOfAABB4d(bvh.AABB);
+    
+//     if (!bvh.group){
+//         return thisSurf;
+//     }
+
+//     var surfOfGroups = bvh.group.reduce((cumul,xx) => cumul+ bvhSurfaceAreaHeuristic4d(xx), 0);
+
+//     return surfOfGroups+thisSurf;
+// }
+// function surfOfAABB4d(aabb){
+//     var sides = aabb[0].map((xx,ii) => aabb[1][ii]-xx);
+//     return 2*(sides[0]*sides[1]*sides[2] + sides[1]*sides[2]*sides[3] +
+//          sides[2]*sides[3]*sides[0] + sides[3]*sides[0]*sides[1]);
+// }
