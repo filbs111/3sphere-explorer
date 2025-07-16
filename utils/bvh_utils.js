@@ -332,19 +332,19 @@ function closestPointForTris(fromPoint, verts, tris){
         // maybe could make more efficient using logic like that.
         //for now simple SAT test.
 
-        triPoints.forEach(pp => {
-            var vecToCorner = vectorDifference(pp, fromPoint);
+        var triPointsFromPoint = triPoints.map(pp => vectorDifference(pp, fromPoint));
+
+        triPointsFromPoint.forEach((vecToCorner,ii) => {
             var vecToCornerLenSq = dotProduct(vecToCorner, vecToCorner);
             //loop over all points, find minimum in this direction (for point in question this calc can is unnecessary, but do 
             // for all 3 points for simplicity)
-            var dotProds = triPoints.map(qq=> dotProduct(vecToCorner, qq) );
-            var leastDotProd = dotProds.reduce((accum,current)=>Math.min(accum,current),Number.MAX_VALUE);
-            var leastDistance = leastDotProd-dotProduct(vecToCorner, fromPoint);
+            var dotProds = triPointsFromPoint.map(vecToCorner2=> dotProduct(vecToCorner, vecToCorner2) );
+            var leastDotProd = dotProds.filter((_,jj)=>ii!=jj).reduce((accum,current)=>Math.min(accum,current),Number.MAX_VALUE);
             //AFAICT this can only be the greatest separating axis (and outside triangle) if that's between 0 and vecToCorner^2
             //but can just find the greatest separation without checking.
             
-            var absoluteDistanceSq = leastDistance*leastDistance /vecToCornerLenSq;
-            if (leastDistance> 0 && absoluteDistanceSq>greatestSeparationSq){
+            var absoluteDistanceSq = leastDotProd*leastDotProd /vecToCornerLenSq;
+            if (leastDotProd> 0 && absoluteDistanceSq>greatestSeparationSq){
                 greatestSeparationSq=absoluteDistanceSq;
                 vectorToClosestPoint = vecToCorner;
                 chosenPointTypeThisFace = 0;
@@ -353,12 +353,13 @@ function closestPointForTris(fromPoint, verts, tris){
 
         //edges and normal
         var distToPlane = dotProduct(tri.normal, fromPoint) - tri.distFromOrigin;
+        var distToPlaneSq = distToPlane*distToPlane;
         var vecToPlane = tri.normal.map(xx=> -xx*distToPlane);
 
         //plane separation.
         //TODO skip this if outside any edge?
-        if (distToPlane*distToPlane>greatestSeparationSq){
-            greatestSeparationSq = distToPlane*distToPlane;
+        if (distToPlaneSq>greatestSeparationSq){
+            greatestSeparationSq = distToPlaneSq;
             vectorToClosestPoint = vecToPlane;
             chosenPointTypeThisFace = 2;
         }
@@ -370,7 +371,7 @@ function closestPointForTris(fromPoint, verts, tris){
             //var firstPointOnEdge = triPoints[ee];
             var distInEdgeDir = dotProduct(edgeData.normal, fromPoint) - edgeData.distFromOrigin;
             if (distInEdgeDir>0){
-                var totalDistSq = distInEdgeDir*distInEdgeDir + distToPlane*distToPlane;
+                var totalDistSq = distInEdgeDir*distInEdgeDir + distToPlaneSq;
                 var vecInEdgeDir = edgeData.normal.map(xx=> xx*distInEdgeDir);
                 if (totalDistSq>greatestSeparationSq){
                     greatestSeparationSq = totalDistSq;
