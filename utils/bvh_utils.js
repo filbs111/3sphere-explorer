@@ -534,13 +534,67 @@ function aabbsOverlap(aabb1, aabb2){
         && aabb1[0][2] < aabb2[1][2] && aabb2[0][2] < aabb1[1][2];
 }
 
-function aabbsOverlap4d(aabb1, aabb2){
+var aabbsOverlap4d = aabbsOverlap4da;
+
+function aabbsOverlap4da(aabb1, aabb2){
     //leftmost of each span left of the rightmost of the other
     return aabb1[0][0] < aabb2[1][0] && aabb2[0][0] < aabb1[1][0]
         && aabb1[0][1] < aabb2[1][1] && aabb2[0][1] < aabb1[1][1]
         && aabb1[0][2] < aabb2[1][2] && aabb2[0][2] < aabb1[1][2]
         && aabb1[0][3] < aabb2[1][3] && aabb2[0][3] < aabb1[1][3];
 }
+
+// //less readable version of above, about same speed.
+// function aabbsOverlap4db(aabb1, aabb2){
+//     //leftmost of each span left of the rightmost of the other
+//     return (
+//         (1&(-1-aabb1[0][0]+aabb2[1][0])>>31) |
+//         (1&(-1-aabb2[0][0]+aabb1[1][0])>>31) |
+//         (1&(-1-aabb1[0][1]+aabb2[1][1])>>31) |
+//         (1&(-1-aabb2[0][1]+aabb1[1][1])>>31) |
+//         (1&(-1-aabb1[0][2]+aabb2[1][2])>>31) |
+//         (1&(-1-aabb2[0][2]+aabb1[1][2])>>31) |
+//         (1&(-1-aabb1[0][3]+aabb2[1][3])>>31) |
+//         (1&(-1-aabb2[0][3]+aabb1[1][3])>>31)) ==0;
+// }
+
+// //less readable version of above, about same speed.
+// function aabbsOverlap4de(aabb1, aabb2){
+//     //leftmost of each span left of the rightmost of the other
+//     return (
+//         ((-1-aabb1[0][0]+aabb2[1][0])>>31) |
+//         ((-1-aabb2[0][0]+aabb1[1][0])>>31) |
+//         ((-1-aabb1[0][1]+aabb2[1][1])>>31) |
+//         ((-1-aabb2[0][1]+aabb1[1][1])>>31) |
+//         ((-1-aabb1[0][2]+aabb2[1][2])>>31) |
+//         ((-1-aabb2[0][2]+aabb1[1][2])>>31) |
+//         ((-1-aabb1[0][3]+aabb2[1][3])>>31) |
+//         ((-1-aabb2[0][3]+aabb1[1][3])>>31)) ==0;
+// }
+// //less readable version of above, about same speed.
+// function aabbsOverlap4df(aabb1, aabb2){
+//     //leftmost of each span left of the rightmost of the other
+//     return (
+//         1&((-1-aabb1[0][0]+aabb2[1][0])>>31) |
+//         1&((-1-aabb2[0][0]+aabb1[1][0])>>31) |
+//         1&((-1-aabb1[0][1]+aabb2[1][1])>>31) |
+//         1&((-1-aabb2[0][1]+aabb1[1][1])>>31) |
+//         1&((-1-aabb1[0][2]+aabb2[1][2])>>31) |
+//         1&((-1-aabb2[0][2]+aabb1[1][2])>>31) |
+//         1&((-1-aabb1[0][3]+aabb2[1][3])>>31) |
+//         1&((-1-aabb2[0][3]+aabb1[1][3])>>31)) ==0;
+// }
+
+// //for use in console to check perf
+// //example testOverlapFunc(bvhObjsForWorld[9].objList, aabbsOverlap4d)
+// var testOverlapFunc = (objList, testFunc) => {
+// 	var timestart = performance.now();
+//     var numOverlaps =
+//         objList.reduce( (cumul, oo) =>
+//             cumul + objList.filter(xx=> testFunc(oo.AABB, xx.AABB)).length,0);
+//     var timetaken = performance.now()-timestart;
+//     return {numOverlaps, timetaken}
+// }
 
 function pointSignedDistanceFromPlane(point, plane){
     return dotProduct(point, plane.normal) - plane.distFromOrigin;
