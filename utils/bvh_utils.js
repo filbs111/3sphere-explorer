@@ -110,7 +110,7 @@ function worldBvhObjFromObjList(objList){
         objList,
         worldBvh,
         worldBvhHilbert,
-        grids: generateGridArrayArray(objList, 0)    //NOTE current grid system can miss large objects
+        grids: generateGridArrayArray(objList, 0),    //NOTE current grid system can miss large objects
             // collisions, and the padding is unneeded since doesn't work as proposed next:
             //TODO better grid system to look up, for an object of size lequal to padding, with centre 
             // in a given grid square, all the objects it could be colliding with. 
@@ -121,6 +121,7 @@ function worldBvhObjFromObjList(objList){
             // *grouping eg bullets to test many against same object simultaneously
             //      including bullets tested against many instances of a given object!
             // *doing line collision detection for multiple frames (assumes constant velocity, fiddly)
+        grids4d: gridSystem4d.generateGridArrays2(objList)
     }
 }
 
@@ -822,6 +823,13 @@ function rayBvhCollision(rayStart, rayEnd, world){
         if (guiParams.debug.worldCollisionTest1 == "grid"){
             var cellIdxForBullet = getGridId.forPoint(rayStart);    //could take average start, end, not need as much padding.
             possiblities = worldBvh.grids ? worldBvh.grids[cellIdxForBullet] : [];
+        }
+
+        if (guiParams.debug.worldCollisionTest1 == "grid2"){
+            possiblities = worldBvh.grids4d ?Array.from(gridSystem4d.getGridItemsForAABB(worldBvh.grids4d, lineAABB)): [];
+        }
+        if (guiParams.debug.worldCollisionTest1 == "grid2OnlyOne"){
+            possiblities = worldBvh.grids4d ?Array.from(gridSystem4d.getGridItemsForAABBOnlyOne(worldBvh.grids4d, lineAABB)): [];
         }
 
         var firstStagePossibles = possiblities.length;
