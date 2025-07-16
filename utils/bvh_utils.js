@@ -121,7 +121,8 @@ function worldBvhObjFromObjList(objList){
             // *grouping eg bullets to test many against same object simultaneously
             //      including bullets tested against many instances of a given object!
             // *doing line collision detection for multiple frames (assumes constant velocity, fiddly)
-        grids4d: gridSystem4d.generateGridArrays2(objList)
+        grids4d: gridSystem4d.generateGridArrays2(objList,0),
+        grids4dPadded: gridSystem4d.generateGridArrays2(objList,0.05)   //padding is max side length of query AABB
     }
 }
 
@@ -829,7 +830,7 @@ function rayBvhCollision(rayStart, rayEnd, world){
             possiblities = worldBvh.grids4d ?Array.from(gridSystem4d.getGridItemsForAABB(worldBvh.grids4d, lineAABB)): [];
         }
         if (guiParams.debug.worldCollisionTest1 == "grid2OnlyOne"){
-            possiblities = worldBvh.grids4d ?Array.from(gridSystem4d.getGridItemsForAABBOnlyOne(worldBvh.grids4d, lineAABB)): [];
+            possiblities = worldBvh.grids4dPadded ?Array.from(gridSystem4d.getGridItemsForAABBOnlyOne(worldBvh.grids4dPadded, lineAABB)): [];
         }
 
         var firstStagePossibles = possiblities.length;

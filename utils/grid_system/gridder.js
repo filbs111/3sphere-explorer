@@ -39,13 +39,15 @@ function generateGridArrayArray(objList, spherePadding){
 var gridSystem4d = (() => {
     const GRID_DIVS_4D = 16;
 
-    function generateGridArrays2(objList){
+    function generateGridArrays2(objList, padding){
         var numCells = Math.pow(GRID_DIVS_4D, 4);
         var gridLists = Array.from({length:numCells}, ()=> new Set());
 
         objList.forEach(
             obj => {
-                var gridStartEnd = obj.AABB.map(startOrEnd => startOrEnd.map(coord => getGridIdx4dSingleAxis(coord) )); 
+
+                var paddedAABB = [obj.AABB[0], obj.AABB[1].map(xx=>xx+padding)];
+                var gridStartEnd = paddedAABB.map(startOrEnd => startOrEnd.map(coord => getGridIdx4dSingleAxis(coord) )); 
 
                 var gridStart = gridStartEnd[0];
                 var gridEnd = gridStartEnd[1];
