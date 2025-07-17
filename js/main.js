@@ -5113,119 +5113,14 @@ var iterateMechanics = (function iterateMechanics(){
 				guiSettingsForWorld[ww].spin += guiSettingsForWorld[ww].spinRate*timeStep*moveSpeed;
 			}
 					
-			updatePlayerMechanics(playerAngVelVec, mouseInfo, timeStep, timeStepMultiplier, moveSpeed, rotateSpeed, 
+			
+			var playerPos = playerCamera.slice(12);
+			var spd = [];
+			updatePlayerMechanics(playerPos, playerAngVelVec, spd, mouseInfo, timeStep, timeStepMultiplier, moveSpeed, rotateSpeed, 
 				currentThrustInput, activeGp);
 
 			
-			//blend velocity with velocity of rotating duosphere. (todo angular vel to use this too)
-			//matrix entries 12-15 describe position. (remain same when rotate player and don't move)
-			//playerVel is in frame of player though - so apply matrix rotation to this.
-			
-			var playerPos = playerCamera.slice(12);			//guess what this is
 
-			var spinVelWorldCoords = [ duoCylinderAngVelConst*playerPos[1],-duoCylinderAngVelConst*playerPos[0],0,0];	
-							
-			var spinVelPlayerCoords = [
-				spinVelWorldCoords[0]*playerCamera[0] + spinVelWorldCoords[1]*playerCamera[1],
-				spinVelWorldCoords[0]*playerCamera[4] + spinVelWorldCoords[1]*playerCamera[5],
-				spinVelWorldCoords[0]*playerCamera[8] + spinVelWorldCoords[1]*playerCamera[9]];
-			
-			//this is in frame of duocylinder. playerVelVec is in frame of player though... ?!! possible to do without matrix mult? by choosing right parts of playerCamera mat?
-			
-			//do the same thing for "up" vector. 
-			//var radialWorldCoords = [ playerPos[0], playerPos[1],0,0];	AFAIK the following is not const length, but hope will give correct direction on duocylinder surf
-			var radialWorldCoords = playerPos;	//this maybe correct
-			var radialPlayerCoords = [
-				radialWorldCoords[0]*playerCamera[0] + radialWorldCoords[1]*playerCamera[1],
-				radialWorldCoords[0]*playerCamera[4] + radialWorldCoords[1]*playerCamera[5],
-				radialWorldCoords[0]*playerCamera[8] + radialWorldCoords[1]*playerCamera[9]];
-			
-			
-			//square drag //want something like spd = spd - const*spd*spd = spd (1 - const*|spd|)
-
-			var airSpdVec = playerVelVec.map((val, idx) => val-spinVelPlayerCoords[idx]);
-			//var spd = Math.sqrt(airSpdVec.map(val => val*val).reduce((val, sum) => val+sum));
-			var spd = Math.hypot.apply(null, airSpdVec);
-			
-			//print speed
-			if (guiParams.debug.showSpeedOverlay){		
-				var infoToShow ="";
-				var speed = Math.hypot.apply(null, playerVelVec);
-				infoToShow += "spd:" + speed.toFixed(2);
-
-				infoToShow+=", airspd: " + spd.toFixed(2);
-			//	infoToShow+=", sshipMat:" + Array.from(sshipMatrix).map(elem=>elem.toFixed(3)).join(",");	//toFixed doesn't work right on float32 array so use Array.from first
-				infoToShow+=", debugRoll: " + debugRoll;
-
-				document.querySelector("#info2").innerHTML = infoToShow;
-				//document.querySelector("#info2").innerHTML = myDebugStr;
-			}
-			
-			if (guiParams.control.handbrake){
-				for (var cc=0;cc<3;cc++){
-					airSpdVec[cc]*=0.9;	//TODO time dependence, but this is just to aid debugging (switch thru display options while view static)
-				}
-			}
-			
-			//get the current atmospheric density.
-			var atmosThick = 0.001*guiParams.display.atmosThickness;	//1st constant just pulled out of the air. 
-			atmosThick*=Math.pow(2.71, guiParams.display.atmosContrast*(playerPos[0]*playerPos[0] + playerPos[1]*playerPos[1] -0.5)); //as atmosScale increases, scale height decreases
-
-
-
-			
-			if (guiParams["player model"] == "plane"){
-				//TODO resolve issues
-				// take into account air velocity due to duocylinder spin
-				// Too much lift?
-				// odd behaviour when travelling backward
-
-				//lift
-				//function of alpha/ pitch angle of attack and airflow.
-				//is relevant speed total, or in direction of flight?
-				var forwardSpeed = airSpdVec[2];	//sign? what if flying backwards? should take abs?
-				var upspeed = airSpdVec[1];	//sign?
-				var alpha = Math.atan2(upspeed,forwardSpeed);
-				var mappedAlpha = alpha / (1 + 2*alpha*alpha);	//something that's linear around 0, goes to 0 for large values.
-				var lift = forwardSpeed * atmosThick * mappedAlpha;
-
-				if (Math.random()*100 < 1){
-					//console.log({alpha, mappedAlpha});
-				}
-
-				airSpdVec[1] -= 200*lift;
-				
-				//stabilisation
-				//plane tends to point towards direction of flight.
-				playerAngVelVec[0] += 1000*lift;
-
-				//function of beta/ turn angle of attack, airflow
-				var sidespeed = airSpdVec[0];
-				var beta = Math.atan2(sidespeed,forwardSpeed);
-				var mappedBeta = beta / (1 + 2*beta*beta);	//?
-				var sideLift = forwardSpeed * atmosThick * mappedBeta;	//TODO does this make sense?
-				
-				airSpdVec[0] -= 50*sideLift;	
-				playerAngVelVec[1] -= 2000*sideLift;
-
-				//tendency to roll right when turning right (outer wing is faster).
-				//this will affect AOA for each wing (and so will reduce outside central linear part of lift curve)
-				//but for now, just add some simple force
-				var turnSpeed = playerAngVelVec[1];
-				playerAngVelVec[2] -= 0.1*atmosThick*turnSpeed;
-			}
-
-
-			//want to be able to steer in the air. todo properly - guess maybe wants "lift" from wings, but easiest implementation guess is to increase drag for lateral velocity.
-			//would like for both left/right, up/down velocity, but to test, try getting just one - like a aeroplane.
-			//TODO better aerodynamic model - would like decent "steerability" without too much slowdown when completely sideways.
-			//some tweak for non-isotropic drag. relates to drag coefficients in different directions
-			var airSpdScale = [0.1,0.1,1];	//left/right, up/down, forwards/back
-			var scaledAirSpdVec = airSpdVec.map((elem,ii)=>elem/airSpdScale[ii]);
-			var spdScaled = Math.hypot.apply(null, scaledAirSpdVec);
-			
-			playerVelVec=scalarvectorprod(1.0-atmosThick*spdScaled,scaledAirSpdVec).map((val,idx) => val*airSpdScale[idx]+spinVelPlayerCoords[idx]);
-			
 			
 			if (autoFireCountdown>0){
 				autoFireCountdown--;
