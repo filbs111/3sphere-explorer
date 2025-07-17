@@ -5,7 +5,8 @@ var playerMechanics = (() => {
     var autoFireCountdown=0;
     var currentPen=0;	//for bodgy box collision (todo use collision points array)
 	var currentTriangleObjectPlayerPen=0;
-    
+    var foundClosestPointTriangleObj=false;
+
     var landingLegData=[
                                     //tricycle
         //	{pos:[0,0.006,0.007],suspHeight:0},	//down, forward
@@ -518,7 +519,7 @@ var playerMechanics = (() => {
         // method for audio, debug markers, but do less frequently.)
         // 2) do the broad phase world bvh less frequently, but do the sphere vs triangles in individual objects more frequently (substeps)
         // 3) continuous collision (swept sphere)
-        var numSubsteps = 20;
+        var numSubsteps = 16;
         var subTimeStep = timeStep/numSubsteps;
 
         for (var ii=0;ii<numSubsteps;ii++){
@@ -698,6 +699,7 @@ var playerMechanics = (() => {
         }
 
         function processTriangleObjectCollision(useFastVersion){
+
             var closestRoughSqDistanceFound = Number.POSITIVE_INFINITY;
             var worldBvhObj = bvhObjsForWorld[playerContainer.world];
 
@@ -708,8 +710,14 @@ var playerMechanics = (() => {
                 )
                 :worldBvhObj.objList;
             
+            if (shouldDumpDebug3){
+                console.log(initialCandidates.length, useFastVersion);
+            }
 
-            processPossibles(initialCandidates);
+            var resultMat = mat4.create();
+            var foundClosestPointTriangleObjPreviously = foundClosestPointTriangleObj; 
+            foundClosestPointTriangleObj = false;
+            processPossibles(initialCandidates, useFastVersion? 800: 3000);
 
             function getSlowPossibles(possibleObjects){
                 //find set of candiate objects by their bounding spheres - 
@@ -729,17 +737,19 @@ var playerMechanics = (() => {
             }
 
             function getFastPossibles(){
-                var playerAABB = aabb4DForSphere(playerPos, settings.playerBallRad);
-                //return worldBvhObj.grids4d ?Array.from(gridSystem4d.getGridItemsForAABB(worldBvhObj.grids4d, playerAABB)): [];
+                var paddedRad = settings.playerBallRadPadded;
+                    //add padding so detect distance to object before collide (rate of penetration used for damping)
+
+                var playerAABB = aabb4DForSphere(playerPos, paddedRad);  
+                //var possiblities = worldBvhObj.grids4d ?Array.from(gridSystem4d.getGridItemsForAABB(worldBvhObj.grids4d, playerAABB)): [];
                 var possiblities = worldBvhObj.grids4dPadded ?Array.from(gridSystem4d.getGridItemsForAABB(worldBvhObj.grids4dPadded, playerAABB)): [];
                     //player rad AFAIK less than padding so should work
 
                 //sphere filter (currently typically returns more candidates than slow version)
-                var sphereRad = settings.playerBallRad; //radians. what should this be? 
                 var testSphere = {
                     position: playerPos,
-                    cosAng:Math.cos(sphereRad),
-                    sinAng:Math.sin(sphereRad)
+                    cosAng:Math.cos(paddedRad),
+                    sinAng:Math.sin(paddedRad)
                 };  //TODO precalculate
                 possiblities = possiblities.filter(objInfo => 
                     collisionTestSimpleSpheres2(testSphere,
@@ -751,14 +761,13 @@ var playerMechanics = (() => {
                 return possiblities;
             }
 
-            function processPossibles(possibleObjects){
+            function processPossibles(possibleObjects, lowestAcceptedMultiplier){
 
                 var bestResult = false;
 
                 possibleObjects.forEach(objInfo =>
                 {
                     var transposedObjMat = objInfo.transposedMat;
-                    var objBvh = objInfo.bvh;
                     var objScale = objInfo.scale;
 
                     var playerPosVec = vec4.create(playerPos);
@@ -770,8 +779,8 @@ var playerMechanics = (() => {
 
                     var projectedPosInObjFrame = playerPosVec.slice(0,3).map(val => val/(objScale*playerPosVec[3]));
 
-                    //var closestPointResult = closestPointBvhBruteForce(projectedPosInObjFrame, objBvh);
-                    var closestPointResult = closestPointBvhEfficient(projectedPosInObjFrame, objBvh);
+                    //var closestPointResult = closestPointBvhBruteForce(projectedPosInObjFrame, objInfo.bvh);
+                    var closestPointResult = closestPointBvhEfficient(projectedPosInObjFrame, objInfo, lowestAcceptedMultiplier);
 
                     if (closestPointResult){
                         var closestPointInObjectFrame = closestPointResult.closestPoint;
@@ -805,50 +814,57 @@ var playerMechanics = (() => {
                     var correction = -scalarAngleDifference/veclen;
                     var angleToMove = positionInProjectedSpace.map(val => val*correction);
 
-                    if (!useFastVersion){
-                        //draw object - position at object centre, then move by vec to point in object space.
-                        mat4.set(bestResult.objInfo.mat, debugDraw.mats[8]);
-                        xyzmove4mat(debugDraw.mats[8], angleToMove);	//draw x on closest vertex
-                    }
+                    mat4.set(bestResult.objInfo.mat, resultMat);
+                    xyzmove4mat(resultMat, angleToMove);	//draw x on closest vertex
+
+                    foundClosestPointTriangleObj = true;
                 }
             }
 
-
-            //TODO handle possibility that returned early and debugDraw.mats[8] is not set.
-
+            //sound. 
+            //TODO efficient distance calculation without matrix mult
+            mat4.set(playerMatrixTransposed, tmpRelativeMat);
+            mat4.multiply(tmpRelativeMat, resultMat);
+            distanceForNoise = distBetween4mats(tmpRelativeMat, identMat);
             if (!useFastVersion){
-                //sound. 
-                //TODO efficient distance calculation without matrix mult
-                mat4.set(playerMatrixTransposed, tmpRelativeMat);
-                mat4.multiply(tmpRelativeMat, debugDraw.mats[8]);
-                distanceForNoise = distBetween4mats(tmpRelativeMat, identMat);
                 var soundSize = 0.002;
                 panForNoise = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));
                 
                 //note spd (speed) in is in duocylinder frame, but object currently does not rotate with it.
                 setSoundHelper(myAudioPlayer.setWhooshSoundTriangleMesh, distanceForNoise, panForNoise, spd);
+
+                //draw object - position at object centre, then move by vec to point in object space.
+                mat4.set(resultMat, debugDraw.mats[8]);
             }
 
             //player collision - apply reaction force due to penetration, with some smoothing (like spring/damper)
             //cribbed from collidePlayerWithObjectByClosestPointFunc
             var lastTriangleObjPen = currentTriangleObjectPlayerPen;
             currentTriangleObjectPlayerPen = settings.playerBallRad - distanceForNoise;
-            var penChange = currentTriangleObjectPlayerPen - lastTriangleObjPen;
-            var reactionForce = Math.max(50*currentTriangleObjectPlayerPen + 1000*penChange, 0);
-            
-            if (currentTriangleObjectPlayerPen > 0 && reactionForce> 0){
-                    //different to collidePlayerWithObjectByClosestPointFunc, which takes places in duocylinder spun space.
-                var relativePosC = tmpRelativeMat.slice(12);
-                //normalise. note could just assume that length is player radius, or matches existing calculation for penetration etc, to simplify.
-                var relativePosCLength = Math.sqrt(1-relativePosC[3]*relativePosC[3]);	//assume matrix SO4
-                var relativePosCNormalised = relativePosC.map(x=>x/relativePosCLength);
-                var forcePlayerFrame = relativePosCNormalised.map(elem => elem*reactionForce);
-                for (var cc=0;cc<3;cc++){
-                    playerVelVec[cc]+=forcePlayerFrame[cc];
+
+            if (foundClosestPointTriangleObj && foundClosestPointTriangleObjPreviously){
+                //if volume checked has some padding so can detect closest point before collide with object this shouldn't 
+                //be necessary. appears to be necessary for lucy collisions! ??
+
+                var penChange = currentTriangleObjectPlayerPen - lastTriangleObjPen;
+                var reactionForce = Math.max(50*currentTriangleObjectPlayerPen + 1000*penChange, 0);
+                
+                if (currentTriangleObjectPlayerPen > 0 && reactionForce> 0){
+
+                    //console.log("collision!", currentTriangleObjectPlayerPen, reactionForce);
+
+                        //different to collidePlayerWithObjectByClosestPointFunc, which takes places in duocylinder spun space.
+                    var relativePosC = tmpRelativeMat.slice(12);
+                    //normalise. note could just assume that length is player radius, or matches existing calculation for penetration etc, to simplify.
+                    var relativePosCLength = Math.sqrt(1-relativePosC[3]*relativePosC[3]);	//assume matrix SO4
+                    var relativePosCNormalised = relativePosC.map(x=>x/relativePosCLength);
+                    var forcePlayerFrame = relativePosCNormalised.map(elem => elem*reactionForce);
+                    for (var cc=0;cc<3;cc++){
+                        playerVelVec[cc]+=forcePlayerFrame[cc];
+                    }
                 }
             }
         }
-
 
 
         
@@ -861,3 +877,5 @@ var playerMechanics = (() => {
 
     }
 })();
+
+var shouldDumpDebug3 = false;

@@ -286,17 +286,19 @@ function closestPointBvhBruteForce(fromPoint, bvh){
     return closestPointForTris(fromPoint, bvh.verts, allTris);    //tris returned from bvh func
 }
 
-function closestPointBvhEfficient(fromPoint, bvh){
-    //var possibles = collisionTestPossibleClosest2(fromPoint, [bvh.tris], Number.POSITIVE_INFINITY);
-    var possibles = collisionTestPossibleClosest2(fromPoint, [bvh.tris], 0.1);  //NOTE currently doing flypast noise+collision in 
-        // same collision/closest point calc, but if need more speed, might do tighter collision check. noise
-        // check likely can be less frequent than collision check.
+function closestPointBvhEfficient(fromPoint, objInfo, lowestAcceptedMultiplier){
+    var possibles = collisionTestPossibleClosest2(fromPoint, [objInfo.bvh.tris], objInfo.scale*lowestAcceptedMultiplier);
+        //lowestAccepted passed into collisionTestPossibleClosest2 is in object space! if object pre-scaling is big, this should be big too! 
 
+    //var possibles = collisionTestPossibleClosest2(fromPoint, [bvh.tris], 0.1);  //NOTE currently doing flypast noise+collision in 
+        // same collision/closest point calc, but if need more speed, might do tighter collision check. noise
+        // check likely can be less frequent than collision check. 
+        
     if (possibles.length == 0){
         return false;
     }
 
-    return closestPointForTris(fromPoint, bvh.verts, possibles);
+    return closestPointForTris(fromPoint, objInfo.bvh.verts, possibles);
 }
 
 
@@ -420,6 +422,7 @@ function collisionTestPossibleClosest(fromPoint, bvh, lowestAccepted){
 }
 
 function collisionTestPossibleClosest2(fromPoint, bvhGroup, lowestAccepted){
+    lowestAccepted=lowestAccepted*lowestAccepted;   //using squared distances.
 
     var minMaxVals = bvhGroup.map(item => aabbMinMaxDistanceFromPoint(fromPoint, item.AABB));
     var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
@@ -793,12 +796,12 @@ function aabb4DForSphere(position, sphereRad){
         }
     }
 
-    console.log({
-        note:"aabb calculation",
-        position,
-        sphereRad,
-        AABB
-    })
+    // console.log({
+    //     note:"aabb calculation",
+    //     position,
+    //     sphereRad,
+    //     AABB
+    // })
 
     return AABB;
 }
