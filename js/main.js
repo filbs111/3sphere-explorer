@@ -4955,9 +4955,6 @@ var iterateMechanics = (function iterateMechanics(){
 		
 	var activeGp;	//gamepad
 
-	var autoFireCountdown=0;
-	//var autoFireCountdownStartVal=6;
-	var autoFireCountdownStartVal=Math.ceil(5 / (timeStep/10));	//note due to rounding, fire rate somewhat dependent on timestep 
 	var lastPlayerAngMove = [0,0,0];	//for interpolation
 	
 	var currentPen=0;	//for bodgy box collision (todo use collision points array)
@@ -4975,7 +4972,6 @@ var iterateMechanics = (function iterateMechanics(){
 		angVelDampMultiplier=Math.pow(0.85, timeStep/10);
 		gunHeatMultiplier = Math.pow(0.995, timeStep/10);
 		
-		autoFireCountdownStartVal=Math.ceil(5 / (timeStep/10));
 		//==========================================================================
 
 		reverseCamera=keyThing.keystate(82) || (mouseInfo.buttons & 4); 	//R or middle mouse click
@@ -5116,41 +5112,9 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			var playerPos = playerCamera.slice(12);
 			var spd = [];
-			updatePlayerMechanics(playerPos, playerAngVelVec, spd, mouseInfo, timeStep, timeStepMultiplier, moveSpeed, rotateSpeed, 
+			playerMechanics.update(playerPos, playerAngVelVec, spd, mouseInfo, timeStep, timeStepMultiplier, moveSpeed, rotateSpeed, 
 				currentThrustInput, activeGp);
 
-			
-
-			
-			if (autoFireCountdown>0){
-				autoFireCountdown--;
-			}else{
-				if (keyThing.keystate(71) ||( activeGp && activeGp.buttons[gpSettings.fireButton].value) || (pointerLocked && mouseInfo.buttons&1)){	//G key or joypad button or LMB (pointer locked)
-					fireGun();
-					autoFireCountdown=autoFireCountdownStartVal;
-				}
-			}
-
-			var heatEmit = gunHeat/(gunHeat+1.5);	//reuse logic from drawSpaceship
-			if (10*Math.random()<heatEmit){
-				//smokeGuns();	//TODO independently random smoking guns? blue noise not white noise, smoke from end of gun, ...
-			}
-			
-			//particle stream
-			if (guiParams.debug.emitFire){
-				if (Math.random()<0.5){
-					//making a new matrix is inefficient - expect better if reused a temp matrix, copied it into buffer
-					var newm4 = mat4.create(sshipMatrix);
-					xyzmove4mat(newm4, [1,1,1].map(elem => sshipModelScale*60*elem*(Math.random()-0.5)));	//square uniform distibution
-					new Explosion({matrix:newm4,world:sshipWorld}, sshipModelScale*0.5, [0.2,0.06,0.06]);
-				}
-			}
-			if (guiParams.debug.fireworks){
-				if (Math.random()<0.05){
-					explosionParticleArrs[0].makeExplosion(random_quaternion(), frameTime, [Math.random(),Math.random(),Math.random(),1],1);	//TODO guarantee bright colour
-				}
-			}
-			
 			
 			//IIRC playerCamera is the spaceship (or virtual spaceship if "dropped spaceship"), and worldCamera is the actual camera (screen)
 			//mat4.set(worldCamera, invertedWorldCamera);		//ensure up to date...
