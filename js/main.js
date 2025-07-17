@@ -3023,7 +3023,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
 		
 		if (activeShaderProgram.uniforms.uOtherLightAmounts){
-			gl.uniform4f(activeShaderProgram.uniforms.uOtherLightAmounts, 0, 100*(muzzleFlashAmounts[0]+muzzleFlashAmounts[1]), 20*(currentThrustInput[2]>0 ? 1:0) , 0);
+			gl.uniform4f(activeShaderProgram.uniforms.uOtherLightAmounts, 0, 100*(muzzleFlashAmounts[0]+muzzleFlashAmounts[1]), 20*(playerMechanics.currentThrustInput[2]>0 ? 1:0) , 0);
 		}				//note muzzleFlashAmounts should be summed over all guns, just doing 2 because symmetric
 		
 		mat4.set(matrix, rotatedMatrix);	//because using rotated model data for sship model
@@ -3636,7 +3636,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 
 	//thrusters
 	//TODO pass amount of thrust to shader for strength of effect.
-	if (guiParams["player model"] == "spaceship" && thrusterBuffers.isLoaded && currentThrustInput[2]>0){
+	if (guiParams["player model"] == "spaceship" && thrusterBuffers.isLoaded && playerMechanics.currentThrustInput[2]>0){
 		
 		//NOTE this shader is inefficient since does world/portal lighting calculation, but has zero effect.
 		var activeShaderProgram = shaderPrograms.coloredPerPixelDiscardVertexColoredEmit[ guiParams.display.atmosShader ];
@@ -4919,13 +4919,11 @@ for (var ii=0;ii<4;ii++){
 var debugRoll=0
 
 var reverseCamera=false;
-var currentThrustInput = [0,0,0];
 var iterateMechanics = (function iterateMechanics(){
 	var lastTime=Date.now();
 	var moveSpeed=0.000075;
 	var rotateSpeed=-0.0005;
 		
-	var playerAngVelVec = [0,0,0];
 	
 	var timeTracker =0;
 	var timeStep = guiParams.debug.timestep;	//5ms => 200 steps/s! this is small to prevent tunelling. TODO better collision system that does not require this!
@@ -4936,8 +4934,7 @@ var iterateMechanics = (function iterateMechanics(){
 
 	var lastPlayerAngMove = [0,0,0];	//for interpolation
 	
-	var currentPen=0;	//for bodgy box collision (todo use collision points array)
-	var currentTriangleObjectPlayerPen=0;
+	
 
 	var bulletMatrixTransposed = mat4.create();	//TODO? instead of transposing matrices describing possible colliding objects orientation.
 	var bulletMatrixTransposedDCRefFrame=mat4.create();		//alternatively might store transposed other objects orientation permanently		
@@ -5087,12 +5084,8 @@ var iterateMechanics = (function iterateMechanics(){
 			for (ww=0;ww<guiSettingsForWorld.length;ww++){
 				guiSettingsForWorld[ww].spin += guiSettingsForWorld[ww].spinRate*timeStep*moveSpeed;
 			}
-					
 			
-			var playerPos = playerCamera.slice(12);
-			var spd = [];
-			playerMechanics.update(playerPos, playerAngVelVec, spd, mouseInfo, timeStep, timeStepMultiplier, moveSpeed, rotateSpeed, 
-				currentThrustInput, activeGp);
+			playerMechanics.update(mouseInfo, timeStep, timeStepMultiplier, moveSpeed, rotateSpeed, activeGp);
 		}
 		
 		

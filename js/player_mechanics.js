@@ -1,5 +1,7 @@
 var playerMechanics = (() => {
 
+    var playerAngVelVec = [0,0,0];
+    var currentThrustInput = [0,0,0];
     var autoFireCountdown=0;
     var currentPen=0;	//for bodgy box collision (todo use collision points array)
 	var currentTriangleObjectPlayerPen=0;
@@ -26,15 +28,15 @@ var playerMechanics = (() => {
 
     playerCentreBallData = {pos:[0,0,0],suspHeight:0,cubeColPen:0};
 
-    
+
     return {
-        update
+        update,
+        currentThrustInput
     }
 
-    function update(playerPos, playerAngVelVec, spd, mouseInfo, timeStep, timeStepMultiplier, moveSpeed, rotateSpeed,
-     currentThrustInput, activeGp){
-        //TODO don't pass stuff in/use globals
+    function update(mouseInfo, timeStep, timeStepMultiplier, moveSpeed, rotateSpeed, activeGp){
         
+        var playerPos = playerCamera.slice(12);
         var thrust = 0.001*timeStep;	//TODO make keyboard/gamepad fair! currently thrust, moveSpeed config independent!
         var angVelDampMultiplier=Math.pow(0.85, timeStep/10);
         var duoCylinderAngVelConst = guiSettingsForWorld[playerContainer.world].spinRate;
@@ -78,7 +80,7 @@ var playerMechanics = (() => {
         currentThrustInput[0]=keyThing.keystate(65)-keyThing.keystate(68);	//lateral
         currentThrustInput[1]=keyThing.keystate(32)-keyThing.keystate(220);	//vertical
         currentThrustInput[2]=keyThing.keystate(87)-keyThing.keystate(83);	//fwd/back
-        currentThrustInput=currentThrustInput.map(elem => elem*thrust);
+        currentThrustInput.forEach((elem,ii) => currentThrustInput[ii]=elem*thrust);
 
         var currentRotateInput=[keyThing.keystate(40)-keyThing.keystate(38), //pitch
                                 keyThing.keystate(39)-keyThing.keystate(37), //turn
@@ -172,7 +174,7 @@ var playerMechanics = (() => {
 
         var airSpdVec = playerVelVec.map((val, idx) => val-spinVelPlayerCoords[idx]);
         //spd = Math.sqrt(airSpdVec.map(val => val*val).reduce((val, sum) => val+sum));
-        spd = Math.hypot.apply(null, airSpdVec);
+        var spd = Math.hypot.apply(null, airSpdVec);
         
         //print speed
         if (guiParams.debug.showSpeedOverlay){
