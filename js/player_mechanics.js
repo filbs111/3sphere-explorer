@@ -731,10 +731,24 @@ var playerMechanics = (() => {
             function getFastPossibles(){
                 var playerAABB = aabb4DForSphere(playerPos, settings.playerBallRad);
                 //return worldBvhObj.grids4d ?Array.from(gridSystem4d.getGridItemsForAABB(worldBvhObj.grids4d, playerAABB)): [];
-                return worldBvhObj.grids4dPadded ?Array.from(gridSystem4d.getGridItemsForAABB(worldBvhObj.grids4dPadded, playerAABB)): [];
+                var possiblities = worldBvhObj.grids4dPadded ?Array.from(gridSystem4d.getGridItemsForAABB(worldBvhObj.grids4dPadded, playerAABB)): [];
                     //player rad AFAIK less than padding so should work
 
-                //TODO sphere filter (currently typically returns more candidates than slow version)
+                //sphere filter (currently typically returns more candidates than slow version)
+                var sphereRad = settings.playerBallRad; //radians. what should this be? 
+                var testSphere = {
+                    position: playerPos,
+                    cosAng:Math.cos(sphereRad),
+                    sinAng:Math.sin(sphereRad)
+                };  //TODO precalculate
+                possiblities = possiblities.filter(objInfo => 
+                    collisionTestSimpleSpheres2(testSphere,
+                        {
+                            cosAng: objInfo.cosAng,
+                            sinAng: objInfo.sinAng,
+                            position: objInfo.mat.slice(12) //store as dedicated field on objInfo?
+                        }));
+                return possiblities;
             }
 
             function processPossibles(possibleObjects){
