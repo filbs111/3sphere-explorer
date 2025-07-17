@@ -522,7 +522,7 @@ var playerMechanics = (() => {
         var subTimeStep = timeStep/numSubsteps;
 
         for (var ii=0;ii<numSubsteps;ii++){
-            processTriangleObjectCollision();	//after boxes to reuse whoosh noise (assume not close to both at same time)
+            processTriangleObjectCollision(ii!=0);	//after boxes to reuse whoosh noise (assume not close to both at same time)
             rotatePlayer(scalarvectorprod(subTimeStep * rotateSpeed,playerAngVelVec));
             movePlayer(scalarvectorprod(subTimeStep * moveSpeed,playerVelVec));
 
@@ -697,28 +697,47 @@ var playerMechanics = (() => {
             }
         }
 
-        function processTriangleObjectCollision(){
+        function processTriangleObjectCollision(useFastVersion){
             var closestRoughSqDistanceFound = Number.POSITIVE_INFINITY;
+            var worldBvhObj = bvhObjsForWorld[playerContainer.world];
 
-            processPossibles(bvhObjsForWorld[playerContainer.world].objList);
+            var initialCandidates = guiParams.debug.worldBvhCollisionTestPlayer ? 
+                (useFastVersion ?  
+                    getFastPossibles(): 
+                    getSlowPossibles(worldBvhObj.objList)
+                )
+                :worldBvhObj.objList;
+            
+
+            processPossibles(initialCandidates);
+
+            function getSlowPossibles(possibleObjects){
+                //find set of candiate objects by their bounding spheres - 
+                //provided each object has something solid within its bounding sphere
+                //any each object has a maximum and minimum possible distance from a given point
+                //the find the minimum maximum distance for all objects.
+                //any object with a minimum distance above this is NOT the closest so can skip testing for.
+                //which in practice is likely to be the bulk of objects. 
+                var objsWithMinMaxDistances = possibleObjects.map(objInfo => {return {
+                    objInfo,
+                    minMaxDist: minMaxDistanceFromPointToBoundingSphere(playerPos, objInfo.mat.slice(12), objInfo.scale*objInfo.bvh.boundingSphereRadius)
+                }});
+                var maxPossibleDistance = objsWithMinMaxDistances.map(xx=>xx.minMaxDist[1]).reduce((a,b)=>Math.min(a,b), 0.1);
+                return objsWithMinMaxDistances
+                    .filter(xx=>xx.minMaxDist[0]<=maxPossibleDistance)
+                    .map(xx=>xx.objInfo);
+            }
+
+            function getFastPossibles(){
+                var playerAABB = aabb4DForSphere(playerPos, settings.playerBallRad);
+                //return worldBvhObj.grids4d ?Array.from(gridSystem4d.getGridItemsForAABB(worldBvhObj.grids4d, playerAABB)): [];
+                return worldBvhObj.grids4dPadded ?Array.from(gridSystem4d.getGridItemsForAABB(worldBvhObj.grids4dPadded, playerAABB)): [];
+                    //player rad AFAIK less than padding so should work
+
+                //TODO sphere filter (currently typically returns more candidates than slow version)
+            }
 
             function processPossibles(possibleObjects){
-                if (guiParams.debug.worldBvhCollisionTestPlayer){
-                    //find set of candiate objects by their bounding spheres - 
-                    //provided each object has something solid within its bounding sphere
-                    //any each object has a maximum and minimum possible distance from a given point
-                    //the find the minimum maximum distance for all objects.
-                    //any object with a minimum distance above this is NOT the closest so can skip testing for.
-                    //which in practice is likely to be the bulk of objects. 
-                    var objsWithMinMaxDistances = possibleObjects.map(objInfo => {return {
-                        objInfo,
-                        minMaxDist: minMaxDistanceFromPointToBoundingSphere(playerPos, objInfo.mat.slice(12), objInfo.scale*objInfo.bvh.boundingSphereRadius)
-                    }});
-                    var maxPossibleDistance = objsWithMinMaxDistances.map(xx=>xx.minMaxDist[1]).reduce((a,b)=>Math.min(a,b), 0.1);
-                    possibleObjects = objsWithMinMaxDistances
-                        .filter(xx=>xx.minMaxDist[0]<=maxPossibleDistance)
-                        .map(xx=>xx.objInfo);
-                }
 
                 var bestResult = false;
 
@@ -772,27 +791,29 @@ var playerMechanics = (() => {
                     var correction = -scalarAngleDifference/veclen;
                     var angleToMove = positionInProjectedSpace.map(val => val*correction);
 
-                    //draw object - position at object centre, then move by vec to point in object space.
-                    mat4.set(bestResult.objInfo.mat, debugDraw.mats[8]);
-                    xyzmove4mat(debugDraw.mats[8], angleToMove);	//draw x on closest vertex
+                    if (!useFastVersion){
+                        //draw object - position at object centre, then move by vec to point in object space.
+                        mat4.set(bestResult.objInfo.mat, debugDraw.mats[8]);
+                        xyzmove4mat(debugDraw.mats[8], angleToMove);	//draw x on closest vertex
+                    }
                 }
             }
 
 
             //TODO handle possibility that returned early and debugDraw.mats[8] is not set.
 
-
-            //sound. 
-            //TODO efficient distance calculation without matrix mult
-            mat4.set(playerMatrixTransposed, tmpRelativeMat);
-            mat4.multiply(tmpRelativeMat, debugDraw.mats[8]);
-            distanceForNoise = distBetween4mats(tmpRelativeMat, identMat);
-            var soundSize = 0.002;
-            panForNoise = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));
-            
-            //note spd (speed) in is in duocylinder frame, but object currently does not rotate with it.
-            setSoundHelper(myAudioPlayer.setWhooshSoundTriangleMesh, distanceForNoise, panForNoise, spd);
-
+            if (!useFastVersion){
+                //sound. 
+                //TODO efficient distance calculation without matrix mult
+                mat4.set(playerMatrixTransposed, tmpRelativeMat);
+                mat4.multiply(tmpRelativeMat, debugDraw.mats[8]);
+                distanceForNoise = distBetween4mats(tmpRelativeMat, identMat);
+                var soundSize = 0.002;
+                panForNoise = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));
+                
+                //note spd (speed) in is in duocylinder frame, but object currently does not rotate with it.
+                setSoundHelper(myAudioPlayer.setWhooshSoundTriangleMesh, distanceForNoise, panForNoise, spd);
+            }
 
             //player collision - apply reaction force due to penetration, with some smoothing (like spring/damper)
             //cribbed from collidePlayerWithObjectByClosestPointFunc
@@ -825,4 +846,4 @@ var playerMechanics = (() => {
         myAudioPlayer.setJetSound({delay:0, gain:thrustVolume, pan:0});
 
     }
-})()
+})();
