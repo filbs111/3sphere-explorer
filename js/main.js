@@ -4951,14 +4951,9 @@ var iterateMechanics = (function iterateMechanics(){
 	var timeTracker =0;
 	var timeStep = guiParams.debug.timestep;	//5ms => 200 steps/s! this is small to prevent tunelling. TODO better collision system that does not require this!
 	var timeStepMultiplier = timeStep/10;	//because stepSpeed initially tuned for timeStep=10;
-	var angVelDampMultiplier=Math.pow(0.85, timeStep/10);
 	var gunHeatMultiplier = Math.pow(0.995, timeStep/10);
-	
-	var thrust = 0.001*timeStep;	//TODO make keyboard/gamepad fair! currently thrust, moveSpeed config independent!
-	
-	//gamepad
-	var activeGp, buttons, axes;
-	var gpMove=new Array(3);
+		
+	var activeGp;	//gamepad
 
 	var autoFireCountdown=0;
 	//var autoFireCountdownStartVal=6;
@@ -4979,38 +4974,17 @@ var iterateMechanics = (function iterateMechanics(){
 		timeStepMultiplier = timeStep/10;	//because stepSpeed initially tuned for timeStep=10;
 		angVelDampMultiplier=Math.pow(0.85, timeStep/10);
 		gunHeatMultiplier = Math.pow(0.995, timeStep/10);
-		thrust = 0.001*timeStep;	//TODO make keyboard/gamepad fair! currently thrust, moveSpeed config independent!
+		
 		autoFireCountdownStartVal=Math.ceil(5 / (timeStep/10));
 		//==========================================================================
 
 		reverseCamera=keyThing.keystate(82) || (mouseInfo.buttons & 4); 	//R or middle mouse click
 		
 		activeGp=getGamepad();
-				
-		if (activeGp){	
-			buttons = activeGp.buttons;
-			//buttons 0 to 15, on xbox controller are:
-			//A,B,X,Y
-			//L1,R1,L2,R2,
-			//BACK,START,
-			//L3,R3,	(analog values)
-			//d-pad u,d,l,r
-			//button 16? don't know (there is a central xbox button but does nothing)
-			
-			axes = activeGp.axes;
-			
-			//axes for xbox controller:
-			//left thumbstick left(-1) to right(+1)
-			//left thumbstick up(-1) to down(+1)
-			//right thumbstick left(-1) to right(+1)
-			//right thumbstick up(-1) to down(+1)
-			
-			if (buttons[10].pressed){	//L3
-				reverseCamera=true;
-			}
+		if (activeGp && activeGp.buttons[10].pressed){	//L3
+			reverseCamera=true;
 		}
-		
-		
+
 		var nowTime = Date.now();
 		var timeElapsed = Math.min(nowTime - lastTime, 50);	//ms. 50ms -> slowdown if drop below 20fps 
 		//console.log("time elapsed: " + timeElapsed);
@@ -5138,101 +5112,11 @@ var iterateMechanics = (function iterateMechanics(){
 			for (ww=0;ww<guiSettingsForWorld.length;ww++){
 				guiSettingsForWorld[ww].spin += guiSettingsForWorld[ww].spinRate*timeStep*moveSpeed;
 			}
-		
-			//auto-roll upright. with view to using for character controller
-			//could put this outside stepspeed if didn't decay towards 0 roll (could do immediately like do with spinCorrection
-			if (true){
-				//get position of point "above" player by zeroing x,y components of player position. get this in player frame/ dot with player side vector...
-				//var pointAbovePlayer = [ 
-				
-				debugRoll = playerCamera[14]*playerCamera[2] + playerCamera[15]*playerCamera[3];
-					//this works because playerCamera 0 thru 3 represents the player's "side" position in the world - ie move quarter way around world from player in sideways direction
-					//and playerCamera 12 thru 15 represents player's position in the world.
-					//not ideal - will be nothing when y=z=0.
-				//debugRoll-= playerCamera[12]*playerCamera[0] + playerCamera[13]*playerCamera[1];	//similar to above but this part -> when x=y=0
-				debugRoll-= playerCamera[12]*playerCamera[0] + playerCamera[13]*playerCamera[1];	//similar to above but this part -> when x=y=0
+					
+			updatePlayerMechanics(playerAngVelVec, mouseInfo, timeStep, timeStepMultiplier, moveSpeed, rotateSpeed, 
+				currentThrustInput, activeGp);
 
-				//multiply by factor that describes how far from top/bottom "poles" (x=y=0, w=z=0) are.
-				//something like 1 -(x*x + y*y - z*z - w*w)^2
-				//since x*x + y*y + z*z + w*w = 1, get 
-				//	1 - ( 2*(x*x + y*y) - 1)^2  = 4(x*x+y*y)^2 - 4(x*x+y*y)
-				var xxplusyy = playerCamera[12]*playerCamera[12] + playerCamera[13]*playerCamera[13];
-				var multFactor = 4*xxplusyy*(1-xxplusyy);
-				
-				playerAngVelVec[2]+=debugRoll*guiParams.control.sriMechStr*multFactor*timeStepMultiplier;
-			}
-		
-			if (guiParams.control.smoothMouse == 0 ){
-				fractionToKeep=0;
-			}else{
-				fractionToKeep = Math.exp(-timeStep/guiParams.control.smoothMouse);	//smoothMouse ~ smoothing time (ms)
-			}
 			
-			var amountToMove = new Array(2);
-			for (var cc=0;cc<2;cc++){
-				amountToMove[cc]=mouseInfo.pendingMovement[cc]*(1-fractionToKeep);
-				mouseInfo.pendingMovement[cc]*=fractionToKeep;
-			}
-			
-			rotatePlayer([ amountToMove[1], amountToMove[0], 0]);	
-			
-			currentThrustInput[0]=keyThing.keystate(65)-keyThing.keystate(68);	//lateral
-			currentThrustInput[1]=keyThing.keystate(32)-keyThing.keystate(220);	//vertical
-			currentThrustInput[2]=keyThing.keystate(87)-keyThing.keystate(83);	//fwd/back
-			
-			currentThrustInput=currentThrustInput.map(elem => elem*thrust);
-			
-			var currentRotateInput=[];
-			
-			currentRotateInput[0]=keyThing.keystate(40)-keyThing.keystate(38); //pitch
-			currentRotateInput[1]=keyThing.keystate(39)-keyThing.keystate(37); //turn
-			currentRotateInput[2]=keyThing.keystate(69)-keyThing.keystate(81); //roll
-			
-			if (activeGp){
-				//TODO move calculation of total input from keys/gamepad outside this loop
-				if (gpSettings.moveEnabled){
-					gpMove[0] = Math.abs(axes[0])>gpSettings.deadZone ? -moveSpeed*axes[0] : 0; //lateral
-					gpMove[1] = Math.abs(axes[1])>gpSettings.deadZone ? moveSpeed*axes[1] : 0; //vertical
-					gpMove[2] = moveSpeed*(buttons[7].value-buttons[6].value); //fwd/back	//note Firefox at least fails to support analog triggers https://bugzilla.mozilla.org/show_bug.cgi?id=1434408
-					
-					var magsq = gpMove.reduce((total, val) => total+ val*val, 0);
-					
-					for (var cc=0;cc<3;cc++){
-						currentThrustInput[cc]+=gpMove[cc]*5000000000*magsq;
-					}
-					
-					//testInfo=[axes,buttons,gpMove,magsq];
-					
-					//note doing cube bodge to both thrust and to adding velocity to position (see key controls code)
-					//maybe better to pick one! (probably should apply cube logic to acc'n for exponential smoothed binary key input, do something "realistic" for drag forces
-				}
-				
-				currentRotateInput[2]+=gpSettings.roll(activeGp); //roll
-				
-				//other rotation
-				var gpRotate=[];
-				var fixedRotateAmount = 10*rotateSpeed;
-				gpRotate[0] = gpSettings.pitch(activeGp, fixedRotateAmount);
-				gpRotate[1] = gpSettings.turn(activeGp, fixedRotateAmount);
-				gpRotate[2] = 0;	//moved to code above
-					
-				magsq = gpRotate.reduce((total, val) => total+ val*val, 0);
-				
-				//var magpow = Math.pow(50*magsq,1.5);	//TODO handle fact that max values separately maxed out, so currently turns faster in diagonal direction.
-				//lastPlayerAngMove = scalarvectorprod(100000*magpow*timeStepMultiplier,gpRotate);
-					//arguably above nicer for gamepad, better supports precise movement
-
-				var magpow = Math.pow(1*magsq,0.25);
-				lastPlayerAngMove = scalarvectorprod(100*magpow*timeStepMultiplier,gpRotate);
-				rotatePlayer(lastPlayerAngMove);	//TODO add rotational momentum - not direct rotate
-			}
-			
-			for (var cc=0;cc<3;cc++){
-				playerAngVelVec[cc]+= timeStepMultiplier*currentRotateInput[cc];
-				playerAngVelVec[cc]*=angVelDampMultiplier;
-				playerVelVec[cc]+=currentThrustInput[cc];	//todo either write vector addition func or use glmatrix vectors
-			}
-									
 			//blend velocity with velocity of rotating duosphere. (todo angular vel to use this too)
 			//matrix entries 12-15 describe position. (remain same when rotate player and don't move)
 			//playerVel is in frame of player though - so apply matrix rotation to this.
