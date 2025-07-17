@@ -4450,7 +4450,7 @@ var guiParams={
 		textTextBox:false,
 		textWorldNum:true,
 		bvhBoundingSpheres:false,
-		worldCollisionTest1:"worldBvh2",
+		worldCollisionTest1:"grid2OnlyOne",
 		worldCollisionTest2:"sphere",
 		worldBvhCollisionTestPlayer:true,
 		timestep:10
