@@ -4453,7 +4453,7 @@ var guiParams={
 		worldCollisionTest1:"worldBvh2",
 		worldCollisionTest2:"sphere",
 		worldBvhCollisionTestPlayer:true,
-		timestep:5
+		timestep:10
 	},
 	audio:{
 		volume:0.2,

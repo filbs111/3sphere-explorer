@@ -492,7 +492,7 @@ var playerMechanics = (() => {
         }
 
         
-        processTriangleObjectCollision();	//after boxes to reuse whoosh noise (assume not close to both at same time)
+        
 
         //whoosh for boxes, using result from closest point calculation done inside collision function
         var distanceForBoxNoise = 100;
@@ -509,6 +509,28 @@ var playerMechanics = (() => {
         }
         setSoundHelper(myAudioPlayer.setWhooshSoundBox, distanceForBoxNoise, panForBoxNoise, spd);
         
+
+        //simply use smaller timesteps for player - triangle soup collision.
+        //this reduces chance of failing to detect collision, but can still break if fast enough. increasing numSubsteps runs
+        //causes performance issues, obvious in 600-cell world.
+        //TODO improve. ideas:
+        // 1) dedicated fast method for sphere overlap rather than use general find closest point on object. (still use closest point
+        // method for audio, debug markers, but do less frequently.)
+        // 2) do the broad phase world bvh less frequently, but do the sphere vs triangles in individual objects more frequently (substeps)
+        // 3) continuous collision (swept sphere)
+        var numSubsteps = 20;
+        var subTimeStep = timeStep/numSubsteps;
+
+        for (var ii=0;ii<numSubsteps;ii++){
+            processTriangleObjectCollision();	//after boxes to reuse whoosh noise (assume not close to both at same time)
+            rotatePlayer(scalarvectorprod(subTimeStep * rotateSpeed,playerAngVelVec));
+            movePlayer(scalarvectorprod(subTimeStep * moveSpeed,playerVelVec));
+
+            //update things used in triangle collision code
+            playerPos = playerCamera.slice(12);
+            mat4.set(playerCamera, playerMatrixTransposed);
+            mat4.transpose(playerMatrixTransposed);
+        }
 
         
         function processBoxCollisionsForBoxInfoAllPoints(boxInfo){
@@ -679,7 +701,6 @@ var playerMechanics = (() => {
             var closestRoughSqDistanceFound = Number.POSITIVE_INFINITY;
 
             processPossibles(bvhObjsForWorld[playerContainer.world].objList);
-            
 
             function processPossibles(possibleObjects){
                 if (guiParams.debug.worldBvhCollisionTestPlayer){
@@ -795,8 +816,7 @@ var playerMechanics = (() => {
 
 
 
-        rotatePlayer(scalarvectorprod(timeStep * rotateSpeed,playerAngVelVec));
-        movePlayer(scalarvectorprod(timeStep * moveSpeed,playerVelVec));
+        
         
         //TODO apply duocylinder spin inside loop here. 
     
