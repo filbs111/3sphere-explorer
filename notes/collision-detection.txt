@@ -1,0 +1,34 @@
+
+2025-07-18
+
+had problems recently: 
+A) game slowing down when lots of bullets in 600-cell world
+B) collision with fast moving player spaceship with triangle mesh object could find player stuck inside object (because collision is with triangles without regard to direction)
+
+A and B could be traded off - reduce timestep to increase speed of spaceship before see collision problems, at expense of B
+
+recent work has improved this. 
+
+1) used a grid system for bullet collision. 
+2) check for player collision more frequently than do bullet collision. allows less frequent bullet collision (acceptable since line collision), more frequent player to triangle mesh object collision. For the latter, at same rate as bullet collisions, doing more expensive test to get closest point for larger area, used for noise as fly past objects. For sub steps, using cheaper check that only detects closest point for things nearer to player (colliding/ near colliding).
+
+Attempted to improve by grouping bullets and checking bullet bvh vs object bvh, but didn't see perf improvement. If could get improvement here, might improve further by testing bullets against multiple instances of objects too. 
+
+Currently performance is decent. Remaining issues: 
+
+B) is still an issue.
+	i) Very fast collision can still break - expected since still finite timestep.
+	ii) Moderately fast collision can result in getting stuck in objects when colliding with 600-cell tetrahedron frames. 
+C) very large objects have erroneous collision far from centre, due to assumptions made about 4d-3d projection that are only right for small objects. see this when bumping into in 5-cell tetrahedeon frames.
+D) collision check for player when very close to lucy (statue) object can still be quite slow.
+
+Further work
+
+0) currently using the result of slow collision check for big step frames, and only doing fast check for substeps. Fast check is so much faster than slow that reusing the slow result on "big" steps to skip fast check is not worth the complication. just use slow test for sounds, closest point debug. Only use fast check for collision, do every step.
+1) option to log distance between sucessive positions, or draw spheres for recently tested player positions. want to check that spacing seems reasonable (expect that once spaced by more than radius will get problems. If this is not happening, suggests other cause of B)
+2) take account of which object collision found is for, or return multiple contacts. Suspect that getting stuck in 600-cell ( B)ii) ) may be due to measuring penetration in successive frames for different objects. Perhaps should take account of penetration vector rather than simple scalar value.
+3) do initial 4d bvh check for set of substeps, then only sub-step once in bvh test for individual objects. might fix D)
+4) use continuous swept sphere collision. Should get rid of fast collision problems
+5) take 4d-3d into account properly, or ensure that models are small / put things like 5-cell as a world level triangle bvh object.
+6) use triangle mesh collision for other objects eg boxes.
+7) use 8 cube (instead of 4d cube) grid system. however, seems collision perf not currently a problem, not worth complication.
