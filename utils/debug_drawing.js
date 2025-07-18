@@ -1,9 +1,22 @@
 var debugDraw = (function(){
 
     var nummats = 9;
-    var mats = [nummats];
+    var mats = new Array(nummats);
     for (var ii=0;ii<nummats;ii++){
         mats[ii] = mat4.identity();
+    }
+
+    var numTestPoints = 50;
+    var nextTestPoint = 0;
+    var testPoints = [];
+    for (var ii=0;ii<numTestPoints;ii++){
+        testPoints[ii] = {mat:mat4.identity(), color:[0,0,0]};
+    }
+    function addTestPoint(mat, color){
+        var testPoint = testPoints[nextTestPoint];
+        mat4.set(mat, testPoint.mat);
+        testPoint.color = color;
+        nextTestPoint = (nextTestPoint+1)%numTestPoints;
     }
 
     function drawTestCubeForMatrixColorAndScale(mat, cubeColor, scale){
@@ -57,11 +70,16 @@ var debugDraw = (function(){
         //triangle objs
         drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[8], 
             [colorArrs.red,colorArrs.green,colorArrs.blue][triObjClosestPointType], 0.01);
+
+        testPoints.forEach(tp => {
+            drawTriAxisCrossForMatrixColorAndScale(tp.mat, tp.color, 0.001);
+        });
     }
     
     return {
         mats,
         drawDebugStuff,
-        drawTriAxisCrossForMatrixColorAndScale
+        drawTriAxisCrossForMatrixColorAndScale,
+        addTestPoint
     }
 })();

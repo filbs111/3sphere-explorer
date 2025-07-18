@@ -700,6 +700,8 @@ var playerMechanics = (() => {
 
         function processTriangleObjectCollision(useFastVersion){
 
+            debugDraw.addTestPoint(playerContainer.matrix, useFastVersion? colorArrs.white:colorArrs.gray);
+
             var closestRoughSqDistanceFound = Number.POSITIVE_INFINITY;
             var worldBvhObj = bvhObjsForWorld[playerContainer.world];
 
