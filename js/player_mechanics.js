@@ -1,3 +1,5 @@
+var mostRecentInfo={};
+
 var playerMechanics = (() => {
 
     var playerAngVelVec = [0,0,0];
@@ -772,9 +774,29 @@ var playerMechanics = (() => {
                         //different to collidePlayerWithObjectByClosestPointFunc, which takes places in duocylinder spun space.
                     var relativePosC = tmpRelativeMat.slice(12);
                     //normalise. note could just assume that length is player radius, or matches existing calculation for penetration etc, to simplify.
-                    var relativePosCLength = Math.sqrt(1-relativePosC[3]*relativePosC[3]);	//assume matrix SO4
+                    
+                    
+                    //var relativePosCLength = Math.sqrt(1-relativePosC[3]*relativePosC[3]);	//assume matrix SO4
+                        //appears relativePosC can be of magnitude > 1. numerical error?
+                    var relativePosCLength = Math.sqrt(relativePosC[0]*relativePosC[0]+relativePosC[1]*relativePosC[1]+relativePosC[2]*relativePosC[2]);     
+
                     var relativePosCNormalised = relativePosC.map(x=>x/relativePosCLength);
                     var forcePlayerFrame = relativePosCNormalised.map(elem => elem*reactionForce);
+
+                    //when this goes wrong....
+                    mostRecentInfo.tmpRelativeMat = tmpRelativeMat.map(xx=>xx);
+                    mostRecentInfo.relativePosC = relativePosC;                     // is something reasonable, eg 
+                                                            // 0: -0.00004600548345479183
+                                                            // 1: 0.000005311260792950634
+                                                            // 2: 0.00005166974733583629
+                                                            // 3: 1                 // note that relativePosC[3] = 1
+                    mostRecentInfo.relativePosCLength = relativePosCLength;         // is zero
+                    mostRecentInfo.relativePosCNormalised = relativePosCNormalised; // is infinities
+                    mostRecentInfo.forcePlayerFrame = forcePlayerFrame;             // is infinities
+                    mostRecentInfo.playerMatrixTransposed = playerMatrixTransposed.map(xx=>xx); // something reasonable
+                    mostRecentInfo.resultMat = resultMat.map(xx=>xx);               // something reasonable
+
+
                     for (var cc=0;cc<3;cc++){
                         playerVelVec[cc]+=forcePlayerFrame[cc];
                     }

@@ -106,6 +106,8 @@ function terrainGetNearPointFor4VecPos(vec, duocylinderSpin){	//returns estimate
 	var bb=decentMod(multiplier*(b + duocylinderSpin),procTerrainSize);
 	
 	if (vec[0]!=vec[0] || vec[1]!=vec[1] || vec[2]!=vec[2]){	//things can go wrong here with fast collision with boxes
+		console.log(mostRecentInfo);
+		alert("NaN vector input to terrainGetHeightFor4VecPos");
 		console.log("NaN vector input to terrainGetHeightFor4VecPos");
 		console.log(vec);
 		return {a:0, b:0 , h:-1};	//todo what should return here? 
