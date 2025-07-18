@@ -306,99 +306,7 @@ var playerMechanics = (() => {
 
 
         
-        if (worldInfo.duocylinderModel == 'procTerrain'){
-            
-            //distanceForTerrainNoise = getHeightAboveTerrainFor4VecPos(playerPos);	//TODO actual distance using surface normal (IIRC this is simple vertical height above terrain)
-
-            processTerrainCollisionForBall(playerCentreBallData, settings.playerBallRad, true);
-            /*
-            for (var legnum=0;legnum<landingLegData.length;legnum++){
-                var landingLeg = landingLegData[legnum];
-                processTerrainCollisionForBall(landingLeg, 0.001);
-            }
-            */
-            function processTerrainCollisionForBall(landingLeg, ballSize, useForThwop){	//0.005 reasonable ballSize for centre of player model. smaller for landing legs
-                var legPosPlayerFrame=landingLeg.pos;
-                var suspensionHeight=landingLeg.suspHeight;
-                            
-                var landingLegMat = mat4.create(playerCamera);
-                xyzmove4mat(landingLegMat, legPosPlayerFrame);
-                var legPos = landingLegMat.slice(12);	
-                
-                //simple spring force terrain collision - 
-                //lookup height above terrain, subtract some value (height above terrain where restoring force goes to zero - basically maximum extension of landing legs. apply spring force upward to player proportional to this amount.
-                var suspensionHeightNow = getHeightAboveTerrainFor4VecPos(legPos, dcSpin);
-                
-                //get nearest point on terrain. could do this in terrain space, but to be reliable, testable, find nearest 4vec position, find this position in player frame.
-                //note this matrix "jiggles" when duocylinder rotating due to interpolation (other test mats that don't jiggle probably are in duocylinder rotating frame space)
-                var nearestTerrainPosInfo = getNearestTerrainPosMatFor4VecPos(legPos, dcSpin);
-                var nearestPosMat = nearestTerrainPosInfo.mat;
-                var nearestPos = nearestPosMat.slice(12);
-                
-                //find length from this to position in player space.
-                var lengthToNearest = Math.hypot.apply(null, nearestPos.map((elem,ii) => elem-legPos[ii]));
-
-                //bodge to get signed distance. TODO more sensible method without if/ternary
-                forceSwitch =  nearestTerrainPosInfo.altitude > 0 ? 1 : -1;
-                lengthToNearest*=forceSwitch;
-                
-                myDebugStr = "suspensionHeightNow: " + suspensionHeightNow.toFixed(4) + ", lengthToNearest: " + lengthToNearest.toFixed(4);
-                
-                suspensionHeightNow = lengthToNearest;	//override suspension height with new distance. improves collision detection (barring glitches if break assumptions - eg might collide with phantom terrain if have abrupt steep wall...) . reaction force will remain upwards with just this change.
-                
-                
-                suspensionHeightNow = Math.max(Math.min(-suspensionHeightNow,0) + ballSize, 0);	//capped
-                var suspensionVel = suspensionHeightNow-suspensionHeight;
-                var suspensionForce = 20*suspensionHeightNow+ 150*suspensionVel;	
-                                                                        //TODO rotational speed impact on velocity									
-                suspensionForce=Math.max(suspensionForce,0) * forceSwitch;
-                landingLeg.suspHeight = suspensionHeightNow;
-                                                    
-                //apply force to player, "up" wrt duocylinder
-                /*
-                for (var cc=0;cc<3;cc++){
-                    playerVelVec[cc]+=suspensionForce*radialPlayerCoords[cc];	//radialPlayerCoords will be a bit different for landing legs but assume same since small displacement
-                }
-                */
-                
-                //get the position of the closest point in the player frame. really only need to rotate the position vector by player matrix
-                var relevantMat = mat4.create();	//just for testing
-                mat4.set(landingLegMat, relevantMat);
-                mat4.transpose(relevantMat);
-                var nearestPosPlayerFrame = [];
-                for (var cc=0;cc<3;cc++){
-                    nearestPosPlayerFrame[cc]=relevantMat[cc]*nearestPos[0] +  relevantMat[cc+4]*nearestPos[1] +  relevantMat[cc+8]*nearestPos[2] +  relevantMat[cc+12]*nearestPos[3];
-                }
-                //normalise it 
-                var distNearestPointPlayerFrame = Math.hypot.apply(null, nearestPosPlayerFrame);	//this should recalculate existing vec
-                myDebugStr += ", distNearestPointPlayerFrame: " + distNearestPointPlayerFrame.toFixed(4);
-                
-                if (useForThwop){
-                    mat4.set(nearestPosMat, debugDraw.mats[5]);	//for visual debugging (TODO display object for each contact)
-                
-                    distanceForTerrainNoise = distNearestPointPlayerFrame;	//assumes only 1 thing used for thwop
-                    var soundSize = 0.002;	//reduced this below noiseRad so get more pan
-                    panForTerrainNoise = Math.tanh(nearestPosPlayerFrame[0]/Math.hypot(soundSize,nearestPosPlayerFrame[1],nearestPosPlayerFrame[2]));	//tanh(left/hypot(size,down,forwards)). tanh smoothly limits to +/- 1
-                }
-                nearestPosPlayerFrame = nearestPosPlayerFrame.map(elem=>elem/distNearestPointPlayerFrame);	//normalise
-                var forcePlayerFrame = nearestPosPlayerFrame.map(x=>x*suspensionForce);	//TODO combo with above
-                
-                for (var cc=0;cc<3;cc++){
-                    playerVelVec[cc]+=forcePlayerFrame[cc];
-                }
-                
-                var torquePlayerFrame = [
-                                legPosPlayerFrame[1]*forcePlayerFrame[2] - legPosPlayerFrame[2]*forcePlayerFrame[1],
-                                legPosPlayerFrame[2]*forcePlayerFrame[0] - legPosPlayerFrame[0]*forcePlayerFrame[2],
-                                legPosPlayerFrame[0]*forcePlayerFrame[1] - legPosPlayerFrame[1]*forcePlayerFrame[0]
-                                ];
-                for (cc=0;cc<3;cc++){
-                    playerAngVelVec[cc]-=20000*torquePlayerFrame[cc];	//assumes moment of intertia of sphere/cube/similar
-                }
-                
-                //TODO apply force along ground normal, friction force
-            }
-        }
+        
 
 
         if (worldInfo.seaActive){
@@ -494,8 +402,6 @@ var playerMechanics = (() => {
             processBoxCollisionsForBoxInfoAllPoints(duocylinderBoxInfo.roads);
         }
 
-        
-        
 
         //whoosh for boxes, using result from closest point calculation done inside collision function
         var distanceForBoxNoise = 100;
@@ -528,6 +434,12 @@ var playerMechanics = (() => {
         var subTimeStep = timeStep/numSubsteps;
 
         for (var ii=0;ii<numSubsteps;ii++){
+
+            //TODO update variables to do with duocylinder between substeps? 
+            if (ii%5==0 && worldInfo.duocylinderModel == 'procTerrain'){
+                processProcterrainCollision();   
+            }
+
             processTriangleObjectCollisionFast();   //collision detection
             
             rotatePlayer(scalarvectorprod(subTimeStep * rotateSpeed,playerAngVelVec));
@@ -852,7 +764,6 @@ var playerMechanics = (() => {
             mat4.set(resultMat, debugDraw.mats[8]);
         }
 
-        
 
         function processTrianglePossibles(resultMat, possibleObjects, lowestAcceptedMultiplier, closestPointFunc){
             var closestRoughSqDistanceFound = Number.POSITIVE_INFINITY;
@@ -910,6 +821,100 @@ var playerMechanics = (() => {
                 xyzmove4mat(resultMat, angleToMove);	//draw x on closest vertex
 
                 foundClosestPointTriangleObj = true;
+            }
+        }
+
+
+        function processProcterrainCollision(){
+            //distanceForTerrainNoise = getHeightAboveTerrainFor4VecPos(playerPos);	//TODO actual distance using surface normal (IIRC this is simple vertical height above terrain)
+
+            processTerrainCollisionForBall(playerCentreBallData, settings.playerBallRad, true);
+            /*
+            for (var legnum=0;legnum<landingLegData.length;legnum++){
+                var landingLeg = landingLegData[legnum];
+                processTerrainCollisionForBall(landingLeg, 0.001);
+            }
+            */
+            function processTerrainCollisionForBall(landingLeg, ballSize, useForThwop){	//0.005 reasonable ballSize for centre of player model. smaller for landing legs
+                var legPosPlayerFrame=landingLeg.pos;
+                var suspensionHeight=landingLeg.suspHeight;
+                            
+                var landingLegMat = mat4.create(playerCamera);
+                xyzmove4mat(landingLegMat, legPosPlayerFrame);
+                var legPos = landingLegMat.slice(12);	
+                
+                //simple spring force terrain collision - 
+                //lookup height above terrain, subtract some value (height above terrain where restoring force goes to zero - basically maximum extension of landing legs. apply spring force upward to player proportional to this amount.
+                var suspensionHeightNow = getHeightAboveTerrainFor4VecPos(legPos, dcSpin);
+                
+                //get nearest point on terrain. could do this in terrain space, but to be reliable, testable, find nearest 4vec position, find this position in player frame.
+                //note this matrix "jiggles" when duocylinder rotating due to interpolation (other test mats that don't jiggle probably are in duocylinder rotating frame space)
+                var nearestTerrainPosInfo = getNearestTerrainPosMatFor4VecPos(legPos, dcSpin);
+                var nearestPosMat = nearestTerrainPosInfo.mat;
+                var nearestPos = nearestPosMat.slice(12);
+                
+                //find length from this to position in player space.
+                var lengthToNearest = Math.hypot.apply(null, nearestPos.map((elem,ii) => elem-legPos[ii]));
+
+                //bodge to get signed distance. TODO more sensible method without if/ternary
+                forceSwitch =  nearestTerrainPosInfo.altitude > 0 ? 1 : -1;
+                lengthToNearest*=forceSwitch;
+                
+                myDebugStr = "suspensionHeightNow: " + suspensionHeightNow.toFixed(4) + ", lengthToNearest: " + lengthToNearest.toFixed(4);
+                
+                suspensionHeightNow = lengthToNearest;	//override suspension height with new distance. improves collision detection (barring glitches if break assumptions - eg might collide with phantom terrain if have abrupt steep wall...) . reaction force will remain upwards with just this change.
+                
+                
+                suspensionHeightNow = Math.max(Math.min(-suspensionHeightNow,0) + ballSize, 0);	//capped
+                var suspensionVel = suspensionHeightNow-suspensionHeight;
+                var suspensionForce = 50*suspensionHeightNow+ 1000*suspensionVel;	
+                                                                        //TODO rotational speed impact on velocity									
+                suspensionForce=Math.max(suspensionForce,0) * forceSwitch;
+                landingLeg.suspHeight = suspensionHeightNow;
+                                                    
+                //apply force to player, "up" wrt duocylinder
+                /*
+                for (var cc=0;cc<3;cc++){
+                    playerVelVec[cc]+=suspensionForce*radialPlayerCoords[cc];	//radialPlayerCoords will be a bit different for landing legs but assume same since small displacement
+                }
+                */
+                
+                //get the position of the closest point in the player frame. really only need to rotate the position vector by player matrix
+                var relevantMat = mat4.create();	//just for testing
+                mat4.set(landingLegMat, relevantMat);
+                mat4.transpose(relevantMat);
+                var nearestPosPlayerFrame = [];
+                for (var cc=0;cc<3;cc++){
+                    nearestPosPlayerFrame[cc]=relevantMat[cc]*nearestPos[0] +  relevantMat[cc+4]*nearestPos[1] +  relevantMat[cc+8]*nearestPos[2] +  relevantMat[cc+12]*nearestPos[3];
+                }
+                //normalise it 
+                var distNearestPointPlayerFrame = Math.hypot.apply(null, nearestPosPlayerFrame);	//this should recalculate existing vec
+                myDebugStr += ", distNearestPointPlayerFrame: " + distNearestPointPlayerFrame.toFixed(4);
+                
+                if (useForThwop){
+                    mat4.set(nearestPosMat, debugDraw.mats[5]);	//for visual debugging (TODO display object for each contact)
+                
+                    distanceForTerrainNoise = distNearestPointPlayerFrame;	//assumes only 1 thing used for thwop
+                    var soundSize = 0.002;	//reduced this below noiseRad so get more pan
+                    panForTerrainNoise = Math.tanh(nearestPosPlayerFrame[0]/Math.hypot(soundSize,nearestPosPlayerFrame[1],nearestPosPlayerFrame[2]));	//tanh(left/hypot(size,down,forwards)). tanh smoothly limits to +/- 1
+                }
+                nearestPosPlayerFrame = nearestPosPlayerFrame.map(elem=>elem/distNearestPointPlayerFrame);	//normalise
+                var forcePlayerFrame = nearestPosPlayerFrame.map(x=>x*suspensionForce);	//TODO combo with above
+                
+                for (var cc=0;cc<3;cc++){
+                    playerVelVec[cc]+=forcePlayerFrame[cc];
+                }
+                
+                var torquePlayerFrame = [
+                                legPosPlayerFrame[1]*forcePlayerFrame[2] - legPosPlayerFrame[2]*forcePlayerFrame[1],
+                                legPosPlayerFrame[2]*forcePlayerFrame[0] - legPosPlayerFrame[0]*forcePlayerFrame[2],
+                                legPosPlayerFrame[0]*forcePlayerFrame[1] - legPosPlayerFrame[1]*forcePlayerFrame[0]
+                                ];
+                for (cc=0;cc<3;cc++){
+                    playerAngVelVec[cc]-=20000*torquePlayerFrame[cc];	//assumes moment of intertia of sphere/cube/similar
+                }
+                
+                //TODO apply force along ground normal, friction force
             }
         }
 
