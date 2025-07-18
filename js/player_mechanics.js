@@ -519,11 +519,15 @@ var playerMechanics = (() => {
         // method for audio, debug markers, but do less frequently.)
         // 2) do the broad phase world bvh less frequently, but do the sphere vs triangles in individual objects more frequently (substeps)
         // 3) continuous collision (swept sphere)
+
+        processTriangleObjectCollisionSlow();   //updates debug point, audio from flying past objects
+
         var numSubsteps = 20;
         var subTimeStep = timeStep/numSubsteps;
 
         for (var ii=0;ii<numSubsteps;ii++){
-            processTriangleObjectCollision(ii!=0);	//after boxes to reuse whoosh noise (assume not close to both at same time)
+            processTriangleObjectCollisionFast();   //collision detection
+            
             rotatePlayer(scalarvectorprod(subTimeStep * rotateSpeed,playerAngVelVec));
             movePlayer(scalarvectorprod(subTimeStep * moveSpeed,playerVelVec));
 
@@ -532,6 +536,9 @@ var playerMechanics = (() => {
             mat4.set(playerCamera, playerMatrixTransposed);
             mat4.transpose(playerMatrixTransposed);
         }
+        
+        var thrustVolume = Math.tanh(40*Math.hypot.apply(null, currentThrustInput));	//todo jet noise. take speed, atmos thickness into account. should be loud when going fast but not thrusting, pitch shift
+        myAudioPlayer.setJetSound({delay:0, gain:thrustVolume, pan:0});
 
         
         function processBoxCollisionsForBoxInfoAllPoints(boxInfo){
@@ -541,6 +548,7 @@ var playerMechanics = (() => {
             //	processBoxCollisionsForBoxInfo(boxInfo, landingLegData[legnum], 0.001, false);	//disable to debug easier using only playerCentreBallData collision
             }
         }
+
         
         function processBoxCollisionsForBoxInfo(boxInfo, landingLeg, collisionBallSize, drawDebugStuff, useForThwop){
             var pointOffset = landingLeg.pos.map( elem => -elem);	//why reversed? probably optimisable. TODO untangle signs!
@@ -698,45 +706,22 @@ var playerMechanics = (() => {
             }
         }
 
-        function processTriangleObjectCollision(useFastVersion){
 
-            debugDraw.addTestPoint(playerContainer.matrix, useFastVersion? colorArrs.white:colorArrs.gray);
+        function processTriangleObjectCollisionFast(){
 
-            var closestRoughSqDistanceFound = Number.POSITIVE_INFINITY;
+            debugDraw.addTestPoint(playerContainer.matrix, colorArrs.white);
+
             var worldBvhObj = bvhObjsForWorld[playerContainer.world];
 
-            var initialCandidates = guiParams.debug.worldBvhCollisionTestPlayer ? 
-                (useFastVersion ?  
-                    getFastPossibles(): 
-                    getSlowPossibles(worldBvhObj.objList)
-                )
-                :worldBvhObj.objList;
-            
-            if (shouldDumpDebug3){
-                console.log(initialCandidates.length, useFastVersion);
-            }
+            var initialCandidates = guiParams.debug.worldBvhCollisionTestPlayer ? getFastPossibles():worldBvhObj.objList;
 
             var resultMat = mat4.create();
             var foundClosestPointTriangleObjPreviously = foundClosestPointTriangleObj; 
             foundClosestPointTriangleObj = false;
-            processPossibles(initialCandidates, useFastVersion? 1000: 2000);
-
-            function getSlowPossibles(possibleObjects){
-                //find set of candiate objects by their bounding spheres - 
-                //provided each object has something solid within its bounding sphere
-                //any each object has a maximum and minimum possible distance from a given point
-                //the find the minimum maximum distance for all objects.
-                //any object with a minimum distance above this is NOT the closest so can skip testing for.
-                //which in practice is likely to be the bulk of objects. 
-                var objsWithMinMaxDistances = possibleObjects.map(objInfo => {return {
-                    objInfo,
-                    minMaxDist: minMaxDistanceFromPointToBoundingSphere(playerPos, objInfo.mat.slice(12), objInfo.scale*objInfo.bvh.boundingSphereRadius)
-                }});
-                var maxPossibleDistance = objsWithMinMaxDistances.map(xx=>xx.minMaxDist[1]).reduce((a,b)=>Math.min(a,b), 0.1);
-                return objsWithMinMaxDistances
-                    .filter(xx=>xx.minMaxDist[0]<=maxPossibleDistance)
-                    .map(xx=>xx.objInfo);
-            }
+            processTrianglePossibles(resultMat, initialCandidates, 1000, (projectedPosInObjFrame, rad, objInfo, lowestAcceptedMultiplier) => {
+                var nearby = closestPointBvhAABBIntialCheck(projectedPosInObjFrame, rad, objInfo);
+                return nearby ? closestPointBvhEfficient(projectedPosInObjFrame, objInfo, lowestAcceptedMultiplier): false;
+            });
 
             function getFastPossibles(){
                 var paddedRad = settings.playerBallRadPadded;
@@ -763,97 +748,15 @@ var playerMechanics = (() => {
                 return possiblities;
             }
 
-            function processPossibles(possibleObjects, lowestAcceptedMultiplier){
-
-                var bestResult = false;
-
-                possibleObjects.forEach(objInfo =>
-                {
-                    var transposedObjMat = objInfo.transposedMat;
-                    var objScale = objInfo.scale;
-
-                    var playerPosVec = vec4.create(playerPos);
-                    mat4.multiplyVec4(transposedObjMat, playerPosVec, playerPosVec);
-                    
-                    if (playerPosVec[3]<=0.3){
-                        return;
-                    }						
-
-                    var projectedPosInObjFrame = playerPosVec.slice(0,3).map(val => val/(objScale*playerPosVec[3]));
-
-                    //var closestPointResult = closestPointBvhBruteForce(projectedPosInObjFrame, objInfo.bvh);
-
-                    var closestPointResult;
-                    if(useFastVersion){
-                        //this is hacky, but avoids running closestPointBvhEfficient if nothing nearby, and doesn't check huge num
-                        // triangles if there is! 
-                        nearby = closestPointBvhAABBIntialCheck(projectedPosInObjFrame, settings.playerBallRadPadded, objInfo);
-                        if (nearby){
-                            closestPointResult= closestPointBvhEfficient(projectedPosInObjFrame, objInfo, lowestAcceptedMultiplier);
-                        }
-                    }else{
-                        closestPointResult = closestPointBvhEfficient(projectedPosInObjFrame, objInfo, lowestAcceptedMultiplier);
-                    }
-
-                    if (closestPointResult){
-                        var closestPointInObjectFrame = closestPointResult.closestPoint;
-                        
-                        //get distance from player.
-                        //TODO return from above, or combine with closestPointBvh / use world level bvh?
-
-                        var vectorToPlayerInObjectSpace = vectorDifference(projectedPosInObjFrame, closestPointInObjectFrame);
-                        var roughDistanceSqFromPlayer = dotProduct(vectorToPlayerInObjectSpace,vectorToPlayerInObjectSpace)
-                                            *objScale*objScale;	//multiplying by scale with view to using multiple scales
-
-                        if (roughDistanceSqFromPlayer<closestRoughSqDistanceFound){
-                            bestResult = {
-                                closestPointResult,
-                                objInfo
-                            }
-                            closestRoughSqDistanceFound = roughDistanceSqFromPlayer;
-                        }
-                    }
-                });
-
-                if (bestResult){
-                    var closestPointResult= bestResult.closestPointResult;
-                    triObjClosestPointType = closestPointResult.closestPointType;
-
-                    var closestPointInObjectFrame = closestPointResult.closestPoint;
-                    var positionInProjectedSpace = closestPointInObjectFrame.map(val => val*bestResult.objInfo.scale);
-                    var veclen = Math.sqrt(positionInProjectedSpace.reduce((accum, xx)=>accum+xx*xx, 0));
-                    var scalarAngleDifference = Math.atan(veclen);
-
-                    var correction = -scalarAngleDifference/veclen;
-                    var angleToMove = positionInProjectedSpace.map(val => val*correction);
-
-                    mat4.set(bestResult.objInfo.mat, resultMat);
-                    xyzmove4mat(resultMat, angleToMove);	//draw x on closest vertex
-
-                    foundClosestPointTriangleObj = true;
-                }
-            }
-
-            //sound. 
             //TODO efficient distance calculation without matrix mult
             mat4.set(playerMatrixTransposed, tmpRelativeMat);
             mat4.multiply(tmpRelativeMat, resultMat);
-            distanceForNoise = distBetween4mats(tmpRelativeMat, identMat);
-            if (!useFastVersion){
-                var soundSize = 0.002;
-                panForNoise = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));
-                
-                //note spd (speed) in is in duocylinder frame, but object currently does not rotate with it.
-                setSoundHelper(myAudioPlayer.setWhooshSoundTriangleMesh, distanceForNoise, panForNoise, spd);
-
-                //draw object - position at object centre, then move by vec to point in object space.
-                mat4.set(resultMat, debugDraw.mats[8]);
-            }
-
+            distanceFromClosestPoint = distBetween4mats(tmpRelativeMat, identMat);
+            
             //player collision - apply reaction force due to penetration, with some smoothing (like spring/damper)
             //cribbed from collidePlayerWithObjectByClosestPointFunc
             var lastTriangleObjPen = currentTriangleObjectPlayerPen;
-            currentTriangleObjectPlayerPen = settings.playerBallRad - distanceForNoise;
+            currentTriangleObjectPlayerPen = settings.playerBallRad - distanceFromClosestPoint;
 
             if (foundClosestPointTriangleObj && foundClosestPointTriangleObjPreviously){
                 //if volume checked has some padding so can detect closest point before collide with object this shouldn't 
@@ -879,15 +782,118 @@ var playerMechanics = (() => {
             }
         }
 
+        
+        
+        function processTriangleObjectCollisionSlow(){
+
+            debugDraw.addTestPoint(playerContainer.matrix, colorArrs.gray);
+
+            var worldBvhObj = bvhObjsForWorld[playerContainer.world];
+
+            var initialCandidates = guiParams.debug.worldBvhCollisionTestPlayer ? getSlowPossibles(worldBvhObj.objList):worldBvhObj.objList;
+            
+            var resultMat = mat4.create();
+            foundClosestPointTriangleObj = false;
+
+            processTrianglePossibles(resultMat, initialCandidates, 2000, (projectedPosInObjFrame, rad, objInfo, lowestAcceptedMultiplier) => {
+                return closestPointBvhEfficient(projectedPosInObjFrame, objInfo, lowestAcceptedMultiplier);
+            });
+
+            function getSlowPossibles(possibleObjects){
+                //find set of candiate objects by their bounding spheres - 
+                //provided each object has something solid within its bounding sphere
+                //any each object has a maximum and minimum possible distance from a given point
+                //the find the minimum maximum distance for all objects.
+                //any object with a minimum distance above this is NOT the closest so can skip testing for.
+                //which in practice is likely to be the bulk of objects. 
+                var objsWithMinMaxDistances = possibleObjects.map(objInfo => {return {
+                    objInfo,
+                    minMaxDist: minMaxDistanceFromPointToBoundingSphere(playerPos, objInfo.mat.slice(12), objInfo.scale*objInfo.bvh.boundingSphereRadius)
+                }});
+                var maxPossibleDistance = objsWithMinMaxDistances.map(xx=>xx.minMaxDist[1]).reduce((a,b)=>Math.min(a,b), 0.1);
+                return objsWithMinMaxDistances
+                    .filter(xx=>xx.minMaxDist[0]<=maxPossibleDistance)
+                    .map(xx=>xx.objInfo);
+            }
+
+            //sound. 
+            //TODO efficient distance calculation without matrix mult
+            mat4.set(playerMatrixTransposed, tmpRelativeMat);
+            mat4.multiply(tmpRelativeMat, resultMat);
+            distanceForNoise = distBetween4mats(tmpRelativeMat, identMat);
+
+            var soundSize = 0.002;
+            panForNoise = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));
+            //note spd (speed) in is in duocylinder frame, but object currently does not rotate with it.
+            setSoundHelper(myAudioPlayer.setWhooshSoundTriangleMesh, distanceForNoise, panForNoise, spd);
+            //draw object - position at object centre, then move by vec to point in object space.
+            mat4.set(resultMat, debugDraw.mats[8]);
+        }
 
         
+
+        function processTrianglePossibles(resultMat, possibleObjects, lowestAcceptedMultiplier, closestPointFunc){
+            var closestRoughSqDistanceFound = Number.POSITIVE_INFINITY;
+            var bestResult = false;
+
+            possibleObjects.forEach(objInfo =>
+            {
+                var transposedObjMat = objInfo.transposedMat;
+                var objScale = objInfo.scale;
+
+                var playerPosVec = vec4.create(playerPos);
+                mat4.multiplyVec4(transposedObjMat, playerPosVec, playerPosVec);
+                
+                if (playerPosVec[3]<=0.3){
+                    return;
+                }						
+
+                var projectedPosInObjFrame = playerPosVec.slice(0,3).map(val => val/(objScale*playerPosVec[3]));
+
+                var closestPointResult = closestPointFunc(projectedPosInObjFrame, settings.playerBallRadPadded, objInfo, lowestAcceptedMultiplier);
+
+                if (closestPointResult){
+                    var closestPointInObjectFrame = closestPointResult.closestPoint;
+                    
+                    //get distance from player.
+                    //TODO return from above, or combine with closestPointBvh / use world level bvh?
+
+                    var vectorToPlayerInObjectSpace = vectorDifference(projectedPosInObjFrame, closestPointInObjectFrame);
+                    var roughDistanceSqFromPlayer = dotProduct(vectorToPlayerInObjectSpace,vectorToPlayerInObjectSpace)
+                                        *objScale*objScale;	//multiplying by scale with view to using multiple scales
+
+                    if (roughDistanceSqFromPlayer<closestRoughSqDistanceFound){
+                        bestResult = {
+                            closestPointResult,
+                            objInfo
+                        }
+                        closestRoughSqDistanceFound = roughDistanceSqFromPlayer;
+                    }
+                }
+            });
+
+            if (bestResult){
+                var closestPointResult= bestResult.closestPointResult;
+                triObjClosestPointType = closestPointResult.closestPointType;
+
+                var closestPointInObjectFrame = closestPointResult.closestPoint;
+                var positionInProjectedSpace = closestPointInObjectFrame.map(val => val*bestResult.objInfo.scale);
+                var veclen = Math.sqrt(positionInProjectedSpace.reduce((accum, xx)=>accum+xx*xx, 0));
+                var scalarAngleDifference = Math.atan(veclen);
+
+                var correction = -scalarAngleDifference/veclen;
+                var angleToMove = positionInProjectedSpace.map(val => val*correction);
+
+                mat4.set(bestResult.objInfo.mat, resultMat);
+                xyzmove4mat(resultMat, angleToMove);	//draw x on closest vertex
+
+                foundClosestPointTriangleObj = true;
+            }
+        }
+
         
         //TODO apply duocylinder spin inside loop here. 
     
-        
-        var thrustVolume = Math.tanh(40*Math.hypot.apply(null, currentThrustInput));	//todo jet noise. take speed, atmos thickness into account. should be loud when going fast but not thrusting, pitch shift
-        myAudioPlayer.setJetSound({delay:0, gain:thrustVolume, pan:0});
-
     }
 })();
 
