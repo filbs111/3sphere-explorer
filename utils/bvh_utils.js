@@ -301,6 +301,23 @@ function closestPointBvhEfficient(fromPoint, objInfo, lowestAcceptedMultiplier){
     return closestPointForTris(fromPoint, objInfo.bvh.verts, possibles);
 }
 
+function closestPointBvhAABB(fromPoint, queryRad, objInfo){
+
+    var radInObjSpace = queryRad/objInfo.scale;
+
+    //some test AABB for sphere. note this is in projected space, so really should be ellipse.
+    //just hope padding is enough. later gfinding of closest point also doesn't account for this.
+    var queryAABB = [fromPoint.map(xx=> xx-radInObjSpace) , fromPoint.map(xx=> xx+radInObjSpace)];
+
+    var possibles = collisionTestBvh(queryAABB, objInfo.bvh.tris);
+    
+    if (possibles.length == 0){
+        return false;
+    }
+
+    return closestPointForTris(fromPoint, objInfo.bvh.verts, possibles);
+}
+
 
 function closestPointForTris(fromPoint, verts, tris){
     //want to find point in frame of object and vector from point to fromPoint (and its length)
@@ -422,7 +439,7 @@ function collisionTestPossibleClosest(fromPoint, bvh, lowestAccepted){
 }
 
 function collisionTestPossibleClosest2(fromPoint, bvhGroup, lowestAccepted){
-    lowestAccepted=lowestAccepted*lowestAccepted;   //using squared distances.
+    lowestAccepted*=lowestAccepted;   //using squared distances.
 
     var minMaxVals = bvhGroup.map(item => aabbMinMaxDistanceFromPoint(fromPoint, item.AABB));
     var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
@@ -436,7 +453,7 @@ function collisionTestPossibleClosest2(fromPoint, bvhGroup, lowestAccepted){
     lowestMax = Math.min(lowestMax, lowestAccepted);    //TODO rule out groups earlier using lowestAccepted?
 
     var filtered = bvhGroup.filter(
-        (item, ii) =>
+        (_, ii) =>
         minMaxVals[ii][0]<lowestMax
     );
 

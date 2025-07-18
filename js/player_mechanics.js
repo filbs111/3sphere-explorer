@@ -519,7 +519,7 @@ var playerMechanics = (() => {
         // method for audio, debug markers, but do less frequently.)
         // 2) do the broad phase world bvh less frequently, but do the sphere vs triangles in individual objects more frequently (substeps)
         // 3) continuous collision (swept sphere)
-        var numSubsteps = 16;
+        var numSubsteps = 20;
         var subTimeStep = timeStep/numSubsteps;
 
         for (var ii=0;ii<numSubsteps;ii++){
@@ -717,7 +717,7 @@ var playerMechanics = (() => {
             var resultMat = mat4.create();
             var foundClosestPointTriangleObjPreviously = foundClosestPointTriangleObj; 
             foundClosestPointTriangleObj = false;
-            processPossibles(initialCandidates, useFastVersion? 800: 3000);
+            processPossibles(initialCandidates, 2000);
 
             function getSlowPossibles(possibleObjects){
                 //find set of candiate objects by their bounding spheres - 
@@ -780,7 +780,10 @@ var playerMechanics = (() => {
                     var projectedPosInObjFrame = playerPosVec.slice(0,3).map(val => val/(objScale*playerPosVec[3]));
 
                     //var closestPointResult = closestPointBvhBruteForce(projectedPosInObjFrame, objInfo.bvh);
-                    var closestPointResult = closestPointBvhEfficient(projectedPosInObjFrame, objInfo, lowestAcceptedMultiplier);
+
+                    var closestPointResult = useFastVersion? 
+                        closestPointBvhAABB(projectedPosInObjFrame, settings.playerBallRadPadded, objInfo):
+                        closestPointBvhEfficient(projectedPosInObjFrame, objInfo, lowestAcceptedMultiplier);
 
                     if (closestPointResult){
                         var closestPointInObjectFrame = closestPointResult.closestPoint;

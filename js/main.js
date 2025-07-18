@@ -4465,6 +4465,7 @@ var guiSettingsForWorld = guiParams.worlds;
 
 var settings = {
 	playerBallRad:0.003,
+	playerBallRadPadded: 0.005
 }
 
 var worldColors=[];
