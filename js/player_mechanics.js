@@ -717,7 +717,7 @@ var playerMechanics = (() => {
             var resultMat = mat4.create();
             var foundClosestPointTriangleObjPreviously = foundClosestPointTriangleObj; 
             foundClosestPointTriangleObj = false;
-            processPossibles(initialCandidates, 2000);
+            processPossibles(initialCandidates, useFastVersion? 1000: 2000);
 
             function getSlowPossibles(possibleObjects){
                 //find set of candiate objects by their bounding spheres - 
@@ -781,9 +781,17 @@ var playerMechanics = (() => {
 
                     //var closestPointResult = closestPointBvhBruteForce(projectedPosInObjFrame, objInfo.bvh);
 
-                    var closestPointResult = useFastVersion? 
-                        closestPointBvhAABB(projectedPosInObjFrame, settings.playerBallRadPadded, objInfo):
-                        closestPointBvhEfficient(projectedPosInObjFrame, objInfo, lowestAcceptedMultiplier);
+                    var closestPointResult;
+                    if(useFastVersion){
+                        //this is hacky, but avoids running closestPointBvhEfficient if nothing nearby, and doesn't check huge num
+                        // triangles if there is! 
+                        nearby = closestPointBvhAABBIntialCheck(projectedPosInObjFrame, settings.playerBallRadPadded, objInfo);
+                        if (nearby){
+                            closestPointResult= closestPointBvhEfficient(projectedPosInObjFrame, objInfo, lowestAcceptedMultiplier);
+                        }
+                    }else{
+                        closestPointResult = closestPointBvhEfficient(projectedPosInObjFrame, objInfo, lowestAcceptedMultiplier);
+                    }
 
                     if (closestPointResult){
                         var closestPointInObjectFrame = closestPointResult.closestPoint;

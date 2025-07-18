@@ -301,21 +301,18 @@ function closestPointBvhEfficient(fromPoint, objInfo, lowestAcceptedMultiplier){
     return closestPointForTris(fromPoint, objInfo.bvh.verts, possibles);
 }
 
-function closestPointBvhAABB(fromPoint, queryRad, objInfo){
+function closestPointBvhAABBIntialCheck(fromPoint, queryRad, objInfo){
 
-    var radInObjSpace = queryRad/objInfo.scale;
+    var radInObjSpace = 2*queryRad/objInfo.scale;
 
     //some test AABB for sphere. note this is in projected space, so really should be ellipse.
     //just hope padding is enough. later gfinding of closest point also doesn't account for this.
     var queryAABB = [fromPoint.map(xx=> xx-radInObjSpace) , fromPoint.map(xx=> xx+radInObjSpace)];
 
     var possibles = collisionTestBvh(queryAABB, objInfo.bvh.tris);
-    
-    if (possibles.length == 0){
-        return false;
-    }
+        //TODO variant of collisionTestBvh that doesn't populate a list. just return bool.
 
-    return closestPointForTris(fromPoint, objInfo.bvh.verts, possibles);
+    return (possibles.length != 0);
 }
 
 
