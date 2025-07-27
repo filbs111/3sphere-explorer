@@ -37,16 +37,15 @@ void main(void) {
     float s = sqrt(1.0 - p*p);  //flip sign dependent on sign of m-phi? might not need to bother for small enough angle
     //can get direction from p,s
 
-    float pOverS = p/s; //project onto top plane. NOTE this doesn't cope with -ve s.
-    vec2 uCoords = normalize(modifiedTextureCoordB) * pOverS * 1.; 
-    vec3 toproject = vec3(uCoords, 1.0);
+    vec2 uCoords = normalize(modifiedTextureCoordB);
+    if (m<phi){s=-s;}
+    vec3 toproject = vec3(uCoords*p,s);
 
-
-    //new fisheye mapping. z component is just 1, so subsequent mapping could be simplified...
+    float hacknum = 0.97;
+    toproject.xy*=hacknum;  //temp hack so intermediate quad views cover final screen.
 
     vec3 afterrotate = vec3( uInvFadjusted.x*toproject.x , uInvFadjusted.y*toproject.y, 
                             toproject.z - adjust.x*toproject.x - adjust.y*toproject.y);
-
     vec3 sampleCoords = vec3( 0.5*afterrotate.x + afterrotate.z,
                                             0.5*afterrotate.y + afterrotate.z,
                                             2.0*afterrotate.z);
