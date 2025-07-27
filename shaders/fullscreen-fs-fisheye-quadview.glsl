@@ -24,10 +24,26 @@ void main(void) {
     //vec2 modifiedTextureCoord = 4.*(vTextureCoord-.5)/(uInvFadjusted); // guess bollocks....
 //vec2 modifiedTextureCoord = 2.*vTextureCoord/(uOversize*uInvF);; // guess bollocks....
     //vec2 modifiedTextureCoord = 2.*vTextureCoord-1.;
-    vec2 modifiedTextureCoord = vTextureCoord;
+    
+    //vec2 modifiedTextureCoord = vTextureCoord;
+    //vec3 toproject = vec3(0.0,0.0,1.0)*(2.0 + uVarOne*dot(modifiedTextureCoord,modifiedTextureCoord)) + vec3( modifiedTextureCoord.s, modifiedTextureCoord.t, 0.0);
 
-    vec3 toproject = vec3(0.0,0.0,1.0)*(2.0 + uVarOne*dot(modifiedTextureCoord,modifiedTextureCoord)) + vec3( modifiedTextureCoord.s, modifiedTextureCoord.t, 0.0);
-                                            
+    vec2 modifiedTextureCoordB = .5*vTextureCoord;
+    float lengthOfT = length(modifiedTextureCoordB);
+    float phi = -8.0*uVarOne;
+    float m = (1.0 + phi)/lengthOfT;
+    float onePlusMSq = 1.0 + m*m;
+    float p = (phi*m + sqrt(onePlusMSq - phi*phi)) / onePlusMSq;
+    float s = sqrt(1.0 - p*p);  //flip sign dependent on sign of m-phi? might not need to bother for small enough angle
+    //can get direction from p,s
+
+    float pOverS = p/s; //project onto top plane. NOTE this doesn't cope with -ve s.
+    vec2 uCoords = normalize(modifiedTextureCoordB) * pOverS * 1.; 
+    vec3 toproject = vec3(uCoords, 1.0);
+
+
+    //new fisheye mapping. z component is just 1, so subsequent mapping could be simplified...
+
     vec3 afterrotate = vec3( uInvFadjusted.x*toproject.x , uInvFadjusted.y*toproject.y, 
                             toproject.z - adjust.x*toproject.x - adjust.y*toproject.y);
 
