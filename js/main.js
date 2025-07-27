@@ -4427,10 +4427,10 @@ var guiParams={
 		useSpecular:true,
 		specularStrength:0.5,
 		specularPower:20.0,
-		quadView:true,
+		quadView:false,
 		quadViewCulling:true,
-		regularFisheye2:false,
-		fFudge:1
+		regularFisheye2:true,
+		fFudge:4
 	},
 	map:{
 		show:"off",
@@ -4710,7 +4710,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	displayFolder.add(guiParams.display, "quadView");
 	displayFolder.add(guiParams.display, "quadViewCulling");
 	displayFolder.add(guiParams.display, "regularFisheye2");
-	displayFolder.add(guiParams.display, "fFudge", 0.1,10,0.1);
+	displayFolder.add(guiParams.display, "fFudge", 0.1,5,0.1);
 	displayFolder.add(guiParams, "normalMove", 0,0.02,0.001);
 
 	var mapFolder = gui.addFolder('map');

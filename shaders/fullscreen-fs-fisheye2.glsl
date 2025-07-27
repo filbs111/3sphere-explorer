@@ -26,14 +26,30 @@ void main(void) {
     // 2) vec3(Q)
     // where 2) just shifts the output effective uv coords from range -1 to 1 to 0 to 1
 
-    float q = (2.0 + uVarOne*dot(vTextureCoord,vTextureCoord));
-    vec3 samplePoint = vec3(uInvF*vTextureCoord, q) + vec3(q);
+    // float q = (2.0 + uVarOne*dot(vTextureCoord,vTextureCoord));
+    // vec3 samplePoint = vec3(uInvF*vTextureCoord, q) + vec3(q);
 
-    // expect this actually differs from assumption used when doing reverse mapping, excepting where 
-    // uVarOne is 0 (rectilinear render) or -0.125 ( stereographic )
-    // because of wrong assumption. as a result, calculated HUD positions for intermediate fisheye are a bit wrong
+    // // expect this actually differs from assumption used when doing reverse mapping, excepting where 
+    // // uVarOne is 0 (rectilinear render) or -0.125 ( stereographic )
+    // // because of wrong assumption. as a result, calculated HUD positions for intermediate fisheye are a bit wrong
 
-    fragColor = textureProj(uSampler, samplePoint);
-    gl_FragDepth = textureProj(uSamplerDepthmap, samplePoint).r;
-    //^unnecessary if decide to use alpha to contain depth info for input to blur
+    // fragColor = textureProj(uSampler, samplePoint);
+    // gl_FragDepth = textureProj(uSamplerDepthmap, samplePoint).r;
+    // //^unnecessary if decide to use alpha to contain depth info for input to blur
+
+    vec2 modifiedTextureCoordB = .5*vTextureCoord;   //guess hack multiplier...
+    float lengthOfT = length(modifiedTextureCoordB);
+    float phi = -8.0*uVarOne;
+    float m = (1.0 + phi)/lengthOfT;
+    float onePlusMSq = 1.0 + m*m;
+    float p = (phi*m + sqrt(onePlusMSq - phi*phi)) / onePlusMSq;
+    float s = sqrt(1.0 - p*p);  //flip sign dependent on sign of m-phi? might not need to bother for small enough angle
+    //can get direction from p,s
+
+    float pOverS = p/s; //project onto top plane. NOTE this won't cope with -ve s.
+    vec2 uCoords = vec2(0.5) + normalize(modifiedTextureCoordB) * pOverS * uInvF* 0.5; 
+
+    fragColor = texture(uSampler, uCoords ); 
+    gl_FragDepth = texture(uSamplerDepthmap, uCoords ).r;
+
 }
