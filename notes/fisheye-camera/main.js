@@ -100,6 +100,11 @@ function renderCanvas(uAng, phi){
     
     var reversedApprox = tFromUApproxReverse(approxUFromT2, phi);
 
+    /*
+    basically this shows that can get t, fisheye position from u, real world position (quite simple)
+    then sucessfully map back to u ok (more complicated.)
+    */
+
     console.log({
         uAng,
         t,
@@ -136,18 +141,23 @@ function uFromT(t){
     return u;
 }
 
+//this is the key func. simplify?
 function dirVecFromT(t){
     //from notes.
     var M = (1+phi)/t;
     var onePlusMSq = 1 + M*M;
     var phiMOverOnePlusMSq = phi*M/onePlusMSq;
 
-    var p = phiMOverOnePlusMSq + Math.sqrt( (1-phi*phi)/onePlusMSq + phiMOverOnePlusMSq*phiMOverOnePlusMSq);
+    //var p = phiMOverOnePlusMSq + Math.sqrt( (1-phi*phi)/onePlusMSq + phiMOverOnePlusMSq*phiMOverOnePlusMSq);
+    var p = (phi*M + Math.sqrt(onePlusMSq - phi*phi)) / onePlusMSq;
+
     var s = Math.sqrt(1-p*p);   //but how to do for reverse direction with -s?
 
         //inelegant test. TODO better way to calculate s?
-    var critical_t = 1+ 1/phi;
-    if (t>critical_t){s=-s}
+    // var critical_t = 1+ 1/phi;
+    // if (t>critical_t){s=-s}
+
+    if (M<phi){s=-s}
 
     return [s,p];
 }

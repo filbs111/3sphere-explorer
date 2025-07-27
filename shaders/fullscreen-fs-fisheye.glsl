@@ -60,11 +60,13 @@ void main(void) {
     
     //fragColor = texture2DProj(uSampler, vec3(1.0,1.0,2.0)*(2.0 + uVarOne*dot(modifiedTextureCoord,modifiedTextureCoord)) + vec3(uInvF.st*modifiedTextureCoord.st, 0.0));
 
-    vec3 centrePoint = (2.0 + uVarOne*dot(modifiedTextureCoord,modifiedTextureCoord)) + vec3(uInvF*modifiedTextureCoord, 0.0);
-    vec4 MIDv4 = textureProj(uSampler, vec3(1.0,1.0,2.0)*centrePoint );
-    
-    fragColor = MIDv4;
+    //vec3 centrePoint = (2.0 + uVarOne*dot(modifiedTextureCoord,modifiedTextureCoord)) + vec3(uInvF*modifiedTextureCoord, 0.0);
+    //vec4 MIDv4 = textureProj(uSampler, vec3(1.0,1.0,2.0)*centrePoint );
 
-    gl_FragDepth = textureProj(uSamplerDepthmap, vec3(1.0,1.0,2.0)*centrePoint ).r;
+    float  q = 2.0 + uVarOne*dot(modifiedTextureCoord,modifiedTextureCoord);
+    vec3 samplePoint = vec3(uInvF*modifiedTextureCoord, q) + vec3(q);
+    fragColor = textureProj(uSampler, samplePoint );
+
+    gl_FragDepth = textureProj(uSamplerDepthmap, samplePoint ).r;
     //^unnecessary if decide to use alpha to contain depth info for input to blur
 }
