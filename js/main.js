@@ -4427,7 +4427,7 @@ var guiParams={
 		useSpecular:true,
 		specularStrength:0.5,
 		specularPower:20.0,
-		quadView:false,
+		quadView:true,
 		quadViewCulling:true,
 		regularFisheye2:true,
 		fFudge:4
@@ -4449,7 +4449,7 @@ var guiParams={
 		test1:false
 	},
 	debug:{
-		hudTest:true,
+		hudTest:false,
 		closestPoint:false,
 		buoys:false,
 		nmapUseShader2:true,
