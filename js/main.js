@@ -70,6 +70,7 @@ var gunBuffers={};
 var gunBvh={};
 var su57Buffers={};
 var frigateBuffers={};
+var frigateBvh={};
 var icoballBuffers={};
 var hyperboloidBuffers={};
 var meshSphereBuffers={};
@@ -398,7 +399,11 @@ function initBuffers(){
 		gunBuffers, gunBvh, 0.1, gunWorldData, 3);
 
 	loadBuffersFromObj2Or3File(su57Buffers, "./data/miscobjs/t50/su57yz-4a.obj2", loadBufferData);
-	loadBuffersFromObj2Or3File(frigateBuffers, "./data/frigate/frigate.obj2", loadBufferData);
+
+	var frigateWorldData = someObjectMatrices.map(xx=> {
+		return {mat: xx.mat, transposedMat: xx.transposedMat, world:2}});
+	loadObjThenAddBvhToLevels(loadBuffersFromObj2Or3File, "./data/frigate/frigate.obj2", 
+		frigateBuffers, frigateBvh, 0.01, frigateWorldData, 3);
 
 	loadBuffersFromObjFile(meshSphereBuffers, "./data/miscobjs/mesh-sphere.obj", loadBufferData);
 	
@@ -437,7 +442,7 @@ function initBuffers(){
 	//now bvhs ready, create the following which references them.
 
 	addManyObjectsToWorld2(0, someObjectMatrices, teapotBuffers, teapotBvh, 0.4);
-	addManyObjectsToWorld2(2, someObjectMatrices, dodecaFrameBuffers2, dodecaFrameBvh2, 0.2);
+	//addManyObjectsToWorld2(2, someObjectMatrices, dodecaFrameBuffers2, dodecaFrameBvh2, 0.2);
 
 	//TODO array for each object type? include direct reference to rendering info (instead of matching bvh later)
 
@@ -2528,24 +2533,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		}
 	}
 	
-	if (guiParams.drawShapes.frigate && frigateBuffers.isLoaded){
-		activeShaderProgram = shaderProgramTexmap;
-		shaderSetup(activeShaderProgram, frigateTexture);
-		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
-
-		modelScale = 0.001*guiParams.drawShapes.frigateScale;
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
-		mat4.set(invertedWorldCamera, mvMatrix);
-		rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
-		mat4.multiply(mvMatrix,frigateMatrix);
-
-		mat4.identity(mMatrix);rotate4mat(mMatrix, 0, 1, duocylinderSpin);
-		mat4.multiply(mMatrix, frigateMatrix);
-		drawObjectFromBuffers(frigateBuffers, activeShaderProgram);
-	}
-
-
-
+	
 	//use a cube for turret base plate
 	//TODO generalise this code for rotation to draw etc.
 
@@ -2566,7 +2554,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 	activeShaderProgram = shaderProgramTexmap;
 	shaderSetup(activeShaderProgram, diffuseTexture);	//TODO different texture.
-	modelScale = 0.005*guiParams.drawShapes.frigateScale;	//TODO different
+	modelScale = 0.005*guiParams.drawShapes.turretScale;	//TODO different
 	mat4.set(invertedWorldCamera, mvMatrix);
 	rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
 	mat4.multiply(mvMatrix,turretBaseMatrix);
@@ -2605,6 +2593,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		{buffersToDraw:octoFractalBuffers, bvh:octoFractalBvh, shader:shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ]},
 		{buffersToDraw:gunBuffers, bvh:gunBvh, shader:shaderProgramColored},
 		{buffersToDraw:teapotBuffers, bvh:teapotBvh, shader:shaderProgramColored},
+		{buffersToDraw:frigateBuffers, bvh:frigateBvh, shader:shaderProgramTexmap, tex:frigateTexture, color:colorArrs.veryDarkGray }
 	].forEach(info => {
 		var objs = bvhObjsForWorld[worldA].objList.filter(objInfo=> objInfo.bvh == info.bvh);	//TODO prefilter
 		if (objs.length >0){
@@ -2613,7 +2602,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 				activeShaderProgram = desiredProgram;
 				shaderSetup(activeShaderProgram);
 			}
-			uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
+			uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", info.color?? colorArrs.white);
 
 			if (info.tex){
 				bind2dTextureIfRequired(info.tex);
@@ -4034,7 +4023,7 @@ var portalMats = [firstPortalSide.matrix, firstPortalSide.otherps.matrix];	//doe
 
 var playerCameraInterp = newIdMatWithQuats();
 var offsetPlayerCamera = newIdMatWithQuats();
-var playerContainer = {matrix:playerCamera, world:3}
+var playerContainer = {matrix:playerCamera, world:2}
 
 xyzmove4mat(playerCamera,[0,-0.4,0.1]);	//move start point towards problem area where collision distance testing many objs = slowdown
 
@@ -4344,7 +4333,7 @@ var guiParams={
 	worlds:[
 		{fogColor:'#2f9a16',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:true,seaLevel:0,seaPeakiness:0.0},
 		{fogColor:'#7496a0',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
-		{fogColor:'#bbbbbb',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
+		{fogColor:'#bbbbbb',duocylinderModel:"none",spinRate:0,spin:0,seaActive:true,seaLevel:-0.002,seaPeakiness:0.0},
 		{fogColor:'#111111',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
 		{fogColor:'#444444',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}, //4
 		{fogColor:'#888888',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}, //5
@@ -4372,8 +4361,7 @@ var guiParams={
 		singleBufferStonehenge:false,
 		roads:false,
 		singleBufferRoads:false,
-		frigate:true,
-		frigateScale:5,
+		turretScale:5,
 		viaduct: 'none'
 	},
 	'random boxes':{
@@ -4522,9 +4510,6 @@ var bvhObjsForWorld=guiParams.worlds.map(xx=>{return {objList:[],worldBvh:null,g
 
 var explodingBoxMatrix = someObjectMatrices[0].mat;
 
-
-var frigateMatrix=mat4.identity();
-xyzmove4mat(frigateMatrix,[0,.7854,0]);
 var buildingMatrix=mat4.identity();
 xyzmove4mat(buildingMatrix,[0,.7,0]);
 var transposedBuildingMatrix = mat4.create(buildingMatrix);
@@ -4658,8 +4643,7 @@ function init(){
 	drawShapesFolder.add(guiParams.drawShapes,"singleBufferStonehenge");
 	drawShapesFolder.add(guiParams.drawShapes,"roads");
 	drawShapesFolder.add(guiParams.drawShapes,"singleBufferRoads");
-	drawShapesFolder.add(guiParams.drawShapes,"frigate");
-	drawShapesFolder.add(guiParams.drawShapes,"frigateScale",0.1,20.0,0.1);
+	drawShapesFolder.add(guiParams.drawShapes,"turretScale",0.1,20.0,0.1);
 	drawShapesFolder.add(guiParams.drawShapes,"viaduct", ['none','individual','instanced']);
 
 	gui.add(guiParams,"player model", ["spaceship","plane","ball"]);

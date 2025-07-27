@@ -55,6 +55,12 @@ function createBvhFrom3dObjectData(sourceData, bvhToPopulate, vertAttrs=3){
         ];
         var crossp = crossProduct(edgeVecs[0], edgeVecs[1]);
         var normal = normalise(crossp);
+        
+        // if (isNaN(normal[0])){
+        //     //seems frigate has some degenerate tris! will do post filter. ideally should clean up 3d model data
+        //     console.log({problem:"cross prod is nan!", edgeVecs, crossp, normal} );
+        // }
+
         var distFromOrigin = dotProduct(triVerts[0], normal);
 
         //edge normals
@@ -77,7 +83,7 @@ function createBvhFrom3dObjectData(sourceData, bvhToPopulate, vertAttrs=3){
             centreMorton,    //note only used for ordering. TODO remove once used?
             //centreHilbert
         }
-    });
+    }).filter(xx => !isNaN(xx.normal[0]));
 
     trisWithAABB.sort((a,b) => a.centreMorton - b.centreMorton);  //sort by morton code.
     //trisWithAABB.sort((a,b) => a.centreHilbert - b.centreHilbert);  //sort by hilbert code.
