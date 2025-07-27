@@ -957,17 +957,16 @@ function drawRegularScene(frameTime){
 			var oversizedViewport = [gl.viewportWidth, gl.viewportHeight].map(xx => 2*Math.floor(oversize*xx/2));
 
 			window.fsq = sumInvSqs;	 //so can access elsewhere. TODO organise fisheye stuff
+			
+			window.fsq = Math.pow(guiParams.display.fFudge,2);	//use to manually line up test points. TODO automate
 
 			//FOV presented is different for quad view and regularFisheye2! (TODO make same)
 			//educated guess, seems about right...
-			if (guiParams.display.quadView){
+			if (guiParams.display.quadView || guiParams.display.regularFisheye2){
 				window.fsq = uF[1]*uF[1];
+				//NOTE This appears not quite right after updating fisheye mapping to work properly with HUD, map circles to ellipses 2025-07-27
+				// but is near enough with current default FOV, uVarOne
 			}
-			if (!guiParams.display.quadView){	//&& guiParams.display.regularFisheye2){
-				window.fsq = Math.pow(guiParams.display.fFudge,2);	//use to manually line up test points. TODO automate
-			}
-
-
 
 			var fisheyeParams={
 				uInvF : uF.map(elem=>1/elem),
