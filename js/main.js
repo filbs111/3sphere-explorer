@@ -960,9 +960,13 @@ function drawRegularScene(frameTime){
 
 			//FOV presented is different for quad view and regularFisheye2! (TODO make same)
 			//educated guess, seems about right...
-			if (guiParams.display.quadView || guiParams.display.regularFisheye2){
+			if (guiParams.display.quadView){
 				window.fsq = uF[1]*uF[1];
 			}
+			if (!guiParams.display.quadView){	//&& guiParams.display.regularFisheye2){
+				window.fsq = Math.pow(guiParams.display.fFudge,2);	//use to manually line up test points. TODO automate
+			}
+
 
 
 			var fisheyeParams={
@@ -1283,14 +1287,19 @@ function drawRegularScene(frameTime){
 			outPos[2] = outPos[2] + sphereShift;
 			
 			//scale such that pos[2] retains the same value for screen corner point at fx,fy
+			// this f represents a direction would like to map to corner of screen
+
 			
 			//root(fsq) is opp, 1 is adj. hyp is root(fsq+1)
 			//stretch such that hyp is 1. 
 			//adj = 1/root(fsq+1)
+			//normalised to hyp=1 because result (adj,opp) is a unit vector representing the direction normalize(1,f) that want to map to 
+			// corner of screen
+			// adj/(adj-sphereShift) is AFAIK because want this point (with specified f val) to retain its position on screen.
 
 			//then multiply pos by adj/(-shift+adj)
 			var adj = 1/Math.sqrt(1+window.fsq);
-			outPos[2] = outPos[2]*adj/(adj-sphereShift); 
+			outPos[2] = outPos[2]*adj/(adj-sphereShift);
 
 			return outPos;
 		}
@@ -1386,7 +1395,7 @@ function drawRegularScene(frameTime){
 			// or fix HUD mapping
 			var possq = pos.map(xx=>xx*xx);
 			if (!(skipCulling || guiParams.debug.hudTest) && possq[2]*15 < possq[0]+possq[1]){
-				return;
+			//	return;
 			}
 
 			//scale*= 0.01/pos[2];
@@ -4420,7 +4429,8 @@ var guiParams={
 		specularPower:20.0,
 		quadView:true,
 		quadViewCulling:true,
-		regularFisheye2:false
+		regularFisheye2:false,
+		fFudge:1
 	},
 	map:{
 		show:"off",
@@ -4439,7 +4449,7 @@ var guiParams={
 		test1:false
 	},
 	debug:{
-		hudTest:false,
+		hudTest:true,
 		closestPoint:false,
 		buoys:false,
 		nmapUseShader2:true,
@@ -4700,6 +4710,7 @@ displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(s
 	displayFolder.add(guiParams.display, "quadView");
 	displayFolder.add(guiParams.display, "quadViewCulling");
 	displayFolder.add(guiParams.display, "regularFisheye2");
+	displayFolder.add(guiParams.display, "fFudge", 0.1,10,0.1);
 	displayFolder.add(guiParams, "normalMove", 0,0.02,0.001);
 
 	var mapFolder = gui.addFolder('map');

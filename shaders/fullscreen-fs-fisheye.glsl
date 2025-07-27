@@ -63,10 +63,37 @@ void main(void) {
     //vec3 centrePoint = (2.0 + uVarOne*dot(modifiedTextureCoord,modifiedTextureCoord)) + vec3(uInvF*modifiedTextureCoord, 0.0);
     //vec4 MIDv4 = textureProj(uSampler, vec3(1.0,1.0,2.0)*centrePoint );
 
-    float  q = 2.0 + uVarOne*dot(modifiedTextureCoord,modifiedTextureCoord);
-    vec3 samplePoint = vec3(uInvF*modifiedTextureCoord, q) + vec3(q);
-    fragColor = textureProj(uSampler, samplePoint );
 
-    gl_FragDepth = textureProj(uSamplerDepthmap, samplePoint ).r;
-    //^unnecessary if decide to use alpha to contain depth info for input to blur
+
+    // float  q = 2.0 + uVarOne*dot(modifiedTextureCoord,modifiedTextureCoord);
+    // vec3 samplePoint = vec3(uInvF*modifiedTextureCoord, q) + vec3(q);
+    // fragColor = textureProj(uSampler, samplePoint );
+    // gl_FragDepth = textureProj(uSamplerDepthmap, samplePoint ).r;
+    // //^unnecessary if decide to use alpha to contain depth info for input to blur   
+
+    //var p = (phi*M + Math.sqrt(onePlusMSq - phi*phi)) / onePlusMSq;
+    //phi is something like -8*uVarOne
+    //float m = (1+phi)/t ... TODO formulate neatly for (x,y) ?#
+
+    //vec2 inputT = 4.*(vTextureCoord - 0.5);         //leave out uInvF?
+
+    //vec2 modifiedTextureCoordB = vec2 modifiedTextureCoord;
+    vec2 modifiedTextureCoordB = 4.*(vTextureCoord - 0.5)/(uInvF * uOversize);
+        //can plug in some multiplier here to alter how big on screen final output is.
+        //the stuff AFTER this is ok, and changing it makes mapping wrong.
+
+    float lengthOfT = length(modifiedTextureCoordB);
+    float phi = -8.0*uVarOne;
+    float m = (1.0 + phi)/lengthOfT;
+    float onePlusMSq = 1.0 + m*m;
+    float p = (phi*m + sqrt(onePlusMSq - phi*phi)) / onePlusMSq;
+    float s = sqrt(1.0 - p*p);  //flip sign dependent on sign of m-phi? might not need to bother for small enough angle
+    //can get direction from p,s
+
+    float pOverS = p/s; //project onto top plane. NOTE this won't cope with -ve s.
+    //vec2 uCoords = vec2(0.5) + normalize(modifiedTextureCoordB) * pOverS * (uInvF*uOversize) * 0.125;
+    vec2 uCoords = vec2(0.5) + normalize(modifiedTextureCoordB) * pOverS * uInvF * .5;
+
+    fragColor = texture(uSampler, uCoords ); 
+    gl_FragDepth = texture(uSamplerDepthmap, uCoords ).r;
 }
