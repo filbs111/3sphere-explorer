@@ -93,7 +93,7 @@ var sixteenCellScale= 4/Math.sqrt(6);	//in the model, vertices are 0.75*sqrt(2) 
 var sixhundredCellScale = 0.386;	//todo use correct scale
 
 //var sshipModelScale=0.0001;
-var sshipModelScale=0.00005;
+var sshipModelScale=0.00002;
 var duocylinderSurfaceBoxScale = 0.025;
 
 
@@ -403,7 +403,7 @@ function initBuffers(){
 	var frigateWorldData = someObjectMatrices.map(xx=> {
 		return {mat: xx.mat, transposedMat: xx.transposedMat, world:2}});
 	loadObjThenAddBvhToLevels(loadBuffersFromObj2Or3File, "./data/frigate/frigate.obj2", 
-		frigateBuffers, frigateBvh, 0.01, frigateWorldData, 3);
+		frigateBuffers, frigateBvh, 0.004, frigateWorldData, 3);
 
 	loadBuffersFromObjFile(meshSphereBuffers, "./data/miscobjs/mesh-sphere.obj", loadBufferData);
 	
@@ -4461,8 +4461,8 @@ var guiParams={
 var guiSettingsForWorld = guiParams.worlds;
 
 var settings = {
-	playerBallRad:0.003,
-	playerBallRadPadded: 0.005
+	playerBallRad:0.0015,
+	playerBallRadPadded: 0.0025
 }
 
 var worldColors=[];

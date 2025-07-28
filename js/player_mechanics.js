@@ -40,7 +40,7 @@ var playerMechanics = (() => {
     function update(mouseInfo, timeStep, timeStepMultiplier, moveSpeed, rotateSpeed, activeGp){
         
         var playerPos = playerCamera.slice(12);
-        var thrust = 0.001*timeStep;	//TODO make keyboard/gamepad fair! currently thrust, moveSpeed config independent!
+        var thrust = 0.00025*timeStep;	//TODO make keyboard/gamepad fair! currently thrust, moveSpeed config independent!
         var angVelDampMultiplier=Math.pow(0.85, timeStep/10);
         var duoCylinderAngVelConst = guiSettingsForWorld[playerContainer.world].spinRate;
         var autoFireCountdownStartVal=Math.ceil(5 / (timeStep/10));
