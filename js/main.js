@@ -5016,7 +5016,7 @@ var iterateMechanics = (function iterateMechanics(){
 		mat4.set(invertedWorldCamera, invertedWorldCameraDuocylinderFrame);
 		rotate4mat(invertedWorldCameraDuocylinderFrame, 0, 1, guiSettingsForWorld[playerContainer.world].spin);
 		
-		var soundspd = 2;	//TODO change delaynode creation param (faster sound means less possible delay)
+		var soundspd = 0.5;	//TODO change delaynode creation param (faster sound means less possible delay)
 		
 		for (var ee in explosions){
 			var singleExplosion = explosions[ee];
@@ -5330,7 +5330,7 @@ var iterateMechanics = (function iterateMechanics(){
 			var explosionParticles = explosionParticleArrs[bullet.world];
 
 			if (!moveWithDuocylinder){
-				new Explosion(bullet, 0.0001, [1,0.5,0.25], false, true);
+				new Explosion(bullet, 0.00005, [1,0.5,0.25], false, true);
 				explosionParticles.makeExplosion(matrix.slice(12), frameTime, color,0);
 			}else{
 				explosionParticles.makeExplosion(matrix.slice(12), frameTime, color,0);
@@ -5338,7 +5338,7 @@ var iterateMechanics = (function iterateMechanics(){
 					//should see slower particles fall to ground, but won't look good yet because particles disappear quickly, abruptly.
 
 				rotate4matCols(matrix, 0, 1, guiSettingsForWorld[bullet.world].spin);	//get bullet matrix in frame of duocylinder. might be duplicating work from elsewhere.
-				new Explosion(bullet, 0.0001, [0.2,0.4,0.6],true, true);	//different colour for debugging
+				new Explosion(bullet, 0.00005, [0.2,0.4,0.6],true, true);	//different colour for debugging
 			}
 
 			matPool.destroy(matrix);
