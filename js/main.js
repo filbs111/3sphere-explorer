@@ -4388,8 +4388,8 @@ var guiParams={
 	display:{
 		cameraType:"far 3rd person",
 		cameraAttachedTo:"player vehicle",
-		cameraZoom:2.2,
-		uVarOne:-0.0425,
+		cameraZoom:2.4,
+		uVarOne:-0.0525,
 		vFOV:"",
 		hFOV:"",
 		flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
