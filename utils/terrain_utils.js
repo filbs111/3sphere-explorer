@@ -332,6 +332,7 @@ function drawTerrain2(wSettings){
 
     gl.useProgram(shaderProg);
     enableDisableAttributes(shaderProg);
+    setupShaderAtmos(shaderProg, wSettings.worldA);
     prepBuffersForDrawing(terrain2Buffer, shaderProg);
 
     bind2dTextureIfRequired(terrain2Texture);
@@ -370,6 +371,7 @@ function drawTerrain2BlockStrips(wSettings){
 
     gl.useProgram(shaderProg);
     enableDisableAttributes(shaderProg);
+    setupShaderAtmos(shaderProg, wSettings.worldA);
     prepBuffersForDrawing(terrain2Buffer, shaderProg);
 
     bind2dTextureIfRequired(terrain2Texture);

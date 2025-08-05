@@ -40,11 +40,12 @@ var playerMechanics = (() => {
     function update(mouseInfo, timeStep, timeStepMultiplier, moveSpeed, rotateSpeed, activeGp){
         
         var playerPos = playerCamera.slice(12);
+        var playerWorldSettings = guiSettingsForWorld[playerContainer.world];
+
         var thrust = 0.00025*timeStep;	//TODO make keyboard/gamepad fair! currently thrust, moveSpeed config independent!
         var angVelDampMultiplier=Math.pow(0.85, timeStep/10);
-        var duoCylinderAngVelConst = guiSettingsForWorld[playerContainer.world].spinRate;
+        var duoCylinderAngVelConst = playerWorldSettings.spinRate;
         var autoFireCountdownStartVal=Math.ceil(5 / (timeStep/10));
-
 
         //auto-roll upright. with view to using for character controller
         //could put this outside stepspeed if didn't decay towards 0 roll (could do immediately like do with spinCorrection
@@ -200,7 +201,7 @@ var playerMechanics = (() => {
         }
         
         //get the current atmospheric density.
-        var atmosThick = 0.001*guiParams.display.atmosThickness;	//1st constant just pulled out of the air.
+        var atmosThick = 0.001*playerWorldSettings.atmosThickness;	//1st constant just pulled out of the air.
         atmosThick*=Math.pow(2.71, guiParams.display.atmosContrast*(playerPos[0]*playerPos[0] + playerPos[1]*playerPos[1] -0.5)); //as atmosScale increases, scale height decreases
 
 

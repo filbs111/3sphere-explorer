@@ -1994,7 +1994,16 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 	({worldA,worldInfo, localVecFogColor, infoForPortals, sshipDrawMatrices} = wSettings);
-		
+	
+	function setupAtmosAndPrepBuffersForDrawing(objBuffer, shaderProg){
+		setupShaderAtmos(shaderProg, worldA);
+		prepBuffersForDrawing(objBuffer, shaderProg);
+	}
+	function drawObjectFromBuffers2(bufferObj, shaderProg){
+		setupShaderAtmos(shaderProg, worldA);
+		drawObjectFromBuffers(bufferObj, shaderProg);
+	}
+
 	if (!isCubemapView && worldInfo.duocylinderModel == "l3dt-blockstrips"){
 		updateTerrain2QuadtreeForCampos(worldCamera.slice(12), worldInfo.spin);
 	}
@@ -2085,7 +2094,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		//gl.activeTexture(gl.TEXTURE0);
 		bind2dTextureIfRequired(texture);
 		
-		drawObjectFromBuffers(explodingCubeBuffers, activeShaderProgram);	
+		drawObjectFromBuffers2(explodingCubeBuffers, activeShaderProgram);	
 	}
 	
 	boxSize = 0.1;
@@ -2132,8 +2141,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 			boxSize = guiParams['random boxes'].size;
 			boxRad = boxSize*Math.sqrt(3);
 			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
-									
-			prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
+			
+			setupAtmosAndPrepBuffersForDrawing(cubeBuffers, activeShaderProgram);
 			
 			for (var ii=0;ii<numRandomBoxes;ii++){
 				var thisMat = randomMats[ii];
@@ -2158,8 +2167,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 			boxSize = guiParams['random boxes'].size;
 			boxRad = boxSize*Math.sqrt(3);
 			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
-						
-			prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
+			
+			setupAtmosAndPrepBuffersForDrawing(cubeBuffers, activeShaderProgram);
 			
 			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uVMatrix, false, invertedWorldCameraDuocylinderFrame);	//TODO what to pass in??
 			//gl.uniformMatrix4fv(activeShaderProgram.uniforms.uVMatrix, false, worldCamera);	//TODO what to pass in??
@@ -2196,7 +2205,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 			
 			//numRandomBoxes = Math.min(randomMats.length, numRandomBoxes);	//todo figure out how to draw part of array of boxes. also for "singleBuffer" version
 			
-			prepBuffersForDrawing(objBufferForInstances, activeShaderProgram);
+			setupAtmosAndPrepBuffersForDrawing(objBufferForInstances, activeShaderProgram);
+
 
 			var matrixBuffers = randBoxBuffers.randMatrixBuffers;	//todo neater selection code (array of terrain types?) TODO select mats array for other drawing types (eg indivVsMatmult)
 			if (['procTerrain','voxTerrain','voxTerrain2','voxTerrain3'].includes(worldInfo.duocylinderModel)) {
@@ -2345,7 +2355,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	
 	
 	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale);
-	prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
+	setupAtmosAndPrepBuffersForDrawing(cubeBuffers, activeShaderProgram);
 	
 	//draw boxes on duocylinder surface. 
 	if (guiParams.drawShapes.towers){	//note currently toggles drawing for all boxes using duocylinder positioning method, including demo axis objects
@@ -2358,7 +2368,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	activeShaderProgram=shaderProgramTexmap;
 	shaderSetup(activeShaderProgram, texture);
 	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale);
-	prepBuffersForDrawing(cubeBuffers, activeShaderProgram);
+	setupAtmosAndPrepBuffersForDrawing(cubeBuffers, activeShaderProgram);
 	
 	if (guiParams.drawShapes.stonehenge){	
 		for (var bb of duocylinderBoxInfo.stonehenge.list){
@@ -2483,7 +2493,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	//todo this should take buffers, shaders and call prepBuffersForDrawing, drawObjectFromPreppedBuffers
 	function drawArrayOfModels(cellMats, cullRad, buffers, shaderProg){
 		shaderProg = shaderProg || shaderProgramTexmap;
-		prepBuffersForDrawing(buffers, shaderProg);
+		setupAtmosAndPrepBuffersForDrawing(buffers, shaderProg);
 		numDrawn = 0;
 		if (!cullRad){
 			drawArrayForFunc(function(){
@@ -2515,7 +2525,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	//drawArrayOfModels + setting scale, without option to cull by bounding sphere, used for new bvh objects
 	function drawArrayOfModels2(objDataArr, buffers, shaderProg){
 		shaderProg = shaderProg || shaderProgramTexmap;
-		prepBuffersForDrawing(buffers, shaderProg);
+		setupAtmosAndPrepBuffersForDrawing(buffers, shaderProg);
 		drawArrayForFunc(function(){
 			drawObjectFromPreppedBuffers(buffers, shaderProg);
 			});
@@ -2563,19 +2573,19 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	mat4.multiply(mMatrix, turretBaseMatrix);
 
 	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale/4,modelScale);	//base plate
-	drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
+	drawObjectFromBuffers2(cubeBuffers, activeShaderProgram);
 
 	rotate4mat(mvMatrix, 2, 0, turretSpin);
 	rotate4mat(mMatrix, 2, 0, turretSpin);
 
 	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale/2,modelScale,modelScale/2);
-	drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
+	drawObjectFromBuffers2(cubeBuffers, activeShaderProgram);
 
 	rotate4mat(mvMatrix, 1, 2, -turretElev);
 	rotate4mat(mMatrix, 1, 2, -turretElev);
 	
 	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale/8,modelScale/8,modelScale*2);	//gun
-	drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
+	drawObjectFromBuffers2(cubeBuffers, activeShaderProgram);
 
 	if (guiParams.display.cameraAttachedTo == "turret"){
 		setMat4FromToWithQuats(turretBaseMatrix, offsetPlayerCamera);		
@@ -2633,7 +2643,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
 
 		bind2dTextureIfRequired(bricktex);
-		prepBuffersForDrawing(bridgeBuffers, activeShaderProgram);
+		setupAtmosAndPrepBuffersForDrawing(bridgeBuffers, activeShaderProgram);
 
 		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uVMatrix, false, invertedWorldCameraDuocylinderFrame);
 
@@ -2663,7 +2673,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
 
 		bind2dTextureIfRequired(bricktex);
-		prepBuffersForDrawing(bridgeBuffers, activeShaderProgram);
+		setupAtmosAndPrepBuffersForDrawing(bridgeBuffers, activeShaderProgram);
 
 		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uVMatrix, false, invertedWorldCameraDuocylinderFrame);
 
@@ -2710,14 +2720,16 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	gl.useProgram(activeShaderProgram);
 	performCommon4vecShaderSetup(activeShaderProgram, wSettings, "not normal map");
 
+	var worldDrawingNow = wSettings.worldA;
+
 	if (guiParams["random boxes"].drawType == 'singleBuffer'){
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.randBoxes);
-		drawTennisBall(randBoxBuffers, activeShaderProgram);	//todo draw subset of buffer according to ui controlled number
+		drawTennisBall(randBoxBuffers, activeShaderProgram, worldDrawingNow);	//todo draw subset of buffer according to ui controlled number
 	}
 	
 	if (guiParams.drawShapes.singleBufferStonehenge){
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.gray);
-		drawTennisBall(stonehengeBoxBuffers, activeShaderProgram);
+		drawTennisBall(stonehengeBoxBuffers, activeShaderProgram, worldDrawingNow);
 	}
 	
 	activeShaderProgram = guiParams.display.useSpecular ? shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscardNormalmapVcolorAndDiffuse[ guiParams.display.atmosShader ];
@@ -2726,7 +2738,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	
 	if (guiParams.drawShapes.singleBufferTowers){
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);	//uColor is redundant here since have vertex colors. TODO lose it?
-		drawTennisBall(towerBoxBuffers, activeShaderProgram);
+		drawTennisBall(towerBoxBuffers, activeShaderProgram, worldDrawingNow);
 	}
 	
 	activeShaderProgram = guiParams.display.useSpecular ? shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongAndDiffuse[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscardNormalmapAndDiffuse[ guiParams.display.atmosShader ];
@@ -2735,7 +2747,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	
 	if (guiParams.drawShapes.singleBufferRoads){
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.darkGray);
-		drawTennisBall(roadBoxBuffers, activeShaderProgram);
+		drawTennisBall(roadBoxBuffers, activeShaderProgram, worldDrawingNow);
 	}
 	/*
 	activeShaderProgram = shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ];
@@ -2782,7 +2794,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,mMatrix);
 
-		drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
+		drawObjectFromBuffers2(cubeBuffers, activeShaderProgram);
 	}
 	
 	//draw objects without textures
@@ -2811,12 +2823,12 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix,objInfo.mat);
 			mat4.set(objInfo.mat, mMatrix);	
-			drawObjectFromBuffers(pillarBuffers, activeShaderProgram);
+			drawObjectFromBuffers2(pillarBuffers, activeShaderProgram);
 		});
 
 	//NOTE this is inefficient but is just debug drawing (could make fast by instancing.)
 	if (guiParams.debug.bvhBoundingSpheres){
-		prepBuffersForDrawing(sphereBuffersHiRes, activeShaderProgram);
+		setupAtmosAndPrepBuffersForDrawing(sphereBuffersHiRes, activeShaderProgram);
 		bvhObjsForWorld[worldA].objList.forEach(bvhObj => {
 			var modelScale = bvhObj.scale * bvhObj.bvh.boundingSphereRadius;
 			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
@@ -2838,11 +2850,11 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		mat4.multiply(mvMatrix,teapotMatrix);		
 		xyzmove4mat(mvMatrix,[0,0.695,0]);	
 		xyzrotate4mat(mvMatrix,[-Math.PI/2,0,0]);	
-		drawObjectFromBuffers(hyperboloidBuffers, shaderProgramColored);
+		drawObjectFromBuffers2(hyperboloidBuffers, shaderProgramColored);
 		*/
 		
 		//reuse logic for drawing towers
-		prepBuffersForDrawing(hyperboloidBuffers, activeShaderProgram);
+		setupAtmosAndPrepBuffersForDrawing(hyperboloidBuffers, activeShaderProgram);
 		
 		for (var bb of duocylinderBoxInfo.hyperboloids.list){
 			drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, hyperboloidBuffers, invertedWorldCameraDuocylinderFrame);
@@ -2855,12 +2867,12 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		modelScale=0.1;
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale/4,modelScale/4,modelScale);
 
-		prepBuffersForDrawing(pillarBuffers, activeShaderProgram);
+		setupAtmosAndPrepBuffersForDrawing(pillarBuffers, activeShaderProgram);
 		for (var ii=0;ii<pillarMatrices.length;ii++){
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix,pillarMatrices[ii]);
 			mat4.set(pillarMatrices[ii], mMatrix);
-			drawObjectFromBuffers(pillarBuffers, activeShaderProgram);
+			drawObjectFromBuffers2(pillarBuffers, activeShaderProgram);
 		}
 	}
 	if (guiParams.drawShapes.bendyPillars && pillarBuffers.isLoaded){
@@ -2886,7 +2898,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		modelScale=0.1;
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale/4,modelScale/4,modelScale);
 
-		prepBuffersForDrawing(pillarBuffers, activeShaderProgram);
+		setupAtmosAndPrepBuffersForDrawing(pillarBuffers, activeShaderProgram);
 
 		for (var ii=0;ii<pillarMatrices.length -1;ii++){
 			mat4.set(invertedWorldCamera, mvMatrixA);
@@ -2929,9 +2941,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 					var emitColor = Math.sin(frameTime*0.01);
 					//emitColor*=emitColor
 					gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, emitColor, emitColor, emitColor/2);	//YELLOW
-					//gl.uniform3fv(activeShaderProgram.uniforms.uEmitColor, [0.5, 0.5, 0.5]);
-					drawObjectFromBuffers(sphereBuffers, activeShaderProgram);
-					//drawObjectFromBuffers(icoballBuffers, activeShaderProgram);
+					drawObjectFromBuffers2(sphereBuffers, activeShaderProgram);
 				}
 				break;
 			case "box":
@@ -2943,7 +2953,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 					gl.useProgram(activeShaderProgram);
 					gl.uniform3f(activeShaderProgram.uniforms.uModelScale, targetRad,targetRad,targetRad);
 					uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
-					drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
+					drawObjectFromBuffers2(cubeBuffers, activeShaderProgram);
 					activeShaderProgram = savedActiveProg;
 					gl.useProgram(activeShaderProgram);
 				}
@@ -2965,7 +2975,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		var fifteenDegs = Math.PI*15/180;
 		xyzmove4mat(mvMatrix,[0,0,0.01]);
 		for (var ii=0;ii<8;ii++){
-			drawObjectFromBuffers(cubeBuffers, activeShaderProgram);
+			drawObjectFromBuffers2(cubeBuffers, activeShaderProgram);
 			xyzmove4mat(mvMatrix,[0,0,-0.01]);
 			xyzrotate4mat(mvMatrix,[0,fifteenDegs,0]);
 			xyzmove4mat(mvMatrix,[0,0,0.01]);
@@ -3079,7 +3089,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		mat4.set(rotatedMatrix, mMatrix);
 
 		if (buffers.isLoaded){
-			drawObjectFromBuffers(buffers, activeShaderProgram);
+			drawObjectFromBuffers2(buffers, activeShaderProgram);
 		}
 		
 		//draw guns
@@ -3093,7 +3103,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 			bind2dTextureIfRequired(cannonTexture);
 			
-			prepBuffersForDrawing(gunBuffers, activeShaderProgram);
+			setupAtmosAndPrepBuffersForDrawing(gunBuffers, activeShaderProgram);
 			
 			mat4.set(sshipMatrixNoInterp,inverseSshipMat);	//todo store inverseSshipMat*gunMatrix ? 
 			mat4.transpose(inverseSshipMat);
@@ -3182,7 +3192,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,	matrix);
 		if (frustumCull(mvMatrix,sphereRad)){
-			drawObjectFromBuffers(objectBuffers, shaderProgramColored);
+			drawObjectFromBuffers2(objectBuffers, shaderProgramColored);
 		}
 	}
 	
@@ -3217,7 +3227,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		uniform4fvSetter.setIfDifferent(shaderProg, "uColor", sharedInfo.color);
 
 		mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
-		drawObjectFromBuffers(cubeFrameSubdivBuffers, shaderProg);
+		drawObjectFromBuffers2(cubeFrameSubdivBuffers, shaderProg);
 
 		//draw coloured axis objects
 		var smallScale = frameScale*0.1;
@@ -3227,15 +3237,15 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		uniform4fvSetter.setIfDifferent(shaderProg, "uColor", colorArrs.red);
 		mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
 		xyzmove4mat(mvMatrix, [moveAmount,0,0]);	//TODO correct mMatrix, but IIRC only impacts lighting 
-		drawObjectFromBuffers(cubeBuffers, shaderProg);
+		drawObjectFromBuffers2(cubeBuffers, shaderProg);
 		uniform4fvSetter.setIfDifferent(shaderProg, "uColor", colorArrs.green);
 		mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
 		xyzmove4mat(mvMatrix, [0,moveAmount,0]);	//TODO correct mMatrix, but IIRC only impacts lighting 
-		drawObjectFromBuffers(cubeBuffers, shaderProg);
+		drawObjectFromBuffers2(cubeBuffers, shaderProg);
 		uniform4fvSetter.setIfDifferent(shaderProg, "uColor", colorArrs.blue);
 		mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
 		xyzmove4mat(mvMatrix, [0,0,moveAmount]);	//TODO correct mMatrix, but IIRC only impacts lighting 
-		drawObjectFromBuffers(cubeBuffers, shaderProg);
+		drawObjectFromBuffers2(cubeBuffers, shaderProg);
 	}
 
 	if (guiParams.reflector.draw !="none"){
@@ -3330,6 +3340,7 @@ function drawPortalsForMultipleCameraViews(isCubemapView, wSettings, portals, po
 				uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.black);
 				gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, pColor[0], pColor[1], pColor[2]);
 				mat4.set(portalInCameraArr[ii], mvMatrix);mat4.set(portalMatArr[ii], mMatrix);
+				setupShaderAtmos(activeShaderProgram, wSettings.worldA);
 				drawObjectFromBuffers(placeholderPortalMesh, activeShaderProgram);
 			}
 
@@ -3493,7 +3504,8 @@ function drawPortalsForMultipleCameraViews(isCubemapView, wSettings, portals, po
 			gl.uniform3fv(shaderProgram.uniforms.uCentrePosScaled, reflInfo.centreTanAngleVectorScaled);
 		}
 
-		drawObjectFromBuffers(meshToDraw, shaderProgram, true, false);
+		setupShaderAtmos(shaderProgram, wSettings.worldA);
+		drawObjectFromBuffers(meshToDraw, shaderProgram, true);
 	}
 }
 
@@ -3545,6 +3557,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 		performShaderSetup(shader, wSettings, tex);
 	}
 	
+	setupShaderAtmos(transpShadProg, worldA);
 	prepBuffersForDrawing(sphereBuffers, transpShadProg);
 	targetRad=sshipModelScale*150;
 	gl.uniform3f(transpShadProg.uniforms.uModelScale, targetRad/50,targetRad/50,targetRad);	//long streaks
@@ -3656,6 +3669,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 			mat4.multiply(mvMatrix,rotatedMatrix2);
 			mat4.set(rotatedMatrix2, mMatrix);
 
+			setupShaderAtmos(activeShaderProgram, worldA);
 			drawObjectFromBuffers(thrusterBuffers, activeShaderProgram);
 		}
 	}
@@ -3793,7 +3807,7 @@ var enableDisableAttributes = (function generateEnableDisableAttributesFunc(){
 })();
 
 
-function drawTennisBall(duocylinderObj, shader, depthMap){
+function drawTennisBall(duocylinderObj, shader, worldDrawingNow, depthMap){
 	enableDisableAttributes(shader);
 
 	gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexPositionBuffer);
@@ -3857,6 +3871,7 @@ function drawTennisBall(duocylinderObj, shader, depthMap){
 		for (var xg=0;xg<duocylinderObj.divs;xg+=1){		//
 			for (var yg=0;yg<duocylinderObj.divs;yg+=1){	//TODO precalc cells array better than grids here.
 				setMatrixUniforms(shader);
+				setupShaderAtmos(shader, worldDrawingNow);
 				gl.drawElements(duocylinderObj.isStrips? gl.TRIANGLE_STRIP : gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 				//gl.drawElements(duocylinderObj.isStrips? gl.LINES : gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 				rotate4mat(mvMatrix, 0, 1, duocylinderObj.step);
@@ -3929,19 +3944,17 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 		uniform4fvSetter.setIfDifferent(shaderProg, "uCameraWorldPos", worldCamera.slice(12));
 	}
 	
-	setupShaderAtmos(shaderProg);
-	
 	//if (shaderProg.uniforms.uPMatrix){
 		gl.uniformMatrix4fv(shaderProg.uniforms.uPMatrix, false, pMatrix);
 	//}
 }
-function setupShaderAtmos(shaderProg){	//TODO generalise more shader stuff
+function setupShaderAtmos(shaderProg, worldDrawingNow){	//TODO generalise more shader stuff
 	if (shaderProg.uniforms.uAtmosContrast){	//todo do less often (at least query ui less often)
 		gl.uniform1f(shaderProg.uniforms.uAtmosContrast, guiParams.display.atmosContrast);
 	}
 	if (shaderProg.uniforms.uAtmosThickness){	//todo do less often (at least query ui less often)
 		//make atmos thickness constant at "zero" duocylinder height. thickness here is uAtmosContrast*uAtmosThickness,
-		var thicknessValForShader = guiParams.display.atmosThickness*Math.pow(2.71,-0.5*guiParams.display.atmosContrast);
+		var thicknessValForShader = guiSettingsForWorld[worldDrawingNow].atmosThickness*Math.pow(2.71,-0.5*guiParams.display.atmosContrast);
 	
 		if (shaderProg.usesVecAtmosThickness){
 			gl.uniform3fv(shaderProg.uniforms.uAtmosThickness, atmosThicknessMultiplier.map(elem=>elem*thicknessValForShader));
@@ -4061,7 +4074,6 @@ function setMatrixUniforms(shaderProgram) {
     gl.uniformMatrix4fv(shaderProgram.uniforms.uPMatrix, false, pMatrix);
     gl.uniformMatrix4fv(shaderProgram.uniforms.uMVMatrix, false, mvMatrix);
 	if (shaderProgram.uniforms.uMMatrix){gl.uniformMatrix4fv(shaderProgram.uniforms.uMMatrix, false, mMatrix);}
-	setupShaderAtmos(shaderProgram);
 }
 
 var cubemapViews;
@@ -4329,18 +4341,31 @@ var stats;
 
 var pointerLocked=false;
 
+function singleWorldSettings(fogColor, atmosThickness, duocylinderModel, seaActive, seaLevel){
+	return {
+		fogColor,
+		atmosThickness,
+		spinRate:0,
+		spin:0,
+		duocylinderModel,
+		seaActive,
+		seaLevel,
+		seaPeakiness:0
+	};
+}
+
 var guiParams={
 	worlds:[
-		{fogColor:'#2f9a16',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:true,seaLevel:0,seaPeakiness:0.0},
-		{fogColor:'#7496a0',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
-		{fogColor:'#bbbbbb',duocylinderModel:"none",spinRate:0,spin:0,seaActive:true,seaLevel:-0.002,seaPeakiness:0.0},
-		{fogColor:'#111111',duocylinderModel:"procTerrain",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},
-		{fogColor:'#444444',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}, //4
-		{fogColor:'#888888',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}, //5
-		{fogColor:'#aaaaaa',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}, //6
-		{fogColor:'#884444',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}, //7
-		{fogColor:'#442222',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0},	//8
-		{fogColor:'#664444',duocylinderModel:"none",spinRate:0,spin:0,seaActive:false,seaLevel:0,seaPeakiness:0.0}	//9
+		singleWorldSettings('#2f9a16', 0.2, "procTerrain", false, 0),
+		singleWorldSettings('#7496a0', 0.2, "procTerrain", false, 0),
+		singleWorldSettings('#bbbbbb', 0.2, "none", true, -0.0022),
+		singleWorldSettings('#111111', 0.2, "procTerrain", false, 0),
+		singleWorldSettings('#444444', 0.2, "none", false, 0),	//4
+		singleWorldSettings('#888888', 0.2, "none", false, 0),	//5
+		singleWorldSettings('#aaaaaa', 0.2, "none", false, 0),	//6
+		singleWorldSettings('#884444', 0.2, "none", false, 0),	//7
+		singleWorldSettings('#442222', 0.2, "none", false, 0),	//8
+		singleWorldSettings('#664444', 0.2, "none", false, 0),	//9
 	],
 	drawShapes:{
 		boxes:{
@@ -4407,7 +4432,6 @@ var guiParams={
 		zPrepass:false,	//currently applies only to 4vec objects (eg terrain), and only affect overdraw for that object. 
 		perPixelLighting:true,
 		atmosShader:"atmos",
-		atmosThickness:0.2,
 		atmosThicknessMultiplier:'#88aaff',
 		atmosContrast:20.0,
 		culling:true,
@@ -4607,11 +4631,12 @@ function init(){
 		worldFolder.addColor(world, 'fogColor').onChange(function(color){
 			setFog(nn,color);
 		});
+		worldFolder.add(world, "atmosThickness", 0,20,0.05);
 		worldFolder.add(world, "duocylinderModel", [
 			"grid","terrain","procTerrain",'voxTerrain','voxTerrain2','voxTerrain3','l3dt-brute','l3dt-blockstrips','none'] );
 		worldFolder.add(world, "spinRate", -2.5,2.5,0.25);
 		worldFolder.add(world, "seaActive" );
-		worldFolder.add(world, "seaLevel", -0.02,0.02,0.001);
+		worldFolder.add(world, "seaLevel", -0.02,0.02,0.0002);
 		worldFolder.add(world, "seaPeakiness", 0.0,0.5,0.01);
 	});
 
@@ -4683,8 +4708,7 @@ function init(){
 	displayFolder.add(guiParams.display, "zPrepass");
 	displayFolder.add(guiParams.display, "perPixelLighting");
 	//displayFolder.add(guiParams.display, "atmosShader", ['constant','atmos','atmos_v2']);	//basic is constant (contrast=0) 
-	displayFolder.add(guiParams.display, "atmosThickness", 0,0.5,0.05);
-displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(setAtmosThicknessMultiplier);
+	displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(setAtmosThicknessMultiplier);
 	displayFolder.add(guiParams.display, "atmosContrast", -20,20,0.5);
 	displayFolder.add(guiParams.display, "culling");
 	displayFolder.add(guiParams.display, "useSpecular");
@@ -6050,7 +6074,7 @@ function drawDuocylinderObject(wSettings, duocylinderObj, zeroLevel, seaPeakines
 	if (!duocylinderObj.isSea && guiParams.display.zPrepass && !depthMap){
 		activeShaderProgram = shaderPrograms.zPrepass4Vec;
 		gl.useProgram(activeShaderProgram);
-		drawTennisBall(duocylinderObj, activeShaderProgram);
+		drawTennisBall(duocylinderObj, activeShaderProgram, wSettings.worldA);
 		return;
 	}
 
@@ -6094,7 +6118,7 @@ function drawDuocylinderObject(wSettings, duocylinderObj, zeroLevel, seaPeakines
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
 	performCommon4vecShaderSetup(activeShaderProgram, wSettings);
 	
-	drawTennisBall(duocylinderObj, activeShaderProgram, depthMap);
+	drawTennisBall(duocylinderObj, activeShaderProgram, wSettings.worldA, depthMap);
 }
 
 var randomNormalised3vec = (function generate3vecRandomiser(){
@@ -6302,6 +6326,8 @@ function drawPortalCubemap(
 		gl.uniform1i(activeProg.uniforms.uSamplerDepthmap, 2);	
 		
 		gl.depthFunc(gl.ALWAYS);
+
+		setupShaderAtmos(activeProg, cameraContainer.world);
 		drawObjectFromBuffers(fsBuffers, activeProg);
 		gl.depthFunc(gl.LESS);
 		gl.cullFace(gl.BACK);
