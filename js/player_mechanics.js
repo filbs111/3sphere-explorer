@@ -202,7 +202,7 @@ var playerMechanics = (() => {
         
         //get the current atmospheric density.
         var atmosThick = 0.001*playerWorldSettings.atmosThickness;	//1st constant just pulled out of the air.
-        atmosThick*=Math.pow(2.71, guiParams.display.atmosContrast*(playerPos[0]*playerPos[0] + playerPos[1]*playerPos[1] -0.5)); //as atmosScale increases, scale height decreases
+        atmosThick*=Math.pow(2.71, playerWorldSettings.atmosContrast*(playerPos[0]*playerPos[0] + playerPos[1]*playerPos[1] -0.5)); //as atmosScale increases, scale height decreases
 
 
         

@@ -3949,12 +3949,13 @@ function prepBuffersForDrawing(bufferObj, shaderProg, usesCubeMap){
 	//}
 }
 function setupShaderAtmos(shaderProg, worldDrawingNow){	//TODO generalise more shader stuff
+	var worldSettings = guiSettingsForWorld[worldDrawingNow];
 	if (shaderProg.uniforms.uAtmosContrast){	//todo do less often (at least query ui less often)
-		gl.uniform1f(shaderProg.uniforms.uAtmosContrast, guiParams.display.atmosContrast);
+		gl.uniform1f(shaderProg.uniforms.uAtmosContrast, worldSettings.atmosContrast);
 	}
 	if (shaderProg.uniforms.uAtmosThickness){	//todo do less often (at least query ui less often)
 		//make atmos thickness constant at "zero" duocylinder height. thickness here is uAtmosContrast*uAtmosThickness,
-		var thicknessValForShader = guiSettingsForWorld[worldDrawingNow].atmosThickness*Math.pow(2.71,-0.5*guiParams.display.atmosContrast);
+		var thicknessValForShader = worldSettings.atmosThickness*Math.pow(2.71,-0.5*worldSettings.atmosContrast);
 	
 		if (shaderProg.usesVecAtmosThickness){
 			gl.uniform3fv(shaderProg.uniforms.uAtmosThickness, atmosThicknessMultiplier.map(elem=>elem*thicknessValForShader));
@@ -4345,6 +4346,7 @@ function singleWorldSettings(fogColor, atmosThickness, duocylinderModel, seaActi
 	return {
 		fogColor,
 		atmosThickness,
+		atmosContrast:20,
 		spinRate:0,
 		spin:0,
 		duocylinderModel,
@@ -4433,7 +4435,6 @@ var guiParams={
 		perPixelLighting:true,
 		atmosShader:"atmos",
 		atmosThicknessMultiplier:'#88aaff',
-		atmosContrast:20.0,
 		culling:true,
 		useSpecular:true,
 		specularStrength:0.5,
@@ -4632,6 +4633,7 @@ function init(){
 			setFog(nn,color);
 		});
 		worldFolder.add(world, "atmosThickness", 0,20,0.05);
+		worldFolder.add(world, "atmosContrast", -20,20,0.5);
 		worldFolder.add(world, "duocylinderModel", [
 			"grid","terrain","procTerrain",'voxTerrain','voxTerrain2','voxTerrain3','l3dt-brute','l3dt-blockstrips','none'] );
 		worldFolder.add(world, "spinRate", -2.5,2.5,0.25);
@@ -4709,7 +4711,6 @@ function init(){
 	displayFolder.add(guiParams.display, "perPixelLighting");
 	//displayFolder.add(guiParams.display, "atmosShader", ['constant','atmos','atmos_v2']);	//basic is constant (contrast=0) 
 	displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(setAtmosThicknessMultiplier);
-	displayFolder.add(guiParams.display, "atmosContrast", -20,20,0.5);
 	displayFolder.add(guiParams.display, "culling");
 	displayFolder.add(guiParams.display, "useSpecular");
 	displayFolder.add(guiParams.display, "specularStrength", 0,1,0.05);	//currently diffuse colour and distance attenuation applies to both specular and diffuse, keeping nonnegative by having diffuse multiplier 1-specularStrength. therefore range 0-1. TODO different specular, diffuse colours, (instead of float strength), specular maybe shouldn't have distance attenuation same way - possibly correct for point source but want solution for sphere light...
