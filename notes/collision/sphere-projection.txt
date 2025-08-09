@@ -1,0 +1,60 @@
+collision detection of sphere - eg for player - with a AABB bvh object.
+
+taking position of sphere in frame of object. currently assuming that object is small, so sphere is fixed size sphere in this frame.
+this is an approximation.
+
+consider 3d projected to 2D. here the "sphere" is a circle at position (x,y,z) with object centred at (0,0,1). currently using projected coords 
+(x/z , y/z) , circle of radius r, so in the approximation, AABB (x/z -r , y/z - r) to (x/z +r , y/z +r)
+
+calculate a true AABB for the sphere.
+
+cone of length 1, radius r, in direction (x,y,z)
+tilt plane y=0 about x until touches cone, project onto z=1 for AABB y limits. (1)
+tilt plane x=0 about y until touches cone, project onto z=1 for AABB x limits. (2)
+
+not hard. put a sphere in the cone like an ice cream.
+tilt the cone, just consider where the sphere hits the tilted planes.
+
+for a cone of height 1, radius of circle r, sphere positioned with centre at hypotenuese squared.
+hyp*hyp = 1+ r*r = D.
+
+and radius r * hyp = r * sqrt(1+ r*r) = R
+
+for circle at position (x,y,z) the sphere has position (x,y,z)*D
+
+for plane tilted about x axis, looking at projection onto yz plane.
+the sphere here is seen as a circle of radius R at (y,z)*D
+
+the range of angles from the origin pointing to the circle in this projection is: 
+
+atan2(y,z) +/- asin( R / D ) 
+
+can asin (R/D) be simplified? 
+asin ( r * sqrt(1+ r*r) /(1+ r*r)) 
+
+copilot tells me this simplifies to atan(r) !!
+
+therefore suspect that range of angles = atan2(y,x) +/- atan(r)
+
+the range of y when projected from origin onto z=1 is then 
+  tan ( atan2(y,z) +/- atan(r) )
+
+copilot says
+tan ( atan2(y,z) + atan(r) )    =   (y + rz) / (z - ry)
+tan ( atan2(y,z) - atan(r) )    =   (y - rz) / (z + ry)
+
+TODO how to handle when sphere partially covers z<=0 ? 
+maybe 
+(y + rz) / Math.max(0,(z - ry))
+(y - rz) / Math.max(0,(z + ry))
+
+since happily in javascript number/0 is infinity 
+or just take advantage of min,max flipping, so AABB becomes -ve, wont match anything.
+
+
+TODO try this out! 
+TODO test program to make many random points on sphere, find AABB from these points. check the calculation comes up with an AABB that matches this result. 
+
+think this works for n to n-1 dimension projection. (2d projected to 1d, 4d projected to 3d, whatever)
+
+this continued in sphere-projection.js test project.
