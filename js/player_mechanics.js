@@ -633,7 +633,13 @@ var playerMechanics = (() => {
             var resultMat = mat4.create();
             var foundClosestPointTriangleObjPreviously = foundClosestPointTriangleObj; 
             foundClosestPointTriangleObj = false;
-            processTrianglePossibles(resultMat, initialCandidates, 1000, (projectedPosInObjFrame, rad, objInfo, lowestAcceptedMultiplier) => {
+            processTrianglePossibles(resultMat, initialCandidates, 1000, (posInObjFrame, objScale, rad, objInfo, lowestAcceptedMultiplier) => {
+                
+                if (posInObjFrame[3]<=0.3){
+                    return;
+                }
+                var projectedPosInObjFrame = posInObjFrame.slice(0,3).map(val => val/(objScale*posInObjFrame[3]));
+                
                 var nearby = closestPointBvhAABBIntialCheck(projectedPosInObjFrame, rad, objInfo);
                 return nearby ? closestPointBvhEfficient(projectedPosInObjFrame, objInfo, lowestAcceptedMultiplier): false;
             });
@@ -730,7 +736,13 @@ var playerMechanics = (() => {
             var resultMat = mat4.create();
             foundClosestPointTriangleObj = false;
 
-            processTrianglePossibles(resultMat, initialCandidates, 2000, (projectedPosInObjFrame, rad, objInfo, lowestAcceptedMultiplier) => {
+            processTrianglePossibles(resultMat, initialCandidates, 2000, (posInObjFrame, objScale, rad, objInfo, lowestAcceptedMultiplier) => {
+            
+                if (posInObjFrame[3]<=0.3){
+                    return;
+                }
+                var projectedPosInObjFrame = posInObjFrame.slice(0,3).map(val => val/(objScale*posInObjFrame[3]));
+            
                 return closestPointBvhEfficient(projectedPosInObjFrame, objInfo, lowestAcceptedMultiplier);
             });
 
@@ -778,23 +790,24 @@ var playerMechanics = (() => {
                 var playerPosVec = vec4.create(playerPos);
                 mat4.multiplyVec4(transposedObjMat, playerPosVec, playerPosVec);
                 
-                if (playerPosVec[3]<=0.3){
-                    return;
-                }						
-
-                var projectedPosInObjFrame = playerPosVec.slice(0,3).map(val => val/(objScale*playerPosVec[3]));
-
-                var closestPointResult = closestPointFunc(projectedPosInObjFrame, settings.playerBallRadPadded, objInfo, lowestAcceptedMultiplier);
+                //here to work properly for 4d, the closestpoint func should be scale aware.
+                var closestPointResult = closestPointFunc(playerPosVec, objScale, settings.playerBallRadPadded, objInfo, lowestAcceptedMultiplier);
 
                 if (closestPointResult){
                     var closestPointInObjectFrame = closestPointResult.closestPoint;
                     
+                    //unproject.
+                    var unscaledPos = closestPointInObjectFrame.map(xx => xx*objScale);
+                    unscaledPos[3]=1;
+                    var len = Math.hypot.apply(null, unscaledPos);
+                    var unprojectedPos = unscaledPos.map(xx => xx/len);
+
                     //get distance from player.
                     //TODO return from above, or combine with closestPointBvh / use world level bvh?
 
-                    var vectorToPlayerInObjectSpace = vectorDifference(projectedPosInObjFrame, closestPointInObjectFrame);
-                    var roughDistanceSqFromPlayer = dotProduct(vectorToPlayerInObjectSpace,vectorToPlayerInObjectSpace)
-                                        *objScale*objScale;	//multiplying by scale with view to using multiple scales
+                    var vectorToPlayerInObjectSpace = vectorDifference(playerPosVec, unprojectedPos);
+                    var roughDistanceSqFromPlayer = dotProduct(vectorToPlayerInObjectSpace,vectorToPlayerInObjectSpace);
+                    //TODO what is correct distance to use here?
 
                     if (roughDistanceSqFromPlayer<closestRoughSqDistanceFound){
                         bestResult = {
