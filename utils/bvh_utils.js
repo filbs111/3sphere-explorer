@@ -589,9 +589,8 @@ function closestPointForTris4d(fromPoint, objInfo, tris){
             }
         }
 
-        if (chosenPointTypeThisFace!=-1 && greatestSeparationSq < closestSq){   
-            //TODO can chosenPointTypeThisFace!=-1 condition be removed once doing face, edge checks?
-
+        if (greatestSeparationSq < closestSq){
+            
             // console.log({
             //     triPointsFromPoint,
             //     vectorToClosestPoint,
