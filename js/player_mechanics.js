@@ -641,7 +641,7 @@ var playerMechanics = (() => {
                 var projectedPosInObjFrame = posInObjFrame.slice(0,3).map(val => val/(objScale*posInObjFrame[3]));
                 
                 var nearby = closestPointBvhAABBIntialCheck(projectedPosInObjFrame, rad, objInfo);
-                return nearby ? closestPointBvhEfficient(projectedPosInObjFrame, objInfo, lowestAcceptedMultiplier): false;
+                return nearby ? closestPointBvhEfficient(projectedPosInObjFrame, posInObjFrame, objInfo, lowestAcceptedMultiplier): false;
             });
 
             function getFastPossibles(){
@@ -743,7 +743,7 @@ var playerMechanics = (() => {
                 }
                 var projectedPosInObjFrame = posInObjFrame.slice(0,3).map(val => val/(objScale*posInObjFrame[3]));
             
-                return closestPointBvhEfficient(projectedPosInObjFrame, objInfo, lowestAcceptedMultiplier);
+                return closestPointBvhEfficient(projectedPosInObjFrame, posInObjFrame, objInfo, lowestAcceptedMultiplier);
             });
 
             function getSlowPossibles(possibleObjects){
@@ -796,17 +796,11 @@ var playerMechanics = (() => {
                 if (closestPointResult){
                     var closestPointInObjectFrame = closestPointResult.closestPoint;
                     
-                    //unproject.
-                    var unscaledPos = closestPointInObjectFrame.map(xx => xx*objScale);
-                    unscaledPos[3]=1;
-                    var len = Math.hypot.apply(null, unscaledPos);
-                    var unprojectedPos = unscaledPos.map(xx => xx/len);
-
                     //get distance from player.
                     //TODO return from above, or combine with closestPointBvh / use world level bvh?
 
-                    var vectorToPlayerInObjectSpace = vectorDifference(playerPosVec, unprojectedPos);
-                    var roughDistanceSqFromPlayer = dotProduct(vectorToPlayerInObjectSpace,vectorToPlayerInObjectSpace);
+                    var vectorToPlayerInObjectSpace = vectorDifference4d(playerPosVec, closestPointInObjectFrame);
+                    var roughDistanceSqFromPlayer = dotProduct4(vectorToPlayerInObjectSpace,vectorToPlayerInObjectSpace);
                     //TODO what is correct distance to use here?
 
                     if (roughDistanceSqFromPlayer<closestRoughSqDistanceFound){
@@ -823,8 +817,10 @@ var playerMechanics = (() => {
                 var closestPointResult= bestResult.closestPointResult;
                 triObjClosestPointType = closestPointResult.closestPointType;
 
+                //convert to projected space to avoid modifying more code here.
                 var closestPointInObjectFrame = closestPointResult.closestPoint;
-                var positionInProjectedSpace = closestPointInObjectFrame.map(val => val*bestResult.objInfo.scale);
+                var positionInProjectedSpace = closestPointInObjectFrame.slice(0,3).map(xx => xx/closestPointInObjectFrame[3]);
+
                 var veclen = Math.sqrt(positionInProjectedSpace.reduce((accum, xx)=>accum+xx*xx, 0));
                 var scalarAngleDifference = Math.atan(veclen);
 
