@@ -416,7 +416,7 @@ function closestPointBvhAABBIntialCheck(fromPoint, queryRad, objInfo){
 //             //loop over all points, find minimum in this direction (for point in question this calc can is unnecessary, but do 
 //             // for all 3 points for simplicity)
 //             var dotProds = triPointsFromPoint.map(vecToCorner2=> dotProduct(vecToCorner, vecToCorner2) );
-//             var leastDotProd = dotProds.filter((_,jj)=>ii!=jj).reduce((accum,current)=>Math.min(accum,current),Number.MAX_VALUE);
+//             var leastDotProd = dotProds.reduce((accum,current)=>Math.min(accum,current),Number.MAX_VALUE);
 //             //AFAICT this can only be the greatest separating axis (and outside triangle) if that's between 0 and vecToCorner^2
 //             //but can just find the greatest separation without checking.
             
@@ -521,7 +521,7 @@ function closestPointForTris4d(fromPoint, objInfo, tris){
             //loop over all points, find minimum in this direction (for point in question this calc can is unnecessary, but do 
             // for all 3 points for simplicity)
             var dotProds = triPointsFromPoint.map(vecToCorner2=> dotProduct4(vecToCorner, vecToCorner2) );
-            var leastDotProd = dotProds.filter((_,jj)=>ii!=jj).reduce((accum,current)=>Math.min(accum,current),Number.MAX_VALUE);
+            var leastDotProd = dotProds.reduce((accum,current)=>Math.min(accum,current),Number.MAX_VALUE);
             //AFAICT this can only be the greatest separating axis (and outside triangle) if that's between 0 and vecToCorner^2
             //but can just find the greatest separation without checking.
             
