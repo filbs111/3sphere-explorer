@@ -4463,6 +4463,7 @@ var guiParams={
 	debug:{
 		hudTest:false,
 		closestPoint:false,
+		closestPointNearby:false,
 		buoys:false,
 		nmapUseShader2:true,
 		showSpeedOverlay:false,
@@ -4730,6 +4731,7 @@ function init(){
 	var debugFolder = gui.addFolder('debug');
 	debugFolder.add(guiParams.debug, "hudTest");
 	debugFolder.add(guiParams.debug, "closestPoint");
+	debugFolder.add(guiParams.debug, "closestPointNearby");
 	debugFolder.add(guiParams.debug, "buoys");
 	debugFolder.add(guiParams.debug, "nmapUseShader2");
 	debugFolder.add(guiParams.debug, "showSpeedOverlay").onChange(() => {

@@ -644,6 +644,15 @@ var playerMechanics = (() => {
                 return nearby ? closestPointBvhEfficient(projectedPosInObjFrame, posInObjFrame, objInfo, lowestAcceptedMultiplier): false;
             });
 
+            // draw debug points for nearby collision tests. note this inefficient! (makes matrices)
+            if (guiParams.debug.closestPointNearby){
+                if (triObjClosestPointType!=-1){
+                    mat4.set(playerMatrixTransposed, tmpRelativeMat);
+                    mat4.multiply(tmpRelativeMat, resultMat);
+                    new Explosion({matrix:mat4.create(resultMat),world:playerContainer.world}, sshipModelScale*0.05, [[1,0,0],[0,1,0],[0,0,1]][triObjClosestPointType]);
+                }
+            }
+
             function getFastPossibles(){
                 var paddedRad = settings.playerBallRadPadded;
                     //add padding so detect distance to object before collide (rate of penetration used for damping)
