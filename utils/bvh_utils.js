@@ -537,7 +537,7 @@ function closestPointForTris4d(fromPoint, objInfo, tris){
         //edges and normal
         
         function calcDistFromPlane4d(threeVecDirection, distPlaneFromOrigin3d){
-             var D = threeVecDirection.slice();
+            var D = threeVecDirection.slice();
             D.push(-distPlaneFromOrigin3d);
 
             var dLen = Math.sqrt(dotProduct4(D,D));
@@ -546,7 +546,7 @@ function closestPointForTris4d(fromPoint, objInfo, tris){
             var distToPlane = dotProduct4(D, fromPoint); //is this really distToPlane? 
                 //TODO adjust dotProd (like sine angle) vs straight distance...
 
-            var vecToPlane = D.map(xx=> -xx*distToPlane);  // ??? ?
+            var vecToPlane = D.map(xx=> xx*distToPlane);
 
             return {
                 distToPlane,
@@ -568,6 +568,23 @@ function closestPointForTris4d(fromPoint, objInfo, tris){
             chosenPointTypeThisFace = 2;
         }
 
+        // for distance from plane of some test point T, consider plane to be defined by so4 matrix with 4 orthogonal 4-vecs. 3 of these vecs are on the plane. ("great sphere"?)
+        // and the other is 1/4 way around world from the sphere, representing its normal. call this A
+        // the closest point to point T is T - A(A.T)
+        // and the vector from T to the closest point is A(A.T)
+
+        //for distance from edge (great circle), consider line defined by so4 matrix with 4 orthogonal 4-vecs. 2 of these vecs are on the great circle.
+        // eg [A, B, C, D] where C,D on the line
+        // to get the closest point on the line to some test point T, take dot products of the test point with these 4 vectors (matrix rotation)
+        // [A.T, B.T, C.T, D.T]
+        // then retain only A, B parts, multiply by A, B ie point on line is
+        // C(C.T) + D(D.T)
+        // or equivalently T - (A(A.T) + B(B.T))
+        // and the vector from T to the closest point on the line is  A(A.T) + B(B.T)
+
+        // this works out quite neatly - the vector A is same for face plane and its 3 edges. so a triangle might be stored using 4 4-vecs.
+        // (currently storing using 3-vecs and projecting, but 4-vecs would reduce physics iteration ops)
+
         //check 3 edges - if dot prod of point with edge direction >0 then check dist from edge.
         for (var ee=0;ee<3;ee++){
             //distance from this edge. is pythagoras of dist from plane and dist in edge direction.
@@ -577,13 +594,13 @@ function closestPointForTris4d(fromPoint, objInfo, tris){
             if (distInEdgeDir>0){
                 var totalDistSq = distInEdgeDir*distInEdgeDir + distToFacePlaneSq;
 
-                var vecInEdgeDir = edgeDistResults.vecToPlane;
                 if (totalDistSq>greatestSeparationSq){
                     greatestSeparationSq = totalDistSq;
-                    //vectorToClosestPoint = vectorDifference4d(faceDistResults.vecToPlane, vecInEdgeDir);  //TODO is it proper to sum these?
-                    vectorToClosestPoint = vectorSum4d(faceDistResults.vecToPlane, vecInEdgeDir);  //TODO is it proper to sum these?
                     
-                    //basically what are doing here is considering point vs surface dividing 3-sphere in two.
+                    var vecInEdgeDir = edgeDistResults.vecToPlane;
+                    vectorToClosestPoint = vectorSum4d(faceDistResults.vecToPlane, vecInEdgeDir);
+                        //vector to closest point is the position of the closest point in object frame
+                    
                     chosenPointTypeThisFace = 1;
                 }
             }
@@ -604,7 +621,7 @@ function closestPointForTris4d(fromPoint, objInfo, tris){
         }
     });
 
-    var closestPoint = vectorSum4d(fromPoint, chosenVectorToClosestPoint);
+    var closestPoint = vectorDifference4d(fromPoint, chosenVectorToClosestPoint);
 
     return {
         closestPoint,
