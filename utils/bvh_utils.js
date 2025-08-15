@@ -535,16 +535,20 @@ function closestPointForTris4d(fromPoint, objInfo, tris){
 
 
         //edges and normal
-        
-        function calcDistFromPlane4d(threeVecDirection, distPlaneFromOrigin3d){
-            var D = threeVecDirection.slice();
+        function calc4dFrom3dPlane(threeVecDirection,distPlaneFromOrigin3d){
+             var D = threeVecDirection.slice();
             D.push(-distPlaneFromOrigin3d);
 
+            //NOTE normalisation maybe unnecessary for initial edge normals that will be corrected and renormalised
+            //however, this calculation of 4d vecs from 3d face, edge normals should not be rone in game loop anyway!
             var dLen = Math.sqrt(dotProduct4(D,D));
             D = D.map(xx=>xx/dLen); //normalise
 
-            var distToPlane = dotProduct4(D, fromPoint); //is this really distToPlane? 
-                //TODO adjust dotProd (like sine angle) vs straight distance...
+            return D;
+        }
+
+        function calcDistToPlane(D){
+            var distToPlane = dotProduct4(D, fromPoint);
 
             var vecToPlane = D.map(xx=> xx*distToPlane);
 
@@ -554,8 +558,8 @@ function closestPointForTris4d(fromPoint, objInfo, tris){
             }
         }
 
-
-        var faceDistResults = calcDistFromPlane4d(tri.normal, tri.distFromOrigin*objScale);
+        var faceVec4d = calc4dFrom3dPlane(tri.normal, tri.distFromOrigin*objScale);
+        var faceDistResults = calcDistToPlane(faceVec4d);
 
         //plane separation.
         //TODO skip this if outside any edge?
@@ -589,8 +593,21 @@ function closestPointForTris4d(fromPoint, objInfo, tris){
         for (var ee=0;ee<3;ee++){
             //distance from this edge. is pythagoras of dist from plane and dist in edge direction.
             var edgeData = tri.edgeData[ee];
-            var edgeDistResults = calcDistFromPlane4d(edgeData.normal, edgeData.distFromOrigin*objScale);
+
+            //initial edge plane vecs is not necessarily perpendicular to faceVec4d
+            var initialEdgePlaneVec = calc4dFrom3dPlane(edgeData.normal, edgeData.distFromOrigin*objScale);
+
+            //make normal to faceVec4d
+            var fractionOfFaceVecToSubtract = dotProduct4(initialEdgePlaneVec, faceVec4d);
+            var vecToSubtract = faceVec4d.map(xx => xx*fractionOfFaceVecToSubtract);
+            var correctedEdgePlaneVec = vectorDifference4d(initialEdgePlaneVec, vecToSubtract);
+            //renormalise
+            var lenEdgeVec = Math.sqrt(correctedEdgePlaneVec.reduce((accum, current) => accum+current*current,0));
+            correctedEdgePlaneVec = correctedEdgePlaneVec.map(xx=>xx/lenEdgeVec);
+
+            var edgeDistResults = calcDistToPlane(correctedEdgePlaneVec);
             var distInEdgeDir = edgeDistResults.distToPlane;
+
             if (distInEdgeDir>0){
                 var totalDistSq = distInEdgeDir*distInEdgeDir + distToFacePlaneSq;
 
