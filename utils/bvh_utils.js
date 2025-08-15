@@ -514,7 +514,7 @@ function closestPointForTris4d(fromPoint, objInfo, tris){
             return tp4d.map(xx => xx/len);
         });
 
-        var triPointsFromPoint = triPoints.map(pp => vectorDifference4d(pp, fromPoint));
+        var triPointsFromPoint = triPoints.map(pp => vectorDifference4d(fromPoint, pp));
 
         triPointsFromPoint.forEach((vecToCorner,ii) => {
             var vecToCornerLenSq = dotProduct4(vecToCorner, vecToCorner);
