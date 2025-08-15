@@ -4843,8 +4843,8 @@ function init(){
 	
 	initGL();
 
-	initTextureFramebuffer(rttFisheyeRectRenderOutput, true);
-	initTextureFramebuffer(rttFisheyeRectRenderOutput2, true);
+	initTextureFramebuffer(rttFisheyeRectRenderOutput, true, gl.REPEAT);
+	initTextureFramebuffer(rttFisheyeRectRenderOutput2, true, gl.REPEAT);
 
 	initTextureFramebuffer(rttView);
 	initTextureFramebuffer(rttStageOneView, true);
@@ -5926,14 +5926,19 @@ function setRttSize(view, width, height){
 }
 
 
-function initTextureFramebuffer(view, useNearestFiltering) {
+function initTextureFramebuffer(view, useNearestFiltering, outsideRangeBehaviour) {
 	var filterType = useNearestFiltering ? gl.NEAREST : gl.LINEAR;
 	view.framebuffer = gl.createFramebuffer();
 
+	outsideRangeBehaviour = outsideRangeBehaviour ?? gl.CLAMP_TO_EDGE;
+		//want to use gl.CLAMP_TO_EDGE to fix problems with textures wrapping top-to-bottom on screen, 
+		//but doesn't work currently for quad view (3 quads are totally of range and rely on repeat)
+		//TODO shift quad views so can use CLAMP across the board
+
 	view.texture = gl.createTexture();
 	gl.bindTexture(gl.TEXTURE_2D, view.texture);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, outsideRangeBehaviour);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, outsideRangeBehaviour);
 
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filterType);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filterType);
@@ -5943,8 +5948,8 @@ function initTextureFramebuffer(view, useNearestFiltering) {
 	gl.bindTexture(gl.TEXTURE_2D, view.depthTexture);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, outsideRangeBehaviour);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, outsideRangeBehaviour);
 	
 
 	gl.bindFramebuffer(gl.FRAMEBUFFER, view.framebuffer);
