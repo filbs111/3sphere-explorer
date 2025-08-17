@@ -5181,8 +5181,20 @@ var iterateMechanics = (function iterateMechanics(){
 				if (voxTerrainData[worldInfo.duocylinderModel].collisionFunction(bulletPos, dcSpin)>0){detonateBullet(bullet, true, [0.5,0.5,0.5,1]);}
 			}
 			if (worldInfo.seaActive){
-				if (getHeightAboveSeaFor4VecPos(bulletPos, lastSeaTime, dcSpin)<0){detonateBullet(bullet, true, [0.6,0.75,1,1]);}
-				//if (getHeightAboveSeaFor4VecPos(bulletPos, 0)<0){detonateBullet(bullet, true);}
+				var hAtEnd = getHeightAboveSeaFor4VecPos(newBulletPos, lastSeaTime, dcSpin);
+				if (hAtEnd<0){
+					//NOTE This is approximate and assumes that sea surface doesn't move far due to duocylinder spin or waves in one collision detection step,
+					// and the sea is smooth (~linear on scale of bullet movement in step)
+					// really should use previous dcSpin, and previous sea time. if do that, should calculate same val here as previous check for same bullet.
+					var hAtStart = getHeightAboveSeaFor4VecPos(bulletPos, lastSeaTime, dcSpin);
+
+					if (hAtStart>0){	//failing this test unlikely to happen, but might do because of ignoring dc rotation change, sea movement.
+										//if this untrue, just detonate bullet at end of ray
+						var fractionAlong = hAtStart / (hAtStart-hAtEnd);
+						xyzmove4mat(bulletMatrix,scalarvectorprod(bulletMoveAmount*(fractionAlong-1),bulletVel));
+					}
+					detonateBullet(bullet, true, [0.6,0.75,1,1]);
+				}
 			}
 			
 			//slow collision detection between bullet and array of boxes.
