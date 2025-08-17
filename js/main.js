@@ -5226,6 +5226,8 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			var bvhCollisionResult = rayBvhCollision(bulletPos, newBulletPos, bullet.world);
 			if (bvhCollisionResult.collided){
+				//move bullet to point on surface (note approximate, since closestFractionAlong is in projected 3d space)
+				xyzmove4mat(bulletMatrix,scalarvectorprod(bulletMoveAmount*(bvhCollisionResult.closestFractionAlong-1),bulletVel));
 				detonateBullet(bullet, false, [0.3,0.3,0.8]);
 			}
 		}
