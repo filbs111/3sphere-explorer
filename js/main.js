@@ -5021,7 +5021,7 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		for (var ee in explosions){
 			var singleExplosion = explosions[ee];
-			singleExplosion.life-=0.2*numSteps;
+			singleExplosion.life-=numSteps;
 			if (singleExplosion.life<1){
 				matPool.destroy(singleExplosion.matrix);
 				delete explosions[ee];
@@ -5258,7 +5258,7 @@ var iterateMechanics = (function iterateMechanics(){
 			var explosionParticles = explosionParticleArrs[bullet.world];
 
 			if (!moveWithDuocylinder){
-				new Explosion(bullet, 0.00005, [1,0.5,0.25], false, true);
+				new Explosion(bullet, 0.00002, [1,0.5,0.25], false, true);
 				explosionParticles.makeExplosion(matrix.slice(12), frameTime, color,0);
 			}else{
 				explosionParticles.makeExplosion(matrix.slice(12), frameTime, color,0);
@@ -5266,7 +5266,7 @@ var iterateMechanics = (function iterateMechanics(){
 					//should see slower particles fall to ground, but won't look good yet because particles disappear quickly, abruptly.
 
 				rotate4matCols(matrix, 0, 1, guiSettingsForWorld[bullet.world].spin);	//get bullet matrix in frame of duocylinder. might be duplicating work from elsewhere.
-				new Explosion(bullet, 0.00005, [0.2,0.4,0.6],true, true);	//different colour for debugging
+				new Explosion(bullet, 0.00002, [0.2,0.4,0.6],true, true);	//different colour for debugging
 			}
 
 			matPool.destroy(matrix);
