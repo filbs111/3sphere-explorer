@@ -311,22 +311,11 @@ function closestPointBvhEfficient(fromPoint, posInObjFrame, objInfo, lowestAccep
 
 function closestPointBvhAABBIntialCheck(fromPoint, posInObjFrame, queryRad, objInfo){
 
-    var radInObjSpace = 2*queryRad/objInfo.scale;
-
-    //some test AABB for sphere. note this is in projected space, so really should be ellipse.
-    //just hope padding is enough. later finding of closest point also doesn't account for this.
-    var queryAABB = [fromPoint.map(xx=> xx-radInObjSpace) , fromPoint.map(xx=> xx+radInObjSpace)];
+    //query AABB that takes projects sphere from 4D to 3D correctly.
+    var queryAABB = queryAABB3DFrom4D(posInObjFrame, queryRad, objInfo);
     var possibles = collisionTestBvh(queryAABB, objInfo.bvh.tris);
-        //TODO variant of collisionTestBvh that doesn't populate a list. just return bool.
-    
     specialCollisionInfo.possibles2 = possibles.length;
     specialCollisionInfo.aabb = queryAABB;
-
-    //another query AABB that takes projects sphere from 4D to 3D correctly.
-    var queryAABB2 = queryAABB3DFrom4D(posInObjFrame, queryRad, objInfo);
-    var possibles3 = collisionTestBvh(queryAABB2, objInfo.bvh.tris);
-    specialCollisionInfo.possibles3 = possibles3.length;
-    specialCollisionInfo.aabb2 = queryAABB2;
 
     return (possibles.length != 0);
 }
