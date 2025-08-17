@@ -431,7 +431,12 @@ var playerMechanics = (() => {
 
         processTriangleObjectCollisionSlow();   //updates debug point, audio from flying past objects
 
-        var numSubsteps = 20;
+        var speed = Math.sqrt(playerVelVec.reduce((accum, current) => accum+current*current,0));
+        var numSubsteps = 1+ Math.floor(speed / 0.05);
+            //TODO inside substep loop/ using a while loop, ensure don't keep making many steps once collide and slow down
+            //TODO take step size into account for spring/damper style collision? (expect more substeps = stiff)
+        //console.log({playerVelVec, speed, numSubsteps});
+
         var subTimeStep = timeStep/numSubsteps;
 
         for (var ii=0;ii<numSubsteps;ii++){
