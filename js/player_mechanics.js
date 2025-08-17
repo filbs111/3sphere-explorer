@@ -311,7 +311,7 @@ var playerMechanics = (() => {
 
 
         if (worldInfo.seaActive){
-            distanceForTerrainNoise = getHeightAboveSeaFor4VecPos(playerPos, lastSeaTime, dcSpin);	//height. todo use distance (unimportant because sea gradient low
+            distanceForTerrainNoise = getHeightAboveSeaFor4VecPos(playerPos, dcSpin, lastSeaTime);	//height. todo use distance (unimportant because sea gradient low
         }
         if (Object.keys(voxTerrainData).includes(worldInfo.duocylinderModel)){
             voxTerrainData[worldInfo.duocylinderModel].test2VoxABC(dcSpin);	//updates closestPointTestMat

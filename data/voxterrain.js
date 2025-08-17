@@ -115,7 +115,7 @@ var voxTerrainData = (function generateMultiVoxTerrainData(){
 			//var cc=(0.5+c*2/Math.PI)*64;
 			var cc=(0.5+c*Math.sqrt(2)/Math.PI)*64;
 		
-			return voxFunction(aa,bb,cc);
+			return -voxFunction(aa,bb,cc);
 		}
 		function voxABCFor4vec(vec){	//just testing
 			var a = -Math.atan2(vec[2],vec[3]);	//note the - here, not used in procTerrain

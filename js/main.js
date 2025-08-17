@@ -5171,28 +5171,30 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 			
 			if (worldInfo.duocylinderModel == "procTerrain"){
-				//collision with duocylinder procedural terrain	
-				if (getHeightAboveTerrainFor4VecPos(bulletPos, dcSpin)<0){detonateBullet(bullet, true, [0.3,0.3,0.3,1]);}
+				var procTerrainCollisionResult = terrainBulletCollision(getHeightAboveTerrainFor4VecPos, bulletPos, newBulletPos, dcSpin);
+				if (procTerrainCollisionResult.collided){
+					xyzmove4mat(bulletMatrix,scalarvectorprod(bulletMoveAmount*(procTerrainCollisionResult.fractionAlong-1),bulletVel));
+					detonateBullet(bullet, true, [0.3,0.3,0.3,1]);
+				}
 			}
 			if (worldInfo.duocylinderModel == "l3dt-brute" || worldInfo.duocylinderModel == "l3dt-blockstrips"){
-				if (getHeightAboveTerrain2For4VecPos(bulletPos, dcSpin)<0){detonateBullet(bullet, true, [0.3,0.3,0.3,1]);}
+				var l3dtCollisionResult = terrainBulletCollision(getHeightAboveTerrain2For4VecPos, bulletPos, newBulletPos, dcSpin);
+				if (l3dtCollisionResult.collided){
+					xyzmove4mat(bulletMatrix,scalarvectorprod(bulletMoveAmount*(l3dtCollisionResult.fractionAlong-1),bulletVel));
+					detonateBullet(bullet, true, [0.3,0.3,0.3,1]);
+				}
 			}
 			if (Object.keys(voxTerrainData).includes(worldInfo.duocylinderModel)){	//TODO generalise collision by specifying a function for terrain. (voxTerrain, procTerrain)
-				if (voxTerrainData[worldInfo.duocylinderModel].collisionFunction(bulletPos, dcSpin)>0){detonateBullet(bullet, true, [0.5,0.5,0.5,1]);}
+				var voxCollisionResult = terrainBulletCollision(voxTerrainData[worldInfo.duocylinderModel].collisionFunction, bulletPos, newBulletPos, dcSpin);
+				if (voxCollisionResult.collided){
+					xyzmove4mat(bulletMatrix,scalarvectorprod(bulletMoveAmount*(voxCollisionResult.fractionAlong-1),bulletVel));
+					detonateBullet(bullet, true, [0.5,0.5,0.5,1]);
+				}
 			}
 			if (worldInfo.seaActive){
-				var hAtEnd = getHeightAboveSeaFor4VecPos(newBulletPos, lastSeaTime, dcSpin);
-				if (hAtEnd<0){
-					//NOTE This is approximate and assumes that sea surface doesn't move far due to duocylinder spin or waves in one collision detection step,
-					// and the sea is smooth (~linear on scale of bullet movement in step)
-					// really should use previous dcSpin, and previous sea time. if do that, should calculate same val here as previous check for same bullet.
-					var hAtStart = getHeightAboveSeaFor4VecPos(bulletPos, lastSeaTime, dcSpin);
-
-					if (hAtStart>0){	//failing this test unlikely to happen, but might do because of ignoring dc rotation change, sea movement.
-										//if this untrue, just detonate bullet at end of ray
-						var fractionAlong = hAtStart / (hAtStart-hAtEnd);
-						xyzmove4mat(bulletMatrix,scalarvectorprod(bulletMoveAmount*(fractionAlong-1),bulletVel));
-					}
+				var seaCollisionResult = terrainBulletCollision(getHeightAboveSeaFor4VecPos, bulletPos, newBulletPos, dcSpin, lastSeaTime);
+				if (seaCollisionResult.collided){
+					xyzmove4mat(bulletMatrix,scalarvectorprod(bulletMoveAmount*(seaCollisionResult.fractionAlong-1),bulletVel));
 					detonateBullet(bullet, true, [0.6,0.75,1,1]);
 				}
 			}

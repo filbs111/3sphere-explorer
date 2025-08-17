@@ -536,3 +536,30 @@ function terrain2GetHeight(ii,jj){
 	}
 	return terrain2HeightData[ii*terrainSize + jj];
 }
+
+function terrainBulletCollision(heightFunction, startPos, endPos, dcSpin, lastSeaTime){
+	//NOTE lastSeaTime only used for sea.
+
+	var hAtEnd = heightFunction(endPos, dcSpin, lastSeaTime);
+
+	if (hAtEnd>0){
+		return {collided:false}
+	}
+
+	//NOTE This is approximate and assumes that sea surface doesn't move far due to duocylinder spin or waves in one collision detection step,
+	// and the sea is smooth (~linear on scale of bullet movement in step)
+	// really should use previous dcSpin, and previous sea time. if do that, should calculate same val here as previous check for same bullet.
+	var hAtStart = heightFunction(startPos, dcSpin, lastSeaTime);
+
+	if (hAtStart>0){	//failing this test unlikely to happen, but might do because of ignoring dc rotation change, sea movement.
+		return {
+			collided: true,
+			fractionAlong: hAtStart / (hAtStart-hAtEnd)
+		}
+	}
+
+	return {
+		collided: true,
+		fractionAlong: 1 // just take collision point to be end of ray
+	}
+}
