@@ -309,7 +309,7 @@ function closestPointBvhEfficient(fromPoint, posInObjFrame, objInfo, lowestAccep
     return closestPointForTris4d(posInObjFrame, objInfo, possibles);
 }
 
-function closestPointBvhAABBIntialCheck(fromPoint, posInObjFrame, queryRad, objInfo){
+function closestPointBvhAABBIntialCheck(posInObjFrame, queryRad, objInfo){
 
     //query AABB that takes projects sphere from 4D to 3D correctly.
     var queryAABB = queryAABB3DFrom4D(posInObjFrame, queryRad, objInfo);
@@ -317,7 +317,7 @@ function closestPointBvhAABBIntialCheck(fromPoint, posInObjFrame, queryRad, objI
     specialCollisionInfo.possibles2 = possibles.length;
     specialCollisionInfo.aabb = queryAABB;
 
-    return (possibles.length != 0);
+    return possibles;
 }
 
 function queryAABB3DFrom4D(posInObjFrame, queryRad, objInfo){

@@ -4451,7 +4451,8 @@ var guiParams={
 		worldCollisionTest1:"grid2OnlyOne",
 		worldCollisionTest2:"sphere",
 		worldBvhCollisionTestPlayer:true,
-		timestep:10
+		timestep:10,
+		useInitialCheckPossibles:true,
 	},
 	audio:{
 		volume:0.2,
@@ -4726,7 +4727,7 @@ function init(){
 	debugFolder.add(guiParams.debug, "worldCollisionTest2", ["none", "aabb", "sphere"]);
 	debugFolder.add(guiParams.debug, "worldBvhCollisionTestPlayer");
 	debugFolder.add(guiParams.debug, "timestep",2,40,1);
-
+	debugFolder.add(guiParams.debug, "useInitialCheckPossibles");
 	var audioFolder = gui.addFolder('audio');
 	audioFolder.add(guiParams.audio, "volume", 0,1,0.1).onChange(MySound.setGlobalVolume);
 	MySound.setGlobalVolume(guiParams.audio.volume);	//if set above 1, fallback html media element will throw exception!!!

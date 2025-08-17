@@ -642,8 +642,27 @@ var playerMechanics = (() => {
                 
                 specialCollisionInfo = {};
 
-                var nearby = closestPointBvhAABBIntialCheck(projectedPosInObjFrame, posInObjFrame, rad, objInfo);
-                return nearby ? closestPointBvhEfficient(projectedPosInObjFrame, posInObjFrame, objInfo, lowestAcceptedMultiplier): false;
+                var nearby = closestPointBvhAABBIntialCheck(posInObjFrame, rad, objInfo);
+
+                if (guiParams.debug.useInitialCheckPossibles){
+                    //return nearby.length>0 ? closestPointForTris4d(posInObjFrame, objInfo, nearby) : false;
+
+                    //filter using minmax logic. TODO take 4d into account properly (currently this is in object space, so could rule out true closest tri)
+                    var minMaxVals = nearby.map(item => aabbMinMaxDistanceFromPoint(projectedPosInObjFrame, item.AABB));
+                    var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
+
+                    var neabyFiltered = nearby.filter(
+                        (_, ii) =>
+                        minMaxVals[ii][0]<lowestMax
+                    );
+
+                    specialCollisionInfo.neabyFilteredLen = neabyFiltered.length;
+
+                    return neabyFiltered.length>0 ? closestPointForTris4d(posInObjFrame, objInfo, neabyFiltered) : false;
+
+                }else{
+                    return nearby.length>0 ? closestPointBvhEfficient(projectedPosInObjFrame, posInObjFrame, objInfo, lowestAcceptedMultiplier): false;
+                }
             });
 
             // draw debug points for nearby collision tests. note this inefficient! (makes matrices)
