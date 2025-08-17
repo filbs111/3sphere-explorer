@@ -299,7 +299,9 @@ function closestPointBvhEfficient(fromPoint, posInObjFrame, objInfo, lowestAccep
     //var possibles = collisionTestPossibleClosest2(fromPoint, [bvh.tris], 0.1);  //NOTE currently doing flypast noise+collision in 
         // same collision/closest point calc, but if need more speed, might do tighter collision check. noise
         // check likely can be less frequent than collision check. 
-        
+    
+    specialCollisionInfo.possibles1 = possibles.length;
+
     if (possibles.length == 0){
         return false;
     }
@@ -307,19 +309,61 @@ function closestPointBvhEfficient(fromPoint, posInObjFrame, objInfo, lowestAccep
     return closestPointForTris4d(posInObjFrame, objInfo, possibles);
 }
 
-function closestPointBvhAABBIntialCheck(fromPoint, queryRad, objInfo){
+function closestPointBvhAABBIntialCheck(fromPoint, posInObjFrame, queryRad, objInfo){
 
     var radInObjSpace = 2*queryRad/objInfo.scale;
 
     //some test AABB for sphere. note this is in projected space, so really should be ellipse.
     //just hope padding is enough. later finding of closest point also doesn't account for this.
     var queryAABB = [fromPoint.map(xx=> xx-radInObjSpace) , fromPoint.map(xx=> xx+radInObjSpace)];
-
     var possibles = collisionTestBvh(queryAABB, objInfo.bvh.tris);
         //TODO variant of collisionTestBvh that doesn't populate a list. just return bool.
+    
+    specialCollisionInfo.possibles2 = possibles.length;
+    specialCollisionInfo.aabb = queryAABB;
+
+    //another query AABB that takes projects sphere from 4D to 3D correctly.
+    var queryAABB2 = queryAABB3DFrom4D(posInObjFrame, queryRad, objInfo);
+    var possibles3 = collisionTestBvh(queryAABB2, objInfo.bvh.tris);
+    specialCollisionInfo.possibles3 = possibles3.length;
+    specialCollisionInfo.aabb2 = queryAABB2;
 
     return (possibles.length != 0);
 }
+
+function queryAABB3DFrom4D(posInObjFrame, queryRad, objInfo){
+    return calcProjectedAABB(posInObjFrame, queryRad).map(coords => coords.map(xx => xx/objInfo.scale));   //map to object space
+}
+
+/*
+for working see notes/collision/sphere-projection.js
+though in test project, zeroth component is like 3th component in this, so 0->3 , slice(1) -> slice(0,3)
+*/
+function calcProjectedAABB(position, radius){
+
+    var sphereDistFromOrigin = 1 + radius*radius;
+    
+    var posW =  position[3];
+    var posWSq = posW*posW;
+    var aabbAnalytic = [
+        position.slice(0,3).map(pp => {
+            var D = sphereDistFromOrigin * (pp*pp + posWSq) - radius*radius;
+            var rootD = Math.sqrt(D);
+            return (pp*rootD - posW*radius)/(posW*rootD + pp*radius);
+        }),
+        position.slice(0,3).map(pp => {
+            var D = sphereDistFromOrigin * (pp*pp + posWSq) - radius*radius;
+            var rootD = Math.sqrt(D);
+            return (pp*rootD + posW*radius)/(posW*rootD - pp*radius);
+        })
+        //TODO deduplicate the above. 
+    ];
+
+    return aabbAnalytic;
+}
+
+
+
 
 
 // function closestPointBvhEfficientA(fromPoint, bvh){

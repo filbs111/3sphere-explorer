@@ -640,7 +640,9 @@ var playerMechanics = (() => {
                 }
                 var projectedPosInObjFrame = posInObjFrame.slice(0,3).map(val => val/(objScale*posInObjFrame[3]));
                 
-                var nearby = closestPointBvhAABBIntialCheck(projectedPosInObjFrame, rad, objInfo);
+                specialCollisionInfo = {};
+
+                var nearby = closestPointBvhAABBIntialCheck(projectedPosInObjFrame, posInObjFrame, rad, objInfo);
                 return nearby ? closestPointBvhEfficient(projectedPosInObjFrame, posInObjFrame, objInfo, lowestAcceptedMultiplier): false;
             });
 
@@ -944,3 +946,4 @@ var playerMechanics = (() => {
 })();
 
 var shouldDumpDebug3 = false;
+var specialCollisionInfo = {};
