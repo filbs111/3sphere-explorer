@@ -72,7 +72,6 @@ var su57Buffers={};
 var frigateBuffers={};
 var frigateBvh={};
 var icoballBuffers={};
-var hyperboloidBuffers={};
 var meshSphereBuffers={};
 var buildingBuffers={};
 var buildingBvh={};
@@ -385,7 +384,6 @@ function initBuffers(){
 	createBvhFrom3dObjectData(dodecaFrameBlenderObject2, dodecaFrameBvh2);
 	
 	loadBufferData(icoballBuffers, icoballObj);
-	loadBufferData(hyperboloidBuffers, hyperboloidData);
 	
 	loadBuffersFromObj2Or3File(pillarBuffers, "./data/pillar/pillar.obj2", (bufferObj, sourceData) =>{
 		loadBufferData(bufferObj, sourceData);
@@ -2839,28 +2837,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		});
 	}
 	
-	if (guiParams.drawShapes.hyperboloid){
-		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.gray);
-		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);	//no emission
-		modelScale = 1.0;
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
-		/*
-		//draw a single tower
-		mat4.set(invertedWorldCamera, mvMatrix);
-		mat4.multiply(mvMatrix,teapotMatrix);		
-		xyzmove4mat(mvMatrix,[0,0.695,0]);	
-		xyzrotate4mat(mvMatrix,[-Math.PI/2,0,0]);	
-		drawObjectFromBuffers2(hyperboloidBuffers, shaderProgramColored);
-		*/
-		
-		//reuse logic for drawing towers
-		setupAtmosAndPrepBuffersForDrawing(hyperboloidBuffers, activeShaderProgram);
-		
-		for (var bb of duocylinderBoxInfo.hyperboloids.list){
-			drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, hyperboloidBuffers, invertedWorldCameraDuocylinderFrame);
-		}
-	}
-	
 	if (guiParams.drawShapes.pillars && pillarBuffers.isLoaded){
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.darkGray);
 		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);	//no emission
@@ -4383,7 +4359,6 @@ var guiParams={
 		towers:false,
 		singleBufferTowers:false,
 		explodingBox:false,
-		hyperboloid:false,
 		stonehenge:false,
 		singleBufferStonehenge:false,
 		roads:false,
@@ -4666,7 +4641,6 @@ function init(){
 	drawShapesFolder.add(guiParams.drawShapes,"towers");
 	drawShapesFolder.add(guiParams.drawShapes,"singleBufferTowers");
 	drawShapesFolder.add(guiParams.drawShapes,"explodingBox");
-	drawShapesFolder.add(guiParams.drawShapes,"hyperboloid");
 	drawShapesFolder.add(guiParams.drawShapes,"stonehenge");
 	drawShapesFolder.add(guiParams.drawShapes,"singleBufferStonehenge");
 	drawShapesFolder.add(guiParams.drawShapes,"roads");
@@ -5247,21 +5221,6 @@ var iterateMechanics = (function iterateMechanics(){
 			function boxCollideBulletForBoxArray(boxArr){
 				for (var gs of gridSqs){
 					boxCollideArray(boxArr[gs]);
-				}
-			}
-			
-			
-			//hyperbolas
-			if (guiParams.drawShapes.hyperboloid){
-				for (var mm of duocylinderBoxInfo.hyperboloids.list){
-					mat4.set(bulletMatrixTransposedDCRefFrame, relativeMat);
-					mat4.multiply(relativeMat, mm.matrix);
-					
-					if (relativeMat[15]<0.5){continue;}	//early sphere check	TODO correct value (closer to 1 for smaller objects.
-					
-					if (hyperboloidData.colCheck([relativeMat[3],relativeMat[7],relativeMat[11]].map(val => val/(relativeMat[15])))){
-						detonateBullet(bullet, true);
-					}
 				}
 			}
 			

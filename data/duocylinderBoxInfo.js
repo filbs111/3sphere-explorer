@@ -1,6 +1,5 @@
 var duocylinderBoxInfo=(function generateBoxInfo(){
 	var boxInfoTowerblocks = initialiseInfo();
-	var boxInfoHyperboloids = initialiseInfo();
 	var boxInfoStonehenge = initialiseInfo();
 	var boxInfoViaducts = initialiseInfo();
 	var boxInfoViaducts2 = initialiseInfo();
@@ -53,15 +52,6 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 	}
 	for (var ii=0;ii<alongRoadSteps;ii++){
 		addBoxData(Math.PI/2,ii*stepSizeAlongRoad +10,0.15, midGreyColor,0);
-	}
-	
-	currentboxInfo=boxInfoHyperboloids;
-	for (var ii=0;ii<4;ii++){
-		for (var jj=0;jj<4;jj++){
-			for (var hi=2;hi<3;hi++){
-				addBoxData((ii+jj)*0.2 ,(ii-jj)*0.2 -0.8,hi*0.05, lightGreyColor, 0);
-			}
-		}
 	}
 	
 	currentboxInfo=boxInfoStonehenge;
@@ -123,7 +113,7 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 		zmove4mat(boxMatrix, bb);
 		xmove4mat(boxMatrix, Math.PI/4 - hh);
 		xyzrotate4mat(boxMatrix, [turn,0,0]);
-		xyzrotate4mat(boxMatrix, [0,Math.PI/2,0]);	//put hyperboloids upright
+		xyzrotate4mat(boxMatrix, [0,Math.PI/2,0]);	//put upright (TODO remove? not needed for boxes)
 		
 		var boxMatrixT = mat4.create(boxMatrix);	//todo use only transposed/not transposed matrix in code
 		mat4.transpose(boxMatrixT);
@@ -142,7 +132,6 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 	
 	return {
 		towerblocks:boxInfoTowerblocks,
-		hyperboloids:boxInfoHyperboloids,
 		stonehenge:boxInfoStonehenge,
 		viaducts:boxInfoViaducts,
 		viaducts2:boxInfoViaducts2,
