@@ -61,8 +61,11 @@ var tetraFrameBvh={};
 var dodecaFrameBuffers={};
 var dodecaFrameBuffers2={};	//without outer faces cut off
 var dodecaFrameBvh2={};
+
+var teapotScale = 0.4;
 var teapotBuffers={};
 var teapotBvh={};
+
 var pillarBuffers={};
 var pillarBvh={}
 var sshipBuffers={};
@@ -439,7 +442,7 @@ function initBuffers(){
 
 	//now bvhs ready, create the following which references them.
 
-	addManyObjectsToWorld2(0, someObjectMatrices, teapotBuffers, teapotBvh, 0.4);
+	addManyObjectsToWorld2(0, someObjectMatrices, teapotBuffers, teapotBvh, teapotScale);
 	//addManyObjectsToWorld2(2, someObjectMatrices, dodecaFrameBuffers2, dodecaFrameBvh2, 0.2);
 
 	//TODO array for each object type? include direct reference to rendering info (instead of matching bvh later)
@@ -6420,6 +6423,8 @@ function addManyObjectsToWorld2(world, matInfoArr, bufferObj, objBvh, scale){
 function addManyObjectsToWorlds(matAndWorldData, bufferObj, objBvh, scale){
 
 	var touchedWorlds = new Set();
+
+	ensureBvhHas4dDataForScale(objBvh, scale);
 
 	matAndWorldData.forEach(matAndWorld => {
 		bvhObjsForWorld[matAndWorld.world].objList.push({
