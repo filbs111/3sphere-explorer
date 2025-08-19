@@ -568,9 +568,10 @@ function calcProjectedAABB(position, radius){
 //     };
 // }
 
-var closestPointForTris4d = closestPointForTris4d1;
 
-function closestPointForTris4d1(fromPoint, objInfo, tris){
+/* keep unoptimised version commented for now because readable */
+/*
+function closestPointForTris4dOld(fromPoint, objInfo, tris){
 
     var verts = objInfo.bvh.verts;
     var objScale = objInfo.scale;
@@ -732,6 +733,8 @@ function closestPointForTris4d1(fromPoint, objInfo, tris){
             chosenVectorToClosestPoint = vectorToClosestPoint;
             closestSq = greatestSeparationSq;
             closestPointType = chosenPointTypeThisFace;
+
+            closestPointInfo.insideDist = Math.sqrt(closestSq);
         }
     });
 
@@ -742,12 +745,13 @@ function closestPointForTris4d1(fromPoint, objInfo, tris){
         closestPointType
     };
 }
+*/
 
 
 /*
 optimised version that uses precalculated 4d verts, face, edge vecs
 */
-function closestPointForTris4d2(fromPoint, objInfo, tris){
+function closestPointForTris4d(fromPoint, objInfo, tris){
 
     var dataForScale = objInfo.bvh.triCollisionData4d[objInfo.scale];
 
