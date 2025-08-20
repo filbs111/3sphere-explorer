@@ -432,7 +432,7 @@ var playerMechanics = (() => {
         processTriangleObjectCollisionSlow();   //updates debug point, audio from flying past objects
 
         var speed = Math.sqrt(playerVelVec.reduce((accum, current) => accum+current*current,0));
-        var numSubsteps = 1+ Math.floor(speed / 0.05);
+        var numSubsteps = 1+ Math.floor(speed / 0.1);
             //TODO inside substep loop/ using a while loop, ensure don't keep making many steps once collide and slow down
             //TODO take step size into account for spring/damper style collision? (expect more substeps = stiff)
         //console.log({playerVelVec, speed, numSubsteps});
@@ -719,7 +719,7 @@ var playerMechanics = (() => {
                 //be necessary. appears to be necessary for lucy collisions! ??
 
                 var penChange = currentTriangleObjectPlayerPen - lastTriangleObjPen;
-                var reactionForce = Math.max(50*currentTriangleObjectPlayerPen + 1000*penChange, 0);
+                var reactionForce = Math.max(100*currentTriangleObjectPlayerPen + 1000*penChange, 0);
                 
                 if (currentTriangleObjectPlayerPen > 0 && reactionForce> 0){
 
