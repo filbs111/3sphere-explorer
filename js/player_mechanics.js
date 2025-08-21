@@ -298,20 +298,19 @@ var playerMechanics = (() => {
         mat4.set(playerCamera, invertedPlayerCamera);		//using spaceship as sound listener. 
         mat4.transpose(invertedPlayerCamera);
         
-        var distanceForTerrainNoise = 100;	//something arbitrarily large
-        var panForTerrainNoise = 0;
+        var terrainAudio = {
+            distance: 100,   //something arbitrarily large
+            pan:0
+        };
                     
         //some logic shared with drawing code
         var worldInfo = guiSettingsForWorld[playerContainer.world];
         var dcSpin = worldInfo.spin;
 
 
-        
-        
-
 
         if (worldInfo.seaActive){
-            distanceForTerrainNoise = getHeightAboveSeaFor4VecPos(playerPos, dcSpin, lastSeaTime);	//height. todo use distance (unimportant because sea gradient low
+            terrainAudio.distance = getHeightAboveSeaFor4VecPos(playerPos, dcSpin, lastSeaTime);	//height. todo use distance (unimportant because sea gradient low
         }
         if (Object.keys(voxTerrainData).includes(worldInfo.duocylinderModel)){
             voxTerrainData[worldInfo.duocylinderModel].test2VoxABC(dcSpin);	//updates closestPointTestMat
@@ -322,12 +321,12 @@ var playerMechanics = (() => {
             mat4.multiply(tmpRelativeMat, closestPointTestMat);
             //distanceForTerrainNoise = distBetween4mats(tmpRelativeMat, identMat);	//should be same as previous result
             
-            if (distanceForVox<distanceForTerrainNoise){
-                distanceForTerrainNoise = distanceForVox;
+            if (distanceForVox<terrainAudio.distance){
+                terrainAudio.distance = distanceForVox;
                 //get terrain noise pan. TODO reuse other pan code (explosions etc)
                 
                 var soundSize = 0.002;	//reduced this below noiseRad so get more pan
-                panForTerrainNoise = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));	//tanh(left/hypot(size,down,forwards)). tanh smoothly limits to +/- 1
+                terrainAudio.pan = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));	//tanh(left/hypot(size,down,forwards)). tanh smoothly limits to +/- 1
             }
             //console.log(panForTerrainNoise);
             
@@ -365,14 +364,6 @@ var playerMechanics = (() => {
         }
 
 
-        	
-        //whoosh sound. simple educated guess model for sound of passing by objects. maybe with a some component of pure wind noise
-        //volume increase with speed - either generally, or component perpendicular to nearest surface normal
-        //volume increases with proximity to obstacles. (can just use 1/r consistent with other sounds)
-        //todo use the projected nearest surface point to inform stereo pan
-        //todo use atmos thickness
-        //todo use correct speed of sound (consistent with elsewhere)
-        setSoundHelper(myAudioPlayer.setWhooshSound, distanceForTerrainNoise, panForTerrainNoise, spd);
         
 
         //apply same forces for other items. 
@@ -442,8 +433,8 @@ var playerMechanics = (() => {
         for (var ii=0;ii<numSubsteps;ii++){
 
             //TODO update variables to do with duocylinder between substeps? 
-            if (ii%5==0 && worldInfo.duocylinderModel == 'procTerrain'){
-                processProcterrainCollision();   
+            if (worldInfo.duocylinderModel == 'procTerrain'){
+                processProcterrainCollision(ii==0 ? terrainAudio : false);   
             }
 
             processTriangleObjectCollisionFast();   //collision detection
@@ -456,6 +447,17 @@ var playerMechanics = (() => {
             mat4.set(playerCamera, playerMatrixTransposed);
             mat4.transpose(playerMatrixTransposed);
         }
+
+
+
+        //whoosh sound. simple educated guess model for sound of passing by objects. maybe with a some component of pure wind noise
+        //volume increase with speed - either generally, or component perpendicular to nearest surface normal
+        //volume increases with proximity to obstacles. (can just use 1/r consistent with other sounds)
+        //todo use the projected nearest surface point to inform stereo pan
+        //todo use atmos thickness
+        //todo use correct speed of sound (consistent with elsewhere)
+        setSoundHelper(myAudioPlayer.setWhooshSound, terrainAudio.distance, terrainAudio.pan, spd);
+
         
         var thrustVolume = Math.tanh(40*Math.hypot.apply(null, currentThrustInput));	//todo jet noise. take speed, atmos thickness into account. should be loud when going fast but not thrusting, pitch shift
         myAudioPlayer.setJetSound({delay:0, gain:thrustVolume, pan:0});
@@ -870,17 +872,17 @@ var playerMechanics = (() => {
         }
 
 
-        function processProcterrainCollision(){
+        function processProcterrainCollision(terrainAudioObj){
             //distanceForTerrainNoise = getHeightAboveTerrainFor4VecPos(playerPos);	//TODO actual distance using surface normal (IIRC this is simple vertical height above terrain)
 
-            processTerrainCollisionForBall(playerCentreBallData, settings.playerBallRad, true);
+            processTerrainCollisionForBall(playerCentreBallData, settings.playerBallRad, terrainAudioObj);
             /*
             for (var legnum=0;legnum<landingLegData.length;legnum++){
                 var landingLeg = landingLegData[legnum];
                 processTerrainCollisionForBall(landingLeg, 0.001);
             }
             */
-            function processTerrainCollisionForBall(landingLeg, ballSize, useForThwop){	//0.005 reasonable ballSize for centre of player model. smaller for landing legs
+            function processTerrainCollisionForBall(landingLeg, ballSize, terrainAudioObj){	//0.005 reasonable ballSize for centre of player model. smaller for landing legs
                 var legPosPlayerFrame=landingLeg.pos;
                 var suspensionHeight=landingLeg.suspHeight;
                             
@@ -936,13 +938,6 @@ var playerMechanics = (() => {
                 var distNearestPointPlayerFrame = Math.hypot.apply(null, nearestPosPlayerFrame);	//this should recalculate existing vec
                 myDebugStr += ", distNearestPointPlayerFrame: " + distNearestPointPlayerFrame.toFixed(4);
                 
-                if (useForThwop){
-                    mat4.set(nearestPosMat, debugDraw.mats[5]);	//for visual debugging (TODO display object for each contact)
-                
-                    distanceForTerrainNoise = distNearestPointPlayerFrame;	//assumes only 1 thing used for thwop
-                    var soundSize = 0.002;	//reduced this below noiseRad so get more pan
-                    panForTerrainNoise = Math.tanh(nearestPosPlayerFrame[0]/Math.hypot(soundSize,nearestPosPlayerFrame[1],nearestPosPlayerFrame[2]));	//tanh(left/hypot(size,down,forwards)). tanh smoothly limits to +/- 1
-                }
                 nearestPosPlayerFrame = nearestPosPlayerFrame.map(elem=>elem/distNearestPointPlayerFrame);	//normalise
                 var forcePlayerFrame = nearestPosPlayerFrame.map(x=>x*suspensionForce);	//TODO combo with above
                 
@@ -960,6 +955,17 @@ var playerMechanics = (() => {
                 }
                 
                 //TODO apply force along ground normal, friction force
+
+                if (terrainAudioObj){
+                    mat4.set(nearestPosMat, debugDraw.mats[5]);	//for visual debugging (TODO display object for each contact)
+                
+                    if (distNearestPointPlayerFrame < terrainAudioObj.distance){
+                        terrainAudioObj.distance = distNearestPointPlayerFrame;
+                        var soundSize = 0.002;	//reduced this below noiseRad so get more pan
+                        terrainAudioObj.pan = Math.tanh(nearestPosPlayerFrame[0]/Math.hypot(soundSize,nearestPosPlayerFrame[1],nearestPosPlayerFrame[2]));	//tanh(left/hypot(size,down,forwards)). tanh smoothly limits to +/- 1
+                    }
+                }
+
             }
         }
 
