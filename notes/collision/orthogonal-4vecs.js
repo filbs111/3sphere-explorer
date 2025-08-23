@@ -21,7 +21,7 @@
 
 //create tris. each is 3 4-vector verts
 
-var findOthoFunc = findOrthoVecByDiags;
+var findOthoFunc = findOrthoVecByDiags2;
 
 
 var tris = [];
@@ -92,6 +92,36 @@ function findOrthoVecByDiags(inputVecs){
  
     return results;
 }
+
+
+
+function findOrthoVecByDiags2(inputVecs){
+    //do 4d x-prod
+
+    //apparently determinant is something like 
+    //multiplying together diagonals... 
+    // https://www.youtube.com/watch?v=z5Yf7QwrotE
+
+    //just use diags instead of calculating 3x3 determinants
+
+    var results = [];
+
+    for (var cc=0;cc<4;cc++){
+        
+        var positiveproduct=1;
+        var negativeproduct=1;
+        
+        for (var aa=0;aa<3;aa++){
+            positiveproduct *= inputVecs[aa][(cc+1+aa)%4];
+            negativeproduct *= inputVecs[aa][(cc+3-aa)%4];
+        }
+
+        results.push(positiveproduct-negativeproduct);
+    }
+
+    return results;
+}
+
 
 function checkOrthogonality(vec1, vecsToTestVs){
     console.log({vec1, vecsToTestVs});
