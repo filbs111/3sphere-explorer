@@ -95,6 +95,7 @@ function runTest(startPoint, endPoint){
 function runSpeedTest(vecPairs){
 
     var time1 = testAMethod(aabb4DForLine, vecPairs);
+    var timeSampling = testAMethod((ss,ee)=>aabb4DForLineBySampling(ss,ee,10), vecPairs);
     var timeAnalytic = testAMethod(aabb4DForLineAnalytic, vecPairs);
     var timeAnalytic2 = testAMethod(aabb4DForLineAnalytic2, vecPairs);
     var timeAnalytic3 = testAMethod(aabb4DForLineAnalytic3, vecPairs);
@@ -102,6 +103,7 @@ function runSpeedTest(vecPairs){
 
     console.log({
         time1,
+        timeSampling,
         timeAnalytic,
         timeAnalytic2,
         timeAnalytic3,
