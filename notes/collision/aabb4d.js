@@ -70,7 +70,8 @@ function runTest(startPoint, endPoint){
         sampling: aabb4DForLineBySampling(startPoint, endPoint, 10000),
         analytic: aabb4DForLineAnalytic(startPoint, endPoint),
         analytic2: aabb4DForLineAnalytic2(startPoint, endPoint),
-        analytic3: aabb4DForLineAnalytic3(startPoint, endPoint)
+        analytic3: aabb4DForLineAnalytic3(startPoint, endPoint),
+        analytic4: aabb4DForLineAnalytic4(startPoint, endPoint)
     }
 
     //test that analytic includes sampling result.
@@ -85,7 +86,9 @@ function runTest(startPoint, endPoint){
         analytic2: aabbs.analytic2,
         analytic2SAH: surfOfAABB4d(aabbs.analytic2),
         analytic3: aabbs.analytic3,
-        analytic3SAH: surfOfAABB4d(aabbs.analytic3)
+        analytic3SAH: surfOfAABB4d(aabbs.analytic3),
+        analytic4: aabbs.analytic4,
+        analytic4SAH: surfOfAABB4d(aabbs.analytic4)
     });
 }
 
@@ -95,12 +98,14 @@ function runSpeedTest(vecPairs){
     var timeAnalytic = testAMethod(aabb4DForLineAnalytic, vecPairs);
     var timeAnalytic2 = testAMethod(aabb4DForLineAnalytic2, vecPairs);
     var timeAnalytic3 = testAMethod(aabb4DForLineAnalytic3, vecPairs);
+    var timeAnalytic4 = testAMethod(aabb4DForLineAnalytic4, vecPairs);
 
     console.log({
         time1,
         timeAnalytic,
         timeAnalytic2,
-        timeAnalytic3
+        timeAnalytic3,
+        timeAnalytic4
     })
 
     function testAMethod(meth, pairs){
@@ -295,6 +300,48 @@ function aabb4DForLineAnalytic3(startPos, endPos){
             var maxMagnitude = Math.sqrt(orthoVecsSq[0][cc]/orthoVecsLensq[0] + orthoVecsSq[1][cc]/orthoVecsLensq[1]);;
             //console.log("adding point for cc = " + cc + ", maxMagnitude = " + maxMagnitude);
             if (derivativeAtStart>0){
+                aabb[1][cc] = maxMagnitude;
+            }else{
+                aabb[0][cc] = -maxMagnitude;
+            }
+        }
+    }
+
+    return aabb;
+}
+
+
+function aabb4DForLineAnalytic4(startPos, endPos){
+    //assume input is normalised 4vecs
+
+    //initial AABB just taking start, end points into account 
+    var aabb = [
+        startPos.map((xx,ii)=>Math.min(xx, endPos[ii])),
+        startPos.map((xx,ii)=>Math.max(xx, endPos[ii]))
+    ];
+
+    var orthoVecs = [
+        vectorDifference4d(endPos, startPos),
+        vectorSum4d(endPos, startPos)
+    ];
+
+    var orthoVecsSq = orthoVecs.map(vv=> vv.map(xx=>xx*xx));
+    var orthoVecsLensq = orthoVecsSq.map(vv=>vv.reduce((acc,ss)=>acc+ss,0));
+    //var orthoVecsOverLensq = orthoVecs.map((vv,ii) => vv.map(xx=>xx/orthoVecsLensq[ii]));
+    var dps = orthoVecs.map(vv => dotProduct4(vv, endPos));
+
+    //var maxMagnitudes = normalisedOrthoEndPos.map((xx,ii) => xx*xx + startPos[ii]*startPos[ii]).map(xx=>Math.sqrt(xx));
+
+    var derivativeAtStart = temp4vec.map((_,cc) => dps[1]*orthoVecs[0][cc] + dps[0]*orthoVecs[1][cc]);
+    var derivativeAtEnd = temp4vec.map((_,cc) => dps[1]*orthoVecs[0][cc] - dps[0]*orthoVecs[1][cc]);
+
+    for (var cc=0;cc<4;cc++){
+
+        var derivsMultiplied = derivativeAtStart[cc]*derivativeAtEnd[cc];
+        if (derivsMultiplied<0){   //switched so include turning point
+            var maxMagnitude = Math.sqrt(orthoVecsSq[0][cc]/orthoVecsLensq[0] + orthoVecsSq[1][cc]/orthoVecsLensq[1]);;
+            //console.log("adding point for cc = " + cc + ", maxMagnitude = " + maxMagnitude);
+            if (derivativeAtStart[cc]>0){
                 aabb[1][cc] = maxMagnitude;
             }else{
                 aabb[0][cc] = -maxMagnitude;
