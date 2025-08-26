@@ -1,6 +1,16 @@
 // lib stuff. TODO share lib with main project
 var temp4vec = [...new Array(4)];
 
+
+function vectorSum4d(vec1, vec2){
+    return [
+        vec1[0] + vec2[0],
+        vec1[1] + vec2[1],
+        vec1[2] + vec2[2],
+        vec1[3] + vec2[3]
+    ];
+}
+
 function vectorDifference4d(vec1, vec2){
     return [
         vec1[0] - vec2[0],
@@ -17,6 +27,9 @@ function dotProduct4(first, second){
 function normalise(inputVector){
     var len = Math.hypot.apply(null, inputVector);
     return inputVector.map(cc => cc/len);
+}
+function lensq(inputVector){
+    return inputVector.reduce((accum, current)=>accum+current*current,0);
 }
 //TODO specialise for 4d, avoid hypot.apply?
 
@@ -43,12 +56,21 @@ function random4vec(){
 //runTest([0,0,0,1],[0,0,1,0]);
 runTest(random4vec(), random4vec());
 
+var randVecPairs = [];
+for (var ii=0;ii<10000;ii++){
+    randVecPairs.push([random4vec(), random4vec()]);
+}
+
+runSpeedTest(randVecPairs);
+
 
 function runTest(startPoint, endPoint){
     var aabbs={
         approxSphere:  aabb4DForLine(startPoint, endPoint),
         sampling: aabb4DForLineBySampling(startPoint, endPoint, 10000),
-        analytic: aabb4DForLineAnalytic(startPoint, endPoint)
+        analytic: aabb4DForLineAnalytic(startPoint, endPoint),
+        analytic2: aabb4DForLineAnalytic2(startPoint, endPoint),
+        analytic3: aabb4DForLineAnalytic3(startPoint, endPoint)
     }
 
     //test that analytic includes sampling result.
@@ -59,12 +81,40 @@ function runTest(startPoint, endPoint){
         sampling: aabbs.sampling,
         samplingSAH: surfOfAABB4d(aabbs.sampling),
         analytic: aabbs.analytic,
-        analyticSAH: surfOfAABB4d(aabbs.analytic)
+        analyticSAH: surfOfAABB4d(aabbs.analytic),
+        analytic2: aabbs.analytic2,
+        analytic2SAH: surfOfAABB4d(aabbs.analytic2),
+        analytic3: aabbs.analytic3,
+        analytic3SAH: surfOfAABB4d(aabbs.analytic3)
     });
 }
 
+function runSpeedTest(vecPairs){
+
+    var time1 = testAMethod(aabb4DForLine, vecPairs);
+    var timeAnalytic = testAMethod(aabb4DForLineAnalytic, vecPairs);
+    var timeAnalytic2 = testAMethod(aabb4DForLineAnalytic2, vecPairs);
+    var timeAnalytic3 = testAMethod(aabb4DForLineAnalytic3, vecPairs);
+
+    console.log({
+        time1,
+        timeAnalytic,
+        timeAnalytic2,
+        timeAnalytic3
+    })
+
+    function testAMethod(meth, pairs){
+        var startTime = performance.now();
+        pairs.forEach(pair=>meth(pair[0],pair[1]))
+        var timeTaken = performance.now() - startTime;
+        return timeTaken;
+    }
+}
+
+
+
 //currently using this approximate func
-function aabb4DForLine(startPos, endPos, numSteps){
+function aabb4DForLine(startPos, endPos){
     //larger aabb than necessary but easy calculation.
     var sumSq = 0;
     var centre = new Array(4);
@@ -158,7 +208,7 @@ function aabb4DForLineAnalytic(startPos, endPos){
         var derivsMultiplied = derivativeAtStart[cc]*derivativeAtEnd[cc];
         if (derivsMultiplied<0){   //switched so include turning point
             var maxMagnitude = Math.sqrt(normalisedOrthoEndPos[cc]*normalisedOrthoEndPos[cc] + startPos[cc]*startPos[cc]);
-            console.log("adding point for cc = " + cc + ", maxMagnitude = " + maxMagnitude);
+            //console.log("adding point for cc = " + cc + ", maxMagnitude = " + maxMagnitude);
             if (derivativeAtStart[cc]>0){
                 aabb[1][cc] = maxMagnitude;
             }else{
@@ -169,6 +219,92 @@ function aabb4DForLineAnalytic(startPos, endPos){
 
     return aabb;
 }
+
+
+
+//symmetric start+end points version. less readable, maybe faster
+function aabb4DForLineAnalytic2(startPos, endPos){
+    //assume input is normalised 4vecs
+
+    //initial AABB just taking start, end points into account 
+    var aabb = [
+        startPos.map((xx,ii)=>Math.min(xx, endPos[ii])),
+        startPos.map((xx,ii)=>Math.max(xx, endPos[ii]))
+    ];
+
+    var orthoVecs = [
+        vectorDifference4d(endPos, startPos),
+        vectorSum4d(endPos, startPos)
+    ];
+
+    orthoVecs=orthoVecs.map(vv=>normalise(vv));
+    var dps = orthoVecs.map(vv => dotProduct4(vv, endPos));   //should sumsq to 1
+
+    //var maxMagnitudes = normalisedOrthoEndPos.map((xx,ii) => xx*xx + startPos[ii]*startPos[ii]).map(xx=>Math.sqrt(xx));
+
+    for (var cc=0;cc<4;cc++){
+
+        var derivativeAtStart = dps[1]*orthoVecs[0][cc] + dps[0]*orthoVecs[1][cc];
+        var derivativeAtEnd = dps[1]*orthoVecs[0][cc] - dps[0]*orthoVecs[1][cc]; 
+
+        var derivsMultiplied = derivativeAtStart*derivativeAtEnd;
+        if (derivsMultiplied<0){   //switched so include turning point
+            var maxMagnitude = Math.sqrt(orthoVecs[0][cc]*orthoVecs[0][cc] + orthoVecs[1][cc]*orthoVecs[1][cc]);
+            //console.log("adding point for cc = " + cc + ", maxMagnitude = " + maxMagnitude);
+            if (derivativeAtStart>0){
+                aabb[1][cc] = maxMagnitude;
+            }else{
+                aabb[0][cc] = -maxMagnitude;
+            }
+        }
+    }
+
+    return aabb;
+}
+
+
+
+function aabb4DForLineAnalytic3(startPos, endPos){
+    //assume input is normalised 4vecs
+
+    //initial AABB just taking start, end points into account 
+    var aabb = [
+        startPos.map((xx,ii)=>Math.min(xx, endPos[ii])),
+        startPos.map((xx,ii)=>Math.max(xx, endPos[ii]))
+    ];
+
+    var orthoVecs = [
+        vectorDifference4d(endPos, startPos),
+        vectorSum4d(endPos, startPos)
+    ];
+
+    var orthoVecsSq = orthoVecs.map(vv=> vv.map(xx=>xx*xx));
+    var orthoVecsLensq = orthoVecsSq.map(vv=>vv.reduce((acc,ss)=>acc+ss,0));
+    //var orthoVecsOverLensq = orthoVecs.map((vv,ii) => vv.map(xx=>xx/orthoVecsLensq[ii]));
+    var dps = orthoVecs.map(vv => dotProduct4(vv, endPos));
+
+    //var maxMagnitudes = normalisedOrthoEndPos.map((xx,ii) => xx*xx + startPos[ii]*startPos[ii]).map(xx=>Math.sqrt(xx));
+
+    for (var cc=0;cc<4;cc++){
+
+        var derivativeAtStart = dps[1]*orthoVecs[0][cc] + dps[0]*orthoVecs[1][cc];
+        var derivativeAtEnd = dps[1]*orthoVecs[0][cc] - dps[0]*orthoVecs[1][cc]; 
+
+        var derivsMultiplied = derivativeAtStart*derivativeAtEnd;
+        if (derivsMultiplied<0){   //switched so include turning point
+            var maxMagnitude = Math.sqrt(orthoVecsSq[0][cc]/orthoVecsLensq[0] + orthoVecsSq[1][cc]/orthoVecsLensq[1]);;
+            //console.log("adding point for cc = " + cc + ", maxMagnitude = " + maxMagnitude);
+            if (derivativeAtStart>0){
+                aabb[1][cc] = maxMagnitude;
+            }else{
+                aabb[0][cc] = -maxMagnitude;
+            }
+        }
+    }
+
+    return aabb;
+}
+
 
 
 //suspect that a 4d AABB for a triangle is the AABB of its 3 sides, and an extreme point (+/- 1) if the triangle wraps around a point axis (eg (0,0,0,1)). 
