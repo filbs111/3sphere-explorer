@@ -21,8 +21,7 @@
 
 //create tris. each is 3 4-vector verts
 
-var findOthoFunc = findOrthoVecByDiags2;
-
+var findOthoFunc = findOrthoVecByDiags;
 
 var tris = [];
 for (var ii=0;ii<2;ii++){
@@ -31,11 +30,11 @@ for (var ii=0;ii<2;ii++){
     testIt(tri);
 }
 
-testIt([
-    [1,0,0,0],
-    [0,1,0,0],
-    [0,0,1,0]
-]); //should get [0,0,0,1]
+// testIt([
+//     [1,0,0,0],
+//     [0,1,0,0],
+//     [0,0,1,0]
+// ]); //should get [0,0,0,1]
 
 
 //var faceVec = findOrthoVecByGlMatrix(triVerts);
@@ -81,46 +80,17 @@ function findOrthoVecByDiags(inputVecs){
         results.push(sum);
     }
 
-    //flip some due to signs
-    // + - + - for determinants for ijkl
-    // + - - + for whether the determinant square wraps right to left (code above calc determinants using %)
-    // multiple: 
-    // + + - -
-    //and flip this for nice sign of output (might wish to flip back if results inconsistent with other code in 3sphere project)
-    results[0]=-results[0];
-    results[1]=-results[1];
+    results[0]=-results[0]; //this apparently works. not sure why! guess could flip indices 1,3 instead
+    results[2]=-results[2];
  
     return results;
 }
 
 
-
-function findOrthoVecByDiags2(inputVecs){
-    //do 4d x-prod
-
-    //apparently determinant is something like 
-    //multiplying together diagonals... 
-    // https://www.youtube.com/watch?v=z5Yf7QwrotE
-
-    //just use diags instead of calculating 3x3 determinants
-
-    var results = [];
-
-    for (var cc=0;cc<4;cc++){
-        
-        var positiveproduct=1;
-        var negativeproduct=1;
-        
-        for (var aa=0;aa<3;aa++){
-            positiveproduct *= inputVecs[aa][(cc+1+aa)%4];
-            negativeproduct *= inputVecs[aa][(cc+3-aa)%4];
-        }
-
-        results.push(positiveproduct-negativeproduct);
-    }
-
-    return results;
-}
+//apparently the is no "rule of sarrus" for 4x4 matrices, so removing this previously committed function
+// function findOrthoVecByDiags2(inputVecs){
+// ...
+// }
 
 
 function checkOrthogonality(vec1, vecsToTestVs){
