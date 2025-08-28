@@ -356,12 +356,10 @@ function closestPointBvhBruteForce(fromPoint, bvh){
 
 function closestPointBvhEfficient(fromPoint, posInObjFrame, objInfo, lowestAcceptedMultiplier){
     var possibles = collisionTestPossibleClosest2(fromPoint, [objInfo.bvh.tris], objInfo.scale*lowestAcceptedMultiplier);
-        //lowestAccepted passed into collisionTestPossibleClosest2 is in object space! if object pre-scaling is big, this should be big too! 
+        //lowestAccepted passed into collisionTestPossibleClosest2 is in object space! if object pre-scaling is big, this should be big too!
+    //var possibles = collisionTestPossibleClosest4dFrom3d(posInObjFrame, [objInfo.bvh.tris], objInfo.scale*lowestAcceptedMultiplier, objInfo.scale);
+        //result is about same as 3d collisionTestPossibleClosest2, but much slower, presumably due to live AABB calculation
 
-    //var possibles = collisionTestPossibleClosest2(fromPoint, [bvh.tris], 0.1);  //NOTE currently doing flypast noise+collision in 
-        // same collision/closest point calc, but if need more speed, might do tighter collision check. noise
-        // check likely can be less frequent than collision check. 
-    
     specialCollisionInfo.possibles1 = possibles.length;
 
     if (possibles.length == 0){
@@ -890,10 +888,7 @@ function collisionTestPossibleClosest(fromPoint, bvh, lowestAccepted){
     return filteredGroup.map(group2 => collisionTestPossibleClosest(fromPoint, group2,lowestMax)).flat();
 }
 
-/*
-to make a version of this that is correct for 4d distance ....
- project frustum from 3d aabb to origin, collide cone with this? 
-*/
+
 function collisionTestPossibleClosest2(fromPoint, bvhGroup, lowestAccepted){
     lowestAccepted*=lowestAccepted;   //using squared distances.
 
@@ -927,6 +922,43 @@ function collisionTestPossibleClosest2(fromPoint, bvhGroup, lowestAccepted){
     return [fromNextLevel, leafNodes].flat();   //TODO keep in separate arrays to make filtering easier, reduce garbage.
 }
 
+/*
+    like collisionTestPossibleClosest2 but for 4d aabbs.
+    results about the same
+    unacceptably slow because aabb4dFrom3D called in game loop. could precalculate, but since results ~ same is unnecessary.
+*/
+// function collisionTestPossibleClosest4dFrom3d(fromPoint, bvhGroup, lowestAccepted, objScale){
+//     lowestAccepted*=lowestAccepted;   //using squared distances.
+
+//     var minMaxVals = bvhGroup.map(item =>  aabbMinMaxDistanceFromPoint(fromPoint, aabb4dFrom3D(item.AABB, objScale)));
+//     var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
+
+//     //IIRC in practice, all leaves are at same depth.
+//     //if want to have leaves at multiple depths should split out leaves, recurse with non-leaves
+
+//     //get range of distances for the AABBs at this level.
+//     //find the AABB with the lowest value of its greatest possible distance
+//     //then filter any where the minimum possible distance is greater than this.
+//     lowestMax = Math.min(lowestMax, lowestAccepted);    //TODO rule out groups earlier using lowestAccepted?
+
+//     var filtered = bvhGroup.filter(
+//         (_, ii) =>
+//         minMaxVals[ii][0]<lowestMax
+//     );
+
+//     var leafNodes = filtered.filter(xx => !xx.group);
+//     var nonLeafNodes = filtered.filter(xx => xx.group);
+
+//     if (nonLeafNodes.length == 0){
+//         return leafNodes;
+//     }
+
+//     //since 1st bvh in the group didn't have a subgroup, assume they all don't, so should recurse.
+//     var fromNextLevel = collisionTestPossibleClosest4dFrom3d(fromPoint, nonLeafNodes.map(nn=>nn.group).flat(), lowestAccepted, objScale);
+//         //TODO update lowestAccepted?
+
+//     return [fromNextLevel, leafNodes].flat();   //TODO keep in separate arrays to make filtering easier, reduce garbage.
+// }
 
 
 // function aabbMinMaxDistanceFromPoint(fromPoint, aabb){
