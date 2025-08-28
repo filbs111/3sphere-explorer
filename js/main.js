@@ -17,7 +17,7 @@ var shaderProgramColored,	//these are variables that are set to different shader
 var myDebugStr = "TEST INFO TO GO HERE";
 
 var duocylinderObjects={
-	grid:{divs:4,step:Math.PI/2,minXY:[-0.24999275,-0.00000725]},
+	grid:{divs:1,step:Math.PI/2,minXY:[-0.24999275,-0.00000725]},
 //from console:
 // tballGridDataPantheonStyle.tricoords.filter((_,ii)=>ii%3==0).reduce((a,b)=>Math.min(a,b),Number.MAX_VALUE)
 // -0.24999275

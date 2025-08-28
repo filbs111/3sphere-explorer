@@ -26,22 +26,22 @@ cosCylRadius, sinCylRadius are determined by zo . cylRadius of PI/4 divides in 2
 
 //data xo,yo,zo in toLoad
 
-loadGridData(tballGridDataPantheonStyle);
-loadGridData(terrainData);
-loadGridData(proceduralTerrainData);
+loadGridData(tballGridDataPantheonStyle, true);
+loadGridData(terrainData, true);
+loadGridData(proceduralTerrainData);	//don't generate collision data because faces data is peculiar!
 
 //map 3d point data to 4d points, wrapping square onto duocylinder
-function loadGridData(toLoad){
+function loadGridData(toLoad, generateCollisionData){
 	var verts = toLoad.vertices;
 	var newverts = [];
 	var tricoords = [];
 	var gridVertdataLen = verts.length;
-	console.log("tball vertexdata length = " +  gridVertdataLen);
+	console.log("tball vertexdata length = " + gridVertdataLen);
 
 	var norms = toLoad.normals;
 	var newnorms = [];
 	var gridNormdataLen = norms.length;
-	console.log("tball normals length = " +  gridNormdataLen);
+	console.log("tball normals length = " + gridNormdataLen);
 	
 	for (var vv=0;vv<gridVertdataLen;vv+=3){
 		var yo = verts[vv];
@@ -153,42 +153,91 @@ function loadGridData(toLoad){
 			for (var cc=0;cc<4;cc++){
 				newtangents.push(difference[cc]/divisor);
 			}
-			
-			
-			
 		}
-	
 	}
 	
 	//test get4vecfrom3vec - check that is "square" for small displacements
-	var centre4vec = get4vecfrom3vec(0,0,0);
-	var xshift4vec = get4vecfrom3vec(0.01,0,0);
-	var yshift4vec = get4vecfrom3vec(0,0.01,0);
-	var zshift4vec = get4vecfrom3vec(0,0,0.01);
+	// var centre4vec = get4vecfrom3vec(0,0,0);
+	// var xshift4vec = get4vecfrom3vec(0.01,0,0);
+	// var yshift4vec = get4vecfrom3vec(0,0.01,0);
+	// var zshift4vec = get4vecfrom3vec(0,0,0.01);
 	
-	console.log("TESTING get4vecfrom3vec");
-	printDifference(centre4vec, centre4vec);
-	printDifference(centre4vec, xshift4vec);
-	printDifference(centre4vec, yshift4vec);
-	printDifference(centre4vec, zshift4vec);
+	// console.log("TESTING get4vecfrom3vec");
+	// printDifference(centre4vec, centre4vec);
+	// printDifference(centre4vec, xshift4vec);
+	// printDifference(centre4vec, yshift4vec);
+	// printDifference(centre4vec, zshift4vec);
 	
-	function printDifference(v1,v2){
-		var vdifference = v1.map(function(elem, ii){return elem-v2[ii];});
-		console.log(Math.hypot.apply(null, vdifference));
-	}
+	// function printDifference(v1,v2){
+	// 	var vdifference = v1.map(function(elem, ii){return elem-v2[ii];});
+	// 	console.log(Math.hypot.apply(null, vdifference));
+	// }
 	
 	function get4vecfrom3vec(x,y,z){
-			var ang1 = 2*Math.PI * x;
-			var ang2 = 2*Math.PI * y;
-			var cylr = Math.PI * (0.25+ z*Math.sqrt(2));
-			var sr = Math.sin(cylr);
-			var cr = Math.cos(cylr);
-			return [ cr * Math.sin(ang1), cr * Math.cos(ang1), sr * Math.sin(ang2), sr * Math.cos(ang2) ];
-		}
+		var ang1 = 2*Math.PI * x;
+		var ang2 = 2*Math.PI * y;
+		var cylr = Math.PI * (0.25+ z*Math.sqrt(2));
+		var sr = Math.sin(cylr);
+		var cr = Math.cos(cylr);
+		return [ cr * Math.sin(ang1), cr * Math.cos(ang1), sr * Math.sin(ang2), sr * Math.cos(ang2) ];
+	}
 	
 	toLoad.tricoords = tricoords;
 	toLoad.vertices = newverts;
 	toLoad.normals = newnorms;
 	toLoad.binormals = newbinormals;
 	toLoad.tangents = newtangents;
+
+
+	if (generateCollisionData){
+		//console.log("num faces in obj: " + toLoad.faces.length);
+		//generate collision data for triangles, like how doing for projected 3d->4d triangle meshes.
+		var verts4d = arrayToGroups(newverts, 4);
+		toLoad.collisionTriangleData = toLoad.faces.map(face => {
+			var triVerts = face.map(vv => verts4d[vv]);			//look up transformed 4vec verts by index
+			return makeCollisionDataForTriangle(triVerts);
+		});
+	}
+
+	//copy of aabb4DForTriAnalytic from test project that also returns face, edge data
+	function makeCollisionDataForTriangle(triVerts){
+
+		//combo aabbs for each line between verts
+		var aabb = [triVerts[0],triVerts[0]];   //some point that will be in the final aabb
+		for (ee=0;ee<3;ee++){
+			edgeaabb = aabb4DForLineAnalytic(triVerts[ee],triVerts[(ee+1)%3]);
+			aabb = combinedAABB(aabb, edgeaabb);
+		}
+
+		//include extreme point if some condition true
+		var face = findOrthoVecByDiags(triVerts);
+		// console.log("checking orthogonality...");
+		// checkOrthogonality(faceVec, triVerts);
+
+
+
+		var edges = []; 
+		for (ee=0;ee<3;ee++){
+			edges.push(normalise(findOrthoVecByDiags([triVerts[ee], triVerts[(ee+1)%3], face])));
+		}
+
+		var face = normalise(face);
+
+		//if all signs the same then do something
+		for (cc=0;cc<4;cc++){
+			var isPositive = edges.map(pv => pv[cc]>0 ? 1:0);
+			if (isPositive[0]==isPositive[1] && isPositive[0]==isPositive[2]){
+				var valueToAdd = Math.sqrt(1-face[cc]*face[cc]);  //or could sum other 3 squared components if want more robust (avoid sqrt -ve num)
+				// console.log({cc, isPositive: isPositive[0], valueToAdd});
+				aabb[1-isPositive[0]][cc] = isPositive[0]? -valueToAdd: valueToAdd;   //is sign to use here reliable? or is it just pot luck, depending on face winding order?
+			}
+		}
+		
+		return {
+			verts:triVerts,
+			face,
+			edges,
+			aabb
+		};
+	}
 };

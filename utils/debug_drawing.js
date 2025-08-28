@@ -1,6 +1,6 @@
 var debugDraw = (function(){
 
-    var nummats = 9;
+    var nummats = 10;
     var mats = new Array(nummats);
     for (var ii=0;ii<nummats;ii++){
         mats[ii] = mat4.identity();
@@ -71,6 +71,11 @@ var debugDraw = (function(){
         drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[8], 
             [colorArrs.red,colorArrs.green,colorArrs.blue][triObjClosestPointType], 0.01);
 
+        drawTriAxisCrossForMatrixColorAndScale(debugDraw.mats[9], 
+            [colorArrs.red,colorArrs.green,colorArrs.blue][triObjClosestPointType], 0.01);
+    }
+
+    function drawPlayerPosMarkers(){
         testPoints.forEach(tp => {
             drawTriAxisCrossForMatrixColorAndScale(tp.mat, tp.color, 0.001);
         });
@@ -80,6 +85,7 @@ var debugDraw = (function(){
         mats,
         drawDebugStuff,
         drawTriAxisCrossForMatrixColorAndScale,
-        addTestPoint
+        addTestPoint,
+        drawPlayerPosMarkers
     }
 })();

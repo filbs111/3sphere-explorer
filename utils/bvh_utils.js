@@ -366,6 +366,20 @@ function closestPointBvhEfficient(fromPoint, posInObjFrame, objInfo, lowestAccep
     return closestPointForTris4d(posInObjFrame, objInfo.bvh.triCollisionData4d[objInfo.scale], possibles);
 }
 
+function closestPointBvhEfficient4d(posInObjFrame, objInfo, lowestAcceptedMultiplier){
+    
+    console.log({
+        posInObjFrame,
+        objInfo,
+        lowestAcceptedMultiplier
+    })
+
+    var possibles = objInfo.collisionTriangleData.map((_,ii) => {return {triIdx:ii}});  //bodge! //TODO rule out tris by minmax or bvh
+
+    return closestPointForTris4d(posInObjFrame, objInfo.collisionTriangleData, possibles);
+}
+
+
 function closestPointBvhAABBIntialCheck(posInObjFrame, queryRad, objInfo){
 
     //query AABB that takes projects sphere from 4D to 3D correctly.
@@ -1439,6 +1453,69 @@ function aabb4DForLine(startPos, endPos){
     }
     var rad = Math.sqrt(sumSq);
     return [-1,1].map(direction => centre.map(xx => xx+direction*rad ));
+}
+
+//fastest analytic aabb func from aabb4d.js test project.
+function aabb4DForLineAnalytic(startPos, endPos){
+    //assume input is normalised 4vecs
+
+    //initial AABB just taking start, end points into account 
+    var aabb = [
+        startPos.map((xx,ii)=>Math.min(xx, endPos[ii])),
+        startPos.map((xx,ii)=>Math.max(xx, endPos[ii]))
+    ];
+
+    var dp = dotProduct4(startPos, endPos);
+    //angle two points these is then acos(dp)
+    //var endAngle = Math.acos(dp);
+
+    var componentOfEndPosInStartPosDirection = startPos.map(xx => xx*dp);
+
+    var orthogonalisedEndPos = vectorDifference4d(endPos, componentOfEndPosInStartPosDirection);
+    var normalisedOrthoEndPos = normalise(orthogonalisedEndPos);
+
+    //this point is 90 deg from startpoint in direction of endpoint.
+
+    //equation of line is then like 
+    // startPoint*cos(t) + normalisedOrthoEndPos * sin(t)
+    // where 0<=t<=endAngle
+
+    //can look at each axis independently
+    // eg startPoint.x*cos(t) + normalisedOrthoEndPos.x * sin(t)
+
+
+    //detect extrema from turning points
+    // look at sign of derivative wrt t for start, end. if changes, is a turning point inbetween, 
+    // and the magnitude of the turning point is pythagoras from the 2 orthogonal points (start, othogonalised end)
+
+    var derivativeAtStart = normalisedOrthoEndPos; 
+
+    var otherComponent = Math.sqrt(1-dp*dp);
+    var derivativeAtEnd = vectorDifference4d(normalisedOrthoEndPos.map(xx=>xx*dp) , startPos.map(xx=>xx*otherComponent)); 
+
+    //var maxMagnitudes = normalisedOrthoEndPos.map((xx,ii) => xx*xx + startPos[ii]*startPos[ii]).map(xx=>Math.sqrt(xx));
+
+    for (var cc=0;cc<4;cc++){
+        var derivsMultiplied = derivativeAtStart[cc]*derivativeAtEnd[cc];
+        if (derivsMultiplied<0){   //switched so include turning point
+            var maxMagnitude = Math.sqrt(normalisedOrthoEndPos[cc]*normalisedOrthoEndPos[cc] + startPos[cc]*startPos[cc]);
+            //console.log("adding point for cc = " + cc + ", maxMagnitude = " + maxMagnitude);
+            if (derivativeAtStart[cc]>0){
+                aabb[1][cc] = maxMagnitude;
+            }else{
+                aabb[0][cc] = -maxMagnitude;
+            }
+        }
+    }
+
+    return aabb;
+}
+
+function combinedAABB(aabb, aabb2){
+    return [
+        aabb[0].map((xx,ii) => Math.min(xx, aabb2[0][ii])),
+        aabb[1].map((xx,ii) => Math.max(xx, aabb2[1][ii])),
+    ]
 }
 
 function minMaxDistanceFromPointToBoundingSphere(pointPos, spherePos, sphereRad){

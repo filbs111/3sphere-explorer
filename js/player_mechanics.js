@@ -824,6 +824,31 @@ var playerMechanics = (() => {
                 return closestPointBvhEfficient(projectedPosInObjFrame, posInObjFrame, objInfo, lowestAcceptedMultiplier);
             });
 
+            //do triangle collision for 4d terrain objects.
+            //TODO deduplicate with regular projected 3d triangle objects.
+            //TODO what should initialcandidates be?
+            //if (guiSettingsForWorld[playerContainer.world].duocylinderModel == "terrain"){
+            if (guiSettingsForWorld[playerContainer.world].duocylinderModel == "grid"){
+                var terrainCollisionResultMat = mat4.identity();
+                processTrianglePossibles(terrainCollisionResultMat, [{
+                    //collisionTriangleData: terrainData.collisionTriangleData,
+                    collisionTriangleData: tballGridDataPantheonStyle.collisionTriangleData,
+                    mat: mat4.identity(),              //TODO store on terrain, reuse
+                    transposedMat: mat4.identity(),    //""
+                    scale:-1    //unused
+                }], 2000, (posInObjFrame, objScaleUnused, rad, objInfo, lowestAcceptedMultiplier) => {
+                    return closestPointBvhEfficient4d(posInObjFrame, objInfo, lowestAcceptedMultiplier);
+                });
+
+                console.log({
+                    terrainCollisionResultMat
+                });
+
+                //this appears to cause a problem!
+                mat4.set(terrainCollisionResultMat, debugDraw.mats[9]);
+            }
+            
+
             function getSlowPossibles(possibleObjects){
                 //find set of candiate objects by their bounding spheres - 
                 //provided each object has something solid within its bounding sphere
