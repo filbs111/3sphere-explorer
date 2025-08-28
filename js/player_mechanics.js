@@ -665,14 +665,37 @@ var playerMechanics = (() => {
                     var minMaxVals = nearby.map(item => aabbMinMaxDistanceFromPoint(projectedPosInObjFrame, item.AABB));
                     var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
 
-                    var neabyFiltered = nearby.filter(
+                    var nearbyFiltered = nearby.filter(
                         (_, ii) =>
                         minMaxVals[ii][0]<lowestMax
                     );
 
-                    specialCollisionInfo.neabyFilteredLen = neabyFiltered.length;
+                    specialCollisionInfo.nearbyFilteredLen = nearbyFiltered.length;
 
-                    return neabyFiltered.length>0 ? closestPointForTris4d(posInObjFrame, objInfo, neabyFiltered) : false;
+
+
+                    var minMaxVals2 = nearby.map(item => aabbMinMaxDistanceFromPoint(posInObjFrame, aabb4dFrom3D(item.AABB, objInfo.scale)));
+                        //TODO precalc 4d aabbs for scale. also could be tighter than 4d AABB from the 3d AABB
+                        //TODO don't get min val if not used to filter
+
+                    var lowestMax2 = minMaxVals2.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
+
+                    var nearbyFiltered2 = nearby.filter(
+                        (_, ii) =>
+                        minMaxVals2[ii][0]<lowestMax2
+                    );
+
+                    specialCollisionInfo.nearbyFilteredLen2 = nearbyFiltered2.length;
+
+                    if (nearbyFiltered2.length!=nearbyFiltered.length){
+                        console.log({
+                            nearbyFiltered,
+                            nearbyFiltered2
+                        })
+                    }
+
+
+                    return nearbyFiltered.length>0 ? closestPointForTris4d(posInObjFrame, objInfo, nearbyFiltered) : false;
 
                 }else{
                     return nearby.length>0 ? closestPointBvhEfficient(projectedPosInObjFrame, posInObjFrame, objInfo, lowestAcceptedMultiplier): false;
@@ -718,10 +741,18 @@ var playerMechanics = (() => {
             mat4.multiply(tmpRelativeMat, resultMat);
             distanceFromClosestPoint = distBetween4mats(tmpRelativeMat, identMat);
             
+            //stick on debug object to investigate
+            closestPointInfo.triObjCloPoinTyp = triObjClosestPointType;
+            closestPointInfo.distFromCloPoin = distanceFromClosestPoint;
+            closestPointInfo.foundCloPoinTriObj = foundClosestPointTriangleObj;
+            closestPointInfo.triObjCloPoTyp = triObjClosestPointType;
+
             //player collision - apply reaction force due to penetration, with some smoothing (like spring/damper)
             //cribbed from collidePlayerWithObjectByClosestPointFunc
             var lastTriangleObjPen = currentTriangleObjectPlayerPen;
             currentTriangleObjectPlayerPen = settings.playerBallRad - distanceFromClosestPoint;
+
+            closestPointInfo.currentTriangleObjectPlayerPen = currentTriangleObjectPlayerPen;
 
             if (foundClosestPointTriangleObj && foundClosestPointTriangleObjPreviously){
                 //if volume checked has some padding so can detect closest point before collide with object this shouldn't 
@@ -853,9 +884,14 @@ var playerMechanics = (() => {
                             objInfo
                         }
                         closestRoughSqDistanceFound = roughDistanceSqFromPlayer;
+
+                        closestPointInfo.closestRoughDist = Math.sqrt(closestRoughSqDistanceFound);
                     }
                 }
             });
+
+            closestPointInfo.bestResult = bestResult;
+            
 
             if (bestResult){
                 var closestPointResult= bestResult.closestPointResult;
@@ -983,4 +1019,6 @@ var playerMechanics = (() => {
 })();
 
 var shouldDumpDebug3 = false;
+
+var closestPointInfo = {};
 var specialCollisionInfo = {};

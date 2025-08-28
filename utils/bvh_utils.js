@@ -953,7 +953,19 @@ function aabbMinMaxDistanceFromPoint(fromPoint, aabb){
     var greatestPossibleSq=0;
     var lowestPossibleSq=0;
 
-    for (var cc=0;cc<3;cc++){
+    var minMaxSq = minMaxSqPerAxis(fromPoint, aabb);
+
+    for (var cc=0;cc<fromPoint.length;cc++){    //TODO are hard coded 4d, 3d versions faster?
+        
+        greatestPossibleSq+=minMaxSq[cc][1];
+        lowestPossibleSq+=minMaxSq[cc][0];
+    }
+    return [lowestPossibleSq, greatestPossibleSq];
+}
+
+function minMaxSqPerAxis(fromPoint, aabb){
+    var results = [];
+    for (var cc=0;cc<fromPoint.length;cc++){    //TODO are hard coded 4d, 3d versions faster?
         var aabbRangeRelativeToPoint = [aabb[0][cc]-fromPoint[cc] , aabb[1][cc]-fromPoint[cc]];
 
         var spaceToRight = aabbRangeRelativeToPoint[0];
@@ -964,11 +976,70 @@ function aabbMinMaxDistanceFromPoint(fromPoint, aabb){
         var farToLeft = -aabbRangeRelativeToPoint[0];
         var furthest = Math.max(farToRight, farToLeft);
 
-        greatestPossibleSq+=furthest*furthest;
-        lowestPossibleSq+=closest*closest;
+        results.push([closest,furthest].map(x=>x*x));
+
+        // greatestPossibleSq+=furthest*furthest;
+        // lowestPossibleSq+=closest*closest;
     }
-    return [lowestPossibleSq, greatestPossibleSq];
+    return results;
 }
+
+function aabb4dFrom3D(aabb, objScale){
+    //NOTE the result here may be larger than if calculated 4d AABB straight from obj tri data.
+    var minMaxSq = minMaxSqPerAxis([0,0,0],aabb);
+
+    //unproject 3d points
+    //say for x, range of 4d x could come from projecting least x or greatest x, other components least or greatest.
+    //this is intended to be somewhat reasonable. 
+    //could make faster, avoid sqrt, but probably should be precalculating anyway, and doing for triangles instead of calc 3d aabb from tris then get approx 4d
+
+    var aabbToReturn = [[],[]];
+
+    for (var cc=0;cc<3;cc++){
+        //here X is component cc
+
+        var otherComponentsMinMaxSq = [0,1].map(xx => minMaxSq[(cc+1)%3][xx] + minMaxSq[(cc+2)%3][xx]);
+
+        var leastX = aabb[0][cc];
+        var otherComponentsUseMax = leastX>0? 1 : 0;
+        var leastXProjected = leastX / Math.sqrt( leastX*leastX + otherComponentsMinMaxSq[otherComponentsUseMax] + 1/(objScale*objScale));
+
+        var greatestX = aabb[1][cc];
+        otherComponentsUseMax = greatestX<0? 1 : 0;
+        var greatestXProjected = greatestX / Math.sqrt( greatestX*greatestX + otherComponentsMinMaxSq[otherComponentsUseMax] + 1/(objScale*objScale));
+
+
+        // console.log({
+        //     cc,
+        //     otherComponentsMinMaxSq,
+        //     leastX,
+        //     greatestX,
+        //     leastXProjected,
+        //     greatestXProjected
+        // });
+
+        aabbToReturn[0].push(leastXProjected);
+        aabbToReturn[1].push(greatestXProjected);
+    }
+    
+    //add 4th component
+    //var ?? = aabbMinMaxDistanceFromPoint()    //this will call minMaxSqPerAxis again. to avoid repeat work, copy relevant code here...
+    // to intermediate func that sums minMaxSq? 
+
+    var greatestPossibleSq=0;
+    var lowestPossibleSq=0;
+
+    for (var cc=0;cc<3;cc++){    //TODO are hard coded 4d, 3d versions faster?
+        greatestPossibleSq+=minMaxSq[cc][1];
+        lowestPossibleSq+=minMaxSq[cc][0];
+    }
+
+    aabbToReturn[0].push(1/Math.sqrt(1+greatestPossibleSq*objScale*objScale));
+    aabbToReturn[1].push(1/Math.sqrt(1+lowestPossibleSq*objScale*objScale));
+
+    return aabbToReturn;
+}
+
 
 //currently unused. TODO use for player sphere collision with level?
 // function bvhSphereOverlapTest(spherePos, sphereRad, bvh){
