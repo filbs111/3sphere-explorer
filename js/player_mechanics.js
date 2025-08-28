@@ -850,9 +850,18 @@ var playerMechanics = (() => {
                         return closestPointBvhEfficient4d(posInObjFrame, objInfo, lowestAcceptedMultiplier);
                     });
 
-                    console.log({
-                        terrainCollisionResultMat
-                    });
+                    
+                    //sound. 
+                    //TODO efficient distance calculation without matrix mult
+                    //TODO deduplicate (also used for reguar tri mesh collision)
+                    mat4.set(playerMatrixTransposed, tmpRelativeMat);
+                    mat4.multiply(tmpRelativeMat, terrainCollisionResultMat);
+                    distanceForNoise = distBetween4mats(tmpRelativeMat, identMat);
+
+                    var soundSize = 0.002;
+                    panForNoise = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));
+                    //note spd (speed) in is in duocylinder frame, but object currently does not rotate with it.
+                    setSoundHelper(myAudioPlayer.setWhooshSoundTriangleMesh2, distanceForNoise, panForNoise, spd);
 
                     mat4.set(terrainCollisionResultMat, debugDraw.mats[9]);
                 }
