@@ -368,15 +368,25 @@ function closestPointBvhEfficient(fromPoint, posInObjFrame, objInfo, lowestAccep
 
 function closestPointBvhEfficient4d(posInObjFrame, objInfo, lowestAcceptedMultiplier){
     
-    console.log({
-        posInObjFrame,
-        objInfo,
-        lowestAcceptedMultiplier
-    })
+    var collisionTriangleData = objInfo.collisionTriangleData;
 
-    var possibles = objInfo.collisionTriangleData.map((_,ii) => {return {triIdx:ii}});  //bodge! //TODO rule out tris by minmax or bvh
+    var minMaxVals = collisionTriangleData.map(item => aabbMinMaxDistanceFromPoint(posInObjFrame, item.aabb));
+                        //TODO precalc 4d aabbs for scale. also could be tighter than 4d AABB from the 3d AABB
+                        //TODO don't get min val if not used to filter
 
-    return closestPointForTris4d(posInObjFrame, objInfo.collisionTriangleData, possibles);
+    var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
+
+    var possibles = collisionTriangleData.map((_,ii) => {return {triIdx:ii}}).  //bodge!
+       filter((_, ii) => minMaxVals[ii][0]<lowestMax);
+
+    // console.log({
+    //     posInObjFrame,
+    //     objInfo,
+    //     lowestAcceptedMultiplier,
+    //     possibles
+    // })
+
+    return closestPointForTris4d(posInObjFrame, collisionTriangleData, possibles);
 }
 
 

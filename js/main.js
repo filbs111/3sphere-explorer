@@ -23,7 +23,7 @@ var duocylinderObjects={
 // -0.24999275
 // tballGridDataPantheonStyle.tricoords.filter((_,ii)=>ii%3==1).reduce((a,b)=>Math.min(a,b),Number.MAX_VALUE)
 // -0.00000725
-	terrain:{divs:2,step:Math.PI,minXY:[-0.25,-0.25]},
+	terrain:{divs:1,step:Math.PI,minXY:[-0.25,-0.25]},
 	procTerrain:{divs:1,step:2*Math.PI,isStrips:true,minXY:[0,0]},
 	sea:{divs:1,step:2*Math.PI,isStrips:true},
 	voxTerrain:{divs:2,step:Math.PI,minXY:[0, -0.5]},
