@@ -696,8 +696,7 @@ var playerMechanics = (() => {
                         })
                     }
 
-
-                    return nearbyFiltered.length>0 ? closestPointForTris4d(posInObjFrame, objInfo, nearbyFiltered) : false;
+                    return nearbyFiltered.length>0 ? closestPointForTris4d(posInObjFrame, objInfo.bvh.triCollisionData4d[objInfo.scale], nearbyFiltered) : false;
 
                 }else{
                     return nearby.length>0 ? closestPointBvhEfficient(projectedPosInObjFrame, posInObjFrame, objInfo, lowestAcceptedMultiplier): false;

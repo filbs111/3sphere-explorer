@@ -74,6 +74,7 @@ function createBvhFrom3dObjectData(sourceData, bvhToPopulate, vertAttrs=3){
             };
         });
 
+
         return {
             triangleIndices: tri,
             normal,
@@ -118,6 +119,7 @@ function ensureBvhHas4dDataForScale(objBvh, objScale){
     var planes4d = objBvh.trisWithAABB.map( tri => {
         var faceVec4d = calc4dFrom3dPlane(tri.normal, tri.distFromOrigin*objScale);
         return {
+            verts: tri.triangleIndices.map(xx => verts4d[xx]),
             face: faceVec4d,
             edges: tri.edgeData.map(edgeData => {
                 //initial edge plane vecs is not necessarily perpendicular to faceVec4d
@@ -135,13 +137,8 @@ function ensureBvhHas4dDataForScale(objBvh, objScale){
         }
     });
 
-    var added = {
-        verts4d,
-        planes4d
-    }
-
-    objBvh.triCollisionData4d[objScale] = added;
-    return added;
+    objBvh.triCollisionData4d[objScale] = planes4d;
+    return planes4d;
 
     function calc4dFrom3dPlane(threeVecDirection,distPlaneFromOrigin3d){
         var D = threeVecDirection.slice();
@@ -366,7 +363,7 @@ function closestPointBvhEfficient(fromPoint, posInObjFrame, objInfo, lowestAccep
         return false;
     }
 
-    return closestPointForTris4d(posInObjFrame, objInfo, possibles);
+    return closestPointForTris4d(posInObjFrame, objInfo.bvh.triCollisionData4d[objInfo.scale], possibles);
 }
 
 function closestPointBvhAABBIntialCheck(posInObjFrame, queryRad, objInfo){
@@ -749,11 +746,7 @@ function closestPointForTris4dOld(fromPoint, objInfo, tris){
 /*
 optimised version that uses precalculated 4d verts, face, edge vecs
 */
-function closestPointForTris4d(fromPoint, objInfo, tris){
-
-    var dataForScale = objInfo.bvh.triCollisionData4d[objInfo.scale];
-
-    var verts4d = dataForScale.verts4d;
+function closestPointForTris4d(fromPoint, triCollisionData4d, tris){
     
     //want to find point in frame of object and vector from point to fromPoint (and its length)
     // for sphere collision, and flypast audio (with doppler shift, distance falloff)
@@ -767,12 +760,12 @@ function closestPointForTris4d(fromPoint, objInfo, tris){
     // can do this by separating axis test
     tris.forEach(tri => {
 
+        var thisTriCollisionData = triCollisionData4d[tri.triIdx];
+
         var greatestSeparationSq = Number.NEGATIVE_INFINITY;
         var chosenPointTypeThisFace = -1;
         var vectorToClosestPoint;
-        var triPoints = tri.triangleIndices.map(pp => verts4d[pp]);
-
-        var triPointsFromPoint = triPoints.map(pp => vectorDifference4d(fromPoint, pp));
+        var triPointsFromPoint = thisTriCollisionData.verts.map(pp => vectorDifference4d(fromPoint, pp));
 
         triPointsFromPoint.forEach((vecToCorner,ii) => {
             var vecToCornerLenSq = dotProduct4(vecToCorner, vecToCorner);
@@ -793,7 +786,6 @@ function closestPointForTris4d(fromPoint, objInfo, tris){
 
 
         //edges and normal
-        var planes4d = dataForScale.planes4d[tri.triIdx];
 
         function calcDistToPlane(D){
             var distToPlane = dotProduct4(D, fromPoint);
@@ -804,7 +796,7 @@ function closestPointForTris4d(fromPoint, objInfo, tris){
             }
         }
 
-        var faceDistResults = calcDistToPlane(planes4d.face);
+        var faceDistResults = calcDistToPlane(thisTriCollisionData.face);
 
         //plane separation.
         //TODO skip this if outside any edge?
@@ -817,7 +809,7 @@ function closestPointForTris4d(fromPoint, objInfo, tris){
             chosenPointTypeThisFace = 2;
         }
 
-        planes4d.edges.forEach(edgePlane => {
+        thisTriCollisionData.edges.forEach(edgePlane => {
             var edgeDistResults = calcDistToPlane(edgePlane);
             var distInEdgeDir = edgeDistResults.distToPlane;
 
