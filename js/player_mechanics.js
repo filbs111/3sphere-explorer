@@ -638,7 +638,9 @@ var playerMechanics = (() => {
 
         function processTriangleObjectCollisionFast(){
 
-            debugDraw.addTestPoint(playerContainer.matrix, colorArrs.white);
+            if (guiParams.debug.drawPlayerPosMarkers){
+                debugDraw.addTestPoint(playerContainer.matrix, colorArrs.white);
+            }
 
             var worldBvhObj = bvhObjsForWorld[playerContainer.world];
 
@@ -802,7 +804,9 @@ var playerMechanics = (() => {
         
         function processTriangleObjectCollisionSlow(){
 
-            debugDraw.addTestPoint(playerContainer.matrix, colorArrs.gray);
+            if (guiParams.debug.drawPlayerPosMarkers){
+                debugDraw.addTestPoint(playerContainer.matrix, colorArrs.gray);
+            }
 
             var worldBvhObj = bvhObjsForWorld[playerContainer.world];
 

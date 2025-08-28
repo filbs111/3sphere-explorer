@@ -2441,6 +2441,9 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	if (guiParams.debug.closestPoint){	//draw collision test objects		
 		debugDraw.drawDebugStuff();
 	}
+	if (guiParams.debug.drawPlayerPosMarkers){
+		debugDraw.drawPlayerPosMarkers();
+	}
 	
 	function drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, buffers, invertedCamera){
 		var invertedCamera = invertedCamera || invertedWorldCamera;
@@ -4441,6 +4444,7 @@ var guiParams={
 	debug:{
 		hudTest:false,
 		closestPoint:false,
+		drawPlayerPosMarkers:false,
 		closestPointNearby:false,
 		buoys:false,
 		nmapUseShader2:true,
@@ -4709,6 +4713,7 @@ function init(){
 	var debugFolder = gui.addFolder('debug');
 	debugFolder.add(guiParams.debug, "hudTest");
 	debugFolder.add(guiParams.debug, "closestPoint");
+	debugFolder.add(guiParams.debug, "drawPlayerPosMarkers");
 	debugFolder.add(guiParams.debug, "closestPointNearby");
 	debugFolder.add(guiParams.debug, "buoys");
 	debugFolder.add(guiParams.debug, "nmapUseShader2");
