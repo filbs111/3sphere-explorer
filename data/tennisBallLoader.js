@@ -197,7 +197,8 @@ function loadGridData(toLoad, generateCollisionData){
 			return makeCollisionDataForTriangle(triVerts);
 		});
 
-		toLoad.collisionTriangleData = generateBvh(allTris, temp4vec, 16);	//TODO morton/hilbert order before bvh
+		allTris.sort((a,b) => a.morton - b.morton);
+		toLoad.collisionTriangleData = generateBvh(allTris, temp4vec, 8);	//TODO morton/hilbert order before bvh
 	}
 
 	//copy of aabb4DForTriAnalytic from test project that also returns face, edge data
@@ -214,8 +215,6 @@ function loadGridData(toLoad, generateCollisionData){
 		var face = findOrthoVecByDiags(triVerts);
 		// console.log("checking orthogonality...");
 		// checkOrthogonality(faceVec, triVerts);
-
-
 
 		var edges = []; 
 		for (ee=0;ee<3;ee++){
@@ -238,7 +237,8 @@ function loadGridData(toLoad, generateCollisionData){
 			verts:triVerts,
 			face,
 			edges,
-			AABB: aabb
+			AABB: aabb,
+			morton: morton4(triVerts[0])	//TODO use centre/average point?
 		};
 	}
 };
