@@ -40,13 +40,13 @@ var duocylinderObjects=(function(){
 	}
 
 	var inputData = {
-		grid: {divs:2,step:Math.PI/2,minXY:[-0.24999275,-0.00000725],data:tballGridDataPantheonStyle.collisionTriangleData},
+		grid: {divs:3,step:Math.PI/2,minXY:[-0.24999275,-0.00000725],data:tballGridDataPantheonStyle.collisionTriangleData},
 //from console:
 // tballGridDataPantheonStyle.tricoords.filter((_,ii)=>ii%3==0).reduce((a,b)=>Math.min(a,b),Number.MAX_VALUE)
 // -0.24999275
 // tballGridDataPantheonStyle.tricoords.filter((_,ii)=>ii%3==1).reduce((a,b)=>Math.min(a,b),Number.MAX_VALUE)
 // -0.00000725
-		terrain:{divs:1,step:Math.PI,minXY:[-0.25,-0.25],data:terrainData.collisionTriangleData},
+		terrain:{divs:2,step:Math.PI,minXY:[-0.25,-0.25],data:terrainData.collisionTriangleData},
 		procTerrain:{divs:1,step:2*Math.PI,isStrips:true,minXY:[0,0]},
 		sea:{divs:1,step:2*Math.PI,isStrips:true},
 		voxTerrain:{divs:2,step:Math.PI,minXY:[0, -0.5]},

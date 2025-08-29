@@ -661,10 +661,11 @@ var playerMechanics = (() => {
                 var nearby = closestPointBvhAABBIntialCheck(posInObjFrame, rad, objInfo);
 
                 if (guiParams.debug.useInitialCheckPossibles){
-                    //return nearby.length>0 ? closestPointForTris4d(posInObjFrame, objInfo, nearby) : false;
+                    //return nearby.length>0 ? closestPointForTris4dWithLookup(posInObjFrame, objInfo, nearby) : false;
 
                     //filter using minmax logic. TODO take 4d into account properly (currently this is in object space, so could rule out true closest tri)
                     var minMaxVals = nearby.map(item => aabbMinMaxDistanceFromPoint(projectedPosInObjFrame, item.AABB));
+                        
                     var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
 
                     var nearbyFiltered = nearby.filter(
@@ -696,7 +697,7 @@ var playerMechanics = (() => {
                         })
                     }
 
-                    return nearbyFiltered.length>0 ? closestPointForTris4d(posInObjFrame, objInfo.bvh.triCollisionData4d[objInfo.scale], nearbyFiltered) : false;
+                    return nearbyFiltered.length>0 ? closestPointForTris4dWithLookup(posInObjFrame, objInfo.bvh.triCollisionData4d[objInfo.scale], nearbyFiltered) : false;
 
                 }else{
                     return nearby.length>0 ? closestPointBvhEfficient(projectedPosInObjFrame, posInObjFrame, objInfo, lowestAcceptedMultiplier): false;

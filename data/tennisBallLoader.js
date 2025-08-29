@@ -188,15 +188,16 @@ function loadGridData(toLoad, generateCollisionData){
 	toLoad.binormals = newbinormals;
 	toLoad.tangents = newtangents;
 
-
 	if (generateCollisionData){
 		//console.log("num faces in obj: " + toLoad.faces.length);
 		//generate collision data for triangles, like how doing for projected 3d->4d triangle meshes.
 		var verts4d = arrayToGroups(newverts, 4);
-		toLoad.collisionTriangleData = toLoad.faces.map(face => {
+		var allTris = toLoad.faces.map(face => {
 			var triVerts = face.map(vv => verts4d[vv]);			//look up transformed 4vec verts by index
 			return makeCollisionDataForTriangle(triVerts);
 		});
+
+		toLoad.collisionTriangleData = generateBvh(allTris, temp4vec, 16);	//TODO morton/hilbert order before bvh
 	}
 
 	//copy of aabb4DForTriAnalytic from test project that also returns face, edge data
@@ -237,7 +238,7 @@ function loadGridData(toLoad, generateCollisionData){
 			verts:triVerts,
 			face,
 			edges,
-			aabb
+			AABB: aabb
 		};
 	}
 };

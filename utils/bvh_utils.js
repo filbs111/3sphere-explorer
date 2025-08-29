@@ -363,30 +363,39 @@ function closestPointBvhEfficient(fromPoint, posInObjFrame, objInfo, lowestAccep
         return false;
     }
 
-    return closestPointForTris4d(posInObjFrame, objInfo.bvh.triCollisionData4d[objInfo.scale], possibles);
+    return closestPointForTris4dWithLookup(posInObjFrame, objInfo.bvh.triCollisionData4d[objInfo.scale], possibles);
 }
 
 function closestPointBvhEfficient4d(posInObjFrame, objInfo, lowestAcceptedMultiplier){
     
     var collisionTriangleData = objInfo.collisionTriangleData;
 
-    var minMaxVals = collisionTriangleData.map(item => aabbMinMaxDistanceFromPoint(posInObjFrame, item.aabb));
-                        //TODO precalc 4d aabbs for scale. also could be tighter than 4d AABB from the 3d AABB
-                        //TODO don't get min val if not used to filter
+    // var minMaxVals = collisionTriangleData.map(item => aabbMinMaxDistanceFromPoint(posInObjFrame, item.AABB));
+    //                     //TODO precalc 4d aabbs for scale. also could be tighter than 4d AABB from the 3d AABB
+    //                     //TODO don't get min val if not used to filter
 
-    var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
+    // var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
 
-    var possibles = collisionTriangleData.map((_,ii) => {return {triIdx:ii}}).  //bodge!
-       filter((_, ii) => minMaxVals[ii][0]<lowestMax);
+    // var possibles = collisionTriangleData.map((_,ii) => {return {triIdx:ii}}).  //bodge!
+    //    filter((_, ii) => minMaxVals[ii][0]<lowestMax);
 
-    // console.log({
-    //     posInObjFrame,
-    //     objInfo,
-    //     lowestAcceptedMultiplier,
-    //     possibles
-    // })
+    // // console.log({
+    // //     posInObjFrame,
+    // //     objInfo,
+    // //     lowestAcceptedMultiplier,
+    // //     possibles
+    // // })
 
-    return closestPointForTris4d(posInObjFrame, collisionTriangleData, possibles);
+    // console.log({objInfo});
+
+    var possibles = collisionTestPossibleClosest2(posInObjFrame, [collisionTriangleData], lowestAcceptedMultiplier);
+        //TODO what should 
+
+    if (possibles.length == 0){
+        return false;
+    }
+
+    return closestPointForTris4d(posInObjFrame, possibles);
 }
 
 
@@ -766,11 +775,10 @@ function closestPointForTris4dOld(fromPoint, objInfo, tris){
 }
 */
 
-
 /*
 optimised version that uses precalculated 4d verts, face, edge vecs
 */
-function closestPointForTris4d(fromPoint, triCollisionData4d, tris){
+function closestPointForTris4d(fromPoint, tris){
     
     //want to find point in frame of object and vector from point to fromPoint (and its length)
     // for sphere collision, and flypast audio (with doppler shift, distance falloff)
@@ -782,9 +790,7 @@ function closestPointForTris4d(fromPoint, triCollisionData4d, tris){
 
     //for each triangle, test dist from edges, face
     // can do this by separating axis test
-    tris.forEach(tri => {
-
-        var thisTriCollisionData = triCollisionData4d[tri.triIdx];
+    tris.forEach(thisTriCollisionData => {
 
         var greatestSeparationSq = Number.NEGATIVE_INFINITY;
         var chosenPointTypeThisFace = -1;
@@ -877,7 +883,9 @@ function closestPointForTris4d(fromPoint, triCollisionData4d, tris){
     };
 }
 
-
+function closestPointForTris4dWithLookup(fromPoint, triCollisionData4d, tris){
+    return closestPointForTris4d(fromPoint, tris.map(tri => triCollisionData4d[tri.triIdx]));
+}
 
 
 
