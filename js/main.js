@@ -16,17 +16,39 @@ var shaderProgramColored,	//these are variables that are set to different shader
 
 var myDebugStr = "TEST INFO TO GO HERE";
 
-var duocylinderObjects={
-	grid:{divs:1,step:Math.PI/2,minXY:[-0.24999275,-0.00000725]},
+var duocylinderObjects=(function(){
+	function initialiseDuocylinderObjectData(duocylinderObj){
+		var mat = mat4.identity();
+		var objInfoArr = [];
+		for (var xg=0;xg<duocylinderObj.divs;xg+=1){
+			for (var yg=0;yg<duocylinderObj.divs;yg+=1){
+				objInfoArr.push(matAndTransposedMat(mat));
+				rotate4mat(mat, 0, 1, duocylinderObj.step);
+			}
+			rotate4mat(mat, 2, 3, duocylinderObj.step);
+		}
+		duocylinderObj.objInfoArr = objInfoArr;
+	}
+	function matAndTransposedMat(mat){
+		var transposedMat = mat4.create(mat);
+		mat4.transpose(transposedMat);
+		return {
+			mat:mat4.create(mat),
+			transposedMat
+		}
+	}
+
+	var inputData = {
+		grid: {divs:2,step:Math.PI/2,minXY:[-0.24999275,-0.00000725]},
 //from console:
 // tballGridDataPantheonStyle.tricoords.filter((_,ii)=>ii%3==0).reduce((a,b)=>Math.min(a,b),Number.MAX_VALUE)
 // -0.24999275
 // tballGridDataPantheonStyle.tricoords.filter((_,ii)=>ii%3==1).reduce((a,b)=>Math.min(a,b),Number.MAX_VALUE)
 // -0.00000725
-	terrain:{divs:1,step:Math.PI,minXY:[-0.25,-0.25]},
-	procTerrain:{divs:1,step:2*Math.PI,isStrips:true,minXY:[0,0]},
-	sea:{divs:1,step:2*Math.PI,isStrips:true},
-	voxTerrain:{divs:2,step:Math.PI,minXY:[0, -0.5]},
+		terrain:{divs:1,step:Math.PI,minXY:[-0.25,-0.25]},
+		procTerrain:{divs:1,step:2*Math.PI,isStrips:true,minXY:[0,0]},
+		sea:{divs:1,step:2*Math.PI,isStrips:true},
+		voxTerrain:{divs:2,step:Math.PI,minXY:[0, -0.5]},
 // voxTerrainData.voxTerrain.tricoords.filter((_,ii)=>ii%3==0).reduce((a,b)=>Math.min(a,b),Number.MAX_VALUE)
 // -0.004672801704145968
 // voxTerrainData.voxTerrain.tricoords.filter((_,ii)=>ii%3==1).reduce((a,b)=>Math.min(a,b),Number.MAX_VALUE)
@@ -34,9 +56,13 @@ var duocylinderObjects={
 //NOTE minXY vox terrain exact vert position depends how regular grid modified to match up with implicit surface
 //so don't bother with exact min, just use approx vals
 	//voxTerrain:{divs:1,step:2*Math.PI}
-	voxTerrain2:{divs:2,step:Math.PI,minXY:[0,-0.5]},
-	voxTerrain3:{divs:2,step:Math.PI,minXY:[0,-0.5]}	
-	};
+		voxTerrain2:{divs:2,step:Math.PI,minXY:[0,-0.5]},
+		voxTerrain3:{divs:2,step:Math.PI,minXY:[0,-0.5]}
+	}
+
+	Object.keys(inputData).forEach( kk => initialiseDuocylinderObjectData(inputData[kk]));
+	return inputData;
+})();
 
 var sphereBuffers={};
 var sphereBuffersHiRes={};
@@ -475,27 +501,35 @@ function initBuffers(){
 
 	var randBoxData = generateDataForDataMatricesScale(smoothCubeData, randomMats.map(elem => {return {matrix:elem};}), 0.001);	//TODO ensure none inside portal radius. (4vec vertex shader doesn't discard pixels)
 	
+	var singleObjectDataArr = [{
+		mat:mat4.identity(),
+		transposedMat:mat4.identity()
+	}];
+
 	//console.log("randBoxData:");
 	//console.log(randBoxData);
 	loadDuocylinderBufferData(randBoxBuffers, randBoxData);	//TODO rename func so not specific to duocylinder - generally is for 4vec vertex data.
 	randBoxBuffers.divs=1;	//because reusing duocylinder drawing function
 	randBoxBuffers.step=0;	//unused
+	randBoxBuffers.objInfoArr = singleObjectDataArr;
 	
 	var towerBoxData = generateDataForDataMatricesScale(levelCubeData, duocylinderBoxInfo.towerblocks.list, duocylinderSurfaceBoxScale);
 	loadDuocylinderBufferData(towerBoxBuffers, towerBoxData);	//TODO rename func so not specific to duocylinder - generally is for 4vec vertex data.
 	towerBoxBuffers.divs=1;	//because reusing duocylinder drawing function
 	towerBoxBuffers.step=0;	//unused
+	towerBoxBuffers.objInfoArr = singleObjectDataArr;
 	
 	var stonehengeBoxData = generateDataForDataMatricesScale(levelCubeData, duocylinderBoxInfo.stonehenge.list, duocylinderSurfaceBoxScale);
 	loadDuocylinderBufferData(stonehengeBoxBuffers, stonehengeBoxData);	//TODO rename func so not specific to duocylinder - generally is for 4vec vertex data.
 	stonehengeBoxBuffers.divs=1;	//because reusing duocylinder drawing function
 	stonehengeBoxBuffers.step=0;	//unused
+	stonehengeBoxBuffers.objInfoArr = singleObjectDataArr;
 	
 	var roadBoxData = generateDataForDataMatricesScale(levelCubeData, duocylinderBoxInfo.roads.list, duocylinderSurfaceBoxScale);
 	loadDuocylinderBufferData(roadBoxBuffers, roadBoxData);	//TODO rename func so not specific to duocylinder - generally is for 4vec vertex data.
 	roadBoxBuffers.divs=1;	//because reusing duocylinder drawing function
 	roadBoxBuffers.step=0;	//unused
-	
+
 	randBoxBuffers.randMatrixBuffers = glBufferMatrixUniformDataForInstancedDrawing(randomMats);
 
 	randBoxBuffers.forTerrain={};
@@ -2715,11 +2749,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 
 	//general stuff used for all 4vec vertex format objects (currently)
-	mat4.set(invertedWorldCamera, mvMatrix);
-	rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
-	mat4.identity(mMatrix);							//better to set M, V matrices and leave MV for shader?
-	rotate4mat(mMatrix, 0, 1, duocylinderSpin);
-	
 	activeShaderProgram = guiParams.display.perPixelLighting? (guiParams.display.useSpecular ? shaderPrograms.texmap4VecPerPixelDiscardPhongVcolor[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscardVcolor[ guiParams.display.atmosShader ]): shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ];
 	gl.useProgram(activeShaderProgram);
 	performCommon4vecShaderSetup(activeShaderProgram, wSettings, "not normal map");
@@ -2728,12 +2757,12 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 	if (guiParams["random boxes"].drawType == 'singleBuffer'){
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.randBoxes);
-		drawTennisBall(randBoxBuffers, activeShaderProgram, worldDrawingNow);	//todo draw subset of buffer according to ui controlled number
+		drawTennisBall(randBoxBuffers, activeShaderProgram, worldDrawingNow, duocylinderSpin);	//todo draw subset of buffer according to ui controlled number
 	}
 	
 	if (guiParams.drawShapes.singleBufferStonehenge){
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.gray);
-		drawTennisBall(stonehengeBoxBuffers, activeShaderProgram, worldDrawingNow);
+		drawTennisBall(stonehengeBoxBuffers, activeShaderProgram, worldDrawingNow, duocylinderSpin);
 	}
 	
 	activeShaderProgram = guiParams.display.useSpecular ? shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscardNormalmapVcolorAndDiffuse[ guiParams.display.atmosShader ];
@@ -2742,7 +2771,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	
 	if (guiParams.drawShapes.singleBufferTowers){
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);	//uColor is redundant here since have vertex colors. TODO lose it?
-		drawTennisBall(towerBoxBuffers, activeShaderProgram, worldDrawingNow);
+		drawTennisBall(towerBoxBuffers, activeShaderProgram, worldDrawingNow, duocylinderSpin);
 	}
 	
 	activeShaderProgram = guiParams.display.useSpecular ? shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongAndDiffuse[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscardNormalmapAndDiffuse[ guiParams.display.atmosShader ];
@@ -2751,7 +2780,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	
 	if (guiParams.drawShapes.singleBufferRoads){
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.darkGray);
-		drawTennisBall(roadBoxBuffers, activeShaderProgram, worldDrawingNow);
+		drawTennisBall(roadBoxBuffers, activeShaderProgram, worldDrawingNow, duocylinderSpin);
 	}
 	/*
 	activeShaderProgram = shaderPrograms.texmap4Vec[ guiParams.display.atmosShader ];
@@ -2759,10 +2788,16 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	performCommon4vecShaderSetup(activeShaderProgram, wSettings, "log3");
 	*/
 	if (worldInfo.duocylinderModel!='none' && worldInfo.duocylinderModel!='l3dt-brute' && worldInfo.duocylinderModel!='l3dt-blockstrips'){
-		drawDuocylinderObject(wSettings, duocylinderObjects[worldInfo.duocylinderModel]);
+		drawDuocylinderObject(wSettings, duocylinderObjects[worldInfo.duocylinderModel], duocylinderSpin);
 	}
 
 	// special case for drawing terrain2. TODO fit into standard draw (above)
+
+	mat4.set(invertedWorldCamera, mvMatrix);
+	rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
+	mat4.identity(mMatrix);							//better to set M, V matrices and leave MV for shader?
+	rotate4mat(mMatrix, 0, 1, duocylinderSpin);
+
 	if (worldInfo.duocylinderModel=='l3dt-brute'){
 		if (terrain2Buffer.isInitialised){
 			drawTerrain2(wSettings);
@@ -2779,7 +2814,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	}
 			
 	//if (worldInfo.seaActive && isCubemapView){	//draw this in drawWorldScene2 for standard view (using depth image from drawWorldScene) TODO move there for cubemap view also.
-	//	drawDuocylinderObject(wSettings, duocylinderObjects['sea'], guiParams.seaLevel, seaTime);
+	//	drawDuocylinderObject(wSettings, duocylinderObjects['sea'], duocylinderSpin, guiParams.seaLevel, seaTime);
 	//}
 
 	if (guiParams.debug.textTextBox){
@@ -3516,7 +3551,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 
 		gl.depthFunc(gl.ALWAYS);	//TODO try no z check - since discarding with using depth texture, this check is redundant
 		gl.depthMask(false);
-		drawDuocylinderObject(wSettings, duocylinderObjects[worldInfo.duocylinderModel], 0,0,0, depthMap);
+		drawDuocylinderObject(wSettings, duocylinderObjects[worldInfo.duocylinderModel], duocylinderSpin, 0,0,0, depthMap);
 		gl.depthFunc(gl.LESS);
 		gl.depthMask(true);
 	}
@@ -3527,7 +3562,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 
 	var seaTime = 0.00005*(frameTime % 20000 ); //20s loop	//note this is duplicated from drawWorldScene
 	if (worldInfo.seaActive){
-		drawDuocylinderObject(wSettings, duocylinderObjects['sea'], worldInfo.seaLevel, worldInfo.seaPeakiness, seaTime, depthMap);
+		drawDuocylinderObject(wSettings, duocylinderObjects['sea'], duocylinderSpin, worldInfo.seaLevel, worldInfo.seaPeakiness, seaTime, depthMap);
 	}
 
 
@@ -3789,7 +3824,7 @@ var enableDisableAttributes = (function generateEnableDisableAttributesFunc(){
 })();
 
 
-function drawTennisBall(duocylinderObj, shader, worldDrawingNow, depthMap){
+function drawTennisBall(duocylinderObj, shader, worldDrawingNow, duocylinderSpin, depthMap){
 	enableDisableAttributes(shader);
 
 	gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexPositionBuffer);
@@ -3849,23 +3884,19 @@ function drawTennisBall(duocylinderObj, shader, worldDrawingNow, depthMap){
 		gl.uniform1i(shader.uniforms.uSampler2B, 5);
 	}
 	
-	//for (var side=0;side<2;side++){	//draw 2 sides
-		for (var xg=0;xg<duocylinderObj.divs;xg+=1){		//
-			for (var yg=0;yg<duocylinderObj.divs;yg+=1){	//TODO precalc cells array better than grids here.
-				setMatrixUniforms(shader);
-				setupShaderAtmos(shader, worldDrawingNow);
-				gl.drawElements(duocylinderObj.isStrips? gl.TRIANGLE_STRIP : gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-				//gl.drawElements(duocylinderObj.isStrips? gl.LINES : gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-				rotate4mat(mvMatrix, 0, 1, duocylinderObj.step);
-				rotate4mat(mMatrix, 0, 1, duocylinderObj.step);
-			}
-			rotate4mat(mvMatrix, 2, 3, duocylinderObj.step);
-			rotate4mat(mMatrix, 2, 3, duocylinderObj.step);
-		}
-	//	xmove4mat(mvMatrix, 0.5*Math.PI);			//switch to 
-	//	rotate4mat(mvMatrix, 1, 2, Math.PI*0.5);	//other side..
-	//}
-	
+	duocylinderObj.objInfoArr.forEach(objInfo => {
+		//NOTE this is wasteful when drawing many objects with identity matrix
+		mat4.set(invertedWorldCameraDuocylinderFrame, mvMatrix);
+		mat4.multiply(mvMatrix,objInfo.mat);
+		mat4.identity(mMatrix);rotate4mat(mMatrix, 0, 1, duocylinderSpin);
+		mat4.multiply(mMatrix,objInfo.mat);
+
+		setMatrixUniforms(shader);
+		setupShaderAtmos(shader, worldDrawingNow);
+
+		gl.drawElements(duocylinderObj.isStrips? gl.TRIANGLE_STRIP : gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+		//gl.drawElements(duocylinderObj.isStrips? gl.LINES : gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+	});
 }
 
 function drawObjectFromBuffers(bufferObj, shaderProg, usesCubeMap){
@@ -5843,7 +5874,7 @@ function performCommon4vecShaderSetup(activeShaderProgram, wSettings, logtag){	/
 
 	performGeneralShaderSetup(activeShaderProgram);
 }
-function drawDuocylinderObject(wSettings, duocylinderObj, zeroLevel, seaPeakiness, seaTime, depthMap){	
+function drawDuocylinderObject(wSettings, duocylinderObj, duocylinderSpin, zeroLevel, seaPeakiness, seaTime, depthMap){	
 	var activeShaderProgram, selectedShaderSet;
 
 	//draw using z prepass if enabled. objects with substancial overdraw may draw faster, though increases num vertices drawn
@@ -5856,7 +5887,7 @@ function drawDuocylinderObject(wSettings, duocylinderObj, zeroLevel, seaPeakines
 	if (!duocylinderObj.isSea && guiParams.display.zPrepass && !depthMap){
 		activeShaderProgram = shaderPrograms.zPrepass4Vec;
 		gl.useProgram(activeShaderProgram);
-		drawTennisBall(duocylinderObj, activeShaderProgram, wSettings.worldA);
+		drawTennisBall(duocylinderObj, activeShaderProgram, wSettings.worldA, duocylinderSpin);
 		return;
 	}
 
@@ -5900,7 +5931,7 @@ function drawDuocylinderObject(wSettings, duocylinderObj, zeroLevel, seaPeakines
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
 	performCommon4vecShaderSetup(activeShaderProgram, wSettings);
 	
-	drawTennisBall(duocylinderObj, activeShaderProgram, wSettings.worldA, depthMap);
+	drawTennisBall(duocylinderObj, activeShaderProgram, wSettings.worldA, duocylinderSpin, depthMap);
 }
 
 var randomNormalised3vec = (function generate3vecRandomiser(){
