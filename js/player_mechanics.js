@@ -827,45 +827,30 @@ var playerMechanics = (() => {
             //do triangle collision for 4d terrain objects.
             //TODO deduplicate with regular projected 3d triangle objects.
             //TODO what should initialcandidates be?
+            var dcInfo = duocylinderObjects[guiSettingsForWorld[playerContainer.world].duocylinderModel];
 
-            var terrainsWithTriData = [ //todo move to config
-                {
-                    name:"grid",
-                    data:tballGridDataPantheonStyle.collisionTriangleData
-                },{
-                    name:"terrain",
-                    data:terrainData.collisionTriangleData
-                },
-            ];
-
-            terrainsWithTriData.forEach(td => {
-                if (guiSettingsForWorld[playerContainer.world].duocylinderModel == td.name){
-                    var terrainCollisionResultMat = mat4.identity();
-                    processTrianglePossibles(terrainCollisionResultMat, [{
-                        collisionTriangleData: td.data,
-                        mat: mat4.identity(),              //TODO store on terrain, reuse
-                        transposedMat: mat4.identity(),    //""
-                        scale:-1    //unused
-                    }], 2000, (posInObjFrame, objScaleUnused, rad, objInfo, lowestAcceptedMultiplier) => {
+            if (dcInfo?.data){
+                var terrainCollisionResultMat = mat4.identity();
+                processTrianglePossibles(terrainCollisionResultMat, dcInfo.objInfoArr, 2000, 
+                    (posInObjFrame, objScaleUnused, rad, objInfo, lowestAcceptedMultiplier) => {
                         return closestPointBvhEfficient4d(posInObjFrame, objInfo, lowestAcceptedMultiplier);
                     });
 
-                    
-                    //sound. 
-                    //TODO efficient distance calculation without matrix mult
-                    //TODO deduplicate (also used for reguar tri mesh collision)
-                    mat4.set(playerMatrixTransposed, tmpRelativeMat);
-                    mat4.multiply(tmpRelativeMat, terrainCollisionResultMat);
-                    distanceForNoise = distBetween4mats(tmpRelativeMat, identMat);
+                //sound. 
+                //TODO efficient distance calculation without matrix mult
+                //TODO deduplicate (also used for reguar tri mesh collision)
+                mat4.set(playerMatrixTransposed, tmpRelativeMat);
+                mat4.multiply(tmpRelativeMat, terrainCollisionResultMat);
+                distanceForNoise = distBetween4mats(tmpRelativeMat, identMat);
 
-                    var soundSize = 0.002;
-                    panForNoise = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));
-                    //note spd (speed) in is in duocylinder frame, but object currently does not rotate with it.
-                    setSoundHelper(myAudioPlayer.setWhooshSoundTriangleMesh2, distanceForNoise, panForNoise, spd);
+                var soundSize = 0.002;
+                panForNoise = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));
+                //note spd (speed) in is in duocylinder frame, but object currently does not rotate with it.
+                setSoundHelper(myAudioPlayer.setWhooshSoundTriangleMesh2, distanceForNoise, panForNoise, spd);
 
-                    mat4.set(terrainCollisionResultMat, debugDraw.mats[9]);
-                }
-            });
+                mat4.set(terrainCollisionResultMat, debugDraw.mats[9]);
+            }
+            
 
             
             
