@@ -8,6 +8,8 @@ var playerMechanics = (() => {
     var currentPen=0;	//for bodgy box collision (todo use collision points array)
 	var currentTriangleObjectPlayerPen=0;
     var foundClosestPointTriangleObj=false;
+    var currentTriangleObjectPlayerPen2=0;
+    var foundClosestPointTriangleObj2=false;
 
     var landingLegData=[
                                     //tricycle
@@ -445,7 +447,8 @@ var playerMechanics = (() => {
             terrainCollisionFunc(ii==0 ? terrainAudio : false);
 
             processTriangleObjectCollisionFast();   //collision detection
-            
+            processTriangleTerrainCollisionFast();  //for terrain objects using 4d tris
+
             rotatePlayer(scalarvectorprod(subTimeStep * rotateSpeed,playerAngVelVec));
             movePlayer(scalarvectorprod(subTimeStep * moveSpeed,playerVelVec));
 
@@ -648,8 +651,7 @@ var playerMechanics = (() => {
 
             var resultMat = mat4.create();
             var foundClosestPointTriangleObjPreviously = foundClosestPointTriangleObj; 
-            foundClosestPointTriangleObj = false;
-            processTrianglePossibles(resultMat, initialCandidates, 1000, (posInObjFrame, objScale, rad, objInfo, lowestAcceptedMultiplier) => {
+            foundClosestPointTriangleObj = processTrianglePossibles(resultMat, initialCandidates, 1000, (posInObjFrame, objScale, rad, objInfo, lowestAcceptedMultiplier) => {
                 
                 if (posInObjFrame[3]<=0.3){
                     return;
@@ -677,25 +679,25 @@ var playerMechanics = (() => {
 
 
 
-                    var minMaxVals2 = nearby.map(item => aabbMinMaxDistanceFromPoint(posInObjFrame, aabb4dFrom3D(item.AABB, objInfo.scale)));
-                        //TODO precalc 4d aabbs for scale. also could be tighter than 4d AABB from the 3d AABB
-                        //TODO don't get min val if not used to filter
+                    // var minMaxVals2 = nearby.map(item => aabbMinMaxDistanceFromPoint(posInObjFrame, aabb4dFrom3D(item.AABB, objInfo.scale)));
+                    //     //TODO precalc 4d aabbs for scale. also could be tighter than 4d AABB from the 3d AABB
+                    //     //TODO don't get min val if not used to filter
 
-                    var lowestMax2 = minMaxVals2.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
+                    // var lowestMax2 = minMaxVals2.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
 
-                    var nearbyFiltered2 = nearby.filter(
-                        (_, ii) =>
-                        minMaxVals2[ii][0]<lowestMax2
-                    );
+                    // var nearbyFiltered2 = nearby.filter(
+                    //     (_, ii) =>
+                    //     minMaxVals2[ii][0]<lowestMax2
+                    // );
 
-                    specialCollisionInfo.nearbyFilteredLen2 = nearbyFiltered2.length;
+                    // specialCollisionInfo.nearbyFilteredLen2 = nearbyFiltered2.length;
 
-                    if (nearbyFiltered2.length!=nearbyFiltered.length){
-                        console.log({
-                            nearbyFiltered,
-                            nearbyFiltered2
-                        })
-                    }
+                    // if (nearbyFiltered2.length!=nearbyFiltered.length){
+                    //     console.log({
+                    //         nearbyFiltered,
+                    //         nearbyFiltered2
+                    //     })
+                    // }
 
                     return nearbyFiltered.length>0 ? closestPointForTris4dWithLookup(posInObjFrame, objInfo.bvh.triCollisionData4d[objInfo.scale], nearbyFiltered) : false;
 
@@ -800,7 +802,119 @@ var playerMechanics = (() => {
             }
         }
 
-        
+
+        //very similar to above. TODO deduplicate
+        function processTriangleTerrainCollisionFast(){
+            var dcInfo = duocylinderObjects[guiSettingsForWorld[playerContainer.world].duocylinderModel];
+
+            if (!(dcInfo?.data)){
+                return;
+            }
+
+            var resultMat = mat4.create();
+            var foundClosestPointTriangleObjPreviously2 = foundClosestPointTriangleObj2; 
+            foundClosestPointTriangleObj2 = processTrianglePossibles(resultMat, dcInfo.objInfoArr, 0.92, (posInObjFrame, objScale, rad, objInfo, lowestAcceptedMultiplier) => {
+                
+                var queryAABB = [-1,1].map(ss=>ss*settings.playerBallRadPadded).map(offs => posInObjFrame.map(xx => xx+offs));
+                    // could use aabb4DForSphere() but maybe too slow.
+
+                var nearby = collisionTestBvh(queryAABB, objInfo.collisionTriangleData);
+                
+                return nearby.length>0 ? closestPointForTris4d(posInObjFrame, nearby) : false;
+
+                //TODO implement below for performance.
+
+                //filter using minmax logic. TODO take 4d into account properly (currently this is in object space, so could rule out true closest tri)
+                // var minMaxVals = nearby.map(item => aabbMinMaxDistanceFromPoint(projectedPosInObjFrame, item.AABB));
+                    
+                // var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
+
+                // var nearbyFiltered = nearby.filter(
+                //     (_, ii) =>
+                //     minMaxVals[ii][0]<lowestMax
+                // );
+
+                // return nearbyFiltered.length>0 ? closestPointForTris4d(posInObjFrame, nearbyFiltered) : false;
+            });
+
+            // draw debug points for nearby collision tests. note this inefficient! (makes matrices)
+            if (guiParams.debug.closestPointNearby){
+                if (triObjClosestPointType!=-1){
+                    mat4.set(playerMatrixTransposed, tmpRelativeMat);
+                    mat4.multiply(tmpRelativeMat, resultMat);
+                    new Explosion({matrix:mat4.create(resultMat),world:playerContainer.world}, sshipModelScale*0.05, [[1,0,0],[0,1,0],[0,0,1]][triObjClosestPointType]);
+                }
+            }
+
+            //TODO efficient distance calculation without matrix mult
+            mat4.set(playerMatrixTransposed, tmpRelativeMat);
+            mat4.multiply(tmpRelativeMat, resultMat);
+            distanceFromClosestPoint2 = distBetween4mats(tmpRelativeMat, identMat);
+            
+
+            //player collision - apply reaction force due to penetration, with some smoothing (like spring/damper)
+            //cribbed from collidePlayerWithObjectByClosestPointFunc
+            var lastTriangleObjPen2 = currentTriangleObjectPlayerPen2;
+            currentTriangleObjectPlayerPen2 = settings.playerBallRad - distanceFromClosestPoint2;
+
+             //stick on debug object to investigate
+            closestPointInfo.terrainCollisionInfo = {
+                triObjClosestPointType,
+                distanceFromClosestPoint2,
+                foundClosestPointTriangleObj2,
+                currentTriangleObjectPlayerPen2
+            }
+
+            if (guiParams.debug.logCollisionInfo){
+                closestPointInfoArr.push(closestPointInfo);
+                closestPointInfo = {};
+            }
+
+            if (foundClosestPointTriangleObj2 && foundClosestPointTriangleObjPreviously2){
+
+                //if volume checked has some padding so can detect closest point before collide with object this shouldn't 
+                //be necessary. appears to be necessary for lucy collisions! ??
+
+                var penChange = currentTriangleObjectPlayerPen2 - lastTriangleObjPen2;
+                var reactionForce = Math.max(100*currentTriangleObjectPlayerPen2 + 1000*penChange, 0);
+                
+                if (currentTriangleObjectPlayerPen2 > 0 && reactionForce> 0){
+
+                    //console.log("collision!", currentTriangleObjectPlayerPen, reactionForce);
+
+                        //different to collidePlayerWithObjectByClosestPointFunc, which takes places in duocylinder spun space.
+                    var relativePosC = tmpRelativeMat.slice(12);
+                    //normalise. note could just assume that length is player radius, or matches existing calculation for penetration etc, to simplify.
+                    
+                    
+                    //var relativePosCLength = Math.sqrt(1-relativePosC[3]*relativePosC[3]);	//assume matrix SO4
+                        //appears relativePosC can be of magnitude > 1. numerical error?
+                    var relativePosCLength = Math.sqrt(relativePosC[0]*relativePosC[0]+relativePosC[1]*relativePosC[1]+relativePosC[2]*relativePosC[2]);     
+
+                    var relativePosCNormalised = relativePosC.map(x=>x/relativePosCLength);
+                    var forcePlayerFrame = relativePosCNormalised.map(elem => elem*reactionForce);
+
+                    //when this goes wrong....
+                    mostRecentInfo.tmpRelativeMat = tmpRelativeMat.map(xx=>xx);
+                    mostRecentInfo.relativePosC = relativePosC;                     // is something reasonable, eg 
+                                                            // 0: -0.00004600548345479183
+                                                            // 1: 0.000005311260792950634
+                                                            // 2: 0.00005166974733583629
+                                                            // 3: 1                 // note that relativePosC[3] = 1
+                    mostRecentInfo.relativePosCLength = relativePosCLength;         // is zero
+                    mostRecentInfo.relativePosCNormalised = relativePosCNormalised; // is infinities
+                    mostRecentInfo.forcePlayerFrame = forcePlayerFrame;             // is infinities
+                    mostRecentInfo.playerMatrixTransposed = playerMatrixTransposed.map(xx=>xx); // something reasonable
+                    mostRecentInfo.resultMat = resultMat.map(xx=>xx);               // something reasonable
+
+
+                    for (var cc=0;cc<3;cc++){
+                        playerVelVec[cc]+=forcePlayerFrame[cc];
+                    }
+                }
+            }
+        }
+
         
         function processTriangleObjectCollisionSlow(){
 
@@ -813,9 +927,8 @@ var playerMechanics = (() => {
             var initialCandidates = guiParams.debug.worldBvhCollisionTestPlayer ? getSlowPossibles(worldBvhObj.objList):worldBvhObj.objList;
             
             var resultMat = mat4.create();
-            foundClosestPointTriangleObj = false;
-
-            processTrianglePossibles(resultMat, initialCandidates, 2000, (posInObjFrame, objScale, rad, objInfo, lowestAcceptedMultiplier) => {
+            
+            foundClosestPointTriangleObj = processTrianglePossibles(resultMat, initialCandidates, 2000, (posInObjFrame, objScale, rad, objInfo, lowestAcceptedMultiplier) => {
             
                 if (posInObjFrame[3]<=0.3){
                     return;
@@ -829,7 +942,6 @@ var playerMechanics = (() => {
             //TODO deduplicate with regular projected 3d triangle objects.
             //TODO what should initialcandidates be?
             var dcInfo = duocylinderObjects[guiSettingsForWorld[playerContainer.world].duocylinderModel];
-
             if (dcInfo?.data){
                 var terrainCollisionResultMat = mat4.identity();
                 processTrianglePossibles(terrainCollisionResultMat, dcInfo.objInfoArr, 0.92,
@@ -930,25 +1042,27 @@ var playerMechanics = (() => {
             closestPointInfo.bestResult = bestResult;
             
 
-            if (bestResult){
-                var closestPointResult= bestResult.closestPointResult;
-                triObjClosestPointType = closestPointResult.closestPointType;
-
-                //convert to projected space to avoid modifying more code here.
-                var closestPointInObjectFrame = closestPointResult.closestPoint;
-                var positionInProjectedSpace = closestPointInObjectFrame.slice(0,3).map(xx => xx/closestPointInObjectFrame[3]);
-
-                var veclen = Math.sqrt(positionInProjectedSpace.reduce((accum, xx)=>accum+xx*xx, 0));
-                var scalarAngleDifference = Math.atan(veclen);
-
-                var correction = -scalarAngleDifference/veclen;
-                var angleToMove = positionInProjectedSpace.map(val => val*correction);
-
-                mat4.set(bestResult.objInfo.mat, resultMat);
-                xyzmove4mat(resultMat, angleToMove);	//draw x on closest vertex
-
-                foundClosestPointTriangleObj = true;
+            if (!bestResult){
+                return false;
             }
+
+            var closestPointResult= bestResult.closestPointResult;
+            triObjClosestPointType = closestPointResult.closestPointType;
+
+            //convert to projected space to avoid modifying more code here.
+            var closestPointInObjectFrame = closestPointResult.closestPoint;
+            var positionInProjectedSpace = closestPointInObjectFrame.slice(0,3).map(xx => xx/closestPointInObjectFrame[3]);
+
+            var veclen = Math.sqrt(positionInProjectedSpace.reduce((accum, xx)=>accum+xx*xx, 0));
+            var scalarAngleDifference = Math.atan(veclen);
+
+            var correction = -scalarAngleDifference/veclen;
+            var angleToMove = positionInProjectedSpace.map(val => val*correction);
+
+            mat4.set(bestResult.objInfo.mat, resultMat);
+            xyzmove4mat(resultMat, angleToMove);	//draw x on closest vertex
+
+            return true;
         }
 
 
