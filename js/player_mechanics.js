@@ -832,7 +832,9 @@ var playerMechanics = (() => {
 
             if (dcInfo?.data){
                 var terrainCollisionResultMat = mat4.identity();
-                processTrianglePossibles(terrainCollisionResultMat, dcInfo.objInfoArr, 2000, 
+                processTrianglePossibles(terrainCollisionResultMat, dcInfo.objInfoArr, 0.92,
+                        //lowestAcceptedMultiplier - rules out distant aabbs quicker to improve perf
+                        // surprised this can't be smaller!
                     (posInObjFrame, objScaleUnused, rad, objInfo, lowestAcceptedMultiplier) => {
                         return closestPointBvhEfficient4d(posInObjFrame, objInfo, lowestAcceptedMultiplier);
                     });

@@ -40,7 +40,7 @@ var duocylinderObjects=(function(){
 	}
 
 	var inputData = {
-		grid: {divs:3,step:Math.PI/2,minXY:[-0.24999275,-0.00000725],data:tballGridDataPantheonStyle.collisionTriangleData},
+		grid: {divs:4,step:Math.PI/2,minXY:[-0.24999275,-0.00000725],data:tballGridDataPantheonStyle.collisionTriangleData},
 //from console:
 // tballGridDataPantheonStyle.tricoords.filter((_,ii)=>ii%3==0).reduce((a,b)=>Math.min(a,b),Number.MAX_VALUE)
 // -0.24999275
