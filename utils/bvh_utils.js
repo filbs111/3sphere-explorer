@@ -289,6 +289,58 @@ function bvhRayOverlapTest(rayStart, rayEnd, bvh){
     };
 }
 
+function bvhRayOverlapTest4d(rayStart, rayEnd, rayAABB, collisionTriangleData){
+    
+    var possibles = collisionTestBvh4d(rayAABB, collisionTriangleData);
+    var closestFractionAlong = 1;    //1 is useful since eg for camera collision want to move full dist if no collide
+    var collided = false;
+
+    possibles.forEach(thisTri => {
+        if (aabbsOverlap(rayAABB, thisTri.AABB)){
+
+            // to find point on plane, consider in some projected space.
+            // each point start or end has some component in direction of the face,
+            // and what remains after subtracting this.
+            // perhaps if weight the 2 points to get a point on the face plane (that has 0 dot prod with face plane),
+            // and normalise this, then have found collision point, which can be checked vs the edge planes.
+
+            // something like
+            // normalise( face.start * end - face.end * start)
+
+            startDistFromPlane = dotProduct4(thisTri.face, rayStart);
+            endDistFromPlane = dotProduct4(thisTri.face, rayEnd);
+
+            if (startDistFromPlane<0 && endDistFromPlane>=0){
+                //crosses plane test (in one direction. if want both ways could xor conditions)
+                //note sign switched vs projected 3d version
+
+                var weightedStart = rayStart.map(xx=>xx*endDistFromPlane);
+                var weightedEnd = rayEnd.map(xx=>xx*startDistFromPlane);
+                var pointOnPlane = vectorDifference4d(weightedEnd, weightedStart);
+                    //normalise unnecessary?
+
+                // console.log("check face dot prod: " + dotProduct4(thisTri.face, pointOnPlane));  //confirm expectation that is on face
+
+                var withinTri = thisTri.edges.reduce( (accum, edge) =>
+                    accum && dotProduct4(pointOnPlane, edge)>=0, true);   //note sign switched vs projected 3d version
+
+                if(withinTri){
+                    collided = true;
+                    var thisFractionAlong = startDistFromPlane/(startDistFromPlane-endDistFromPlane);
+                    closestFractionAlong = Math.min(closestFractionAlong, thisFractionAlong);
+                }
+            }
+        }
+    });
+    
+    return {
+        collided,
+        closestFractionAlong
+    };
+}
+
+
+
 //this returns possible colliding bvh nodes in the group.
 function collisionTestBvh(aabb, bvh){
     var picked=[];
@@ -1550,6 +1602,7 @@ function rayBvhCollision(rayStart, rayEnd, world){
     var closestFractionAlong = 1;
 
     processObjs(bvhObjsForWorld[world]);
+    processTerrain();
 
     function processObjs(worldBvh){
 
@@ -1629,6 +1682,30 @@ function rayBvhCollision(rayStart, rayEnd, world){
             closestFractionAlong = Math.min(closestFractionAlong, result.closestFractionAlong);
         });
     }
+
+    function processTerrain(){
+        var dcInfo = duocylinderObjects[guiSettingsForWorld[playerContainer.world].duocylinderModel];
+
+        if (!(dcInfo?.data)){
+            return;
+        }
+
+        var possiblities = dcInfo.objInfoArr;
+
+        possiblities.forEach(objInfo => {
+            //do bvh ray collision 4d version. (TODO how does this work? creates aabb for ray?)
+
+            var rayPosVec = getPosInMatrixFrame(rayStart, objInfo.transposedMat);
+            var rayPosEndVec = getPosInMatrixFrame(rayEnd, objInfo.transposedMat);
+            var lineAABB = aabb4DForLine(rayPosVec, rayPosEndVec);
+
+            var result = bvhRayOverlapTest4d(rayPosVec, rayPosEndVec, lineAABB, objInfo.collisionTriangleData);
+            collided = collided || result.collided;
+            closestFractionAlong = Math.min(closestFractionAlong, result.closestFractionAlong);
+        });
+    }
+
+
 
     return {
         collided,
