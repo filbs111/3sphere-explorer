@@ -326,7 +326,7 @@ function bvhRayOverlapTest4d(rayStart, rayEnd, rayAABB, collisionTriangleData){
 
                 if(withinTri){
                     collided = true;
-                    var thisFractionAlong = startDistFromPlane/(startDistFromPlane-endDistFromPlane);
+                    var thisFractionAlong = startDistFromPlane/(endDistFromPlane-startDistFromPlane);
                     closestFractionAlong = Math.min(closestFractionAlong, thisFractionAlong);
                 }
             }
