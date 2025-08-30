@@ -815,7 +815,7 @@ var playerMechanics = (() => {
                 var queryAABB = [-1,1].map(ss=>ss*settings.playerBallRadPadded).map(offs => posInObjFrame.map(xx => xx+offs));
                     // could use aabb4DForSphere() but maybe too slow.
 
-                var nearby = collisionTestBvh(queryAABB, objInfo.collisionTriangleData);
+                var nearby = collisionTestBvh4d(queryAABB, objInfo.collisionTriangleData);
                 
                 return nearby.length>0 ? closestPointForTris4d(posInObjFrame, nearby) : false;
 
@@ -941,7 +941,7 @@ var playerMechanics = (() => {
             var dcInfo = duocylinderObjects[guiSettingsForWorld[playerContainer.world].duocylinderModel];
             if (dcInfo?.data){
                 var terrainCollisionResultMat = mat4.identity();
-                processTrianglePossibles(terrainCollisionResultMat, dcInfo.objInfoArr, 0.92,
+                processTrianglePossibles(terrainCollisionResultMat, dcInfo.objInfoArr, 0.95,
                         //lowestAcceptedMultiplier - rules out distant aabbs quicker to improve perf
                         // surprised this can't be smaller!
                     (posInObjFrame, objScaleUnused, rad, objInfo, lowestAcceptedMultiplier) => {
@@ -1046,15 +1046,19 @@ var playerMechanics = (() => {
             var closestPointResult= bestResult.closestPointResult;
             triObjClosestPointType = closestPointResult.closestPointType;
 
+
+            //this is a dumb, overcomplicated way to deliver collision point info back to the calling function 
+            // retained for now for consistency with previous code, side effect of placing the debug point
+
             //convert to projected space to avoid modifying more code here.
             var closestPointInObjectFrame = closestPointResult.closestPoint;
-            var positionInProjectedSpace = closestPointInObjectFrame.slice(0,3).map(xx => xx/closestPointInObjectFrame[3]);
+            var positionXyz = closestPointInObjectFrame.slice(0,3);
 
-            var veclen = Math.sqrt(positionInProjectedSpace.reduce((accum, xx)=>accum+xx*xx, 0));
-            var scalarAngleDifference = Math.atan(veclen);
+            var veclenXyz = Math.sqrt(positionXyz.reduce((accum, xx)=>accum+xx*xx, 0));
+            var scalarAngleDifference = Math.atan2(veclenXyz, closestPointInObjectFrame[3]);
 
-            var correction = -scalarAngleDifference/veclen;
-            var angleToMove = positionInProjectedSpace.map(val => val*correction);
+            var correction = -scalarAngleDifference/veclenXyz;
+            var angleToMove = positionXyz.map(val => val*correction);
 
             mat4.set(bestResult.objInfo.mat, resultMat);
             xyzmove4mat(resultMat, angleToMove);	//draw x on closest vertex
