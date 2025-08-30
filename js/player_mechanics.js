@@ -437,9 +437,6 @@ var playerMechanics = (() => {
         if (Object.keys(voxTerrainData).includes(worldInfo.duocylinderModel)){
             terrainCollisionFunc = processVoxCollision;
         }
-        if (worldInfo.duocylinderModel == 'procTerrain'){
-            terrainCollisionFunc = processProcterrainCollision;
-        }
 
         for (var ii=0;ii<numSubsteps;ii++){
 

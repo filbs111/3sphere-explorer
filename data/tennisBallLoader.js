@@ -28,7 +28,7 @@ cosCylRadius, sinCylRadius are determined by zo . cylRadius of PI/4 divides in 2
 
 loadGridData(tballGridDataPantheonStyle, true);
 loadGridData(terrainData, true);
-loadGridData(proceduralTerrainData);	//don't generate collision data because faces data is peculiar!
+loadGridData(proceduralTerrainData, true);
 
 //map 3d point data to 4d points, wrapping square onto duocylinder
 function loadGridData(toLoad, generateCollisionData){
@@ -188,17 +188,21 @@ function loadGridData(toLoad, generateCollisionData){
 	toLoad.binormals = newbinormals;
 	toLoad.tangents = newtangents;
 
+	
 	if (generateCollisionData){
 		//console.log("num faces in obj: " + toLoad.faces.length);
 		//generate collision data for triangles, like how doing for projected 3d->4d triangle meshes.
+		
 		var verts4d = arrayToGroups(newverts, 4);
-		var allTris = toLoad.faces.map(face => {
+		var facesAsTriVerts = toLoad.unstrippedFaces || toLoad.faces;	//procTerrain stores strips data in faces
+
+		var allTris = facesAsTriVerts.map(face => {
 			var triVerts = face.map(vv => verts4d[vv]);			//look up transformed 4vec verts by index
 			return makeCollisionDataForTriangle(triVerts);
 		});
 
 		allTris.sort((a,b) => a.morton - b.morton);
-		toLoad.collisionTriangleData = generateBvh(allTris, temp4vec, 8);	//TODO morton/hilbert order before bvh
+		toLoad.collisionTriangleData = generateBvh(allTris, temp4vec, 8);
 	}
 
 	//copy of aabb4DForTriAnalytic from test project that also returns face, edge data

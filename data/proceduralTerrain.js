@@ -439,7 +439,25 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 			uvcoords.push(16*ii/gridSize);
 		}
 	}
-		
+	
+	//unstripped triangle indices to use for collision detection
+	var unstrippedFaces = [];
+	for (var yy=0;yy<gridSize;yy++){
+		var yoffs = (gridSize+1)*yy;
+		for (var xx=0;xx<gridSize;xx++){
+			var fourCorners = [
+				yoffs + xx,
+				yoffs + xx + 1,
+				yoffs + xx + gridSize + 1,
+				yoffs + xx + gridSize + 2,
+			];
+			unstrippedFaces.push(
+				[fourCorners[0],fourCorners[1],fourCorners[3]],
+				[fourCorners[0],fourCorners[3],fourCorners[2]]
+			);
+		}
+	}
+
 	//triangle strip data
 	for (var ii=0;ii<gridSize;ii++){
 		indices.push(lookupIndex(ii,0));	//duplicate vert at start of strip
@@ -493,7 +511,8 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 	}
 	return {vertices, normals, binormals, tangents, uvcoords, colors, 
 		//faces:indices
-		faces:indices_b
+		faces:indices_b,
+		unstrippedFaces
 	};
 })(procTerrainSize);
 

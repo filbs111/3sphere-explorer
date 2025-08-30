@@ -47,7 +47,7 @@ var duocylinderObjects=(function(){
 // tballGridDataPantheonStyle.tricoords.filter((_,ii)=>ii%3==1).reduce((a,b)=>Math.min(a,b),Number.MAX_VALUE)
 // -0.00000725
 		terrain:{divs:2,step:Math.PI,minXY:[-0.25,-0.25],data:terrainData.collisionTriangleData},
-		procTerrain:{divs:1,step:2*Math.PI,isStrips:true,minXY:[0,0]},
+		procTerrain:{divs:1,step:2*Math.PI,isStrips:true,minXY:[0,0],data:proceduralTerrainData.collisionTriangleData},
 		sea:{divs:1,step:2*Math.PI,isStrips:true},
 		voxTerrain:{divs:2,step:Math.PI,minXY:[0, -0.5]},
 // voxTerrainData.voxTerrain.tricoords.filter((_,ii)=>ii%3==0).reduce((a,b)=>Math.min(a,b),Number.MAX_VALUE)
@@ -2424,14 +2424,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	var playerPos = playerCamera.slice(12);			//copied from elsewhere
 		
 	if (guiParams.debug.closestPoint){
-
-		//not really closest point - just the point below player on terrain
-		if (worldInfo.duocylinderModel == 'procTerrain'){
-			terrainCollisionTestBoxPos = terrainGetHeightFor4VecPos(playerPos, worldInfo.spin);		//TODO in position update (not rendering)
-			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, 0.001,0.001,0.001);
-			drawPreppedBufferOnDuocylinder(terrainCollisionTestBoxPos.b,terrainCollisionTestBoxPos.a,terrainCollisionTestBoxPos.h *Math.sqrt(2), [1.0, 0.4, 1.0, 1.0], cubeBuffers);
-		}
-	
 		if (Object.keys(voxTerrainData).includes(worldInfo.duocylinderModel)){
 			debugDraw.drawTriAxisCrossForMatrixColorAndScale(closestPointTestMat, colorArrs.magenta, 0.02);
 			debugDraw.drawTriAxisCrossForMatrixColorAndScale(voxCollisionDebugMat, colorArrs.blue, 0.01);
@@ -5211,13 +5203,6 @@ var iterateMechanics = (function iterateMechanics(){
 				detonateBullet(bullet);
 			}
 			
-			if (worldInfo.duocylinderModel == "procTerrain"){
-				var procTerrainCollisionResult = terrainBulletCollision(getHeightAboveTerrainFor4VecPos, bulletPos, newBulletPos, dcSpin);
-				if (procTerrainCollisionResult.collided){
-					xyzmove4mat(bulletMatrix,scalarvectorprod(bulletMoveAmount*(procTerrainCollisionResult.fractionAlong-1),bulletVel));
-					detonateBullet(bullet, true, [0.3,0.3,0.3,1]);
-				}
-			}
 			if (worldInfo.duocylinderModel == "l3dt-brute" || worldInfo.duocylinderModel == "l3dt-blockstrips"){
 				var l3dtCollisionResult = terrainBulletCollision(getHeightAboveTerrain2For4VecPos, bulletPos, newBulletPos, dcSpin);
 				if (l3dtCollisionResult.collided){
