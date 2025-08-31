@@ -4951,6 +4951,42 @@ var iterateMechanics = (function iterateMechanics(){
 			bufferArraySubDataGeneral(randBoxBuffers.randMatrixBuffers.d, 0, matrixF32ArrD);
 		}
 		
+
+
+
+		//value used in sphere collision TODO? avoid this if switched to box. eg referencing some general
+		//collision func. TODO recalc critvalue only when changes
+		//var critValue = 1-guiParams.target.scale*guiParams.target.scale;	//small ang approx
+		var critValue = 1/Math.sqrt(1+guiParams.target.scale*guiParams.target.scale);	//some small ang approx here
+		var invTargetMat = mat4.create();
+		mat4.set(targetMatrix, invTargetMat);
+		mat4.transpose(invTargetMat);
+		var relativeMat = mat4.create();
+		var numRandomBoxes = guiParams['random boxes'].number;
+		numRandomBoxes = Math.min(randomMats.length, numRandomBoxes);	//TODO check this doesn't happen/ make obvious error!
+		
+		var boxSize = guiParams['random boxes'].size;
+		var ringBoxSize = 0.1;
+		
+		var critValueRandBox = 1/Math.sqrt(1+3*boxSize*boxSize);
+		var critValueRingBox = 1/Math.sqrt(1+3*ringBoxSize*ringBoxSize);
+		
+		var targetCollisionFunc = (function(targetType){
+			if (targetType == "sphere"){
+				return (rMat => rMat[15]>critValue);
+			}else if (targetType == "box"){
+				return (rMat => rMat[15]>0 && Math.max(Math.abs(rMat[12]),	Math.abs(rMat[13]), Math.abs(rMat[14]))<guiParams.target.scale);
+			}else{
+				return (x => false);
+			}
+		})(guiParams.target.type);
+
+		var tmpVec4 = vec4.create();				//variable referring to this to make quicker to reference?
+		var bulletPos = new Array(4); 
+		var bulletPos4V = vec4.create();
+		var bulletPosDCF4V = vec4.create();
+
+
 		
 		
 		var duoCylinderAngVelConst = guiSettingsForWorld[playerContainer.world].spinRate;
@@ -5040,49 +5076,20 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 			
 			playerMechanics.update(mouseInfo, timeStep, timeStepMultiplier, moveSpeed, rotateSpeed, activeGp);
-		}
-		
-		
-		//value used in sphere collision TODO? avoid this if switched to box. eg referencing some general
-		//collision func. TODO recalc critvalue only when changes
-		//var critValue = 1-guiParams.target.scale*guiParams.target.scale;	//small ang approx
-		var critValue = 1/Math.sqrt(1+guiParams.target.scale*guiParams.target.scale);	//some small ang approx here
-		var invTargetMat = mat4.create();
-		mat4.set(targetMatrix, invTargetMat);
-		mat4.transpose(invTargetMat);
-		var relativeMat = mat4.create();
-		var numRandomBoxes = guiParams['random boxes'].number;
-		numRandomBoxes = Math.min(randomMats.length, numRandomBoxes);	//TODO check this doesn't happen/ make obvious error!
-		
-		var boxSize = guiParams['random boxes'].size;
-		var ringBoxSize = 0.1;
-		var boxRad = boxSize*Math.sqrt(3);
-		
-		var critValueRandBox = 1/Math.sqrt(1+3*boxSize*boxSize);
-		var critValueDCBox = 1/Math.sqrt(1+3*duocylinderSurfaceBoxScale*duocylinderSurfaceBoxScale);
-		var critValueRingBox = 1/Math.sqrt(1+3*ringBoxSize*ringBoxSize);
-		
-		var targetCollisionFunc = (function(targetType){
-			if (targetType == "sphere"){
-				return (rMat => rMat[15]>critValue);
-			}else if (targetType == "box"){
-				return (rMat => rMat[15]>0 && Math.max(Math.abs(rMat[12]),	Math.abs(rMat[13]), Math.abs(rMat[14]))<guiParams.target.scale);
-			}else{
-				return (x => false);
-			}
-		})(guiParams.target.type);
 
-		var tmpVec4 = vec4.create();				//variable referring to this to make quicker to reference?
-		var bulletPos = new Array(4); 
-		var bulletPos4V = vec4.create();
-		var bulletPosDCF4V = vec4.create();
-		//slightly less ridiculous place for this - not declaring functions inside for loop!
-		function checkBulletCollision(bullet, bulletMoveAmount){
-			function boxCollideArray(bArray){
-				for (var bb of bArray){
-					boxCollideCheck(bb.matrixT,duocylinderSurfaceBoxScale,critValueDCBox, bulletPosDCF4V, true);
+			// bullet movement and non-grouped collision
+			for (var b of bullets){
+				if (b.active){	//TODO just delete/unlink removed objects
+					checkBulletCollision(b, timeStep*moveSpeed);
+					portalTestMultiPortal(b, 0);
 				}
 			}
+		}
+		
+
+
+		//slightly less ridiculous place for this - not declaring functions inside for loop!
+		function checkBulletCollision(bullet, bulletMoveAmount){
 			function boxCollideCheck(cellMatT,thisBoxSize,boxCritValue, bulletPos4V, moveWithDuocylinder){
 					mat4.multiplyVec4(cellMatT, bulletPos4V, tmpVec4);
 					if (tmpVec4[3]<boxCritValue){return;}	//early sphere check
@@ -5206,19 +5213,6 @@ var iterateMechanics = (function iterateMechanics(){
 			
 			//singleExplosion.life = 100;
 			//singleExplosion.matrix = bulletMatrix;
-		}
-		
-		var singleStepMove = timeStep*moveSpeed;
-		if (numSteps>0){
-			for (var ii=0;ii<numSteps;ii++){	//TODO make more performant
-				// bullet movement and non-grouped collision
-				for (var b of bullets){
-					if (b.active){	//TODO just delete/unlink removed objects
-						checkBulletCollision(b, singleStepMove);
-						portalTestMultiPortal(b, 0);
-					}
-				}
-			}
 		}
 		
 		for(var cc=0;cc<3;cc++){
