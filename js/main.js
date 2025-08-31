@@ -5190,11 +5190,11 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			}
 
-			var bvhCollisionResult = rayBvhCollision(bulletPosDCF4V, bulletPosNewDCF4V, bullet.world);
+			var bvhCollisionResult = rayBvhCollision(bulletPos, newBulletPos, bulletPosDCF4V, bulletPosNewDCF4V, bullet.world);
 			if (bvhCollisionResult.collided){
 				//move bullet to point on surface (note approximate, since closestFractionAlong is in projected 3d space)
 				xyzmove4mat(bulletMatrix,scalarvectorprod(bulletMoveAmount*(bvhCollisionResult.closestFractionAlong-1),bulletVel));
-				detonateBullet(bullet, true, [0.3,0.3,0.8]);
+				detonateBullet(bullet, bvhCollisionResult.objectIsSpinning, [0.3,0.3,0.8]);
 					//NOTE currently all objects are assumed to rotate with duocylinder of world they are in, so moveWithDuocylinger=true
 					//TODO use bvh objects ref frame or surface velocity at collision point to support objects moving/spinning differently
 			}

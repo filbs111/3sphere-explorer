@@ -110,12 +110,31 @@ function getCameraToMoveVecWithCameraCollision(offsetCameraContainer, desiredCam
     var testDistOverDesired = 1+kOverDesired;
     var testCameraMoveVec = desiredCameraMoveVec.map(xx=>xx*testDistOverDesired);
 
-    var tempMat4 = mat4.create(offsetCameraContainer.matrix);
-    var cameraRayStartPos = tempMat4.slice(12);
-    xyzmove4mat(tempMat4, testCameraMoveVec);
-    var cameraRayEndPos = tempMat4.slice(12);
 
-    var bvhCollideResult = rayBvhCollision(cameraRayStartPos, cameraRayEndPos, offsetCameraContainer.world);
+    //rotate with duocylinder. NOTE this code is inefficient! (could reorder mat mults etc)
+	var dcSpin = guiSettingsForWorld[offsetCameraContainer.world].spin;
+
+    var tempMat4 = mat4.create(offsetCameraContainer.matrix);
+    var tempMat4Copy = mat4.create(tempMat4);
+    var cameraRayStartPos = tempMat4.slice(12);   //this could be correct for unspun objects
+    xyzmove4mat(tempMat4Copy, testCameraMoveVec);
+    var cameraRayEndPos = tempMat4Copy.slice(12);     // ""
+
+    mat4.transpose(tempMat4);
+    mat4.transpose(tempMat4Copy);
+
+	rotate4mat(tempMat4, 0, 1, dcSpin);
+   	rotate4mat(tempMat4Copy, 0, 1, dcSpin);
+
+    mat4.transpose(tempMat4);
+    mat4.transpose(tempMat4Copy);
+
+    var cameraRayStartPosSpun = tempMat4.slice(12);
+    var cameraRayEndPosSpun = tempMat4Copy.slice(12);
+
+
+
+    var bvhCollideResult = rayBvhCollision(cameraRayStartPos, cameraRayEndPos, cameraRayStartPosSpun, cameraRayEndPosSpun, offsetCameraContainer.world);
 
     var resultAsFractionOfDesired = bvhCollideResult.closestFractionAlong*testDistOverDesired;
     var smoothed = (

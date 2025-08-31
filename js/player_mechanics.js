@@ -587,7 +587,6 @@ var playerMechanics = (() => {
             var dcSpin = wSettings.spin;
 
             //inefficient but readable way to spin many objects by same amount
-            console.log({objInfoArr: dcInfo.objInfoArr, dcSpin});
             var spunObjInfoArr = dcInfo.objInfoArr.map(objInfo => {
                 var mat = mat4.create(objInfo.mat);
                 rotate4mat(mat, 0, 1, dcSpin);

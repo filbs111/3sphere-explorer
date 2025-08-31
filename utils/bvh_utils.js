@@ -1596,15 +1596,16 @@ function minMaxDistanceFromPointToBoundingSphere(pointPos, spherePos, sphereRad)
         //TODO maybe remove the max(0, here since may work without anyway
 }
 
-function rayBvhCollision(rayStart, rayEnd, world){
+function rayBvhCollision(cameraRayStartPos, cameraRayEndPos, cameraRayStartPosSpun, cameraRayEndPosSpun, world){
 
     var collided = false;
+    var objectIsSpinning = false;   //currently all terrain objects spin, other objects don't
     var closestFractionAlong = 1;
 
-    processObjs(bvhObjsForWorld[world]);
-    processTerrain();
+    processObjs(cameraRayStartPos, cameraRayEndPos, bvhObjsForWorld[world]);
+    processTerrain(cameraRayStartPosSpun, cameraRayEndPosSpun);
 
-    function processObjs(worldBvh){
+    function processObjs(rayStart, rayEnd, worldBvh){
 
         var possiblities=worldBvh.objList;
 
@@ -1683,7 +1684,7 @@ function rayBvhCollision(rayStart, rayEnd, world){
         });
     }
 
-    function processTerrain(){
+    function processTerrain(rayStart, rayEnd){
         var dcInfo = duocylinderObjects[guiSettingsForWorld[playerContainer.world].duocylinderModel];
 
         if (!(dcInfo?.data)){
@@ -1701,6 +1702,11 @@ function rayBvhCollision(rayStart, rayEnd, world){
 
             var result = bvhRayOverlapTest4d(rayPosVec, rayPosEndVec, lineAABB, objInfo.collisionTriangleData);
             collided = collided || result.collided;
+
+            if (result.collided && result.closestFractionAlong<closestFractionAlong){
+                objectIsSpinning = true;
+            }
+
             closestFractionAlong = Math.min(closestFractionAlong, result.closestFractionAlong);
         });
     }
@@ -1709,7 +1715,8 @@ function rayBvhCollision(rayStart, rayEnd, world){
 
     return {
         collided,
-        closestFractionAlong
+        closestFractionAlong,
+        objectIsSpinning
     }
 }
 
