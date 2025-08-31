@@ -4985,9 +4985,7 @@ var iterateMechanics = (function iterateMechanics(){
 		var bulletPos = new Array(4); 
 		var bulletPos4V = vec4.create();
 		var bulletPosDCF4V = vec4.create();
-
-
-		
+		var bulletPosNewDCF4V = vec4.create();
 		
 		var duoCylinderAngVelConst = guiSettingsForWorld[playerContainer.world].spinRate;
 		
@@ -5069,12 +5067,13 @@ var iterateMechanics = (function iterateMechanics(){
 		
 		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
 
+			guiSettingsForWorld.forEach(setting => {
+				setting.spinOld = setting.spin;
+				setting.spin += setting.spinRate*timeStep*moveSpeed;
+			});
+
 			applyPortalMovement();
 
-			for (ww=0;ww<guiSettingsForWorld.length;ww++){
-				guiSettingsForWorld[ww].spin += guiSettingsForWorld[ww].spinRate*timeStep*moveSpeed;
-			}
-			
 			playerMechanics.update(mouseInfo, timeStep, timeStepMultiplier, moveSpeed, rotateSpeed, activeGp);
 
 			// bullet movement and non-grouped collision
@@ -5107,6 +5106,7 @@ var iterateMechanics = (function iterateMechanics(){
 
 			var worldInfo = guiSettingsForWorld[bullet.world];
 			var dcSpin = worldInfo.spin;
+			var dcSpinOld = worldInfo.spinOld;
 					//todo keep bullets in lists/arrays per world so can check this once per world
 
 			var bulletMatrix=bullet.matrix;
@@ -5115,19 +5115,31 @@ var iterateMechanics = (function iterateMechanics(){
 			mat4.transpose(bulletMatrixTransposed);
 			
 			mat4.set(bulletMatrixTransposed,bulletMatrixTransposedDCRefFrame);	//in frame of duocylinder
-			rotate4mat(bulletMatrixTransposedDCRefFrame, 0, 1, dcSpin);
+			rotate4mat(bulletMatrixTransposedDCRefFrame, 0, 1, dcSpinOld);
 			
 			for (var cc=0;cc<4;cc++){
 				bulletPos[cc] = bulletMatrix[12+cc];
 				bulletPos4V[cc]= bulletPos[cc];
 				bulletPosDCF4V[cc] = bulletMatrixTransposedDCRefFrame[3+4*cc];
 			}
-			
+
 			var bulletVel=bullet.vel;
 			xyzmove4mat(bulletMatrix,scalarvectorprod(bulletMoveAmount,bulletVel));
 			
 			var newBulletPos = bulletMatrix.slice(12);	//already copying bulletpos before moved.
 
+			mat4.set(bulletMatrix,bulletMatrixTransposed);
+			mat4.transpose(bulletMatrixTransposed);
+			
+			mat4.set(bulletMatrixTransposed,bulletMatrixTransposedDCRefFrame);	//in frame of duocylinder
+			rotate4mat(bulletMatrixTransposedDCRefFrame, 0, 1, dcSpin);
+
+			for (var cc=0;cc<4;cc++){
+				bulletPosNewDCF4V[cc] = bulletMatrixTransposedDCRefFrame[3+4*cc];
+			}
+
+			
+			
 			mat4.set(invTargetMat,relativeMat);
 			mat4.multiply(relativeMat, bulletMatrix);
 			
@@ -5177,12 +5189,14 @@ var iterateMechanics = (function iterateMechanics(){
 					boxCollideCheck(randomMatsT[ii],boxSize,critValueRandBox,bulletPos4V);
 				}
 			}
-			
-			var bvhCollisionResult = rayBvhCollision(bulletPos, newBulletPos, bullet.world);
+
+			var bvhCollisionResult = rayBvhCollision(bulletPosDCF4V, bulletPosNewDCF4V, bullet.world);
 			if (bvhCollisionResult.collided){
 				//move bullet to point on surface (note approximate, since closestFractionAlong is in projected 3d space)
 				xyzmove4mat(bulletMatrix,scalarvectorprod(bulletMoveAmount*(bvhCollisionResult.closestFractionAlong-1),bulletVel));
-				detonateBullet(bullet, false, [0.3,0.3,0.8]);
+				detonateBullet(bullet, true, [0.3,0.3,0.8]);
+					//NOTE currently all objects are assumed to rotate with duocylinder of world they are in, so moveWithDuocylinger=true
+					//TODO use bvh objects ref frame or surface velocity at collision point to support objects moving/spinning differently
 			}
 		}
 
