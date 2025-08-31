@@ -530,6 +530,7 @@ function initBuffers(){
 	loadDuocylinderBufferData(roadBoxBuffers, roadBoxData);	//TODO rename func so not specific to duocylinder - generally is for 4vec vertex data.
 	roadBoxBuffers.divs=1;	//because reusing duocylinder drawing function
 	roadBoxBuffers.step=0;	//unused
+	roadBoxBuffers.objInfoArr = singleObjectDataArr;
 
 	randBoxBuffers.randMatrixBuffers = glBufferMatrixUniformDataForInstancedDrawing(randomMats);
 
