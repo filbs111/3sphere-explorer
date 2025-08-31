@@ -577,15 +577,32 @@ var playerMechanics = (() => {
 
         //very similar to above. TODO deduplicate
         function processTriangleTerrainCollisionFast(){
-            var dcInfo = duocylinderObjects[guiSettingsForWorld[playerContainer.world].duocylinderModel];
+            var wSettings = guiSettingsForWorld[playerContainer.world];
+            var dcInfo = duocylinderObjects[wSettings.duocylinderModel];
 
             if (!(dcInfo?.data)){
                 return;
             }
 
+            var dcSpin = wSettings.spin;
+
+            //inefficient but readable way to spin many objects by same amount
+            console.log({objInfoArr: dcInfo.objInfoArr, dcSpin});
+            var spunObjInfoArr = dcInfo.objInfoArr.map(objInfo => {
+                var mat = mat4.create(objInfo.mat);
+                rotate4mat(mat, 0, 1, dcSpin);
+                var transposedMat = mat4.create(mat);
+                mat4.transpose(transposedMat);
+                return {
+                    mat,
+                    transposedMat,
+                    collisionTriangleData: objInfo.collisionTriangleData,
+                }
+            });
+
             var resultMat = mat4.create();
-            var foundClosestPointTriangleObjPreviously2 = foundClosestPointTriangleObj2; 
-            foundClosestPointTriangleObj2 = processTrianglePossibles(resultMat, dcInfo.objInfoArr, 0.92, (posInObjFrame, objScale, rad, objInfo, lowestAcceptedMultiplier) => {
+            var foundClosestPointTriangleObjPreviously2 = foundClosestPointTriangleObj2;
+            foundClosestPointTriangleObj2 = processTrianglePossibles(resultMat, spunObjInfoArr, 0.92, (posInObjFrame, objScale, rad, objInfo, lowestAcceptedMultiplier) => {
                 
                 var queryAABB = [-1,1].map(ss=>ss*settings.playerBallRadPadded).map(offs => posInObjFrame.map(xx => xx+offs));
                     // could use aabb4DForSphere() but maybe too slow.
