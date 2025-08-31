@@ -97,7 +97,6 @@ out vec4 fragColor;
 
 		//float depthVal = .5*(vZW.x/vZW.y) + .5;
 		gl_FragDepth = depthVal;
-		fragColor.a = depthVal;
 #endif
 	}
 
