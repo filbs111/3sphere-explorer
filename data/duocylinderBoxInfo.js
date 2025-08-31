@@ -1,9 +1,6 @@
 var duocylinderBoxInfo=(function generateBoxInfo(){
-	var boxInfoTowerblocks = initialiseInfo();
-	var boxInfoStonehenge = initialiseInfo();
 	var boxInfoViaducts = initialiseInfo();
 	var boxInfoViaducts2 = initialiseInfo();
-	var boxInfoRoads = initialiseInfo();
 	var currentboxInfo;
 	
 	function initialiseInfo(){
@@ -15,70 +12,9 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 		return {list:[],gridContents:gridArr};
 	}
 	
-	var oneGridSquareOffset = Math.PI/14;
-	var fudgeFact = 2/Math.PI;	//maytbe this is correct. seems to be ratio of up move to surface move at surface
-	var hh=0.05;
-	
-	currentboxInfo=boxInfoTowerblocks;
-	
-	var midGreyColor = new Float32Array([0.5, 0.5, 0.5, 1]);
-	var lightGreyColor = new Float32Array([0.7, 0.7, 0.7, 1]);
 	var whiteColor = new Float32Array([1,1,1,1]);	//TODO use colorArrs.white? perhaps should be declared earlier.
 
-	addBoxData(0,0,hh, midGreyColor, 0);
-	addBoxData(oneGridSquareOffset,0,hh, new Float32Array([1.0, 0.4, 0.4, 1.0]),0);				//red - around
-	addBoxData(0,oneGridSquareOffset,hh, new Float32Array([0.4, 1.0, 0.4, 1.0]),0);				//green - along
-	addBoxData(0,0,oneGridSquareOffset*fudgeFact+hh, new Float32Array([0.4, 0.4, 1.0, 1.0]),0);	//blue - up
-
-	//an array of boxes, with view to testing atmosphere shader.
-	//this is a huge number of boxes. very inefficient. testing only. if want scene like this, combine into fewer objects (eg one)
-	for (var ii=0;ii<4;ii++){
-		for (var jj=0;jj<4;jj++){
-			for (var hi=-1;hi<8;hi++){
-				addBoxData((ii+jj)*0.15 -1.5,(ii-jj)*0.15 -0.5,hi*0.05, midGreyColor, Math.PI/4);	//45 degree twist
-			}
-		}
-	}
-	
-	currentboxInfo=boxInfoRoads;
-	
-	//add a ring of boxes to form a 2 roads - one "around" duocylinder (in spin/antispin direction), another "along".
-	var aroundRoadSteps = 82;	//raised up so shorter than on duocyl surf
-	var alongRoadSteps = 100;	//raised up so looser than on duocyl surf
-	var stepSizeAroundRoad= Math.PI*2/aroundRoadSteps;
-	var stepSizeAlongRoad= Math.PI*2/alongRoadSteps;
-	for (var ii=0;ii<aroundRoadSteps;ii++){
-		addBoxData(ii*stepSizeAroundRoad +10,-1.7,0.05, midGreyColor,0);
-	}
-	for (var ii=0;ii<alongRoadSteps;ii++){
-		addBoxData(Math.PI/2,ii*stepSizeAlongRoad +10,0.15, midGreyColor,0);
-	}
-	
-	currentboxInfo=boxInfoStonehenge;
-	
-	function randColor(){
-		var coherentShift = Math.random()*0.05;
-		return new Float32Array([0.9+coherentShift+Math.random()*0.05,
-				0.6+coherentShift+Math.random()*0.03,
-				0.1+coherentShift+Math.random()*0.01,1.0]);
-	}
-	
 	var stepSize= Math.PI*2/31;
-	for (var ii=0;ii<31;ii++){	//doesn't quite meet up. probably exact is 10*PI
-		for (var hi=0;hi<4;hi++){
-			addBoxData(ii*stepSize +10,ii*stepSize,hi*0.05, randColor(), Math.PI/4 + 0.2);	//tiny extra twist so stonehenge diagonal monorail thing looks ok  
-		}
-		for (var kk=0.125;kk<1;kk+=0.25){
-			addBoxData((ii+kk)*stepSize +10,(ii+kk)*stepSize,4*0.05, randColor(),Math.PI/4 + 0.2);
-		}
-	}
-	//add some tower that passes through portal?
-	//currently requires 2 towers. TODO different setup for each side.
-	for (var hi=0;hi<11;hi++){
-		addBoxData(-0.1,0,hi*0.05, lightGreyColor,0);
-		addBoxData(Math.PI-0.1,0,hi*0.05, lightGreyColor,0);
-	}
-
 	currentboxInfo = boxInfoViaducts;
 	for (var ii=0;ii<31;ii++){	//doesn't quite meet up. probably exact is 10*PI
 		//copied from stonehenge but just the top parts
@@ -131,11 +67,8 @@ var duocylinderBoxInfo=(function generateBoxInfo(){
 	};
 	
 	return {
-		towerblocks:boxInfoTowerblocks,
-		stonehenge:boxInfoStonehenge,
 		viaducts:boxInfoViaducts,
 		viaducts2:boxInfoViaducts2,
-		roads:boxInfoRoads
 	};
 })();
 
@@ -157,18 +90,4 @@ function duocylXYfor4Pos(inputPos, duocylinderSpin){
 function testDuocylXYfor4Pos(){
 	var playerPos = [playerCamera[12],playerCamera[13],playerCamera[14],playerCamera[15]];
 	console.log(duocylXYfor4Pos(playerPos,0));
-}
-
-function getGridSqFor4Pos(pos, duocylinderSpin){
-	var tmpXYPos = duocylXYfor4Pos(pos, duocylinderSpin);
-	var gridSquareX = (Math.floor(tmpXYPos.x))%8;
-	var gridSquareY = (Math.floor(tmpXYPos.y))%8;
-	var gridSqs = [
-		gridSquareX + 8*gridSquareY,
-		(gridSquareX+1)%8 + 8*gridSquareY,
-		gridSquareX + 8*((gridSquareY+1)%8),
-		(gridSquareX+1)%8 + 8*((gridSquareY+1)%8)
-	];
-	if (gridSqs[0]<0 || gridSqs[0]>63){alert("grid square out of range! " + gridSq);}
-	return gridSqs;
 }

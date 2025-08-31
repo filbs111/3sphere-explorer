@@ -72,9 +72,6 @@ var quadBuffers2D={};
 var cubeBuffers={};
 var smoothCubeBuffers={};
 var randBoxBuffers={};
-var roadBoxBuffers={};
-var stonehengeBoxBuffers={};
-var towerBoxBuffers={};
 var explodingCubeBuffers={};
 var cubeFrameBuffers={};
 var cubeFrameBvh={}
@@ -514,24 +511,6 @@ function initBuffers(){
 	randBoxBuffers.step=0;	//unused
 	randBoxBuffers.objInfoArr = singleObjectDataArr;
 	
-	var towerBoxData = generateDataForDataMatricesScale(levelCubeData, duocylinderBoxInfo.towerblocks.list, duocylinderSurfaceBoxScale);
-	loadDuocylinderBufferData(towerBoxBuffers, towerBoxData);	//TODO rename func so not specific to duocylinder - generally is for 4vec vertex data.
-	towerBoxBuffers.divs=1;	//because reusing duocylinder drawing function
-	towerBoxBuffers.step=0;	//unused
-	towerBoxBuffers.objInfoArr = singleObjectDataArr;
-	
-	var stonehengeBoxData = generateDataForDataMatricesScale(levelCubeData, duocylinderBoxInfo.stonehenge.list, duocylinderSurfaceBoxScale);
-	loadDuocylinderBufferData(stonehengeBoxBuffers, stonehengeBoxData);	//TODO rename func so not specific to duocylinder - generally is for 4vec vertex data.
-	stonehengeBoxBuffers.divs=1;	//because reusing duocylinder drawing function
-	stonehengeBoxBuffers.step=0;	//unused
-	stonehengeBoxBuffers.objInfoArr = singleObjectDataArr;
-	
-	var roadBoxData = generateDataForDataMatricesScale(levelCubeData, duocylinderBoxInfo.roads.list, duocylinderSurfaceBoxScale);
-	loadDuocylinderBufferData(roadBoxBuffers, roadBoxData);	//TODO rename func so not specific to duocylinder - generally is for 4vec vertex data.
-	roadBoxBuffers.divs=1;	//because reusing duocylinder drawing function
-	roadBoxBuffers.step=0;	//unused
-	roadBoxBuffers.objInfoArr = singleObjectDataArr;
-
 	randBoxBuffers.randMatrixBuffers = glBufferMatrixUniformDataForInstancedDrawing(randomMats);
 
 	randBoxBuffers.forTerrain={};
@@ -2387,37 +2366,11 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		
 	}
 	
-	//switch back to previous shader (may already be using this depending on which drawType used for 'random boxes'
-	shaderSetup(guiParams.debug.nmapUseShader2 ? (guiParams.display.useSpecular ? shaderPrograms.texmapPerPixelDiscardNormalmapPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmapPerPixelDiscardNormalmap[ guiParams.display.atmosShader ]) : shaderPrograms.texmapPerPixelDiscardNormalmapV1[ guiParams.display.atmosShader ], nmapTexture);
-	
-	
-	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale);
-	setupAtmosAndPrepBuffersForDrawing(cubeBuffers, activeShaderProgram);
-	
-	//draw boxes on duocylinder surface. 
-	if (guiParams.drawShapes.towers){	//note currently toggles drawing for all boxes using duocylinder positioning method, including demo axis objects
-		for (var bb of duocylinderBoxInfo.towerblocks.list){
-			drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, cubeBuffers, invertedWorldCameraDuocylinderFrame);
-		}
-	}
-	
 	//switch to non-normal map version to draw some objects.
 	activeShaderProgram=shaderProgramTexmap;
 	shaderSetup(activeShaderProgram, texture);
 	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale,duocylinderSurfaceBoxScale);
 	setupAtmosAndPrepBuffersForDrawing(cubeBuffers, activeShaderProgram);
-	
-	if (guiParams.drawShapes.stonehenge){	
-		for (var bb of duocylinderBoxInfo.stonehenge.list){
-			drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, cubeBuffers, invertedWorldCameraDuocylinderFrame);
-		}
-	}
-	
-	if (guiParams.drawShapes.roads){	
-		for (var bb of duocylinderBoxInfo.roads.list){
-			drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, cubeBuffers, invertedWorldCameraDuocylinderFrame);
-		}
-	}
 	
 	//switch to non-normalmap shader
 //	shaderSetup(shaderProgramTexmap, texture);
@@ -2752,20 +2705,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	if (guiParams["random boxes"].drawType == 'singleBuffer'){
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.randBoxes);
 		drawTennisBall(randBoxBuffers, activeShaderProgram, worldDrawingNow, duocylinderSpin);	//todo draw subset of buffer according to ui controlled number
-	}
-	
-	if (guiParams.drawShapes.singleBufferStonehenge){
-		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.gray);
-		drawTennisBall(stonehengeBoxBuffers, activeShaderProgram, worldDrawingNow, duocylinderSpin);
-	}
-	
-	activeShaderProgram = guiParams.display.useSpecular ? shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscardNormalmapVcolorAndDiffuse[ guiParams.display.atmosShader ];
-	gl.useProgram(activeShaderProgram);
-	performCommon4vecShaderSetup(activeShaderProgram, wSettings, "normal map");
-	
-	if (guiParams.drawShapes.singleBufferTowers){
-		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);	//uColor is redundant here since have vertex colors. TODO lose it?
-		drawTennisBall(towerBoxBuffers, activeShaderProgram, worldDrawingNow, duocylinderSpin);
 	}
 	
 	activeShaderProgram = guiParams.display.useSpecular ? shaderPrograms.texmap4VecPerPixelDiscardNormalmapPhongAndDiffuse[ guiParams.display.atmosShader ] : shaderPrograms.texmap4VecPerPixelDiscardNormalmapAndDiffuse[ guiParams.display.atmosShader ];
@@ -4311,9 +4250,6 @@ function initTexture(){
 	frigateTexture = makeTexture("data/frigate/frigate-tex.webp");
 
 	randBoxBuffers.tex=texture;
-	towerBoxBuffers.tex=nmapTexture;towerBoxBuffers.texB=diffuseTexture;
-	stonehengeBoxBuffers.tex=texture;stonehengeBoxBuffers.texB=diffuseTexture;
-	roadBoxBuffers.tex=nmapTexture;roadBoxBuffers.texB=diffuseTexture;
 	
 	loadTmpFFTexture(11581);	//note voxTerrain normal mapping currently reversed/inverted vs procTerrain, boxes.
 	duocylinderObjects.voxTerrain.texB = diffuseTexture;
@@ -4387,13 +4323,7 @@ var guiParams={
 		},
 		pillars:false,
 		bendyPillars:false,
-		towers:false,
-		singleBufferTowers:false,
 		explodingBox:false,
-		stonehenge:false,
-		singleBufferStonehenge:false,
-		roads:false,
-		singleBufferRoads:false,
 		turretScale:5,
 		viaduct: 'none'
 	},
@@ -4671,13 +4601,7 @@ function init(){
 	randBoxesFolder.add(guiParams["random boxes"],"numToMove", 0,maxRandBoxes,8);
 	drawShapesFolder.add(guiParams.drawShapes,"pillars");
 	drawShapesFolder.add(guiParams.drawShapes,"bendyPillars");
-	drawShapesFolder.add(guiParams.drawShapes,"towers");
-	drawShapesFolder.add(guiParams.drawShapes,"singleBufferTowers");
 	drawShapesFolder.add(guiParams.drawShapes,"explodingBox");
-	drawShapesFolder.add(guiParams.drawShapes,"stonehenge");
-	drawShapesFolder.add(guiParams.drawShapes,"singleBufferStonehenge");
-	drawShapesFolder.add(guiParams.drawShapes,"roads");
-	drawShapesFolder.add(guiParams.drawShapes,"singleBufferRoads");
 	drawShapesFolder.add(guiParams.drawShapes,"turretScale",0.1,20.0,0.1);
 	drawShapesFolder.add(guiParams.drawShapes,"viaduct", ['none','individual','instanced']);
 
@@ -5244,24 +5168,6 @@ var iterateMechanics = (function iterateMechanics(){
 			if (numRandomBoxes>0 && guiParams["random boxes"].collision){
 				for (var ii=0;ii<numRandomBoxes;ii++){
 					boxCollideCheck(randomMatsT[ii],boxSize,critValueRandBox,bulletPos4V);
-				}
-			}
-			
-			//var bulletPosAdjusted = [ bulletMatrixTransposedDCRefFrame[3],bulletMatrixTransposedDCRefFrame[7], bulletMatrixTransposedDCRefFrame[11], bulletMatrixTransposedDCRefFrame[15]];
-			var gridSqs = getGridSqFor4Pos(bulletPos, worldInfo.spin);
-			
-			if (guiParams.drawShapes.towers || guiParams.drawShapes.singleBufferTowers){	
-				boxCollideBulletForBoxArray(duocylinderBoxInfo.towerblocks.gridContents);
-			}
-			if (guiParams.drawShapes.stonehenge || guiParams.drawShapes.singleBufferStonehenge){
-				boxCollideBulletForBoxArray(duocylinderBoxInfo.stonehenge.gridContents);
-			}
-			if (guiParams.drawShapes.roads || guiParams.drawShapes.singleBufferRoads){
-				boxCollideBulletForBoxArray(duocylinderBoxInfo.roads.gridContents);
-			}
-			function boxCollideBulletForBoxArray(boxArr){
-				for (var gs of gridSqs){
-					boxCollideArray(boxArr[gs]);
 				}
 			}
 			

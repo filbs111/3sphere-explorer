@@ -130,7 +130,6 @@ var myAudioPlayer = (function(){
 	//TODO rewrite/generalise (looping) sound code. 
 	var whooshSound;
 	var whooshSoundInstance;
-	var whooshSoundBoxInstance;
 	var whooshSoundOctoFractalInstance;
 	var whooshSoundTriangleMeshInstance;
 	var whooshSoundTriangleMeshInstance2;
@@ -172,9 +171,6 @@ var myAudioPlayer = (function(){
 		setWhooshSound: function(settings){
 			if (whooshSoundInstance){whooshSoundInstance.setAll(settings);}
 		},
-		setWhooshSoundBox: function(settings){
-			if (whooshSoundBoxInstance){whooshSoundBoxInstance.setAll(settings);}
-		},
 		setWhooshSoundTriangleMesh: function(settings){
 			if (whooshSoundTriangleMeshInstance){whooshSoundTriangleMeshInstance.setAll(settings);}
 		},
@@ -204,7 +200,7 @@ function makeDistortionCurve(amount) {
 
 /*
 * note this is a hack on top of existing code.
-* TODO make existing code nicer? sound class instead of separate funcs setWhooshSound, setWhooshSoundBox...
+* TODO make existing code nicer? sound class instead of separate funcs setWhooshSound, setWhooshSoundTriangleMesh...
 */
 var setSoundHelper= ( function(){
 	var terrainNoiseRad = 0.01;
