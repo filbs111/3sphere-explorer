@@ -380,12 +380,13 @@ var playerMechanics = (() => {
         }
 
         for (var ii=0;ii<numSubsteps;ii++){
+            var timestepFraction = ii/numSubsteps;
 
             //TODO update variables to do with duocylinder between substeps? 
             terrainCollisionFunc(ii==0 ? terrainAudio : false);
 
             processTriangleObjectCollisionFast();   //collision detection
-            processTriangleTerrainCollisionFast();  //for terrain objects using 4d tris
+            processTriangleTerrainCollisionFast(timestepFraction);  //for terrain objects using 4d tris
 
             rotatePlayer(scalarvectorprod(subTimeStep * rotateSpeed,playerAngVelVec));
             movePlayer(scalarvectorprod(subTimeStep * moveSpeed,playerVelVec));
@@ -576,7 +577,7 @@ var playerMechanics = (() => {
 
 
         //very similar to above. TODO deduplicate
-        function processTriangleTerrainCollisionFast(){
+        function processTriangleTerrainCollisionFast(timestepFraction){
             var wSettings = guiSettingsForWorld[playerContainer.world];
             var dcInfo = duocylinderObjects[wSettings.duocylinderModel];
 
@@ -584,7 +585,7 @@ var playerMechanics = (() => {
                 return;
             }
 
-            var dcSpin = wSettings.spin;
+            var dcSpin = wSettings.spin * timestepFraction + (1-timestepFraction)*wSettings.spinOld;
 
             //inefficient but readable way to spin many objects by same amount
             var spunObjInfoArr = dcInfo.objInfoArr.map(objInfo => {
