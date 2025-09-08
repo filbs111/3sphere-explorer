@@ -207,11 +207,13 @@ function loadGridData(toLoad, generateCollisionData){
 		var verts4d = arrayToGroups(newverts, 4);
 		var facesAsTriVerts = toLoad.unstrippedFaces || toLoad.faces;	//procTerrain stores strips data in faces
 
-		var allTris = facesAsTriVerts.map(face => {
-			var triVerts = face.map(vv => verts4d[vv]);			//look up transformed 4vec verts by index
+		var allTris = facesAsTriVerts.map(face => face.map(vv => verts4d[vv])).
+		map(triVerts => {			//look up transformed 4vec verts by index
 			return makeCollisionDataForTriangle(triVerts);
 		});
 
+		//filter bad tris, apparently degenerate tris with repeated verts (TODO remove earlier - ideally from object before loading!)
+		allTris = allTris.filter(tri => !isNaN(tri.face[0]));
 		allTris.sort((a,b) => a.morton - b.morton);
 		toLoad.collisionTriangleData = generateBvh(allTris, temp4vec, 8);
 	}

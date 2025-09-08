@@ -422,6 +422,10 @@ function closestPointBvhEfficient4d(posInObjFrame, objInfo, lowestAcceptedMultip
     
     var collisionTriangleData = objInfo.collisionTriangleData;
 
+    if (!collisionTriangleData){
+        return false;   //can happen if not yet loaded 3d model data
+    }
+
     // var minMaxVals = collisionTriangleData.map(item => aabbMinMaxDistanceFromPoint(posInObjFrame, item.AABB));
     //                     //TODO precalc 4d aabbs for scale. also could be tighter than 4d AABB from the 3d AABB
     //                     //TODO don't get min val if not used to filter

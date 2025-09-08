@@ -311,12 +311,14 @@ function initBuffers(){
 	function loadDuocylinderObjAndDoStuff(objLoader, objFile, terrainObj){
 		objLoader(terrainObj, objFile, (terrainObj, sourceData) => {
 			sourceData.faces = arrayToGroups(sourceData.indices, 3);	//augment sourceData with faces object that loadGridData expects
-			loadGridData(sourceData, false);
-				//TODO fix collision data loading.
+			loadGridData(sourceData, true);
 			
 			loadDuocylinderBufferData(terrainObj, sourceData);
-			terrainObj.data = sourceData.collisionTriangleData;	//for this to exist, 2nd param true should be passed to loadGridData (
-				// but currently that causes an error)
+			terrainObj.data = sourceData.collisionTriangleData;
+
+			//update all object info. TODO change to reference a single object that will be updated later.
+			terrainObj.objInfoArr.forEach(objInfo=>objInfo.collisionTriangleData = terrainObj.data);
+
 			terrainObj.isLoaded = true;
 		}, 6);
 	}
