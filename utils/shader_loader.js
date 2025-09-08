@@ -232,6 +232,9 @@ function initShaders(shaderProgs){
 		texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse2Tex:["texmap-perpixel-normalmap-vs-4vec", "texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','DOUBLE_TEXTURES',"CUSTOM_TEXBIAS"],true],
 		texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse2TexDepthAware:["texmap-perpixel-normalmap-vs-4vec", "texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','DEPTH_AWARE'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','DOUBLE_TEXTURES',"CUSTOM_TEXBIAS",'DEPTH_AWARE'],true],
 
+		noTexmap4VecPerPixelDiscardVcolorOnly:["perpixel-discard-vs-4vec", "perpixel-discard-fs", ['VERTCOLOR','SPECULAR_ACTIVE'], ['VERTCOLOR'],true],	//no specular?
+
+		
 		//voxTerrain shaders
 		triplanarColor4Vec:["texmap-color-triplanar-vs-4vec", "texmap-triplanar-fs",[],[]],
 		//triplanarPerPixel:["texmap-perpixel-color-triplanar-vs-4vec", "texmap-perpixel-triplanar-fs", ['VCOLOR','SPECULAR_ACTIVE'],['VCOLOR','SPECULAR_ACTIVE']],

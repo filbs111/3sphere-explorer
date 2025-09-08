@@ -41,7 +41,10 @@ function loadBufferData(bufferObj, sourceData){
     }
     bufferObj.vertexIndexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(sourceData.indices), gl.STATIC_DRAW);
+    
+    bufferObj.use32BitIndices = sourceData.vertices.length > sourceData.vertices_len * 65536;
+
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, bufferObj.use32BitIndices? new Uint32Array(sourceData.indices): new Uint16Array(sourceData.indices), gl.STATIC_DRAW);
     bufferObj.vertexIndexBuffer.itemSize = 3;
     bufferObj.vertexIndexBuffer.numItems = sourceData.indices.length;
 }
@@ -67,4 +70,60 @@ function createBuffersForInstancedDrawingFromList(container){
 		//extra element for "bendy" matrix interpolation instanced draw - 
 		// matrix A goes from 0 to n-1, matrix B goes from 1 to n
 	container.buffersForInstancedDrawing = glBufferMatrixUniformDataForInstancedDrawing(matrixArrWithExtraElem);
+}
+
+function loadDuocylinderBufferData(bufferObj, sourceData){
+    bufferObj.vertexPositionBuffer = gl.createBuffer();
+
+    bufferArrayData(bufferObj.vertexPositionBuffer, sourceData.vertices, 4);
+    bufferObj.normalBuffer = gl.createBuffer();
+    bufferArrayData(bufferObj.normalBuffer, sourceData.normals, 4);
+    
+    if (sourceData.colors){
+        //alert("loading with colours. colors length : " + sourceData.colors.length);
+        //alert("vertices length : " + sourceData.vertices.length);
+        bufferObj.vertexColorBuffer = gl.createBuffer();
+        bufferArrayData(bufferObj.vertexColorBuffer, sourceData.colors, 4);
+    }
+    if (sourceData.uvcoords || sourceData.texturecoords){
+        bufferObj.vertexTextureCoordBuffer= gl.createBuffer();
+        bufferArrayData(bufferObj.vertexTextureCoordBuffer, sourceData.uvcoords || sourceData.texturecoords[0], 2);	//handle inconsistent formats
+    }
+    if (sourceData.tricoords){
+        bufferObj.vertexTriCoordBuffer= gl.createBuffer();
+        bufferArrayData(bufferObj.vertexTriCoordBuffer, sourceData.tricoords, 3);
+    }
+    if (sourceData.trinormals){
+        bufferObj.vertexTriNormalBuffer= gl.createBuffer();
+        bufferArrayData(bufferObj.vertexTriNormalBuffer, sourceData.trinormals, 3);
+    }
+    
+    if (sourceData.tangents){
+        bufferObj.vertexTangentBuffer= gl.createBuffer();
+        bufferArrayData(bufferObj.vertexTangentBuffer, sourceData.tangents, 4);
+    }
+    if (sourceData.binormals){
+        bufferObj.vertexBinormalBuffer= gl.createBuffer();
+        bufferArrayData(bufferObj.vertexBinormalBuffer, sourceData.binormals, 4);
+    }
+    
+    bufferObj.vertexIndexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
+    if (Array.isArray(sourceData.faces[0])){	//if faces is an array of length 3 arrays
+        sourceData.indices = [].concat.apply([],sourceData.faces);
+    } else {									//faces is just a set of indices - used for procTerrain indexed strips. TODO maybe don't use "faces"
+        sourceData.indices = sourceData.faces;
+    }
+
+    bufferObj.use32BitIndices = sourceData.vertices.length > 4 * 65536;
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, bufferObj.use32BitIndices? new Uint32Array(sourceData.indices): new Uint16Array(sourceData.indices), gl.STATIC_DRAW);
+
+    bufferObj.vertexIndexBuffer.itemSize = 3;
+    bufferObj.vertexIndexBuffer.numItems = sourceData.indices.length;
+
+     console.log({
+        mssg:"dc data",
+        sourceData,
+        bufferObj
+    });
 }

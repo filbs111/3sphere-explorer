@@ -47,6 +47,7 @@ var duocylinderObjects=(function(){
 // tballGridDataPantheonStyle.tricoords.filter((_,ii)=>ii%3==1).reduce((a,b)=>Math.min(a,b),Number.MAX_VALUE)
 // -0.00000725
 		terrain:{divs:2,step:Math.PI,minXY:[-0.25,-0.25],data:terrainData.collisionTriangleData},
+		greebleTerrain:{divs:2,step:Math.PI,minXY:[0,0],vertexColors:true},
 		procTerrain:{divs:1,step:2*Math.PI,isStrips:true,minXY:[0,0],data:proceduralTerrainData.collisionTriangleData},
 		sea:{divs:1,step:2*Math.PI,isStrips:true},
 		voxTerrain:{divs:2,step:Math.PI,minXY:[0, -0.5]},
@@ -303,56 +304,27 @@ function initBuffers(){
 	loadDuocylinderBufferData(duocylinderObjects.procTerrain, proceduralTerrainData);
 	loadDuocylinderSeaBufferData(duocylinderObjects.sea, gridData);	//for use in a different shader. no precalculation of mapping to 4-verts
 	
+	//load duocylinder after loading obj file.
+	//TODO make more similar to other object load/cb
+	loadDuocylinderObjAndDoStuff(loadBuffersFromObj5File, "./data/miscobjs/more-greebles-pack-pick1-2d.obj5",
+		duocylinderObjects.greebleTerrain);
+	function loadDuocylinderObjAndDoStuff(objLoader, objFile, terrainObj){
+		objLoader(terrainObj, objFile, (terrainObj, sourceData) => {
+			sourceData.faces = arrayToGroups(sourceData.indices, 3);	//augment sourceData with faces object that loadGridData expects
+			loadGridData(sourceData, false);
+				//TODO fix collision data loading.
+			
+			loadDuocylinderBufferData(terrainObj, sourceData);
+			terrainObj.data = sourceData.collisionTriangleData;	//for this to exist, 2nd param true should be passed to loadGridData (
+				// but currently that causes an error)
+			terrainObj.isLoaded = true;
+		}, 6);
+	}
+
 	Object.keys(voxTerrainData).forEach(x=>{
 		loadGridData(voxTerrainData[x]);	//TODO don't do this... - different shader like sea - either don't precalc 4-vec mapping, or store 3vec co-ords 
 		loadDuocylinderBufferData(duocylinderObjects[x], voxTerrainData[x]);
 	});
-	
-	function loadDuocylinderBufferData(bufferObj, sourceData){
-		bufferObj.vertexPositionBuffer = gl.createBuffer();
-		bufferArrayData(bufferObj.vertexPositionBuffer, sourceData.vertices, 4);
-		bufferObj.normalBuffer = gl.createBuffer();
-		bufferArrayData(bufferObj.normalBuffer, sourceData.normals, 4);
-		
-		if (sourceData.colors){
-			//alert("loading with colours. colors length : " + sourceData.colors.length);
-			//alert("vertices length : " + sourceData.vertices.length);
-			bufferObj.vertexColorBuffer = gl.createBuffer();
-			bufferArrayData(bufferObj.vertexColorBuffer, sourceData.colors, 4);
-		}
-		if (sourceData.uvcoords || sourceData.texturecoords){
-			bufferObj.vertexTextureCoordBuffer= gl.createBuffer();
-			bufferArrayData(bufferObj.vertexTextureCoordBuffer, sourceData.uvcoords || sourceData.texturecoords[0], 2);	//handle inconsistent formats
-		}
-		if (sourceData.tricoords){
-			bufferObj.vertexTriCoordBuffer= gl.createBuffer();
-			bufferArrayData(bufferObj.vertexTriCoordBuffer, sourceData.tricoords, 3);
-		}
-		if (sourceData.trinormals){
-			bufferObj.vertexTriNormalBuffer= gl.createBuffer();
-			bufferArrayData(bufferObj.vertexTriNormalBuffer, sourceData.trinormals, 3);
-		}
-		
-		if (sourceData.tangents){
-			bufferObj.vertexTangentBuffer= gl.createBuffer();
-			bufferArrayData(bufferObj.vertexTangentBuffer, sourceData.tangents, 4);
-		}
-		if (sourceData.binormals){
-			bufferObj.vertexBinormalBuffer= gl.createBuffer();
-			bufferArrayData(bufferObj.vertexBinormalBuffer, sourceData.binormals, 4);
-		}
-		
-		bufferObj.vertexIndexBuffer = gl.createBuffer();
-		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
-		if (Array.isArray(sourceData.faces[0])){	//if faces is an array of length 3 arrays
-			sourceData.indices = [].concat.apply([],sourceData.faces);
-		} else {									//faces is just a set of indices - used for procTerrain indexed strips. TODO maybe don't use "faces"
-			sourceData.indices = sourceData.faces;
-		}
-		gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(sourceData.indices), gl.STATIC_DRAW);
-		bufferObj.vertexIndexBuffer.itemSize = 3;
-		bufferObj.vertexIndexBuffer.numItems = sourceData.indices.length;
-	}
 	
 	function loadDuocylinderSeaBufferData(bufferObj, sourceData){
 		bufferObj.vertexPositionBuffer = gl.createBuffer();
@@ -3827,8 +3799,8 @@ function drawTennisBall(duocylinderObj, shader, worldDrawingNow, duocylinderSpin
 		setMatrixUniforms(shader);
 		setupShaderAtmos(shader, worldDrawingNow);
 
-		gl.drawElements(duocylinderObj.isStrips? gl.TRIANGLE_STRIP : gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
-		//gl.drawElements(duocylinderObj.isStrips? gl.LINES : gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+		gl.drawElements(duocylinderObj.isStrips? gl.TRIANGLE_STRIP : gl.TRIANGLES, duocylinderObj.vertexIndexBuffer.numItems, 
+			duocylinderObj.use32BitIndices? gl.UNSIGNED_INT: gl.UNSIGNED_SHORT, 0);
 	});
 }
 
@@ -3935,13 +3907,13 @@ function drawObjectFromPreppedBuffers(bufferObj, shaderProg, skipM){
 		gl.drawElements(gl.TRIANGLE_STRIP, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 		return;
 	}
-	gl.drawElements(gl.TRIANGLES, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+	gl.drawElements(gl.TRIANGLES, bufferObj.vertexIndexBuffer.numItems, bufferObj.use32BitIndices? gl.UNSIGNED_INT: gl.UNSIGNED_SHORT, 0);
 	//gl.drawElements(gl.LINES, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 }
 
 function drawObjectFromPreppedBuffersVsMatmult(bufferObj, shaderProg){
 	gl.uniformMatrix4fv(shaderProg.uniforms.uMMatrix, false, mMatrix);
-	gl.drawElements(gl.TRIANGLES, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
+	gl.drawElements(gl.TRIANGLES, bufferObj.vertexIndexBuffer.numItems, bufferObj.use32BitIndices? gl.UNSIGNED_INT: gl.UNSIGNED_SHORT, 0);
 }
 
 
@@ -4301,7 +4273,7 @@ function singleWorldSettings(fogColor, atmosThickness, duocylinderModel, seaActi
 
 var guiParams={
 	worlds:[
-		singleWorldSettings('#2f9a16', 0.2, "procTerrain", false, 0),
+		singleWorldSettings('#2f9a16', 0.2, "greebleTerrain", false, 0),
 		singleWorldSettings('#7496a0', 0.2, "procTerrain", false, 0),
 		singleWorldSettings('#bbbbbb', 0.2, "none", true, -0.0022),
 		singleWorldSettings('#111111', 0.2, "procTerrain", false, 0),
@@ -4574,7 +4546,7 @@ function init(){
 		worldFolder.add(world, "atmosThickness", 0,20,0.05);
 		worldFolder.add(world, "atmosContrast", -20,20,0.5);
 		worldFolder.add(world, "duocylinderModel", [
-			"grid","terrain","procTerrain",'voxTerrain','voxTerrain2','voxTerrain3','l3dt-brute','l3dt-blockstrips','none'] );
+			"grid","terrain","greebleTerrain","procTerrain",'voxTerrain','voxTerrain2','voxTerrain3','l3dt-brute','l3dt-blockstrips','none'] );
 		worldFolder.add(world, "spinRate", -2.5,2.5,0.25);
 		worldFolder.add(world, "seaActive" );
 		worldFolder.add(world, "seaLevel", -0.02,0.02,0.0002);
@@ -5800,6 +5772,9 @@ function drawDuocylinderObject(wSettings, duocylinderObj, duocylinderSpin, zeroL
 			}else{
 				selectedShaderSet = 'triplanarPerPixelTwoAndDiffuseDepthAware';
 			}
+		}else if (duocylinderObj.vertexColors){	//no texture, used for loaded obj
+			//todo depth map versions?
+			selectedShaderSet = 'noTexmap4VecPerPixelDiscardVcolorOnly';
 		}else{
 			if (!depthMap){
 				selectedShaderSet = duocylinderObj.useMapproject? 

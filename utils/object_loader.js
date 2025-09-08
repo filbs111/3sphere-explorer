@@ -11,12 +11,12 @@ function loadBuffersFromObj5File(bufferObj, location, cb, expectedVertLength=3){
 }
 function loadBuffersFromFile(bufferObj, location, cb, indexDataIsDiffs, expectedVertLength, loaderFunc){
     var oReq = new XMLHttpRequest();
-    oReq.addEventListener("load", x => loaderFunc(bufferObj, x.target.response, cb, expectedVertLength, indexDataIsDiffs));
+    oReq.addEventListener("load", x => loaderFunc(bufferObj, location, x.target.response, cb, expectedVertLength, indexDataIsDiffs));
     oReq.open("GET", location);
     oReq.send();
 }
 
-function loadBuffersFromObjFileResponse(bufferObj, response, cb, expectedVertLength, indexDataIsDiffs){
+function loadBuffersFromObjFileResponse(bufferObj, location, response, cb, expectedVertLength, indexDataIsDiffs){
     //console.log(response);
     var lines = response.split("\n");
     console.log(lines.length);
@@ -53,9 +53,14 @@ function loadBuffersFromObjFileResponse(bufferObj, response, cb, expectedVertLen
             }
         }
         if (firstPart == 'f'){
-            faces.push(splitLine.slice(1));
+            var indicesArr = splitLine.slice(1);
+            if (indicesArr.length != 3){
+                alert("indicesArr with length != 3", indicesArr);
+            }
+            faces.push(indicesArr);
         }
     }
+
     //face data in obj lists indices for position, uv, normals independently.
     //can change file format to describe "whole" vertices by referencing these independent parts, then describe faces referencing the "whole" vertices,
     //but for now just work with regular obj data. this maybe slower, and in some cases file size larger. 
@@ -98,7 +103,7 @@ function loadBuffersFromObjFileResponse(bufferObj, response, cb, expectedVertLen
     bufferObj.isLoaded = true;  //should check this before drawing using these buffers (or set some initial dummy data)
 }
 
-function loadBuffersFromObj2Or3Or5FileResponse(bufferObj, response, cb, expectedVertLength, indexDataIsDiffs){
+function loadBuffersFromObj2Or3Or5FileResponse(bufferObj, location, response, cb, expectedVertLength, indexDataIsDiffs){
     //console.log(response);
     var lines = response.split("\n");
     console.log(lines.length);
@@ -126,7 +131,7 @@ function loadBuffersFromObj2Or3Or5FileResponse(bufferObj, response, cb, expected
         if (firstPart == 'vp' || firstPart == 'v'){
             positions.push(floatArr);
             if (floatArr.length != 3){
-               alert("vertex vector size " + floatArr.length + ", but expected length 3" , floatArr);
+               alert("vertex vector size " + floatArr.length + ", but expected length 3. ll = " + ll + JSON.stringify(floatArr));
             }
         }
         if (firstPart == 'vc'){

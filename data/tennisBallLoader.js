@@ -43,7 +43,9 @@ function loadGridData(toLoad, generateCollisionData){
 	var gridNormdataLen = norms.length;
 	console.log("tball normals length = " + gridNormdataLen);
 	
-	for (var vv=0;vv<gridVertdataLen;vv+=3){
+	var vertStep = toLoad.vertices_len ?? 3;
+
+	for (var vv=0, nn=0;vv<gridVertdataLen;vv+=vertStep, nn+=3){
 		var yo = verts[vv];
 		var zo = verts[vv+1];
 		var xo = verts[vv+2];
@@ -57,9 +59,9 @@ function loadGridData(toLoad, generateCollisionData){
 			newverts.push(outverts[cc]);
 		}
 		
-		var ny = norms[vv];
-		var nz = norms[vv+1];
-		var nx = norms[vv+2];
+		var ny = norms[nn];
+		var nz = norms[nn+1];
+		var nx = norms[nn+2];
 		
 		//simple way to calc norms - move a little along normal, subtract this from original value, normalise the result.
 		//probably can express as a derivative wrt normal movment, then normalise result, but this way is easier.
@@ -82,7 +84,16 @@ function loadGridData(toLoad, generateCollisionData){
 			newnorms.push(difference[cc]/divisor);
 		}
 	}
-	
+
+	//add color info if loaded from model.
+	if (toLoad.vertices_len == 6){
+		var colorData = [];
+		for (var vv=0;vv<gridVertdataLen;vv+=vertStep){
+			colorData.push(verts[vv+3], verts[vv+4], verts[vv+5], 1);
+		}
+		toLoad.colors = colorData;
+	}
+
 	if (toLoad.binormals){
 		var binormals = toLoad.binormals;
 		var newbinormals = [];
@@ -95,7 +106,7 @@ function loadGridData(toLoad, generateCollisionData){
 		//TODO more correct to map all vertices into 4vec space and calculate tangents, binormals there, normals from cross products.
 		// that nouniform scaling shouldn't matter
 		
-		for (var vv=0;vv<gridVertdataLen;vv+=3){
+		for (var vv=0;vv<gridVertdataLen;vv+=vertStep){
 			var yo = verts[vv];
 			var zo = verts[vv+1];
 			var xo = verts[vv+2];
