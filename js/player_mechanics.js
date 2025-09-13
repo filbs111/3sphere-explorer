@@ -515,19 +515,21 @@ var playerMechanics = (() => {
 
             //TODO efficient distance calculation without matrix mult
             mat4.set(playerMatrixTransposed, tmpRelativeMat);
-            mat4.multiply(tmpRelativeMat, resultMat);
-            distanceFromClosestPoint = distBetween4mats(tmpRelativeMat, identMat);
-            
+            mat4.multiply(tmpRelativeMat, resultMat);   //TODO just slice matrix then do 4vec mult (not matxmat mult)
+
+            var relativePosC = tmpRelativeMat.slice(12);
+            var relativePosCLength = Math.sqrt(relativePosC[0]*relativePosC[0]+relativePosC[1]*relativePosC[1]+relativePosC[2]*relativePosC[2]);
+
             //stick on debug object to investigate
             closestPointInfo.triObjCloPoinTyp = triObjClosestPointType;
-            closestPointInfo.distFromCloPoin = distanceFromClosestPoint;
+            closestPointInfo.distFromCloPoin = relativePosCLength;
             closestPointInfo.foundCloPoinTriObj = foundClosestPointTriangleObj;
             closestPointInfo.triObjCloPoTyp = triObjClosestPointType;
 
             //player collision - apply reaction force due to penetration, with some smoothing (like spring/damper)
             //cribbed from collidePlayerWithObjectByClosestPointFunc
             var lastTriangleObjPen = currentTriangleObjectPlayerPen;
-            currentTriangleObjectPlayerPen = settings.playerBallRad - distanceFromClosestPoint;
+            currentTriangleObjectPlayerPen = settings.playerBallRad - relativePosCLength;
 
             closestPointInfo.currentTriangleObjectPlayerPen = currentTriangleObjectPlayerPen;
 
@@ -540,33 +542,8 @@ var playerMechanics = (() => {
                 
                 if (currentTriangleObjectPlayerPen > 0 && reactionForce> 0){
 
-                    //console.log("collision!", currentTriangleObjectPlayerPen, reactionForce);
-
-                        //different to collidePlayerWithObjectByClosestPointFunc, which takes places in duocylinder spun space.
-                    var relativePosC = tmpRelativeMat.slice(12);
-                    //normalise. note could just assume that length is player radius, or matches existing calculation for penetration etc, to simplify.
-                    
-                    
-                    //var relativePosCLength = Math.sqrt(1-relativePosC[3]*relativePosC[3]);	//assume matrix SO4
-                        //appears relativePosC can be of magnitude > 1. numerical error?
-                    var relativePosCLength = Math.sqrt(relativePosC[0]*relativePosC[0]+relativePosC[1]*relativePosC[1]+relativePosC[2]*relativePosC[2]);     
-
                     var relativePosCNormalised = relativePosC.map(x=>x/relativePosCLength);
                     var forcePlayerFrame = relativePosCNormalised.map(elem => elem*reactionForce);
-
-                    //when this goes wrong....
-                    mostRecentInfo.tmpRelativeMat = tmpRelativeMat.map(xx=>xx);
-                    mostRecentInfo.relativePosC = relativePosC;                     // is something reasonable, eg 
-                                                            // 0: -0.00004600548345479183
-                                                            // 1: 0.000005311260792950634
-                                                            // 2: 0.00005166974733583629
-                                                            // 3: 1                 // note that relativePosC[3] = 1
-                    mostRecentInfo.relativePosCLength = relativePosCLength;         // is zero
-                    mostRecentInfo.relativePosCNormalised = relativePosCNormalised; // is infinities
-                    mostRecentInfo.forcePlayerFrame = forcePlayerFrame;             // is infinities
-                    mostRecentInfo.playerMatrixTransposed = playerMatrixTransposed.map(xx=>xx); // something reasonable
-                    mostRecentInfo.resultMat = resultMat.map(xx=>xx);               // something reasonable
-
 
                     for (var cc=0;cc<3;cc++){
                         playerVelVec[cc]+=forcePlayerFrame[cc];
@@ -638,18 +615,20 @@ var playerMechanics = (() => {
             //TODO efficient distance calculation without matrix mult
             mat4.set(playerMatrixTransposed, tmpRelativeMat);
             mat4.multiply(tmpRelativeMat, resultMat);
-            distanceFromClosestPoint2 = distBetween4mats(tmpRelativeMat, identMat);
-            
+
+            var relativePosC = tmpRelativeMat.slice(12);
+            var relativePosCLength = Math.sqrt(relativePosC[0]*relativePosC[0]+relativePosC[1]*relativePosC[1]+relativePosC[2]*relativePosC[2]);
+                //note this is not exact distance between mat and ident mat - w values differ (ident 1, tmpRelativeMat slightly less than 1)
 
             //player collision - apply reaction force due to penetration, with some smoothing (like spring/damper)
             //cribbed from collidePlayerWithObjectByClosestPointFunc
             var lastTriangleObjPen2 = currentTriangleObjectPlayerPen2;
-            currentTriangleObjectPlayerPen2 = settings.playerBallRad - distanceFromClosestPoint2;
+            currentTriangleObjectPlayerPen2 = settings.playerBallRad - relativePosCLength;
 
              //stick on debug object to investigate
             closestPointInfo.terrainCollisionInfo = {
                 triObjClosestPointType,
-                distanceFromClosestPoint2,
+                relativePosCLength,
                 foundClosestPointTriangleObj2,
                 currentTriangleObjectPlayerPen2
             }
@@ -669,33 +648,8 @@ var playerMechanics = (() => {
                 
                 if (currentTriangleObjectPlayerPen2 > 0 && reactionForce> 0){
 
-                    //console.log("collision!", currentTriangleObjectPlayerPen, reactionForce);
-
-                        //different to collidePlayerWithObjectByClosestPointFunc, which takes places in duocylinder spun space.
-                    var relativePosC = tmpRelativeMat.slice(12);
-                    //normalise. note could just assume that length is player radius, or matches existing calculation for penetration etc, to simplify.
-                    
-                    
-                    //var relativePosCLength = Math.sqrt(1-relativePosC[3]*relativePosC[3]);	//assume matrix SO4
-                        //appears relativePosC can be of magnitude > 1. numerical error?
-                    var relativePosCLength = Math.sqrt(relativePosC[0]*relativePosC[0]+relativePosC[1]*relativePosC[1]+relativePosC[2]*relativePosC[2]);     
-
                     var relativePosCNormalised = relativePosC.map(x=>x/relativePosCLength);
                     var forcePlayerFrame = relativePosCNormalised.map(elem => elem*reactionForce);
-
-                    //when this goes wrong....
-                    mostRecentInfo.tmpRelativeMat = tmpRelativeMat.map(xx=>xx);
-                    mostRecentInfo.relativePosC = relativePosC;                     // is something reasonable, eg 
-                                                            // 0: -0.00004600548345479183
-                                                            // 1: 0.000005311260792950634
-                                                            // 2: 0.00005166974733583629
-                                                            // 3: 1                 // note that relativePosC[3] = 1
-                    mostRecentInfo.relativePosCLength = relativePosCLength;         // is zero
-                    mostRecentInfo.relativePosCNormalised = relativePosCNormalised; // is infinities
-                    mostRecentInfo.forcePlayerFrame = forcePlayerFrame;             // is infinities
-                    mostRecentInfo.playerMatrixTransposed = playerMatrixTransposed.map(xx=>xx); // something reasonable
-                    mostRecentInfo.resultMat = resultMat.map(xx=>xx);               // something reasonable
-
 
                     for (var cc=0;cc<3;cc++){
                         playerVelVec[cc]+=forcePlayerFrame[cc];
@@ -754,9 +708,6 @@ var playerMechanics = (() => {
 
                 mat4.set(terrainCollisionResultMat, debugDraw.mats[9]);
             }
-            
-
-            
             
 
             function getSlowPossibles(possibleObjects){
