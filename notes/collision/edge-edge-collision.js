@@ -130,12 +130,27 @@ console.log(p1guess);   //indeed turns out to be wrong
 // the tri soup object. since these triangles are typically large, the list of possibles should be quite small - ~10.
 
 //TODO can the current tri soup data using face, edge normals for triangles be reused?
+// NOTE for SAT, can transform candidate axes instead of points.
+// NOTE could use faces with >3 edges, reducing number of separating axis checks by reducing face and edge count vs triangulated mesh
+// but to process a triangle mesh to combine faces, remove edges is a bit tricky, can just get working with triangles first.
+// when come to optimise, perhaps good idea to use blender obj export without triangulate, and maybe for terrain objects, use quads,
+// split quads to tris on load for rendering.
+// for cube, quads = 6 faces, 12 edges. triangulation adds 6 faces, 6 edges.
 
+//"parallel" edges optimisation: 
+// can probably get away with comboing edges that share a distant "vanishing point" (where edge set meets), similar to optimisation for regular 3d edge-edge SAT testing
+// (edge directions matter - can check parallel edges together) store the vanishing point only. For parallel edges in 3d objects projected to 4d, vanishing point for is 
+// quarter way around world from the object centre- edges that are parallel in 3d will converge here when projected onto 3-sphere.
+// to test 2 sets of edges in 2 objects ("parallel" edges in 1 vs "parallel" edges in another object), 
+// find the great circle containing these 2 points, find the opposite great circle, project points onto this. eg if edge set 1 has vanishing point (1,0,0,0),
+// , edge set 2 has vanishing point (0,1,0,0), then the opposite great circle is Acost + Bsint, where A=(0,0,1,0), B=(0,0,0,1). project each point onto this to find t for each point
+// ie atan2(B.p , A.p), check for ranges of angle overlapping. this maybe tricky because cyclic. hope some way to work out angle direction of object origin to point...
+// this should enable finding of separating axis. but won't always find right penetration depth (can find a point that overlaps, but extreme points in t aren't necessarily 
+// most penetrating. might wish to do regular 1d projection in that case, as described elsewhere here.
 
 function wrapToCircle(angle){
     return (angle+ 2*Math.PI) % (2*Math.PI);
 }
-
 
 function bruteForceCheckForClosestPoints(greatCircle1, greatCircle2, maxUOverPi, maxVOverPi){
     
