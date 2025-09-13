@@ -97,6 +97,7 @@ var sshipBuffers={};
 var gunBuffers={};
 var gunBvh={};
 var su57Buffers={};
+var chullObj={};
 var frigateBuffers={};
 var frigateBvh={};
 var icoballBuffers={};
@@ -398,6 +399,7 @@ function initBuffers(){
 		gunBuffers, gunBvh, 0.1, gunWorldData, 3);
 
 	loadBuffersFromObj2Or3File(su57Buffers, "./data/miscobjs/t50/su57yz-4a.obj2", loadBufferData);
+	loadConvexHullDataFromObjFile(chullObj, 0.0005, "./data/miscobjs/conv-hull-test.obj");
 
 	var frigateWorldData = someObjectMatrices.map(xx=> {
 		return {mat: xx.mat, transposedMat: xx.transposedMat, world:2}});

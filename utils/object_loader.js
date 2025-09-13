@@ -9,6 +9,32 @@ function loadBuffersFromObj2Or3File(bufferObj, location, cb, expectedVertLength=
 function loadBuffersFromObj5File(bufferObj, location, cb, expectedVertLength=3){
     loadBuffersFromFile(bufferObj, location, cb, true, expectedVertLength, loadBuffersFromObj2Or3Or5FileResponse);
 }
+
+function loadConvexHullDataFromObjFile(chullObj, scale, location, expectedVertLength=3){
+    loadBuffersFromFile(chullObj, location, x=>x , false, expectedVertLength, (chullObj, location, response, cb, expectedVertLength, indexDataIsDiffs) => {
+        //load convex hull data.
+        var sd = sourceDataFromObjFileResponse(response, expectedVertLength);
+
+        var in_verts = arrayToGroups(sd.vertices, sd.vertices_len).map(xx=>xx.slice(0,3)); //AFAIK slice is redundant because vertices_len = 3
+        var verts = in_verts.map(xx=>xx.map(cc=>cc*scale)).map(xx=>{
+            xx.push(1);
+            return normalise(xx)});   //unit 4-vec vertices
+
+        var in_faces = arrayToGroups(sd.indices, 3);
+        var faces = in_faces.map(ff => normalise(findOrthoVecByDiags(ff.map(ii=>verts[ii]))));
+
+        var edges;   //TODO. use 1 point matching a vert, another point quarter way around world along edge. to avoid edge duplicates, check vert idx from<to
+
+        chullObj.verts=verts;
+        chullObj.faces=faces;
+        chullObj.edges=edges;
+
+        chullObj.isLoaded = true;
+
+        console.log({mssg:"convex hull data loaded from file " + location + " for scale " + scale, sd, chullObj});
+    });
+}
+
 function loadBuffersFromFile(bufferObj, location, cb, indexDataIsDiffs, expectedVertLength, loaderFunc){
     var oReq = new XMLHttpRequest();
     oReq.addEventListener("load", x => loaderFunc(bufferObj, location, x.target.response, cb, expectedVertLength, indexDataIsDiffs));
@@ -17,6 +43,12 @@ function loadBuffersFromFile(bufferObj, location, cb, indexDataIsDiffs, expected
 }
 
 function loadBuffersFromObjFileResponse(bufferObj, location, response, cb, expectedVertLength, indexDataIsDiffs){
+    var sd = sourceDataFromObjFileResponse(response, expectedVertLength);
+    cb(bufferObj, sd);  //loadBufferData
+    bufferObj.isLoaded = true;  //should check this before drawing using these buffers (or set some initial dummy data)
+}
+
+function sourceDataFromObjFileResponse(response, expectedVertLength){
     //console.log(response);
     var lines = response.split("\n");
     console.log(lines.length);
@@ -99,11 +131,16 @@ function loadBuffersFromObjFileResponse(bufferObj, location, response, cb, expec
     // console.log("Obj data:");
     // console.log(sourceData);
 
-    cb(bufferObj, sourceData);  //loadBufferData
-    bufferObj.isLoaded = true;  //should check this before drawing using these buffers (or set some initial dummy data)
+    return sourceData;
 }
 
 function loadBuffersFromObj2Or3Or5FileResponse(bufferObj, location, response, cb, expectedVertLength, indexDataIsDiffs){
+    var sd = sourceDataFromObj2Or3Or5FileResponse(response, expectedVertLength, indexDataIsDiffs);
+    cb(bufferObj, sd);  //loadBufferData
+    bufferObj.isLoaded = true;  //should check this before drawing using these buffers (or set some initial dummy data)
+}
+
+function sourceDataFromObj2Or3Or5FileResponse(response, expectedVertLength, indexDataIsDiffs){
     //console.log(response);
     var lines = response.split("\n");
     console.log(lines.length);
@@ -198,6 +235,5 @@ function loadBuffersFromObj2Or3Or5FileResponse(bufferObj, location, response, cb
     console.log(newVerts);
     console.log(sourceData);
 
-    cb(bufferObj, sourceData);  //loadBufferData
-    bufferObj.isLoaded = true;  //should check this before drawing using these buffers (or set some initial dummy data)
+    return sourceData;
 }
