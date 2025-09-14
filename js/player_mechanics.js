@@ -1,4 +1,5 @@
 var mostRecentInfo={};
+var chullCollisionScreenInfo = "";
 
 var playerMechanics = (() => {
 
@@ -577,6 +578,17 @@ var playerMechanics = (() => {
                 }
             });
 
+
+            if (guiParams.debug.testChullCollision){
+                var chullResult = processTrianglePossiblesForConvexHull(spunObjInfoArr);
+                chullCollisionScreenInfo= (chullResult.possiblyCollidingWithAnObjTriangle ? "x (" : "- (" ) + 
+                chullResult.possiblyCollidingTrisCount + "/" + chullResult.nearbyCount + ")" + 
+                "(" + chullResult.notCollidingDueToObjTriFaceCheckCount + "," + chullResult.notCollidingDueToObjTriEdgeFaceCheckCount + 
+                "," + chullResult.notCollidingDueToPlayerFaceCheckCount + ")";
+                //console.log(chullCollisionScreenInfo, chullResult);
+                return;
+            }
+
             var resultMat = mat4.create();
             var foundClosestPointTriangleObjPreviously2 = foundClosestPointTriangleObj2;
             foundClosestPointTriangleObj2 = processTrianglePossibles(resultMat, spunObjInfoArr, 0.92, (posInObjFrame, objScale, rad, objInfo, lowestAcceptedMultiplier) => {
@@ -807,6 +819,148 @@ var playerMechanics = (() => {
             xyzmove4mat(resultMat, angleToMove);	//draw x on closest vertex
 
             return true;
+        }
+
+        function processTrianglePossiblesForConvexHull(possibleObjects){
+            //processTrianglePossibles is for player simple sphere.
+            //this should work for player convex hull shape. 
+            //later may wish to generalise so sphere collision also uses this code - perhaps describe as a single point, allow expanded/rounded convex hull
+            
+            var greatestPenetrationFound = Number.NEGATIVE_INFINITY;
+            var bestResult = false;
+
+            var possiblyCollidingWithAnObjTriangle = false;
+            var nearbyCount = 0;
+            var possiblyCollidingTrisCount = 0;
+            var notCollidingDueToObjTriFaceCheckCount =0;
+            var notCollidingDueToObjTriEdgeFaceCheckCount =0;
+            var notCollidingDueToPlayerFaceCheckCount =0;
+
+            possibleObjects.forEach(objInfo => {
+                
+                var transposedObjMat = objInfo.transposedMat;
+                var objScale = objInfo.scale;
+
+                var relativeMat = mat4.create(transposedObjMat);    //TODO which way around ?
+                mat4.multiply(relativeMat, playerCamera);
+
+                // var posInObjFrame = vec4.create(playerPos);
+                // mat4.multiplyVec4(transposedObjMat, posInObjFrame, posInObjFrame);
+
+                var posInObjFrame = playerPointInObjFrame([0,0,0,1]);
+
+
+                //find nearby candidates by bounding sphere check as done elsewhere, return early if none nearby
+                //note this logic differs for small objects, terrain objects elsewhere.
+
+                //copied from terrain check
+                //TODO use rad of chull bounding sphere
+                var queryAABB = [-1,1].map(ss=>ss*settings.playerBallRadPadded).map(offs => posInObjFrame.map(xx => xx+offs));
+                var nearby = collisionTestBvh4d(queryAABB, objInfo.collisionTriangleData);                
+                if (nearby.length<1){return false;} 
+
+                nearbyCount+=nearby.length;
+
+                //for small level objects
+                // if (posInObjFrame[3]<=0.3){
+                //     return;
+                // }
+                // var nearby = closestPointBvhAABBIntialCheck(posInObjFrame, rad, objInfo);
+
+                //to do like sphere collision, get player info into object frame.
+                function playerPointInObjFrame(vv){
+                    //TODO fix this! is used to rotate player position into 
+
+                    var vv4 = vec4.create(vv);
+                    mat4.multiplyVec4(relativeMat, vv4, vv4);
+                    return vv4;
+                }
+                var playerVertsInObjFrame = chullObj.verts.map(vv => playerPointInObjFrame(vv));  //transform player convex hull points into obj frame.
+                var playerFacesInObjFrame = chullObj.faces.map(vv => playerPointInObjFrame(vv));  //same thing for faces
+                //TODO same for edges
+
+                console.log({
+                    posInObjFrame,
+                    playerVertsInObjFrame,
+                    playerFacesInObjFrame
+                })
+
+
+                function minMaxInDirection(dirVec, pointVecs){
+                    var dotProdsWithFace = pointVecs.map(vv => dotProduct4(vv, dirVec));
+
+                    var greatest = dotProdsWithFace.reduce((accum, dp) => Math.max(dp,accum), -1);
+                    var least = dotProdsWithFace.reduce((accum, dp) => Math.min(dp,accum), 1);
+
+                    return [least, greatest];
+                }
+
+                nearby.forEach(tt => {
+                    var leastPenetrationThisObjectTriangle = Number.POSITIVE_INFINITY;
+
+                    //tri data has properties: verts (3 4vecs), face (4vec), edges(3x 4vecs)
+                    //TODO find penetration, contact normal etc, but initially should just find if overlapping.
+
+                    //test player verts vs tri soup faces - dot obj face vecs with player points.
+                    var faceRange = minMaxInDirection(tt.face, playerVertsInObjFrame);
+
+                    if (faceRange[0]*faceRange[1]>0){
+                        //console.log("found separating axis using obj tri face", faceRange);
+                        notCollidingDueToObjTriFaceCheckCount+=1;
+                        return; //found separating axis (greatest, least are on same side of obj tri face plane)
+                    }else{
+                        //console.log("failed to find separating axis using obj tri face", faceRange);
+                    }
+
+                    // to reduce likelihood of needing edge test, also check vs obj triangle existing "edge" data, taking this to describe an infinitely thin face
+                    // perpendicular to triangle plane. (this is a point vs face SAT test, NOT a SAT edge test )
+                    //TODO don't bother with minmax - only need one or other. (which?)
+                    var edgeFaceRanges = tt.edges.map(ee=>minMaxInDirection(ee, playerVertsInObjFrame));
+                    for (var ii=0;ii<edgeFaceRanges.length;ii++){
+                        var edgeFaceRange = edgeFaceRanges[ii];
+                        if (edgeFaceRange[0]>0){    //TODO check - perhaps want edgeFaceRange[1]<0
+                        //if (edgeFaceRange[1]<0){
+                            //console.log("found separating axis using obj tri edge face", edgeFaceRange);
+                            notCollidingDueToObjTriEdgeFaceCheckCount+=1;
+                            return; //found separating axis
+                        }
+                    }
+
+                    //TODO test player faces vs tri soup verts. (note repetition here since verts used in adjacent tri soup faces)
+                    var playerFaceRanges = playerFacesInObjFrame.map(ff=>minMaxInDirection(ff, tt.verts));
+                    for (var ii=0;ii<playerFaceRanges.length;ii++){
+                        var playerFaceRange = playerFaceRanges[ii];
+                        if (playerFaceRange[0]>0){    //TODO check - perhaps want playerFaceRange[1]<0
+                        //if (playerFaceRange[1]<0){
+                            //console.log("found separating axis using player face", playerFaceRange);
+                            notCollidingDueToPlayerFaceCheckCount+=1;
+                            return; //found separating axis
+                        }
+                    }
+
+                    possiblyCollidingTrisCount+=1;
+                    possiblyCollidingWithAnObjTriangle = true;
+                    return;
+
+                     //TODO edge-edge test if haven't yet found separating axis for this obj tri vs the player convex hull.
+                });
+
+            });
+
+            return {
+                possiblyCollidingWithAnObjTriangle,
+                nearbyCount,
+                possiblyCollidingTrisCount,
+                notCollidingDueToObjTriFaceCheckCount,
+                notCollidingDueToObjTriEdgeFaceCheckCount,
+                notCollidingDueToPlayerFaceCheckCount
+            }
+
+            //processTrianglePossibles returns bool, has side-effect of altering resultMat, which contains collision point,
+            // is used later to work out force, penetration - force is always thru player centre for sphere collision
+            // here need more info - collision normal or 2 points (closest point on both shapes), penetration
+
+            //for now, possiblyCollidingWithAnObjTriangle can be used to detect collision (without collision response)
         }
     }
 })();

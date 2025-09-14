@@ -398,7 +398,9 @@ function initBuffers(){
 	loadObjThenAddBvhToLevels(loadBuffersFromObj2Or3File, "./data/cannon/cannon-pointz-yz.obj2",
 		gunBuffers, gunBvh, 0.1, gunWorldData, 3);
 
-	loadBuffersFromObj2Or3File(su57Buffers, "./data/miscobjs/t50/su57yz-4a.obj2", loadBufferData);
+	//loadBuffersFromObj2Or3File(su57Buffers, "./data/miscobjs/t50/su57yz-4a.obj2", loadBufferData);
+	loadBuffersFromObj2Or3File(su57Buffers, "./data/miscobjs/conv-hull-test.obj3", loadBufferData);
+
 	loadConvexHullDataFromObjFile(chullObj, 0.0005, "./data/miscobjs/conv-hull-test.obj");
 
 	var frigateWorldData = someObjectMatrices.map(xx=> {
@@ -1359,6 +1361,10 @@ function drawRegularScene(frameTime){
 			portalTexts.forEach(pp=>{
 				drawText(pp.text, pp.pos[0], pp.pos[1], pp.pos[2], 0.6);
 			});
+
+			if (guiParams.debug.testChullCollision){
+				drawText(chullCollisionScreenInfo, 0.6, 0.15, 1, 0.6);
+			}
 
 			function drawText(textToDraw, xpos, ypos, zpos, size){
 				if (!text_util.isLoaded){return;}
@@ -2928,7 +2934,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	}
 
 	function drawPlane(matrix){
-		drawPlayerGradlightObject(matrix, su57Buffers, su57texture, su57texture2, 0.006, -1,false);
+		drawPlayerGradlightObject(matrix, su57Buffers, su57texture, su57texture2, 0.0005, -1,false);
 	}
 
 	function drawPlayerGradlightObject(matrix, buffers, tex, tex2, modelScale, lightBodge, includeGuns){
@@ -2960,7 +2966,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		}				//note muzzleFlashAmounts should be summed over all guns, just doing 2 because symmetric
 		
 		mat4.set(matrix, rotatedMatrix);	//because using rotated model data for sship model
-		xyzrotate4mat(rotatedMatrix, [-Math.PI/2,0,0]); 
+	//	xyzrotate4mat(rotatedMatrix, [-Math.PI/2,0,0]);
 		
 		//uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.gray);
 		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);
@@ -4391,6 +4397,7 @@ var guiParams={
 		worldBvhCollisionTestPlayer:true,
 		timestep:10,
 		useInitialCheckPossibles:true,
+		testChullCollision:false
 	},
 	audio:{
 		volume:0.2,
@@ -4661,6 +4668,8 @@ function init(){
 	debugFolder.add(guiParams.debug, "worldBvhCollisionTestPlayer");
 	debugFolder.add(guiParams.debug, "timestep",2,40,1);
 	debugFolder.add(guiParams.debug, "useInitialCheckPossibles");
+	debugFolder.add(guiParams.debug, "testChullCollision");
+	
 	var audioFolder = gui.addFolder('audio');
 	audioFolder.add(guiParams.audio, "volume", 0,1,0.1).onChange(MySound.setGlobalVolume);
 	MySound.setGlobalVolume(guiParams.audio.volume);	//if set above 1, fallback html media element will throw exception!!!
