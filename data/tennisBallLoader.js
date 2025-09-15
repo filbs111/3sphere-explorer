@@ -238,6 +238,14 @@ function loadGridData(toLoad, generateCollisionData){
 			edges.push(normalise(findOrthoVecByDiags([triVerts[ee], triVerts[(ee+1)%3], face])));
 		}
 
+		//edge great circles that are perpendicular to face, edge normal, and a point on edge. used for convex hull edge-edge separating axis tests (SAT)
+		//stored as 2 points on great circle PI/2 apart
+		var edgeGcs = [];
+		for (ee=0;ee<3;ee++){
+			var otherPoint = normalise(findOrthoVecByDiags([face, edges[ee], triVerts[ee]]));
+			edgeGcs.push([triVerts[ee], otherPoint]);	//could avoid storing triVerts[ee] here since already know it from verts, but like this is more explicit
+		}
+
 		var face = normalise(face);
 
 		//if all signs the same then do something
@@ -254,6 +262,7 @@ function loadGridData(toLoad, generateCollisionData){
 			verts:triVerts,
 			face,
 			edges,
+			edgeGcs,
 			AABB: aabb,
 			morton: morton4(triVerts[0])	//TODO use centre/average point?
 		};

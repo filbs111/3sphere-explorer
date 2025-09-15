@@ -54,8 +54,7 @@ console.log(wrapToCircle(uPlusV), wrapToCircle(test1));      //indeed this works
 //from calculations elsewhere, suspect similar for u-v
 // tan(u-v) = (-A.D + B.C)/(A.C + B.D)
 var uMinusV = resultOne.bestAngs[0] - resultOne.bestAngs[1];
-var test2 = Math.atan2( -dotProduct4(greatCircle1[0], greatCircle2[1]) + dotProduct4(greatCircle1[1], greatCircle2[0]) ,
-            dotProduct4(greatCircle1[0], greatCircle2[0]) + dotProduct4(greatCircle1[1], greatCircle2[1])  );
+var test2 = Math.atan2(-AD + BC, AC + BD);
 
 console.log(wrapToCircle(uMinusV), wrapToCircle(test2));      //indeed this works
 

@@ -21,13 +21,29 @@ function loadConvexHullDataFromObjFile(chullObj, scale, location, expectedVertLe
             return normalise(xx)});   //unit 4-vec vertices
 
         var in_faces = arrayToGroups(sd.indices, 3);
-        var faces = in_faces.map(ff => normalise(findOrthoVecByDiags(ff.map(ii=>verts[ii]))));
 
-        var edges;   //TODO. use 1 point matching a vert, another point quarter way around world along edge. to avoid edge duplicates, check vert idx from<to
+        var faces = [];
+        var edgeGcs = [];
+        in_faces.forEach(ff => {
+            var facePoints = ff.map(ii=>verts[ii]);
+            faces.push(normalise(findOrthoVecByDiags(facePoints)));
+            //edge great circles that are perpendicular to face, edge normal, and a point on edge. used for convex hull edge-edge separating axis tests (SAT)
+		    //stored as 2 points on great circle PI/2 apart (quarter way around world along edge)
+            for (ee=0;ee<3;ee++){
+                var index1 = ee;
+                var index2 = (ee+1)%3;
+                if (ff[index1]>ff[index2]){   // to avoid edge duplicates. assumes closed mesh without edge splits.
+                    var point1 = facePoints[index1];
+                    var point2 = facePoints[index2];
+                    edgeGcs.push([vectorSum4d(point1, point2), vectorDifference4d(point1, point2)].map(xx=>normalise(xx)));
+                        //NOTE could just point to one of existing verts and only introduce single new point here, but above formulation more readable.
+                }
+            }
+        });
 
         chullObj.verts=verts;
         chullObj.faces=faces;
-        chullObj.edges=edges;
+        chullObj.edgeGcs=edgeGcs;
 
         chullObj.isLoaded = true;
 

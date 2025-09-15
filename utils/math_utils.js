@@ -30,3 +30,28 @@ function findOrthoVecByDiags(inputVecs){
  
     return results;
 }
+
+function findClosePointsBetweenGreatCircles(greatCircle1, greatCircle2){
+    //find a pair of points, one on each great circle, which are closest aproach. switching sign of points also is a pair of closest points.
+
+    var AC = dotProduct4(greatCircle1[0], greatCircle2[0]);
+    var AD = dotProduct4(greatCircle1[0], greatCircle2[1]);
+    var BC = dotProduct4(greatCircle1[1], greatCircle2[0]);
+    var BD = dotProduct4(greatCircle1[1], greatCircle2[1]);
+
+    var test1 = Math.atan2(AD + BC, AC - BD);
+    var test2 = Math.atan2(-AD + BC, AC + BD);
+
+    var uAnalytic = (test1 + test2) /2;
+    var vAnalytic = (test1 - test2) /2;
+
+    var closestPointAnalytic1 = greatCirclePositionForAngle(greatCircle1, uAnalytic);
+    var closestPointAnalytic2 = greatCirclePositionForAngle(greatCircle2, vAnalytic);
+
+    return [closestPointAnalytic1, closestPointAnalytic2];
+}
+
+function greatCirclePositionForAngle(gs, ang){
+    var cosSinAng = [Math.cos(ang), Math.sin(ang)];
+    return vectorSum4d( gs[0].map(xx => xx*cosSinAng[0]) , gs[1].map(xx => xx*cosSinAng[1]) );
+}

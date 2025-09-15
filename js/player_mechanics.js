@@ -584,7 +584,7 @@ var playerMechanics = (() => {
                 chullCollisionScreenInfo= (chullResult.possiblyCollidingWithAnObjTriangle ? "x (" : "- (" ) + 
                 chullResult.possiblyCollidingTrisCount + "/" + chullResult.nearbyCount + ")" + 
                 "(" + chullResult.notCollidingDueToObjTriFaceCheckCount + "," + chullResult.notCollidingDueToObjTriEdgeFaceCheckCount + 
-                "," + chullResult.notCollidingDueToPlayerFaceCheckCount + ")";
+                "," + chullResult.notCollidingDueToPlayerFaceCheckCount + "," + chullResult.notCollidingDueToEdgeEdgeCount + ")";
                 //console.log(chullCollisionScreenInfo, chullResult);
                 return;
             }
@@ -835,6 +835,7 @@ var playerMechanics = (() => {
             var notCollidingDueToObjTriFaceCheckCount =0;
             var notCollidingDueToObjTriEdgeFaceCheckCount =0;
             var notCollidingDueToPlayerFaceCheckCount =0;
+            var notCollidingDueToEdgeEdgeCount =0;
 
             possibleObjects.forEach(objInfo => {
                 
@@ -877,20 +878,22 @@ var playerMechanics = (() => {
                 }
                 var playerVertsInObjFrame = chullObj.verts.map(vv => playerPointInObjFrame(vv));  //transform player convex hull points into obj frame.
                 var playerFacesInObjFrame = chullObj.faces.map(vv => playerPointInObjFrame(vv));  //same thing for faces
-                //TODO same for edges
+                
+                var playerEdgeGcsInObjFrame = chullObj.edgeGcs.map(egcarr => egcarr.map(vv => playerPointInObjFrame(vv)));
+                    //NOTE could reuse a player vert for 1 of 2 of each edge point, avoid transforming them here 
 
-                console.log({
-                    posInObjFrame,
-                    playerVertsInObjFrame,
-                    playerFacesInObjFrame
-                })
-
+                // console.log({
+                //     posInObjFrame,
+                //     playerVertsInObjFrame,
+                //     playerFacesInObjFrame,
+                //     playerEdgeGcsInObjFrame
+                // });
 
                 function minMaxInDirection(dirVec, pointVecs){
                     var dotProdsWithFace = pointVecs.map(vv => dotProduct4(vv, dirVec));
 
-                    var greatest = dotProdsWithFace.reduce((accum, dp) => Math.max(dp,accum), -1);
-                    var least = dotProdsWithFace.reduce((accum, dp) => Math.min(dp,accum), 1);
+                    var greatest = dotProdsWithFace.reduce((accum, dp) => Math.max(dp,accum), -1);  //can work with unnormalised input with +/- inf, but expect want
+                    var least = dotProdsWithFace.reduce((accum, dp) => Math.min(dp,accum), 1);          //normalised anyway in order to compare penetration
 
                     return [least, greatest];
                 }
@@ -918,8 +921,7 @@ var playerMechanics = (() => {
                     var edgeFaceRanges = tt.edges.map(ee=>minMaxInDirection(ee, playerVertsInObjFrame));
                     for (var ii=0;ii<edgeFaceRanges.length;ii++){
                         var edgeFaceRange = edgeFaceRanges[ii];
-                        if (edgeFaceRange[0]>0){    //TODO check - perhaps want edgeFaceRange[1]<0
-                        //if (edgeFaceRange[1]<0){
+                        if (edgeFaceRange[0]>0){
                             //console.log("found separating axis using obj tri edge face", edgeFaceRange);
                             notCollidingDueToObjTriEdgeFaceCheckCount+=1;
                             return; //found separating axis
@@ -930,19 +932,33 @@ var playerMechanics = (() => {
                     var playerFaceRanges = playerFacesInObjFrame.map(ff=>minMaxInDirection(ff, tt.verts));
                     for (var ii=0;ii<playerFaceRanges.length;ii++){
                         var playerFaceRange = playerFaceRanges[ii];
-                        if (playerFaceRange[0]>0){    //TODO check - perhaps want playerFaceRange[1]<0
-                        //if (playerFaceRange[1]<0){
+                        if (playerFaceRange[0]>0){
                             //console.log("found separating axis using player face", playerFaceRange);
                             notCollidingDueToPlayerFaceCheckCount+=1;
                             return; //found separating axis
                         }
                     }
 
+                    //TODO edge-edge test if haven't yet found separating axis for this obj tri vs the player convex hull.
+                    for (var ii=0;ii<tt.edgeGcs.length;ii++){   //3 edges for tris, but may wish to support quads etc.
+                        var objEdgeGc = tt.edgeGcs[ii];
+                        for (var jj=0;jj<playerEdgeGcsInObjFrame.length;jj++){
+                            var playerEdgeGc = playerEdgeGcsInObjFrame[jj];
+                            var closePoints = findClosePointsBetweenGreatCircles(objEdgeGc, playerEdgeGc);    //TODO handle possibility of coincident points due to touching great circles.
+                            var pointDifferenceDirection = normalise(vectorDifference4d(closePoints[0], closePoints[1]));
+                            var distRange = minMaxInDirection(pointDifferenceDirection, playerVertsInObjFrame);
+                            var distRangObjTriPoints = minMaxInDirection(pointDifferenceDirection, tt.verts);
+                            if (distRangObjTriPoints[1]< distRange[0] || distRange[1]< distRangObjTriPoints[0]){   //no overlap
+                                //console.log({distRange, distRangObjTriPoints});
+                                notCollidingDueToEdgeEdgeCount+=1;
+                                return;
+                            }
+                        }
+                    }
+
                     possiblyCollidingTrisCount+=1;
                     possiblyCollidingWithAnObjTriangle = true;
                     return;
-
-                     //TODO edge-edge test if haven't yet found separating axis for this obj tri vs the player convex hull.
                 });
 
             });
@@ -953,7 +969,8 @@ var playerMechanics = (() => {
                 possiblyCollidingTrisCount,
                 notCollidingDueToObjTriFaceCheckCount,
                 notCollidingDueToObjTriEdgeFaceCheckCount,
-                notCollidingDueToPlayerFaceCheckCount
+                notCollidingDueToPlayerFaceCheckCount,
+                notCollidingDueToEdgeEdgeCount
             }
 
             //processTrianglePossibles returns bool, has side-effect of altering resultMat, which contains collision point,
