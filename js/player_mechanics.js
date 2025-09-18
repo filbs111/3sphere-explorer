@@ -581,10 +581,11 @@ var playerMechanics = (() => {
 
             if (guiParams.debug.testChullCollision){
                 var chullResult = processTrianglePossiblesForConvexHull(spunObjInfoArr);
-                chullCollisionScreenInfo= (chullResult.possiblyCollidingWithAnObjTriangle ? "x (" : "- (" ) + 
-                chullResult.possiblyCollidingTrisCount + "/" + chullResult.nearbyCount + ")" + 
+                chullCollisionScreenInfo= ["-","V","E","F"][chullResult.chosenChullCollisionPointType+1] + 
+                " (" + chullResult.possiblyCollidingTrisCount + "/" + chullResult.nearbyCount + ")" + 
                 "(" + chullResult.notCollidingDueToObjTriFaceCheckCount + "," + chullResult.notCollidingDueToObjTriEdgeFaceCheckCount + 
-                "," + chullResult.notCollidingDueToPlayerFaceCheckCount + "," + chullResult.notCollidingDueToEdgeEdgeCount + ")";
+                "," + chullResult.notCollidingDueToPlayerFaceCheckCount + "," + chullResult.notCollidingDueToEdgeEdgeCount + ")" + 
+                "PEN: " + chullResult.greatestPenetrationFound;
                 //console.log(chullCollisionScreenInfo, chullResult);
                 return;
             }
@@ -827,9 +828,8 @@ var playerMechanics = (() => {
             //later may wish to generalise so sphere collision also uses this code - perhaps describe as a single point, allow expanded/rounded convex hull
             
             var greatestPenetrationFound = Number.NEGATIVE_INFINITY;
-            var bestResult = false;
+            var chosenChullCollisionPointType = -1;
 
-            var possiblyCollidingWithAnObjTriangle = false;
             var nearbyCount = 0;
             var possiblyCollidingTrisCount = 0;
             var notCollidingDueToObjTriFaceCheckCount =0;
@@ -900,6 +900,7 @@ var playerMechanics = (() => {
 
                 nearby.forEach(tt => {
                     var leastPenetrationThisObjectTriangle = Number.POSITIVE_INFINITY;
+                    var chosenChullCollisionPointTypeThisObjectTriangle = -1;
 
                     //tri data has properties: verts (3 4vecs), face (4vec), edges(3x 4vecs)
                     //TODO find penetration, contact normal etc, but initially should just find if overlapping.
@@ -907,12 +908,17 @@ var playerMechanics = (() => {
                     //test player verts vs tri soup faces - dot obj face vecs with player points.
                     var faceRange = minMaxInDirection(tt.face, playerVertsInObjFrame);
 
-                    if (faceRange[0]*faceRange[1]>0){
-                        //console.log("found separating axis using obj tri face", faceRange);
+                    // if (faceRange[0]*faceRange[1]>0){
+                    //     notCollidingDueToObjTriFaceCheckCount+=1;
+                    // }
+
+                    var minPenetrationFace = Math.min(-faceRange[0], faceRange[1]);
+                    if (minPenetrationFace<0){
                         notCollidingDueToObjTriFaceCheckCount+=1;
-                        return; //found separating axis (greatest, least are on same side of obj tri face plane)
-                    }else{
-                        //console.log("failed to find separating axis using obj tri face", faceRange);
+                    }
+                    if (minPenetrationFace<leastPenetrationThisObjectTriangle){
+                        leastPenetrationThisObjectTriangle = minPenetrationFace;
+                        chosenChullCollisionPointTypeThisObjectTriangle = 2;  //face. note that penetration could be -ve here
                     }
 
                     // to reduce likelihood of needing edge test, also check vs obj triangle existing "edge" data, taking this to describe an infinitely thin face
@@ -921,10 +927,18 @@ var playerMechanics = (() => {
                     var edgeFaceRanges = tt.edges.map(ee=>minMaxInDirection(ee, playerVertsInObjFrame));
                     for (var ii=0;ii<edgeFaceRanges.length;ii++){
                         var edgeFaceRange = edgeFaceRanges[ii];
-                        if (edgeFaceRange[0]>0){
+                        var minPenetrationFaceEdge = -edgeFaceRange[0];
+                        if (minPenetrationFaceEdge<0){
                             //console.log("found separating axis using obj tri edge face", edgeFaceRange);
                             notCollidingDueToObjTriEdgeFaceCheckCount+=1;
-                            return; //found separating axis
+                            //return; //found separating axis
+                        }
+                        if (minPenetrationFaceEdge<leastPenetrationThisObjectTriangle){
+                            leastPenetrationThisObjectTriangle = minPenetrationFaceEdge;
+                            chosenChullCollisionPointTypeThisObjectTriangle = 1;  //"edge". really this is infinitely thin face, but if disabled this check, would get picked up by edge check
+                                //really the penetration here will be no less than than found true edge check (usually greater), so no point, unless using it to exit 
+                                // early. might with to do so if penetration more negative than zero or some negative number describing a inflated skin around object. 
+                                // (nonzero maybe useful to measure -ve penetration to use for damper force on first +ve penetration). 
                         }
                     }
 
@@ -932,10 +946,15 @@ var playerMechanics = (() => {
                     var playerFaceRanges = playerFacesInObjFrame.map(ff=>minMaxInDirection(ff, tt.verts));
                     for (var ii=0;ii<playerFaceRanges.length;ii++){
                         var playerFaceRange = playerFaceRanges[ii];
-                        if (playerFaceRange[0]>0){
+                        var minPenetrationPlayerFace = -playerFaceRange[0];
+                        if (minPenetrationPlayerFace<0){
                             //console.log("found separating axis using player face", playerFaceRange);
                             notCollidingDueToPlayerFaceCheckCount+=1;
-                            return; //found separating axis
+                            //return; //found separating axis
+                        }
+                        if (minPenetrationPlayerFace<leastPenetrationThisObjectTriangle){
+                            leastPenetrationThisObjectTriangle = minPenetrationPlayerFace;
+                            chosenChullCollisionPointTypeThisObjectTriangle = 0;  //"vertex" on the world object, consist with sphere-world object tri collision
                         }
                     }
 
@@ -948,23 +967,41 @@ var playerMechanics = (() => {
                             var pointDifferenceDirection = normalise(vectorDifference4d(closePoints[0], closePoints[1]));
                             var distRange = minMaxInDirection(pointDifferenceDirection, playerVertsInObjFrame);
                             var distRangObjTriPoints = minMaxInDirection(pointDifferenceDirection, tt.verts);
-                            if (distRangObjTriPoints[1]< distRange[0] || distRange[1]< distRangObjTriPoints[0]){   //no overlap
+
+                            var minPenetrationEdgeEdge = Math.min( distRangObjTriPoints[1]-distRange[0], distRange[1] - distRangObjTriPoints[0]);
+
+                            if (minPenetrationEdgeEdge<0){
+                            //if (distRangObjTriPoints[1]< distRange[0] || distRange[1]< distRangObjTriPoints[0]){   //no overlap
                                 //console.log({distRange, distRangObjTriPoints});
                                 notCollidingDueToEdgeEdgeCount+=1;
-                                return;
+                                //return;
+                            }
+                            if (minPenetrationEdgeEdge<leastPenetrationThisObjectTriangle){
+                                leastPenetrationThisObjectTriangle = minPenetrationEdgeEdge;
+                                chosenChullCollisionPointTypeThisObjectTriangle = 1; //edge
                             }
                         }
                     }
 
-                    possiblyCollidingTrisCount+=1;
-                    possiblyCollidingWithAnObjTriangle = true;
-                    return;
+                    if (chosenChullCollisionPointTypeThisObjectTriangle == -1){
+                        possiblyCollidingTrisCount+=1;
+                    }
+
+                    // if (leastPenetrationThisObjectTriangle>0){
+                    //     //colliding with this tri. however, for now, just find 1 triangle max
+                    // }
+
+                    if (leastPenetrationThisObjectTriangle>greatestPenetrationFound){
+                        greatestPenetrationFound = leastPenetrationThisObjectTriangle;
+                        chosenChullCollisionPointType = chosenChullCollisionPointTypeThisObjectTriangle;
+                    }
                 });
 
             });
 
             return {
-                possiblyCollidingWithAnObjTriangle,
+                chosenChullCollisionPointType,
+                greatestPenetrationFound,
                 nearbyCount,
                 possiblyCollidingTrisCount,
                 notCollidingDueToObjTriFaceCheckCount,
