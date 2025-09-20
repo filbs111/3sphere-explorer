@@ -829,6 +829,7 @@ var playerMechanics = (() => {
             
             var greatestPenetrationFound = Number.NEGATIVE_INFINITY;
             var chosenChullCollisionPointType = -1;
+            var collisionPointResult;
 
             var nearbyCount = 0;
             var possiblyCollidingTrisCount = 0;
@@ -889,6 +890,7 @@ var playerMechanics = (() => {
                 //     playerEdgeGcsInObjFrame
                 // });
 
+                //TODO maybe use this to pick object/triangle, rerun with minMaxInDirectionWithPoint once know which obj/tri
                 function minMaxInDirection(dirVec, pointVecs){
                     var dotProdsWithFace = pointVecs.map(vv => dotProduct4(vv, dirVec));
 
@@ -898,7 +900,31 @@ var playerMechanics = (() => {
                     return [least, greatest];
                 }
 
+                function minMaxInDirectionWithPoint(dirVec, pointVecs){
+                    var minResult = {best: 1};
+                    var maxResult = {best: -1};
+
+                    pointVecs.forEach(pv => {
+                        var dotProdWithFace = dotProduct4(pv, dirVec);
+                        if (dotProdWithFace < minResult.best){
+                            minResult = {
+                                best: dotProdWithFace,
+                                picked: pv
+                            }
+                        }
+                        if (dotProdWithFace > maxResult.best){
+                            maxResult = {
+                                best: dotProdWithFace,
+                                picked: pv
+                            }
+                        }
+                    })
+
+                    return [minResult, maxResult];
+                }
+
                 nearby.forEach(tt => {
+                    var collisionPointInObjectFrame;
                     var leastPenetrationThisObjectTriangle = Number.POSITIVE_INFINITY;
                     var chosenChullCollisionPointTypeThisObjectTriangle = -1;
 
@@ -906,28 +932,32 @@ var playerMechanics = (() => {
                     //TODO find penetration, contact normal etc, but initially should just find if overlapping.
 
                     //test player verts vs tri soup faces - dot obj face vecs with player points.
-                    var faceRange = minMaxInDirection(tt.face, playerVertsInObjFrame);
+                    var faceRange = minMaxInDirectionWithPoint(tt.face, playerVertsInObjFrame);
 
                     // if (faceRange[0]*faceRange[1]>0){
                     //     notCollidingDueToObjTriFaceCheckCount+=1;
                     // }
 
-                    var minPenetrationFace = Math.min(-faceRange[0], faceRange[1]);
-                    if (minPenetrationFace<0){
+                    var minPenetrationFace = -faceRange[0] < faceRange[1] ?
+                        {minPen:-faceRange[0].best, picked:faceRange[0].picked}:
+                        {minPen:faceRange[1].best, picked:faceRange[1].picked};
+
+                    if (minPenetrationFace.minPen<0){
                         notCollidingDueToObjTriFaceCheckCount+=1;
                     }
-                    if (minPenetrationFace<leastPenetrationThisObjectTriangle){
-                        leastPenetrationThisObjectTriangle = minPenetrationFace;
+                    if (minPenetrationFace.minPen<leastPenetrationThisObjectTriangle){
+                        leastPenetrationThisObjectTriangle = minPenetrationFace.minPen;
                         chosenChullCollisionPointTypeThisObjectTriangle = 2;  //face. note that penetration could be -ve here
+                        collisionPointInObjectFrame = minPenetrationFace.picked;
                     }
 
                     // to reduce likelihood of needing edge test, also check vs obj triangle existing "edge" data, taking this to describe an infinitely thin face
                     // perpendicular to triangle plane. (this is a point vs face SAT test, NOT a SAT edge test )
-                    //TODO don't bother with minmax - only need one or other. (which?)
-                    var edgeFaceRanges = tt.edges.map(ee=>minMaxInDirection(ee, playerVertsInObjFrame));
+                    //TODO don't bother with minmax - only need one or other. (which?) 
+                    var edgeFaceRanges = tt.edges.map(ee=>minMaxInDirectionWithPoint(ee, playerVertsInObjFrame));
                     for (var ii=0;ii<edgeFaceRanges.length;ii++){
                         var edgeFaceRange = edgeFaceRanges[ii];
-                        var minPenetrationFaceEdge = -edgeFaceRange[0];
+                        var minPenetrationFaceEdge = -edgeFaceRange[0].best;
                         if (minPenetrationFaceEdge<0){
                             //console.log("found separating axis using obj tri edge face", edgeFaceRange);
                             notCollidingDueToObjTriEdgeFaceCheckCount+=1;
@@ -938,15 +968,16 @@ var playerMechanics = (() => {
                             chosenChullCollisionPointTypeThisObjectTriangle = 1;  //"edge". really this is infinitely thin face, but if disabled this check, would get picked up by edge check
                                 //really the penetration here will be no less than than found true edge check (usually greater), so no point, unless using it to exit 
                                 // early. might with to do so if penetration more negative than zero or some negative number describing a inflated skin around object. 
-                                // (nonzero maybe useful to measure -ve penetration to use for damper force on first +ve penetration). 
+                                // (nonzero maybe useful to measure -ve penetration to use for damper force on first +ve penetration).
+                            collisionPointInObjectFrame = edgeFaceRange[0].picked;
                         }
                     }
 
                     //TODO test player faces vs tri soup verts. (note repetition here since verts used in adjacent tri soup faces)
-                    var playerFaceRanges = playerFacesInObjFrame.map(ff=>minMaxInDirection(ff, tt.verts));
+                    var playerFaceRanges = playerFacesInObjFrame.map(ff=>minMaxInDirectionWithPoint(ff, tt.verts));
                     for (var ii=0;ii<playerFaceRanges.length;ii++){
                         var playerFaceRange = playerFaceRanges[ii];
-                        var minPenetrationPlayerFace = -playerFaceRange[0];
+                        var minPenetrationPlayerFace = -playerFaceRange[0].best;
                         if (minPenetrationPlayerFace<0){
                             //console.log("found separating axis using player face", playerFaceRange);
                             notCollidingDueToPlayerFaceCheckCount+=1;
@@ -955,6 +986,7 @@ var playerMechanics = (() => {
                         if (minPenetrationPlayerFace<leastPenetrationThisObjectTriangle){
                             leastPenetrationThisObjectTriangle = minPenetrationPlayerFace;
                             chosenChullCollisionPointTypeThisObjectTriangle = 0;  //"vertex" on the world object, consist with sphere-world object tri collision
+                            collisionPointInObjectFrame = playerFaceRange[0].picked;
                         }
                     }
 
@@ -979,7 +1011,9 @@ var playerMechanics = (() => {
                             if (minPenetrationEdgeEdge<leastPenetrationThisObjectTriangle){
                                 leastPenetrationThisObjectTriangle = minPenetrationEdgeEdge;
                                 chosenChullCollisionPointTypeThisObjectTriangle = 1; //edge
-                            }
+                                var avgPoint = normalise(vectorSum4d(closePoints[0], closePoints[1]));
+                                collisionPointInObjectFrame = avgPoint;
+                            } 
                         }
                     }
 
@@ -994,10 +1028,39 @@ var playerMechanics = (() => {
                     if (leastPenetrationThisObjectTriangle>greatestPenetrationFound){
                         greatestPenetrationFound = leastPenetrationThisObjectTriangle;
                         chosenChullCollisionPointType = chosenChullCollisionPointTypeThisObjectTriangle;
+                        collisionPointResult = {
+                            collisionPointInObjectFrame,
+                            objInfo
+                        };
                     }
                 });
-
             });
+
+
+            if (guiParams.debug.closestPointNearby){
+                //if (chosenChullCollisionPointType!=-1){
+
+                if (collisionPointResult?.collisionPointInObjectFrame){ 
+                    //copypaste code from elsewhere to get a matrix describing contact point.
+                    //TODO generalise! also don't actually need a matrix for this. just position
+
+                    var closestPointInObjectFrame = collisionPointResult.collisionPointInObjectFrame;
+                    var positionXyz = closestPointInObjectFrame.slice(0,3);
+                    var veclenXyz = Math.sqrt(positionXyz.reduce((accum, xx)=>accum+xx*xx, 0));
+                    var scalarAngleDifference = Math.atan2(veclenXyz, closestPointInObjectFrame[3]);
+
+                    var correction = -scalarAngleDifference/veclenXyz;
+                    var angleToMove = positionXyz.map(val => val*correction);
+
+                    var tempMat = mat4.create();
+
+                    mat4.set(collisionPointResult.objInfo.mat, tempMat);
+                    xyzmove4mat(tempMat, angleToMove);	//draw x on closest vertex
+
+                    new Explosion({matrix:mat4.create(tempMat),world:playerContainer.world}, sshipModelScale*0.01, [[1,0,0],[0,1,0],[0,0,1]][chosenChullCollisionPointType]);
+                }
+            }
+
 
             return {
                 chosenChullCollisionPointType,
