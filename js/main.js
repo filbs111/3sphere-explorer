@@ -3995,6 +3995,7 @@ var closestPointTestMat = mat4.create();	//TODO maybe more efficient to just use
 var voxCollisionCentralLevel =0;
 var voxCollisionDebugMat = mat4.create();	//in player frame, showing where the collison/reaction
 var lastVoxPenetration = 0;
+var lastChullPenetration = 0;
 
 var closestBoxDist=100;	//initialise to arbitrarily large. TODO store point so pan sound	
 var closestBoxInfo;
