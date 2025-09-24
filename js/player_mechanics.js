@@ -581,7 +581,7 @@ var playerMechanics = (() => {
 
             if (guiParams.debug.testChullCollision){
                 var chullResult = processTrianglePossiblesForConvexHull(spunObjInfoArr);
-                chullCollisionScreenInfo= ["-","V","E","F"][chullResult.chosenChullCollisionPointType+1] + 
+                chullCollisionScreenInfo= ["-","V","E","F","FE"][chullResult.chosenChullCollisionPointType+1] + 
                 " (" + chullResult.possiblyCollidingTrisCount + "/" + chullResult.nearbyCount + ")" + 
                 "(" + chullResult.notCollidingDueToObjTriFaceCheckCount + "," + chullResult.notCollidingDueToObjTriEdgeFaceCheckCount + 
                 "," + chullResult.notCollidingDueToPlayerFaceCheckCount + "," + chullResult.notCollidingDueToEdgeEdgeCount + ")" + 
@@ -838,6 +838,8 @@ var playerMechanics = (() => {
             var notCollidingDueToPlayerFaceCheckCount =0;
             var notCollidingDueToEdgeEdgeCount =0;
 
+            var extraInfo;
+
             possibleObjects.forEach(objInfo => {
                 
                 var transposedObjMat = objInfo.transposedMat;
@@ -951,6 +953,8 @@ var playerMechanics = (() => {
                     var leastPenetrationThisObjectTriangle = Number.POSITIVE_INFINITY;
                     var chosenChullCollisionPointTypeThisObjectTriangle = -1;
 
+                    var extraInfoThisFace;
+
                     //tri data has properties: verts (3 4vecs), face (4vec), edges(3x 4vecs)
                     //TODO find penetration, contact normal etc, but initially should just find if overlapping.
 
@@ -973,6 +977,7 @@ var playerMechanics = (() => {
                         chosenChullCollisionPointTypeThisObjectTriangle = 2;  //face. note that penetration could be -ve here
                         collisionPointInObjectFrame = minPenetrationFace.picked;
                         contactNormalInObjectFrame = tt.face;
+                        extraInfoThisFace=null;
                     }
 
                     // to reduce likelihood of needing edge test, also check vs obj triangle existing "edge" data, taking this to describe an infinitely thin face
@@ -989,12 +994,12 @@ var playerMechanics = (() => {
                     //     }
                     //     if (minPenetrationFaceEdge<leastPenetrationThisObjectTriangle){
                     //         leastPenetrationThisObjectTriangle = minPenetrationFaceEdge;
-                    //         chosenChullCollisionPointTypeThisObjectTriangle = 1;  //"edge". really this is infinitely thin face, but if disabled this check, would get picked up by edge check
+                    //         chosenChullCollisionPointTypeThisObjectTriangle = 3;  //"face edge". like infinitely thin face, but if disabled this check, would get picked up by edge check
                     //             //really the penetration here will be no less than than found true edge check (usually greater), so no point, unless using it to exit 
                     //             // early. might with to do so if penetration more negative than zero or some negative number describing a inflated skin around object. 
                     //             // (nonzero maybe useful to measure -ve penetration to use for damper force on first +ve penetration).
                     //         collisionPointInObjectFrame = edgeFaceRange[0].picked;
-                    //         contactNormalInObjectFrame = edge;
+                    //         contactNormalInObjectFrame = edge.map(xx=>xx*-1);   //TODO is direction correct?
                     //     }
                     // }
 
@@ -1013,6 +1018,7 @@ var playerMechanics = (() => {
                             chosenChullCollisionPointTypeThisObjectTriangle = 0;  //"vertex" on the world object, consist with sphere-world object tri collision
                             collisionPointInObjectFrame = tt.verts[playerFaceRange[1].idx];
                             contactNormalInObjectFrame = playerFacesInObjFrame[ii].map(xx=>xx*-1);  //reverse? TODO flip chull face norms?
+                            extraInfoThisFace=null;
                         }
                     }
 
@@ -1027,6 +1033,10 @@ var playerMechanics = (() => {
                             var distRangObjTriPoints = minMaxInDirection(pointDifferenceDirection, tt.verts);
 
                             var minPenetrationEdgeEdge = Math.min( distRangObjTriPoints[1]-distRange[0], distRange[1] - distRangObjTriPoints[0]);
+                            //var minPenetrationEdgeEdge = distRange[1] - distRangObjTriPoints[0];
+
+                            var sign = distRangObjTriPoints[1]-distRange[0] <  distRange[1] - distRangObjTriPoints[0] ? -1:1;
+                            //var sign = 1;
 
                             if (minPenetrationEdgeEdge<0){
                             //if (distRangObjTriPoints[1]< distRange[0] || distRange[1]< distRangObjTriPoints[0]){   //no overlap
@@ -1034,13 +1044,41 @@ var playerMechanics = (() => {
                                 notCollidingDueToEdgeEdgeCount+=1;
                                 //return;
                             }
-                            if (minPenetrationEdgeEdge<leastPenetrationThisObjectTriangle){
+
+                            //detect ranges of the 2 objects not crossing 0. (each fully on same side of test plane), AND on same side.
+                            //  in this case the ranges of vertices of each might not be correct range of whole object, because wraps round, leading to 
+                            // missing overlap between 2 shapes
+                            // seems this edge case is hit sometimes, but removing it does NOT fix jumpy edge-edge collision!
+                            // NOTE if just detected that each obj doesn't cross 0, could miss near but non-overlap.
+
+                            //TODO toggle this edge case detection on/off - could be makes matters worse!!
+                            var edgeCaseDetected = (distRange[0]*distRange[1]>0) && (distRangObjTriPoints[0]*distRangObjTriPoints[1]>0) && (distRange[0]*distRangObjTriPoints[0]>0);
+
+                            //if (edgeCaseDetected){alert("edge case detected!!");}
+
+                            //TODO actually project into space with straight lines?
+
+                            //possible reasons/cures for wacky collision: 
+                            // if spurious selected collision points are only when there is no overlap, might disregard last penetration or cap to 0, (still get spurious zeros though)
+                            // put a skin on object/only take last penetration into account if was +ve
+                            // TODO semi transparent/flash player object/lines so can see if point detected inside
+                            //TODO highlighted the edges that collision detected for
+                            //TODO toggle collision response on/off so can see if spurious axis detection is only when not colliding.
+
+
+                            if ((minPenetrationEdgeEdge<leastPenetrationThisObjectTriangle) && !edgeCaseDetected){
                                 leastPenetrationThisObjectTriangle = minPenetrationEdgeEdge;
                                 chosenChullCollisionPointTypeThisObjectTriangle = 1; //edge
                                 var avgPoint = normalise(vectorSum4d(closePoints[0], closePoints[1]));
                                 collisionPointInObjectFrame = avgPoint;
-                                contactNormalInObjectFrame = pointDifferenceDirection;
-                            } 
+                                contactNormalInObjectFrame = pointDifferenceDirection.map(xx=>xx*sign);
+                                extraInfoThisFace = {
+                                    distRangObjTriPoints,
+                                    distRange,
+                                    minPenetrationEdgeEdge,
+                                    sign
+                                };
+                            }
                         }
                     }
 
@@ -1053,6 +1091,7 @@ var playerMechanics = (() => {
                     // }
 
                     if (leastPenetrationThisObjectTriangle>greatestPenetrationFound){
+                        extraInfo = extraInfoThisFace;
                         greatestPenetrationFound = leastPenetrationThisObjectTriangle;
                         chosenChullCollisionPointType = chosenChullCollisionPointTypeThisObjectTriangle;
                         collisionPointResult = {
@@ -1064,28 +1103,41 @@ var playerMechanics = (() => {
                 });
             });
 
-
             if (guiParams.debug.closestPointNearby){
                 if (collisionPointResult?.collisionPointInObjectFrame){ 
                     //copypaste code from elsewhere to get a matrix describing contact point.
                     //TODO generalise! also don't actually need a matrix for this. just position
 
-                    var closestPointInObjectFrame = collisionPointResult.collisionPointInObjectFrame;
-                    var positionXyz = closestPointInObjectFrame.slice(0,3);
-                    var veclenXyz = Math.sqrt(positionXyz.reduce((accum, xx)=>accum+xx*xx, 0));
-                    var scalarAngleDifference = Math.atan2(veclenXyz, closestPointInObjectFrame[3]);
+                    putDebugPointInObjFrame(collisionPointResult.objInfo, collisionPointResult.collisionPointInObjectFrame, [[1,0,0],[0,1,0],[0,0,1],[1,0,1]][chosenChullCollisionPointType]);
 
-                    var correction = -scalarAngleDifference/veclenXyz;
-                    var angleToMove = positionXyz.map(val => val*correction);
+                    //add an extra point offset in contact normal position.
+                    var offsetPoint = normalise(vectorSum4d(collisionPointResult.collisionPointInObjectFrame, 
+                        collisionPointResult.contactNormalInObjectFrame.map(xx=>xx*-0.0001)));
+                    putDebugPointInObjFrame(collisionPointResult.objInfo, offsetPoint, [1,1,1]);
 
-                    var tempMat = mat4.create();
-
-                    mat4.set(collisionPointResult.objInfo.mat, tempMat);
-                    xyzmove4mat(tempMat, angleToMove);	//draw x on closest vertex
-
-                    new Explosion({matrix:mat4.create(tempMat),world:playerContainer.world}, sshipModelScale*0.01, [[1,0,0],[0,1,0],[0,0,1]][chosenChullCollisionPointType]);
+                    // if (extraInfo){console.log(extraInfo);}                
                 }
             }
+
+            function putDebugPointInObjFrame(objInfo, collisionPointInObjectFrame, pointColor){
+                var closestPointInObjectFrame = collisionPointInObjectFrame;
+                var positionXyz = closestPointInObjectFrame.slice(0,3);
+                var veclenXyz = Math.sqrt(positionXyz.reduce((accum, xx)=>accum+xx*xx, 0));
+                var scalarAngleDifference = Math.atan2(veclenXyz, closestPointInObjectFrame[3]);
+
+                var correction = -scalarAngleDifference/veclenXyz;
+                var angleToMove = positionXyz.map(val => val*correction);
+
+                var tempMat = mat4.create();
+
+                mat4.set(objInfo.mat, tempMat);
+                xyzmove4mat(tempMat, angleToMove);	//draw x on closest vertex
+
+                if (extraInfo){console.log(extraInfo);}
+
+                new Explosion({matrix:mat4.create(tempMat),world:playerContainer.world}, sshipModelScale*0.01, pointColor);
+            }
+
 
             
             // apply force to player along contactNormalInObjectFrame (at collisionPointInObjectFrame, but for linear acceleration may not matter)
@@ -1099,8 +1151,8 @@ var playerMechanics = (() => {
                 mat4.multiplyVec4(relativeMat, normInPlayerFrame, normInPlayerFrame);
 
                 if (greatestPenetrationFound>0 && lastChullPenetration != Number.NEGATIVE_INFINITY){  //TODO better logic here! 
-                    var penChange = greatestPenetrationFound - lastChullPenetration;    //problem - infinity
-                    var reactionForce = Math.max(100*greatestPenetrationFound + 1000*penChange, 0);
+                    var penChange = greatestPenetrationFound - lastChullPenetration;
+                    var reactionForce = Math.max(200*greatestPenetrationFound + 5000*penChange, 0);
 
                     //apply force along normal. convert 4vec to 3vec. not sure what is correct here. code copied from elsewhere.
                     var relativePosC = Array.from(normInPlayerFrame);   //TODO is Array from needed?
@@ -1114,7 +1166,7 @@ var playerMechanics = (() => {
                 }
             }
 
-            lastChullPenetration = greatestPenetrationFound;
+            lastChullPenetration = Math.max(greatestPenetrationFound,0);
 
             return {
                 chosenChullCollisionPointType,
