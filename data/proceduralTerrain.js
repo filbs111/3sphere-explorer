@@ -452,8 +452,8 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 				yoffs + xx + gridSize + 2,
 			];
 			unstrippedFaces.push(
-				[fourCorners[0],fourCorners[1],fourCorners[3]],
-				[fourCorners[0],fourCorners[3],fourCorners[2]]
+				[fourCorners[0],fourCorners[1],fourCorners[2]],
+				[fourCorners[2],fourCorners[1],fourCorners[3]]
 			);
 		}
 	}
