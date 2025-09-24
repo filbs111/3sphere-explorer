@@ -4402,6 +4402,7 @@ var guiParams={
 		timestep:10,
 		useInitialCheckPossibles:true,
 		testChullCollision:true,
+		chullCollisionApplyResponse:true,
 		flickerPlayerDisplay:true
 	},
 	audio:{
@@ -4674,6 +4675,7 @@ function init(){
 	debugFolder.add(guiParams.debug, "timestep",2,40,1);
 	debugFolder.add(guiParams.debug, "useInitialCheckPossibles");
 	debugFolder.add(guiParams.debug, "testChullCollision");
+	debugFolder.add(guiParams.debug, "chullCollisionApplyResponse");
 	debugFolder.add(guiParams.debug, "flickerPlayerDisplay");
 	
 	var audioFolder = gui.addFolder('audio');

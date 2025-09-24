@@ -1142,7 +1142,7 @@ var playerMechanics = (() => {
             
             // apply force to player along contactNormalInObjectFrame (at collisionPointInObjectFrame, but for linear acceleration may not matter)
             //convert normal into player frame from object frame. 
-            if (collisionPointResult?.contactNormalInObjectFrame){
+            if (guiParams.debug.chullCollisionApplyResponse && collisionPointResult?.contactNormalInObjectFrame){
                 var transposedObjMat = collisionPointResult.objInfo.transposedMat;
                 var relativeMat = mat4.create(transposedObjMat);    //TODO which way around ?
                 mat4.multiply(relativeMat, playerCamera);
