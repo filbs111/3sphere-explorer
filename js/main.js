@@ -98,6 +98,7 @@ var sshipBuffers={};
 var gunBuffers={};
 var gunBvh={};
 var su57Buffers={};
+var chullBuffers={};
 var chullObj={};
 var frigateBuffers={};
 var frigateBvh={};
@@ -399,8 +400,8 @@ function initBuffers(){
 	loadObjThenAddBvhToLevels(loadBuffersFromObj2Or3File, "./data/cannon/cannon-pointz-yz.obj2",
 		gunBuffers, gunBvh, 0.1, gunWorldData, 3);
 
-	//loadBuffersFromObj2Or3File(su57Buffers, "./data/miscobjs/t50/su57yz-4a.obj2", loadBufferData);
-	loadBuffersFromObj2Or3File(su57Buffers, "./data/miscobjs/conv-hull-test.obj3", loadBufferData);
+	loadBuffersFromObj2Or3File(su57Buffers, "./data/miscobjs/t50/su57yz-4a.obj2", loadBufferData);
+	loadBuffersFromObj2Or3File(chullBuffers, "./data/miscobjs/conv-hull-test.obj3", loadBufferData);
 
 	loadConvexHullDataFromObjFile(chullObj, 0.0005, "./data/miscobjs/conv-hull-test.obj");
 
@@ -2918,6 +2919,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	var drawFunc = {
 		"spaceship" : drawSpaceship,
 		"plane": drawPlane,
+		"convexHullTest": drawConvexHull,
 		"ball": drawBall
 	}[guiParams["player model"]];
 	
@@ -2937,7 +2939,12 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	}
 
 	function drawPlane(matrix){
-		drawPlayerGradlightObject(matrix, su57Buffers, su57texture, su57texture2, 0.0005, -1,false);
+		drawPlayerGradlightObject(matrix, su57Buffers, su57texture, su57texture2, 0.002, -1,false);
+	}
+
+	function drawConvexHull(matrix){
+		//TODO appropriate shader
+		drawPlayerGradlightObject(matrix, chullBuffers, su57texture, su57texture2, 0.0005, -1,false);
 	}
 
 	function drawPlayerGradlightObject(matrix, buffers, tex, tex2, modelScale, lightBodge, includeGuns){
@@ -4320,7 +4327,7 @@ var guiParams={
 		drawType:'instanced speckles',
 		numToMove:0
 	},
-	"player model":"plane",
+	"player model":"convexHullTest",
 	target:{
 		type:"none",
 		scale:0.03
@@ -4594,7 +4601,7 @@ function init(){
 	drawShapesFolder.add(guiParams.drawShapes,"turretScale",0.1,20.0,0.1);
 	drawShapesFolder.add(guiParams.drawShapes,"viaduct", ['none','individual','instanced']);
 
-	gui.add(guiParams,"player model", ["spaceship","plane","ball"]);
+	gui.add(guiParams,"player model", ["spaceship","plane","convexHullTest","ball"]);
 	
 	var targetFolder = gui.addFolder('target');
 	targetFolder.add(guiParams.target, "type",["none", "sphere","box"]);
