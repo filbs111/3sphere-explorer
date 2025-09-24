@@ -1,5 +1,6 @@
 var shouldDumpDebug = false;
 var shouldDumpDebug2 = false;
+var flickerFlag=true;
 
 var quadplane={	//temp...
 	fx:5,
@@ -2922,8 +2923,12 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		"ball": drawBall
 	}[guiParams["player model"]];
 	
-	for (var mat of sshipDrawMatrices){
-		drawFunc(mat);
+	var shouldDrawPlayer = guiParams.debug.flickerPlayerDisplay? flickerFlag:true;
+
+	if (shouldDrawPlayer){
+		for (var mat of sshipDrawMatrices){
+			drawFunc(mat);
+		}
 	}
 	
 	function drawSpaceship(matrix){
@@ -4317,7 +4322,7 @@ var guiParams={
 		drawType:'instanced speckles',
 		numToMove:0
 	},
-	"player model":"spaceship",
+	"player model":"plane",
 	target:{
 		type:"none",
 		scale:0.03
@@ -4398,7 +4403,8 @@ var guiParams={
 		worldBvhCollisionTestPlayer:true,
 		timestep:10,
 		useInitialCheckPossibles:true,
-		testChullCollision:false
+		testChullCollision:true,
+		flickerPlayerDisplay:true
 	},
 	audio:{
 		volume:0.2,
@@ -4670,6 +4676,7 @@ function init(){
 	debugFolder.add(guiParams.debug, "timestep",2,40,1);
 	debugFolder.add(guiParams.debug, "useInitialCheckPossibles");
 	debugFolder.add(guiParams.debug, "testChullCollision");
+	debugFolder.add(guiParams.debug, "flickerPlayerDisplay");
 	
 	var audioFolder = gui.addFolder('audio');
 	audioFolder.add(guiParams.audio, "volume", 0,1,0.1).onChange(MySound.setGlobalVolume);
