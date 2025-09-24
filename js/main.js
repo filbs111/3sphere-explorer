@@ -602,12 +602,10 @@ var gunHeat = 0;
 
 var lastSeaTime=0;
 function drawScene(frameTime){
-
+	flickerFlag = !flickerFlag;
 	cubemapViewCache.clearCache();	//NOTE putting here breaks stereo 3d through portals (will reuse 1st eye)
-
 	resizecanvas();
 	heapPerfMon.sample();	//suspect not right place for this, better at end
-
 	var heapPerfData = heapPerfMon.read();
 	if (heapPerfData){
 		document.getElementById("info3").innerHTML ="GC avg amount:" + (heapPerfData.avgAmount / 1000000).toFixed(1) + "MB, "+ 
