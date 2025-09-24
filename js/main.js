@@ -1362,7 +1362,7 @@ function drawRegularScene(frameTime){
 				drawText(pp.text, pp.pos[0], pp.pos[1], pp.pos[2], 0.6);
 			});
 
-			if (guiParams.debug.testChullCollision){
+			if (guiParams["player model"] == "convexHullTest"){
 				drawText(chullCollisionScreenInfo, 0.6, 0.15, 1, 0.6);
 			}
 
@@ -4408,7 +4408,6 @@ var guiParams={
 		worldBvhCollisionTestPlayer:true,
 		timestep:10,
 		useInitialCheckPossibles:true,
-		testChullCollision:true,
 		chullCollisionApplyResponse:true,
 		flickerPlayerDisplay:true
 	},
@@ -4681,7 +4680,6 @@ function init(){
 	debugFolder.add(guiParams.debug, "worldBvhCollisionTestPlayer");
 	debugFolder.add(guiParams.debug, "timestep",2,40,1);
 	debugFolder.add(guiParams.debug, "useInitialCheckPossibles");
-	debugFolder.add(guiParams.debug, "testChullCollision");
 	debugFolder.add(guiParams.debug, "chullCollisionApplyResponse");
 	debugFolder.add(guiParams.debug, "flickerPlayerDisplay");
 	

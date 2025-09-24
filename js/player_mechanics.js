@@ -579,7 +579,7 @@ var playerMechanics = (() => {
             });
 
 
-            if (guiParams.debug.testChullCollision){
+            if (guiParams["player model"] == "convexHullTest"){
                 var chullResult = processTrianglePossiblesForConvexHull(spunObjInfoArr);
                 chullCollisionScreenInfo= ["-","V","E","F","FE"][chullResult.chosenChullCollisionPointType+1] + 
                 " (" + chullResult.possiblyCollidingTrisCount + "/" + chullResult.nearbyCount + ")" + 
