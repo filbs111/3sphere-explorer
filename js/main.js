@@ -4897,7 +4897,7 @@ var iterateMechanics = (function iterateMechanics(){
 		//TODO remove
 		timeStep = guiParams.debug.timestep;	//5ms => 200 steps/s! this is small to prevent tunelling. TODO better collision system that does not require this!
 		timeStepMultiplier = timeStep/10;	//because stepSpeed initially tuned for timeStep=10;
-		angVelDampMultiplier=Math.pow(0.85, timeStep/10);
+		angVelDampMultiplier=Math.pow(0.95, timeStep/10);
 		gunHeatMultiplier = Math.pow(0.995, timeStep/10);
 		
 		//==========================================================================

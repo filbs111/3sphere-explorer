@@ -1163,6 +1163,23 @@ var playerMechanics = (() => {
                     for (var cc=0;cc<3;cc++){
                         playerVelVec[cc]+=forcePlayerFrame[cc];
                     }
+
+
+                    //apply torque.
+                    //have the reaction normal, the player position, some position force is applied*
+                    mat4.set(transposedObjMat, relativeMat);
+                    mat4.multiply(relativeMat, playerCamera);
+                    mat4.transpose(relativeMat);    //??
+                    var collisionPointInPlayerFrame = vec4.create(collisionPointResult.collisionPointInObjectFrame);
+                    mat4.multiplyVec4(relativeMat, collisionPointInPlayerFrame, collisionPointInPlayerFrame);
+                    var torqueGuess = findOrthoVecByDiags([normInPlayerFrame, collisionPointInPlayerFrame, [0,0,0,1]]);
+                    //NOTE in player frame, can just take 3d x-prod of 3d components of collision point and norm. simpler, expect approx same
+                    for (var ii=0;ii<3;ii++){
+                        playerAngVelVec[ii]+=100000*reactionForce*torqueGuess[ii];
+                            //NOTE this may be large, but effect of torque reduced by very high angular damping
+                            //TODO* make this right for edge-edge collision - suspect current collision point does not work as a contact point.
+                    }
+
                 }
             }
 
