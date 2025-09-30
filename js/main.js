@@ -2407,6 +2407,9 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	if (guiParams.debug.drawPlayerPosMarkers){
 		debugDraw.drawPlayerPosMarkers();
 	}
+	if (guiParams.debug.drawExtraMarkers){
+		debugDraw.drawExtraMarkers();
+	}
 	
 	function drawPreppedBufferOnDuocylinderForBoxData(bb, activeShaderProgram, buffers, invertedCamera){
 		var invertedCamera = invertedCamera || invertedWorldCamera;
@@ -4393,7 +4396,8 @@ var guiParams={
 		hudTest:false,
 		closestPoint:false,
 		drawPlayerPosMarkers:false,
-		closestPointNearby:false,
+		drawExtraMarkers:true,
+		closestPointNearby:true,
 		buoys:false,
 		nmapUseShader2:true,
 		showSpeedOverlay:false,
@@ -4409,6 +4413,9 @@ var guiParams={
 		timestep:10,
 		useInitialCheckPossibles:true,
 		chullCollisionApplyResponse:true,
+		skipSatPlayerFaceTests:false,
+		skipEdgeColAcc:true,	//suspect do want this
+		skipEdgeCaseCheck:false,
 		flickerPlayerDisplay:true
 	},
 	audio:{
@@ -4658,6 +4665,7 @@ function init(){
 	debugFolder.add(guiParams.debug, "hudTest");
 	debugFolder.add(guiParams.debug, "closestPoint");
 	debugFolder.add(guiParams.debug, "drawPlayerPosMarkers");
+	debugFolder.add(guiParams.debug, "drawExtraMarkers");
 	debugFolder.add(guiParams.debug, "closestPointNearby");
 	debugFolder.add(guiParams.debug, "buoys");
 	debugFolder.add(guiParams.debug, "nmapUseShader2");
@@ -4681,6 +4689,9 @@ function init(){
 	debugFolder.add(guiParams.debug, "timestep",2,40,1);
 	debugFolder.add(guiParams.debug, "useInitialCheckPossibles");
 	debugFolder.add(guiParams.debug, "chullCollisionApplyResponse");
+	debugFolder.add(guiParams.debug, "skipSatPlayerFaceTests");
+	debugFolder.add(guiParams.debug, "skipEdgeColAcc");
+	debugFolder.add(guiParams.debug, "skipEdgeCaseCheck");
 	debugFolder.add(guiParams.debug, "flickerPlayerDisplay");
 	
 	var audioFolder = gui.addFolder('audio');

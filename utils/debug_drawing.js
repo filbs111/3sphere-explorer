@@ -19,6 +19,17 @@ var debugDraw = (function(){
         nextTestPoint = (nextTestPoint+1)%numTestPoints;
     }
 
+
+    //additional markers using a pool of mats. 
+    //TODO use system like this for other points.
+    //TODO ensure stay within limit! NOTE quite a lot here AFAIK since resetting to 0 then drawing markers for multiple phys steps. TODO reset more often!
+    var numExtraMarkers=0;
+    var extraMarkerPoolSize=200;
+    var extraMarkerPool=[];
+    for (var ee=0;ee<extraMarkerPoolSize;ee++){
+        extraMarkerPool.push({mat:mat4.identity()});
+    }
+
     function drawTestCubeForMatrixColorAndScale(mat, cubeColor, scale){
         mat4.set(invertedWorldCamera, mvMatrix);
         mat4.multiply(mvMatrix, mat);
@@ -80,12 +91,34 @@ var debugDraw = (function(){
             drawTriAxisCrossForMatrixColorAndScale(tp.mat, tp.color, 0.001);
         });
     }
+
+    function drawExtraMarkers(){
+        console.log("drawing " + numExtraMarkers + "extra markers");
+        for (var mm=0;mm<numExtraMarkers;mm++){
+            var thisMarker = extraMarkerPool[mm];
+            drawTriAxisCrossForMatrixColorAndScale(thisMarker.mat, thisMarker.color, thisMarker.size);
+        }
+    }
     
+    function addExtraMarker(mat, size, color){
+        var thisMarker = extraMarkerPool[numExtraMarkers++];
+        mat4.set(mat, thisMarker.mat);
+        thisMarker.size = 500*size;
+        thisMarker.color = color;
+    }
+
+    function removeExtraMarkers(){
+        numExtraMarkers=0;
+    }
+
     return {
         mats,
         drawDebugStuff,
         drawTriAxisCrossForMatrixColorAndScale,
         addTestPoint,
-        drawPlayerPosMarkers
+        drawPlayerPosMarkers,
+        addExtraMarker,
+        removeExtraMarkers,
+        drawExtraMarkers
     }
 })();

@@ -18,10 +18,12 @@ var playerMechanics = (() => {
 
     function update(mouseInfo, timeStep, timeStepMultiplier, moveSpeed, rotateSpeed, activeGp){
         
+        debugDraw.removeExtraMarkers();
+
         var playerPos = playerCamera.slice(12);
         var playerWorldSettings = guiSettingsForWorld[playerContainer.world];
 
-        var thrust = 0.00025*timeStep;	//TODO make keyboard/gamepad fair! currently thrust, moveSpeed config independent!
+        var thrust = 0.00025*timeStep*(guiParams.control.handbrake?0.1:1);	//TODO make keyboard/gamepad fair! currently thrust, moveSpeed config independent!
         var angVelDampMultiplier=Math.pow(0.85, timeStep/10);
         var duoCylinderAngVelConst = playerWorldSettings.spinRate;
         var autoFireCountdownStartVal=Math.ceil(5 / (timeStep/10));
@@ -585,7 +587,7 @@ var playerMechanics = (() => {
                 " (" + chullResult.possiblyCollidingTrisCount + "/" + chullResult.nearbyCount + ")" + 
                 "(" + chullResult.notCollidingDueToObjTriFaceCheckCount + "," + chullResult.notCollidingDueToObjTriEdgeFaceCheckCount + 
                 "," + chullResult.notCollidingDueToPlayerFaceCheckCount + "," + chullResult.notCollidingDueToEdgeEdgeCount + ")" + 
-                "PEN: " + chullResult.greatestPenetrationFound;
+                "PEN: " + Math.floor(1_000_000*chullResult.greatestPenetrationFound);
                 //console.log(chullCollisionScreenInfo, chullResult);
                 return;
             }
@@ -977,48 +979,51 @@ var playerMechanics = (() => {
                         chosenChullCollisionPointTypeThisObjectTriangle = 2;  //face. note that penetration could be -ve here
                         collisionPointInObjectFrame = minPenetrationFace.picked;
                         contactNormalInObjectFrame = tt.face;
-                        extraInfoThisFace=null;
+                        extraInfoThisFace={objFacePoints:tt.verts};
                     }
 
                     // to reduce likelihood of needing edge test, also check vs obj triangle existing "edge" data, taking this to describe an infinitely thin face
                     // perpendicular to triangle plane. (this is a point vs face SAT test, NOT a SAT edge test )
                     //TODO don't bother with minmax - only need one or other. (which?) 
-                    // for (var ii=0;ii<tt.edges.length;ii++){
-                    //     var edge = tt.edges[ii];
-                    //     var edgeFaceRange = minMaxInDirectionWithPoint(edge, playerVertsInObjFrame);
-                    //     var minPenetrationFaceEdge = -edgeFaceRange[0].best;
-                    //     if (minPenetrationFaceEdge<0){
-                    //         //console.log("found separating axis using obj tri edge face", edgeFaceRange);
-                    //         notCollidingDueToObjTriEdgeFaceCheckCount+=1;
-                    //         //return; //found separating axis
-                    //     }
-                    //     if (minPenetrationFaceEdge<leastPenetrationThisObjectTriangle){
-                    //         leastPenetrationThisObjectTriangle = minPenetrationFaceEdge;
-                    //         chosenChullCollisionPointTypeThisObjectTriangle = 3;  //"face edge". like infinitely thin face, but if disabled this check, would get picked up by edge check
-                    //             //really the penetration here will be no less than than found true edge check (usually greater), so no point, unless using it to exit 
-                    //             // early. might with to do so if penetration more negative than zero or some negative number describing a inflated skin around object. 
-                    //             // (nonzero maybe useful to measure -ve penetration to use for damper force on first +ve penetration).
-                    //         collisionPointInObjectFrame = edgeFaceRange[0].picked;
-                    //         contactNormalInObjectFrame = edge.map(xx=>xx*-1);   //TODO is direction correct?
-                    //     }
-                    // }
-
-                    //TODO test player faces vs tri soup verts. (note repetition here since verts used in adjacent tri soup faces)
-                    var playerFaceRanges = playerFacesInObjFrame.map(ff=>minMaxInDirectionWithIndex(ff, tt.verts));
-                    for (var ii=0;ii<playerFaceRanges.length;ii++){
-                        var playerFaceRange = playerFaceRanges[ii];
-                        var maxPenetrationPlayerFace = playerFaceRange[1].best;
-                        if (maxPenetrationPlayerFace<0){
-                            //console.log("found separating axis using player face", playerFaceRange);
-                            notCollidingDueToPlayerFaceCheckCount+=1;
+                    for (var ii=0;ii<tt.edges.length;ii++){
+                        var edge = tt.edges[ii];
+                        var edgeFaceRange = minMaxInDirectionWithPoint(edge, playerVertsInObjFrame);
+                        var minPenetrationFaceEdge = -edgeFaceRange[0].best;
+                        if (minPenetrationFaceEdge<0){
+                            //console.log("found separating axis using obj tri edge face", edgeFaceRange);
+                            notCollidingDueToObjTriEdgeFaceCheckCount+=1;
                             //return; //found separating axis
                         }
-                        if (maxPenetrationPlayerFace<leastPenetrationThisObjectTriangle){
-                            leastPenetrationThisObjectTriangle = maxPenetrationPlayerFace;
-                            chosenChullCollisionPointTypeThisObjectTriangle = 0;  //"vertex" on the world object, consist with sphere-world object tri collision
-                            collisionPointInObjectFrame = tt.verts[playerFaceRange[1].idx];
-                            contactNormalInObjectFrame = playerFacesInObjFrame[ii].map(xx=>xx*-1);  //reverse? TODO flip chull face norms?
-                            extraInfoThisFace=null;
+                        if (minPenetrationFaceEdge<leastPenetrationThisObjectTriangle){
+                            leastPenetrationThisObjectTriangle = minPenetrationFaceEdge;
+                            chosenChullCollisionPointTypeThisObjectTriangle = 3;  //"face edge". like infinitely thin face, but if disabled this check, would get picked up by edge check
+                                //really the penetration here will be no less than than found true edge check (usually greater), so no point, unless using it to exit 
+                                // early. might with to do so if penetration more negative than zero or some negative number describing a inflated skin around object. 
+                                // (nonzero maybe useful to measure -ve penetration to use for damper force on first +ve penetration).
+                            collisionPointInObjectFrame = edgeFaceRange[0].picked;
+                            contactNormalInObjectFrame = edge.map(xx=>xx*-1);   //TODO is direction correct?
+                        }
+                    }
+
+                    if (!guiParams.debug.skipSatPlayerFaceTests){
+                        //test player faces vs tri soup verts. (note repetition here since verts used in adjacent tri soup faces)
+                        var playerFaceRanges = playerFacesInObjFrame.map(ff=>minMaxInDirectionWithIndex(ff, tt.verts));
+                        for (var ii=0;ii<playerFaceRanges.length;ii++){
+                            var playerFaceRange = playerFaceRanges[ii];
+                            var maxPenetrationPlayerFace = playerFaceRange[1].best;
+
+                            if (maxPenetrationPlayerFace<0){
+                                //console.log("found separating axis using player face", playerFaceRange);
+                                notCollidingDueToPlayerFaceCheckCount+=1;
+                                //return; //found separating axis
+                            }
+                            if (maxPenetrationPlayerFace<leastPenetrationThisObjectTriangle){
+                                leastPenetrationThisObjectTriangle = maxPenetrationPlayerFace;
+                                chosenChullCollisionPointTypeThisObjectTriangle = 0;  //"vertex" on the world object, consist with sphere-world object tri collision
+                                collisionPointInObjectFrame = tt.verts[playerFaceRange[1].idx];
+                                contactNormalInObjectFrame = playerFacesInObjFrame[ii].map(xx=>xx*-1);  //reverse? TODO flip chull face norms?
+                                extraInfoThisFace={facePoints:chullObj.faceIndices[ii].map(idx=>playerVertsInObjFrame[idx])};
+                            }
                         }
                     }
 
@@ -1054,6 +1059,8 @@ var playerMechanics = (() => {
                             //TODO toggle this edge case detection on/off - could be makes matters worse!!
                             var edgeCaseDetected = (distRange[0]*distRange[1]>0) && (distRangObjTriPoints[0]*distRangObjTriPoints[1]>0) && (distRange[0]*distRangObjTriPoints[0]>0);
 
+                            if (guiParams.debug.skipEdgeCaseCheck){edgeCaseDetected=false;}
+                            
                             //if (edgeCaseDetected){alert("edge case detected!!");}
 
                             //TODO actually project into space with straight lines?
@@ -1066,17 +1073,33 @@ var playerMechanics = (() => {
                             //TODO toggle collision response on/off so can see if spurious axis detection is only when not colliding.
 
 
-                            if ((minPenetrationEdgeEdge<leastPenetrationThisObjectTriangle) && !edgeCaseDetected){
+                            //TODO suspect that the problem here is that because not comparing ANGLE ranges, there is a preference for differences
+                            //that are away from centre, so ends up selecting edges away from true newrly colliding edge, on opposite side of player object.
+                            //to avoid this, change selection criteria to favour close things?
+
+                            //actually, suspect issue might be solved by looking at distance between tested edges
+                            //should consider distance (along SAT axis) of edges in question...
+
+                            var isAcceptableEdgeCollision = guiParams.debug.skipEdgeColAcc || (distRange[0]*distRangObjTriPoints[1] <=0 && distRange[1]*distRangObjTriPoints[0] <=0);
+                                //seems like should work, but seems to rule out legit things!
+                            
+
+                            if ((minPenetrationEdgeEdge<leastPenetrationThisObjectTriangle) && !edgeCaseDetected && isAcceptableEdgeCollision){
                                 leastPenetrationThisObjectTriangle = minPenetrationEdgeEdge;
                                 chosenChullCollisionPointTypeThisObjectTriangle = 1; //edge
-                                var avgPoint = normalise(vectorSum4d(closePoints[0], closePoints[1]));
+                                //var avgPoint = normalise(vectorSum4d(closePoints[0], closePoints[1]));
+                                var avgPoint = normalise(findAxisResult.sumPoint);
                                 collisionPointInObjectFrame = avgPoint;
                                 contactNormalInObjectFrame = pointDifferenceDirection.map(xx=>xx*sign);
                                 extraInfoThisFace = {
                                     distRangObjTriPoints,
                                     distRange,
                                     minPenetrationEdgeEdge,
-                                    sign
+                                    sign,
+                                    triEdgeEndpoints:{
+                                        onObject:[tt.verts[ii], tt.verts[(ii+1)%3]],
+                                        onPlayer:chullObj.edgeVertIndices[jj].map(idx=>playerVertsInObjFrame[idx])
+                                    }
                                 };
                             }
                         }
@@ -1103,23 +1126,50 @@ var playerMechanics = (() => {
                 });
             });
 
+
+            //possible problem? 
+            // could be that face direction dotted with point is not good.
+            //because in order to move objects aparts, should move along a great circle. 
+
             if (guiParams.debug.closestPointNearby){
                 if (collisionPointResult?.collisionPointInObjectFrame){ 
                     //copypaste code from elsewhere to get a matrix describing contact point.
                     //TODO generalise! also don't actually need a matrix for this. just position
 
-                    putDebugPointInObjFrame(collisionPointResult.objInfo, collisionPointResult.collisionPointInObjectFrame, [[1,0,0],[0,1,0],[0,0,1],[1,0,1]][chosenChullCollisionPointType]);
+                    putDebugPointInObjFrame(collisionPointResult.objInfo, collisionPointResult.collisionPointInObjectFrame, [colorArrs.red,colorArrs.green,colorArrs.blue,colorArrs.magenta][chosenChullCollisionPointType]);
 
                     //add an extra point offset in contact normal position.
                     var offsetPoint = normalise(vectorSum4d(collisionPointResult.collisionPointInObjectFrame, 
                         collisionPointResult.contactNormalInObjectFrame.map(xx=>xx*-0.0001)));
-                    putDebugPointInObjFrame(collisionPointResult.objInfo, offsetPoint, [1,1,1]);
+                    putDebugPointInObjFrame(collisionPointResult.objInfo, offsetPoint, colorArrs.white);
 
-                    // if (extraInfo){console.log(extraInfo);}                
+                    if (extraInfo?.closePoints){
+                        putDebugPointInObjFrame(collisionPointResult.objInfo, extraInfo.closePoints[0], colorArrs.magenta);
+                        putDebugPointInObjFrame(collisionPointResult.objInfo, extraInfo.closePoints[1], colorArrs.magenta);
+
+                        putDebugPointInObjFrame(collisionPointResult.objInfo, extraInfo.triEdgeEndpoints.onObject[0], colorArrs.red, 0.1);
+                        putDebugPointInObjFrame(collisionPointResult.objInfo, extraInfo.triEdgeEndpoints.onObject[1], colorArrs.red, 0.1);
+                        //TODO draw whole edge
+
+                        putDebugPointInObjFrame(collisionPointResult.objInfo, extraInfo.triEdgeEndpoints.onPlayer[0], colorArrs.cyan, 0.01);
+                        putDebugPointInObjFrame(collisionPointResult.objInfo, extraInfo.triEdgeEndpoints.onPlayer[1], colorArrs.cyan, 0.01);
+                    }
+
+                    if (extraInfo?.facePoints){  //found least SAT overlap for object vertex vs player face. put debug points on corners of the player face.
+                        putDebugPointInObjFrame(collisionPointResult.objInfo, extraInfo.facePoints[0], colorArrs.red, 0.01);
+                        putDebugPointInObjFrame(collisionPointResult.objInfo, extraInfo.facePoints[1], colorArrs.red, 0.01);
+                        putDebugPointInObjFrame(collisionPointResult.objInfo, extraInfo.facePoints[2], colorArrs.red, 0.01);
+                    }
+
+                    if (extraInfo?.objFacePoints){  //same for verts of obj face, but make bigger else can be hard to see
+                        extraInfo?.objFacePoints.forEach(fp =>{
+                            putDebugPointInObjFrame(collisionPointResult.objInfo, fp, [1,1,0], 0.1);
+                        });
+                    }
                 }
             }
 
-            function putDebugPointInObjFrame(objInfo, collisionPointInObjectFrame, pointColor){
+            function putDebugPointInObjFrame(objInfo, collisionPointInObjectFrame, pointColor, size = 0.01){
                 var closestPointInObjectFrame = collisionPointInObjectFrame;
                 var positionXyz = closestPointInObjectFrame.slice(0,3);
                 var veclenXyz = Math.sqrt(positionXyz.reduce((accum, xx)=>accum+xx*xx, 0));
@@ -1133,9 +1183,9 @@ var playerMechanics = (() => {
                 mat4.set(objInfo.mat, tempMat);
                 xyzmove4mat(tempMat, angleToMove);	//draw x on closest vertex
 
-                if (extraInfo){console.log(extraInfo);}
+                debugDraw.addExtraMarker(tempMat, sshipModelScale*size, pointColor);
 
-                new Explosion({matrix:mat4.create(tempMat),world:playerContainer.world}, sshipModelScale*0.01, pointColor);
+                //new Explosion({matrix:mat4.create(tempMat),world:playerContainer.world}, sshipModelScale*size, pointColor.slice(0,3);
             }
 
 

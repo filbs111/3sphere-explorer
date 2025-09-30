@@ -24,6 +24,7 @@ function loadConvexHullDataFromObjFile(chullObj, scale, location, expectedVertLe
 
         var faces = [];
         var edgeGcs = [];
+        var edgeVertIndices = [];   //only used to draw debug points at ends of a selected edge.
         in_faces.forEach(ff => {
             var facePoints = ff.map(ii=>verts[ii]);
             faces.push(normalise(findOrthoVecByDiags(facePoints)));
@@ -37,6 +38,8 @@ function loadConvexHullDataFromObjFile(chullObj, scale, location, expectedVertLe
                     var point2 = facePoints[index2];
                     edgeGcs.push([vectorSum4d(point1, point2), vectorDifference4d(point1, point2)].map(xx=>normalise(xx)));
                         //NOTE could just point to one of existing verts and only introduce single new point here, but above formulation more readable.
+
+                    edgeVertIndices.push([ff[index1], ff[index2]]);
                 }
             }
         });
@@ -44,6 +47,8 @@ function loadConvexHullDataFromObjFile(chullObj, scale, location, expectedVertLe
         chullObj.verts=verts;
         chullObj.faces=faces;
         chullObj.edgeGcs=edgeGcs;
+        chullObj.edgeVertIndices=edgeVertIndices;
+        chullObj.faceIndices=in_faces;  //only used for debug draw corners of selected face.
 
         chullObj.isLoaded = true;
 

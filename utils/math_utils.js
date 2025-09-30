@@ -51,6 +51,38 @@ function findClosePointsBetweenGreatCircles(greatCircle1, greatCircle2){
     return [closestPointAnalytic1, closestPointAnalytic2];
 }
 
+
+function findAxisBetweenGreatCircles(greatCircle1, greatCircle2){
+    //direction between closest points, but without problem/sign switch at crossing.
+    //find point that is perpendicular to average of crossing points, and points 90 deg around world on each circle.
+    //TODO detect/reject (near) parallel great circles (like cross product between parallel vecs makes no sense.)
+
+    //find a pair of points, one on each great circle, which are closest aproach. switching sign of points also is a pair of closest points.
+
+    var AC = dotProduct4(greatCircle1[0], greatCircle2[0]);
+    var AD = dotProduct4(greatCircle1[0], greatCircle2[1]);
+    var BC = dotProduct4(greatCircle1[1], greatCircle2[0]);
+    var BD = dotProduct4(greatCircle1[1], greatCircle2[1]);
+
+    var test1 = Math.atan2(AD + BC, AC - BD);
+    var test2 = Math.atan2(-AD + BC, AC + BD);
+
+    var uAnalytic = (test1 + test2) /2;
+    var vAnalytic = (test1 - test2) /2;
+
+    var closestPointAnalytic1 = greatCirclePositionForAngle(greatCircle1, uAnalytic);
+    var closestPointAnalytic2 = greatCirclePositionForAngle(greatCircle2, vAnalytic);
+
+    var sumPoint = vectorSum4d(closestPointAnalytic1, closestPointAnalytic2); //average, but don't need to normalise
+
+    var ninetyDegPointAnalytic1 = greatCirclePositionForAngle(greatCircle1, uAnalytic+ Math.PI/2);
+    var ninetyDegPointAnalytic2 = greatCirclePositionForAngle(greatCircle2, vAnalytic+ Math.PI/2);
+
+    var axis = findOrthoVecByDiags([sumPoint, ninetyDegPointAnalytic1, ninetyDegPointAnalytic2]);
+
+    return {sumPoint, axis:normalise(axis)};
+}
+
 function greatCirclePositionForAngle(gs, ang){
     var cosSinAng = [Math.cos(ang), Math.sin(ang)];
     return vectorSum4d( gs[0].map(xx => xx*cosSinAng[0]) , gs[1].map(xx => xx*cosSinAng[1]) );
