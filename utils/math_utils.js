@@ -85,5 +85,5 @@ function findAxisBetweenGreatCircles(greatCircle1, greatCircle2){
 
 function greatCirclePositionForAngle(gs, ang){
     var cosSinAng = [Math.cos(ang), Math.sin(ang)];
-    return vectorSum4d( gs[0].map(xx => xx*cosSinAng[0]) , gs[1].map(xx => xx*cosSinAng[1]) );
+    return [0,0,0,0].map((_,ii)=> gs[0][ii]*cosSinAng[0] + gs[1][ii]*cosSinAng[0]*cosSinAng[1]);
 }
