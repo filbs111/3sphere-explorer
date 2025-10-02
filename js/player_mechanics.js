@@ -1032,8 +1032,10 @@ var playerMechanics = (() => {
                         var objEdgeGc = tt.edgeGcs[ii];
                         for (var jj=0;jj<playerEdgeGcsInObjFrame.length;jj++){
                             var playerEdgeGc = playerEdgeGcsInObjFrame[jj];
-                            var closePoints = findClosePointsBetweenGreatCircles(objEdgeGc, playerEdgeGc);    //TODO handle possibility of coincident points due to touching great circles.
-                            var pointDifferenceDirection = normalise(vectorDifference4d(closePoints[0], closePoints[1]));
+                           
+                            var findAxisResult = findAxisBetweenGreatCircles(objEdgeGc, playerEdgeGc);
+                            var pointDifferenceDirection = findAxisResult.axis;
+                            
                             var distRange = minMaxInDirection(pointDifferenceDirection, playerVertsInObjFrame);
                             var distRangObjTriPoints = minMaxInDirection(pointDifferenceDirection, tt.verts);
 
