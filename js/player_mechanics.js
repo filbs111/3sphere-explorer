@@ -973,6 +973,7 @@ var playerMechanics = (() => {
 
                     if (minPenetrationFace.minPen<0){
                         notCollidingDueToObjTriFaceCheckCount+=1;
+                        return;
                     }
                     if (minPenetrationFace.minPen<leastPenetrationThisObjectTriangle){
                         leastPenetrationThisObjectTriangle = minPenetrationFace.minPen;
@@ -992,7 +993,7 @@ var playerMechanics = (() => {
                         if (minPenetrationFaceEdge<0){
                             //console.log("found separating axis using obj tri edge face", edgeFaceRange);
                             notCollidingDueToObjTriEdgeFaceCheckCount+=1;
-                            //return; //found separating axis
+                            return; //found separating axis
                         }
                         if (minPenetrationFaceEdge<leastPenetrationThisObjectTriangle){
                             leastPenetrationThisObjectTriangle = minPenetrationFaceEdge;
@@ -1015,7 +1016,7 @@ var playerMechanics = (() => {
                             if (maxPenetrationPlayerFace<0){
                                 //console.log("found separating axis using player face", playerFaceRange);
                                 notCollidingDueToPlayerFaceCheckCount+=1;
-                                //return; //found separating axis
+                                return; //found separating axis
                             }
                             if (maxPenetrationPlayerFace<leastPenetrationThisObjectTriangle){
                                 leastPenetrationThisObjectTriangle = maxPenetrationPlayerFace;
@@ -1049,7 +1050,7 @@ var playerMechanics = (() => {
                             //if (distRangObjTriPoints[1]< distRange[0] || distRange[1]< distRangObjTriPoints[0]){   //no overlap
                                 //console.log({distRange, distRangObjTriPoints});
                                 notCollidingDueToEdgeEdgeCount+=1;
-                                //return;
+                                return;
                             }
 
                             //detect ranges of the 2 objects not crossing 0. (each fully on same side of test plane), AND on same side.
