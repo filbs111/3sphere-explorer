@@ -73,17 +73,17 @@ function findAxisBetweenGreatCircles(greatCircle1, greatCircle2){
     var closestPointAnalytic1 = greatCirclePositionForAngle(greatCircle1, uAnalytic);
     var closestPointAnalytic2 = greatCirclePositionForAngle(greatCircle2, vAnalytic);
 
-    var sumPoint = vectorSum4d(closestPointAnalytic1, closestPointAnalytic2); //average, but don't need to normalise
+    var sumPoint = vectorSum4d(closestPointAnalytic1.close, closestPointAnalytic2.close); //average, but don't need to normalise
 
-    var ninetyDegPointAnalytic1 = greatCirclePositionForAngle(greatCircle1, uAnalytic+ Math.PI/2);
-    var ninetyDegPointAnalytic2 = greatCirclePositionForAngle(greatCircle2, vAnalytic+ Math.PI/2);
-
-    var axis = findOrthoVecByDiags([sumPoint, ninetyDegPointAnalytic1, ninetyDegPointAnalytic2]);
+    var axis = findOrthoVecByDiags([sumPoint, closestPointAnalytic1.ninetyDegAround, closestPointAnalytic2.ninetyDegAround]);
 
     return {sumPoint, axis:normalise(axis)};
 }
 
 function greatCirclePositionForAngle(gs, ang){
     var cosSinAng = [Math.cos(ang), Math.sin(ang)];
-    return [0,0,0,0].map((_,ii)=> gs[0][ii]*cosSinAng[0] + gs[1][ii]*cosSinAng[0]*cosSinAng[1]);
+    return {
+        close:[0,0,0,0].map((_,ii)=> gs[0][ii]*cosSinAng[0] + gs[1][ii]*cosSinAng[0]*cosSinAng[1]),
+        ninetyDegAround:[0,0,0,0].map((_,ii)=> gs[0][ii]*cosSinAng[1] - gs[1][ii]*cosSinAng[0]*cosSinAng[0])
+    };
 }
