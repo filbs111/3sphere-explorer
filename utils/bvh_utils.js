@@ -93,7 +93,9 @@ function createBvhFrom3dObjectData(sourceData, bvhToPopulate, vertAttrs=3){
 
     trisWithAABB.forEach((tri,ii) => tri.triIdx = ii);   //will use index to look up scale dependent 4d collision data.
     bvhToPopulate.trisWithAABB = trisWithAABB;  //will use this when populating scale dependent 4d collision data.
-    bvhToPopulate.triCollisionData4d = {};
+    bvhToPopulate.triCollisionData4d = {};  //flat triangle data. is used for sphere collision currently, TODO remove?
+    bvhToPopulate.triCollisionData4dBvh = {};   //per scale bvh. NOTE bvh structure may as well be same for all scales, but for simplicity, 
+                                                //just create a bvh for level in question. (in practice so far only 1 scale anyway)
 
     bvhToPopulate.tris = generateBvh(trisWithAABB, temp3vec, 16);
     bvhToPopulate.isLoaded = true;
@@ -149,7 +151,16 @@ function ensureBvhHas4dDataForScale(objBvh, objScale){
     });
 
     objBvh.triCollisionData4d[objScale] = planes4d;
-    return planes4d;
+    
+    
+    //add bvh version.
+    var allTris = objBvh.trisWithAABB.map(tri => {
+        var triVerts = tri.triangleIndices.map(xx => verts4d[xx]);
+        return makeCollisionDataForTriangle4d(triVerts);
+    });
+    allTris.sort((a,b) => a.morton - b.morton);
+    objBvh.triCollisionData4dBvh[objScale] = generateBvh(allTris, temp4vec, 8);
+
 
     function calc4dFrom3dPlane(threeVecDirection,distPlaneFromOrigin3d){
         var D = threeVecDirection.slice();

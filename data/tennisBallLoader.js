@@ -209,7 +209,7 @@ function loadGridData(toLoad, generateCollisionData){
 
 		var allTris = facesAsTriVerts.map(face => face.map(vv => verts4d[vv])).
 		map(triVerts => {			//look up transformed 4vec verts by index
-			return makeCollisionDataForTriangle(triVerts);
+			return makeCollisionDataForTriangle4d(triVerts);
 		});
 
 		//filter bad tris, apparently degenerate tris with repeated verts (TODO remove earlier - ideally from object before loading!)
@@ -218,53 +218,54 @@ function loadGridData(toLoad, generateCollisionData){
 		toLoad.collisionTriangleData = generateBvh(allTris, temp4vec, 8);
 	}
 
-	//copy of aabb4DForTriAnalytic from test project that also returns face, edge data
-	function makeCollisionDataForTriangle(triVerts){
 
-		//combo aabbs for each line between verts
-		var aabb = [triVerts[0],triVerts[0]];   //some point that will be in the final aabb
-		for (ee=0;ee<3;ee++){
-			edgeaabb = aabb4DForLineAnalytic(triVerts[ee],triVerts[(ee+1)%3]);
-			aabb = combinedAABB(aabb, edgeaabb);
-		}
 
-		//include extreme point if some condition true
-		var face = findOrthoVecByDiags(triVerts);
-		// console.log("checking orthogonality...");
-		// checkOrthogonality(faceVec, triVerts);
+//copy of aabb4DForTriAnalytic from test project that also returns face, edge data
+function makeCollisionDataForTriangle4d(triVerts){
 
-		var edges = []; 
-		for (ee=0;ee<3;ee++){
-			edges.push(normalise(findOrthoVecByDiags([triVerts[ee], triVerts[(ee+1)%3], face])));
-		}
-
-		//edge great circles that are perpendicular to face, edge normal, and a point on edge. used for convex hull edge-edge separating axis tests (SAT)
-		//stored as 2 points on great circle PI/2 apart
-		var edgeGcs = [];
-		for (ee=0;ee<3;ee++){
-			var otherPoint = normalise(findOrthoVecByDiags([face, edges[ee], triVerts[ee]]));
-			edgeGcs.push([triVerts[ee], otherPoint]);	//could avoid storing triVerts[ee] here since already know it from verts, but like this is more explicit
-		}
-
-		var face = normalise(face);
-
-		//if all signs the same then do something
-		for (cc=0;cc<4;cc++){
-			var isPositive = edges.map(pv => pv[cc]>0 ? 1:0);
-			if (isPositive[0]==isPositive[1] && isPositive[0]==isPositive[2]){
-				var valueToAdd = Math.sqrt(1-face[cc]*face[cc]);  //or could sum other 3 squared components if want more robust (avoid sqrt -ve num)
-				// console.log({cc, isPositive: isPositive[0], valueToAdd});
-				aabb[1-isPositive[0]][cc] = isPositive[0]? -valueToAdd: valueToAdd;   //is sign to use here reliable? or is it just pot luck, depending on face winding order?
-			}
-		}
-		
-		return {
-			verts:triVerts,
-			face,
-			edges,
-			edgeGcs,
-			AABB: aabb,
-			morton: morton4(triVerts[0])	//TODO use centre/average point?
-		};
+	//combo aabbs for each line between verts
+	var aabb = [triVerts[0],triVerts[0]];   //some point that will be in the final aabb
+	for (ee=0;ee<3;ee++){
+		edgeaabb = aabb4DForLineAnalytic(triVerts[ee],triVerts[(ee+1)%3]);
+		aabb = combinedAABB(aabb, edgeaabb);
 	}
-};
+
+	//include extreme point if some condition true
+	var face = findOrthoVecByDiags(triVerts);
+	// console.log("checking orthogonality...");
+	// checkOrthogonality(faceVec, triVerts);
+
+	var edges = []; 
+	for (ee=0;ee<3;ee++){
+		edges.push(normalise(findOrthoVecByDiags([triVerts[ee], triVerts[(ee+1)%3], face])));
+	}
+
+	//edge great circles that are perpendicular to face, edge normal, and a point on edge. used for convex hull edge-edge separating axis tests (SAT)
+	//stored as 2 points on great circle PI/2 apart
+	var edgeGcs = [];
+	for (ee=0;ee<3;ee++){
+		var otherPoint = normalise(findOrthoVecByDiags([face, edges[ee], triVerts[ee]]));
+		edgeGcs.push([triVerts[ee], otherPoint]);	//could avoid storing triVerts[ee] here since already know it from verts, but like this is more explicit
+	}
+
+	var face = normalise(face);
+
+	//if all signs the same then do something
+	for (cc=0;cc<4;cc++){
+		var isPositive = edges.map(pv => pv[cc]>0 ? 1:0);
+		if (isPositive[0]==isPositive[1] && isPositive[0]==isPositive[2]){
+			var valueToAdd = Math.sqrt(1-face[cc]*face[cc]);  //or could sum other 3 squared components if want more robust (avoid sqrt -ve num)
+			// console.log({cc, isPositive: isPositive[0], valueToAdd});
+			aabb[1-isPositive[0]][cc] = isPositive[0]? -valueToAdd: valueToAdd;   //is sign to use here reliable? or is it just pot luck, depending on face winding order?
+		}
+	}
+	
+	return {
+		verts:triVerts,
+		face,
+		edges,
+		edgeGcs,
+		AABB: aabb,
+		morton: morton4(triVerts[0])	//TODO use centre/average point?
+	};
+}

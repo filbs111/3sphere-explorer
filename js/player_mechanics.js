@@ -436,7 +436,7 @@ var playerMechanics = (() => {
                     return {
                         mat,
                         transposedMat,
-                        collisionTriangleData: objInfo.bvh.triCollisionData4d[objInfo.scale],
+                        collisionTriangleData: objInfo.bvh.triCollisionData4dBvh[objInfo.scale],
                     }
                 });
 
