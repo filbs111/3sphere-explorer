@@ -425,6 +425,29 @@ var playerMechanics = (() => {
 
             var initialCandidates = guiParams.debug.worldBvhCollisionTestPlayer ? getFastPossibles():worldBvhObj.objList;
 
+
+            if (guiParams["player model"] == "convexHullTest"){
+
+                var hackObjInfoArr = initialCandidates.map(objInfo => {
+                    var mat = mat4.create(objInfo.mat);
+                    //rotate4mat(mat, 0, 1, dcSpin);    //TODO SPIN?
+                    var transposedMat = mat4.create(mat);
+                    mat4.transpose(transposedMat);
+                    return {
+                        mat,
+                        transposedMat,
+                        collisionTriangleData: objInfo.bvh.triCollisionData4d[objInfo.scale],
+                    }
+                });
+
+                var chullResult = processTrianglePossiblesForConvexHull(hackObjInfoArr);
+                //NOTE this is very slow for some objects. perhaps num triangles processed excessive.
+                //see that callback passed into processTrianglePossibles below is quite complex, different to terrain collision code. 
+                // perhaps should pass similar cb to processTrianglePossiblesForConvexHull
+
+                return;
+            }
+
             var resultMat = mat4.create();
             var foundClosestPointTriangleObjPreviously = foundClosestPointTriangleObj; 
             foundClosestPointTriangleObj = processTrianglePossibles(resultMat, initialCandidates, 1000, (posInObjFrame, objScale, rad, objInfo, lowestAcceptedMultiplier) => {
