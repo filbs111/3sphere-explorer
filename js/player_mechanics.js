@@ -1,5 +1,6 @@
 var mostRecentInfo={};
 var chullCollisionScreenInfo = "";
+var chullCollisionScreenInfo2 = "";
 
 var playerMechanics = (() => {
 
@@ -444,6 +445,12 @@ var playerMechanics = (() => {
                 //NOTE this is very slow for some objects. perhaps num triangles processed excessive.
                 //see that callback passed into processTrianglePossibles below is quite complex, different to terrain collision code. 
                 // perhaps should pass similar cb to processTrianglePossiblesForConvexHull
+
+                chullCollisionScreenInfo2= ["-","V","E","F","FE"][chullResult.chosenChullCollisionPointType+1] + 
+                " (" + chullResult.possiblyCollidingTrisCount + "/" + chullResult.nearbyCount + ")" + 
+                "(" + chullResult.notCollidingDueToObjTriFaceCheckCount + "," + chullResult.notCollidingDueToObjTriEdgeFaceCheckCount + 
+                "," + chullResult.notCollidingDueToPlayerFaceCheckCount + "," + chullResult.notCollidingDueToEdgeEdgeCount + ")" + 
+                "PEN: " + Math.floor(1_000_000*chullResult.greatestPenetrationFound);
 
                 return;
             }

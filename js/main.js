@@ -1364,6 +1364,7 @@ function drawRegularScene(frameTime){
 
 			if (guiParams["player model"] == "convexHullTest"){
 				drawText(chullCollisionScreenInfo, 0.6, 0.15, 1, 0.6);
+				drawText(chullCollisionScreenInfo2, 0.6, 0.4, 1, 0.6);
 			}
 
 			function drawText(textToDraw, xpos, ypos, zpos, size){
