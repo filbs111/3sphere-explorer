@@ -309,7 +309,8 @@ function initBuffers(){
 	
 	//load duocylinder after loading obj file.
 	//TODO make more similar to other object load/cb
-	loadDuocylinderObjAndDoStuff(loadBuffersFromObj5File, "./data/miscobjs/more-greebles-pack-pick1-2d.obj5",
+	//loadDuocylinderObjAndDoStuff(loadBuffersFromObj5File, "./data/miscobjs/more-greebles-pack-pick1-2d.obj5",
+	loadDuocylinderObjAndDoStuff(loadBuffersFromObj5File, "./data/miscobjs/more-greebles-pack-plane13.obj5",
 		duocylinderObjects.greebleTerrain);
 	function loadDuocylinderObjAndDoStuff(objLoader, objFile, terrainObj){
 		objLoader(terrainObj, objFile, (terrainObj, sourceData) => {
@@ -5811,9 +5812,9 @@ function drawDuocylinderObject(wSettings, duocylinderObj, duocylinderSpin, zeroL
 			}else{
 				selectedShaderSet = 'triplanarPerPixelTwoAndDiffuseDepthAware';
 			}
-		}else if (duocylinderObj.vertexColors){	//no texture, used for loaded obj
+		}else if (duocylinderObj.vertexColors){
 			//todo depth map versions?
-			selectedShaderSet = 'noTexmap4VecPerPixelDiscardVcolorOnly';
+			selectedShaderSet = 'texmap4VecPerPixelDiscardPhongVcolor';
 		}else{
 			if (!depthMap){
 				selectedShaderSet = duocylinderObj.useMapproject? 
