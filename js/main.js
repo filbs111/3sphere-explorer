@@ -1224,11 +1224,10 @@ function drawRegularScene(frameTime){
 
 		var standardDecalScale = [0.002,0.002,0];
 		//direction of flight
-		if (playerVelVec[2] > 0.1){	//??
-			bind2dTextureIfRequired(hudTexturePlus);		//todo texture atlas for all hud
-			var reversed = playerVelVec.map(x=>-x);
-			drawTargetDecal(standardDecalScale, colorArrs.hudFlightDir, adjustedDirectionForFisheye(reversed));
-		}
+		bind2dTextureIfRequired(hudTexturePlus);		//todo texture atlas for all hud
+		var reversed = playerVelVec.map(x=>-x);
+		drawTargetDecal(standardDecalScale, colorArrs.hudFlightDir, adjustedDirectionForFisheye(reversed));
+		
 		bind2dTextureIfRequired(hudTexture);	
 		
 		//drawTargetDecal(0.004, [1.0, 1.0, 0.0, 0.5], [0,0,0.01]);	//camera near plane. todo render with transparency
