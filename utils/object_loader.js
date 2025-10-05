@@ -140,13 +140,13 @@ function sourceDataFromObjFileResponse(response, expectedVertLength){
 
     //produce in format returned by loadBlenderExport()
     var sourceData = {
-        vertices: [].concat.apply([],newVerts.map(x=>verts[x[0]])),
+        vertices: newVerts.map(x=>verts[x[0]]).flat(),
         vertices_len: expectedVertLength,   //not required if is 3 (normal)
-        normals: [].concat.apply([],newVerts.map(x=>norms[x[2]])),
-        indices: [].concat.apply([],newFaces)
+        normals: newVerts.map(x=>norms[x[2]]).flat(),
+        indices: newFaces.flat()
     };
     if (uvs.length > 0){
-        sourceData.uvcoords = [].concat.apply([],newVerts.map(x=>uvs[x[1]]));
+        sourceData.uvcoords = newVerts.map(x=>uvs[x[1]]).flat();
     }
 
     // console.log("Obj data:");
@@ -241,15 +241,15 @@ function sourceDataFromObj2Or3Or5FileResponse(response, expectedVertLength, inde
         vertices: (hasVertexColours? 
             //halfway house - code that uses result expects vertex positions and colours to be stuck together.
             //TODO for symmetry (with normals, uvcoods...), separate 
-            [].concat.apply([],newVerts.map(x=> positions[x[0]].concat(colours[x[3]]))):
-            [].concat.apply([],newVerts.map(x=> positions[x[0]]))
+            newVerts.map(x=> positions[x[0]].concat(colours[x[3]])).flat():
+            newVerts.map(x=> positions[x[0]]).flat()
             ),
         vertices_len: expectedVertLength,   //not required if is 3 (normal)
-        normals: [].concat.apply([],newVerts.map(x=>norms[x[2]])),
-        indices: [].concat.apply([],newFaces)
+        normals: newVerts.map(x=>norms[x[2]]).flat(),
+        indices: newFaces.flat()
     };
     if (uvs.length > 0){
-        sourceData.uvcoords = [].concat.apply([],newVerts.map(x=>uvs[x[1]]));
+        sourceData.uvcoords = newVerts.map(x=>uvs[x[1]]).flat();
     }
 
     console.log("custom Obj data:");
