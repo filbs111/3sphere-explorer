@@ -4350,6 +4350,7 @@ var guiParams={
 		cameraAttachedTo:"player vehicle",
 		cameraZoom:2.4,
 		uVarOne:-0.0525,
+		cameraMoveSide:0,
 		vFOV:"",
 		hFOV:"",
 		flipReverseCamera:false,	//flipped camera makes direction pointing behavour match forwards, but side thrust directions switched, seems less intuitive
@@ -4628,6 +4629,7 @@ function init(){
 	displayFolder.add(guiParams.display, "cameraAttachedTo", ["player vehicle", "turret","none"]);	//"none" acts like drop camera
 	displayFolder.add(guiParams.display, "cameraZoom", 1,5,0.1);
 	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.0025);
+	displayFolder.add(guiParams.display, "cameraMoveSide", -0.002,0.002,0.00001);
 	displayFolder.add(guiParams.display, "vFOV").listen();
 	displayFolder.add(guiParams.display, "hFOV").listen();
 	displayFolder.add(guiParams.display, "flipReverseCamera");

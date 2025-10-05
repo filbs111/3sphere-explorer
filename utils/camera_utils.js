@@ -83,7 +83,9 @@ var offsetCam = (function(){
                 smoothedCurrentVec = collidedVec;
             }
 
-            return smoothedCurrentVec;
+            var toReturn=smoothedCurrentVec;
+            toReturn[0] -= guiParams.display.cameraMoveSide;    //bodge on side shift to aid debugging. [1]= up,down
+            return toReturn;
         }
 	}
 })();
