@@ -134,19 +134,11 @@ function ensureBvhHas4dDataForScale(objBvh, objScale){
                 correctedEdgePlaneVec = correctedEdgePlaneVec.map(xx=>xx/lenEdgeVec);
                 return correctedEdgePlaneVec;
             });
-        //edge great circles that are perpendicular to face, edge normal, and a point on edge. used for convex hull edge-edge separating axis tests (SAT)
-		//stored as 2 points on great circle PI/2 apart
-		var edgeGcs = [];
-		for (ee=0;ee<3;ee++){
-			var otherPoint = normalise(findOrthoVecByDiags([faceVec4d, edges[ee], triVerts[ee]]));
-			edgeGcs.push([triVerts[ee], otherPoint]);	//could avoid storing triVerts[ee] here since already know it from verts, but like this is more explicit
-		}
-
+        
         return {
             verts: triVerts,
-            face: faceVec4d.map(xx=>-xx),   //flip face appears necessary for convex hull collision!
-            edges,
-            edgeGcs
+            face: faceVec4d,
+            edges
         }
     });
 
