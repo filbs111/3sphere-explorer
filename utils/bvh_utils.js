@@ -1076,17 +1076,23 @@ function collisionTestPossibleClosest2(fromPoint, bvhGroup, lowestAccepted){
 //equivalent to above but harder to read, ~2x speed!
 
 function aabbMinMaxDistanceFromPoint(fromPoint, aabb){
-    var greatestPossibleSq=0;
-    var lowestPossibleSq=0;
-
-    var minMaxSq = minMaxSqPerAxis(fromPoint, aabb);
-
+    var minMax=[0,0];
     for (var cc=0;cc<fromPoint.length;cc++){    //TODO are hard coded 4d, 3d versions faster?
-        
-        greatestPossibleSq+=minMaxSq[cc][1];
-        lowestPossibleSq+=minMaxSq[cc][0];
+        var aabbRangeRelativeToPoint = [aabb[0][cc]-fromPoint[cc] , aabb[1][cc]-fromPoint[cc]];
+
+        var spaceToRight = aabbRangeRelativeToPoint[0];
+        var spaceToLeft = -aabbRangeRelativeToPoint[1];
+        var closest = Math.max(0, Math.max(spaceToLeft, spaceToRight));
+
+        var farToRight = aabbRangeRelativeToPoint[1];
+        var farToLeft = -aabbRangeRelativeToPoint[0];
+        var furthest = Math.max(farToRight, farToLeft);
+
+        minMax[0]+=closest*closest;
+        minMax[1]+=furthest*furthest;
+
     }
-    return [lowestPossibleSq, greatestPossibleSq];
+    return minMax;
 }
 
 function minMaxSqPerAxis(fromPoint, aabb){
