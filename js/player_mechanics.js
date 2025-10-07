@@ -457,7 +457,7 @@ var playerMechanics = (() => {
 
             var resultMat = mat4.create();
             var foundClosestPointTriangleObjPreviously = foundClosestPointTriangleObj; 
-            foundClosestPointTriangleObj = processTrianglePossibles(resultMat, initialCandidates, 1000, (posInObjFrame, objScale, rad, objInfo, lowestAcceptedMultiplier) => {
+            foundClosestPointTriangleObj = processTrianglePossibles(resultMat, initialCandidates, 0.05, (posInObjFrame, objScale, rad, objInfo, greatestAcceptedDistance) => {
                 
                 if (posInObjFrame[3]<=0.3){
                     return;
@@ -508,7 +508,7 @@ var playerMechanics = (() => {
                     return nearbyFiltered.length>0 ? closestPointForTris4dWithLookup(posInObjFrame, objInfo.bvh.triCollisionData4d[objInfo.scale], nearbyFiltered) : false;
 
                 }else{
-                    return nearby.length>0 ? closestPointBvhEfficient(projectedPosInObjFrame, posInObjFrame, objInfo, lowestAcceptedMultiplier): false;
+                    return nearby.length>0 ? closestPointBvhEfficient(projectedPosInObjFrame, posInObjFrame, objInfo, greatestAcceptedDistance): false;
                 }
             });
 
@@ -624,7 +624,7 @@ var playerMechanics = (() => {
 
             var resultMat = mat4.create();
             var foundClosestPointTriangleObjPreviously2 = foundClosestPointTriangleObj2;
-            foundClosestPointTriangleObj2 = processTrianglePossibles(resultMat, spunObjInfoArr, 0.92, (posInObjFrame, objScale, rad, objInfo, lowestAcceptedMultiplier) => {
+            foundClosestPointTriangleObj2 = processTrianglePossibles(resultMat, spunObjInfoArr, 0.05, (posInObjFrame, objScale, rad, objInfo, lowestAcceptedMultiplier) => {
                 
                 var queryAABB = [-1,1].map(ss=>ss*settings.playerBallRadPadded).map(offs => posInObjFrame.map(xx => xx+offs));
                     // could use aabb4DForSphere() but maybe too slow.
@@ -716,14 +716,14 @@ var playerMechanics = (() => {
             
             var resultMat = mat4.create();
             
-            foundClosestPointTriangleObj = processTrianglePossibles(resultMat, initialCandidates, 2000, (posInObjFrame, objScale, rad, objInfo, lowestAcceptedMultiplier) => {
+            foundClosestPointTriangleObj = processTrianglePossibles(resultMat, initialCandidates, 0.2, (posInObjFrame, objScale, rad, objInfo, greatestAcceptedDistance) => {
             
                 if (posInObjFrame[3]<=0.3){
                     return;
                 }
                 var projectedPosInObjFrame = posInObjFrame.slice(0,3).map(val => val/(objScale*posInObjFrame[3]));
             
-                return closestPointBvhEfficient(projectedPosInObjFrame, posInObjFrame, objInfo, lowestAcceptedMultiplier);
+                return closestPointBvhEfficient(projectedPosInObjFrame, posInObjFrame, objInfo, greatestAcceptedDistance);
             });
 
             //do triangle collision for 4d terrain objects.
@@ -732,11 +732,11 @@ var playerMechanics = (() => {
             var dcInfo = duocylinderObjects[guiSettingsForWorld[playerContainer.world].duocylinderModel];
             if (dcInfo?.data){
                 var terrainCollisionResultMat = mat4.identity();
-                processTrianglePossibles(terrainCollisionResultMat, dcInfo.objInfoArr, 0.95,
+                processTrianglePossibles(terrainCollisionResultMat, dcInfo.objInfoArr, 0.2,
                         //lowestAcceptedMultiplier - rules out distant aabbs quicker to improve perf
                         // surprised this can't be smaller!
-                    (posInObjFrame, objScaleUnused, rad, objInfo, lowestAcceptedMultiplier) => {
-                        return closestPointBvhEfficient4d(posInObjFrame, objInfo, lowestAcceptedMultiplier);
+                    (posInObjFrame, objScaleUnused, rad, objInfo, greatestAcceptedDistance) => {
+                        return closestPointBvhEfficient4d(posInObjFrame, objInfo, greatestAcceptedDistance);
                     });
 
                 //sound. 
@@ -787,7 +787,7 @@ var playerMechanics = (() => {
         }
 
 
-        function processTrianglePossibles(resultMat, possibleObjects, lowestAcceptedMultiplier, closestPointFunc){
+        function processTrianglePossibles(resultMat, possibleObjects, greatestAcceptedDistance, closestPointFunc){
             var closestRoughSqDistanceFound = Number.POSITIVE_INFINITY;
             var bestResult = false;
 
@@ -800,7 +800,7 @@ var playerMechanics = (() => {
                 mat4.multiplyVec4(transposedObjMat, playerPosVec, playerPosVec);
                 
                 //here to work properly for 4d, the closestpoint func should be scale aware.
-                var closestPointResult = closestPointFunc(playerPosVec, objScale, settings.playerBallRadPadded, objInfo, lowestAcceptedMultiplier);
+                var closestPointResult = closestPointFunc(playerPosVec, objScale, settings.playerBallRadPadded, objInfo, greatestAcceptedDistance);
 
                 if (closestPointResult){
                     var closestPointInObjectFrame = closestPointResult.closestPoint;

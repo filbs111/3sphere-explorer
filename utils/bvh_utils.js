@@ -417,8 +417,9 @@ function closestPointBvhBruteForce(fromPoint, bvh){
     return closestPointForTris(fromPoint, bvh.verts, allTris);    //tris returned from bvh func
 }
 
-function closestPointBvhEfficient(fromPoint, posInObjFrame, objInfo, lowestAcceptedMultiplier){
-    var possibles = collisionTestPossibleClosest2(fromPoint, [objInfo.bvh.tris], objInfo.scale*lowestAcceptedMultiplier);
+function closestPointBvhEfficient(fromPoint, posInObjFrame, objInfo, greatestAcceptedDistance){
+    var furthestAcceptedSq = Math.pow(greatestAcceptedDistance/objInfo.scale,2)
+    var possibles = collisionTestPossibleClosest2(fromPoint, [objInfo.bvh.tris], furthestAcceptedSq);
         //lowestAccepted passed into collisionTestPossibleClosest2 is in object space! if object pre-scaling is big, this should be big too!
     //var possibles = collisionTestPossibleClosest4dFrom3d(posInObjFrame, [objInfo.bvh.tris], objInfo.scale*lowestAcceptedMultiplier, objInfo.scale);
         //result is about same as 3d collisionTestPossibleClosest2, but much slower, presumably due to live AABB calculation
@@ -432,7 +433,7 @@ function closestPointBvhEfficient(fromPoint, posInObjFrame, objInfo, lowestAccep
     return closestPointForTris4dWithLookup(posInObjFrame, objInfo.bvh.triCollisionData4d[objInfo.scale], possibles);
 }
 
-function closestPointBvhEfficient4d(posInObjFrame, objInfo, lowestAcceptedMultiplier){
+function closestPointBvhEfficient4d(posInObjFrame, objInfo, greatestAcceptedDistance){
     
     var collisionTriangleData = objInfo.collisionTriangleData;
 
@@ -452,14 +453,14 @@ function closestPointBvhEfficient4d(posInObjFrame, objInfo, lowestAcceptedMultip
     // // console.log({
     // //     posInObjFrame,
     // //     objInfo,
-    // //     lowestAcceptedMultiplier,
+    // //     greatestAcceptedDistance,
     // //     possibles
     // // })
 
     // console.log({objInfo});
 
-    var possibles = collisionTestPossibleClosest2(posInObjFrame, [collisionTriangleData], lowestAcceptedMultiplier);
         //TODO what should 
+    var possibles = collisionTestPossibleClosest2(posInObjFrame, [collisionTriangleData], greatestAcceptedDistance*greatestAcceptedDistance);
 
     if (possibles.length == 0){
         return false;
@@ -983,8 +984,7 @@ function collisionTestPossibleClosest(fromPoint, bvh, lowestAccepted){
 }
 
 
-function collisionTestPossibleClosest2(fromPoint, bvhGroup, lowestAccepted){
-    lowestAccepted*=lowestAccepted;   //using squared distances.
+function collisionTestPossibleClosest2(fromPoint, bvhGroup, furthestAcceptedSq){
 
     var minMaxVals = bvhGroup.map(item => aabbMinMaxDistanceFromPoint(fromPoint, item.AABB));
     var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
@@ -995,11 +995,11 @@ function collisionTestPossibleClosest2(fromPoint, bvhGroup, lowestAccepted){
     //get range of distances for the AABBs at this level.
     //find the AABB with the lowest value of its greatest possible distance
     //then filter any where the minimum possible distance is greater than this.
-    lowestMax = Math.min(lowestMax, lowestAccepted);    //TODO rule out groups earlier using lowestAccepted?
+    furthestAcceptedSq = Math.min(lowestMax, furthestAcceptedSq);    //TODO rule out groups earlier using furthestAcceptedSq?
 
     var filtered = bvhGroup.filter(
         (_, ii) =>
-        minMaxVals[ii][0]<lowestMax
+        minMaxVals[ii][0]<furthestAcceptedSq
     );
 
     var leafNodes = filtered.filter(xx => !xx.group);
@@ -1010,7 +1010,7 @@ function collisionTestPossibleClosest2(fromPoint, bvhGroup, lowestAccepted){
     }
 
     //since 1st bvh in the group didn't have a subgroup, assume they all don't, so should recurse.
-    var fromNextLevel = collisionTestPossibleClosest2(fromPoint, nonLeafNodes.map(nn=>nn.group).flat(), lowestAccepted);
+    var fromNextLevel = collisionTestPossibleClosest2(fromPoint, nonLeafNodes.map(nn=>nn.group).flat(), furthestAcceptedSq);
         //TODO update lowestAccepted?
 
     return [fromNextLevel, leafNodes].flat();   //TODO keep in separate arrays to make filtering easier, reduce garbage.
