@@ -1,34 +1,18 @@
 function findOrthoVecByDiags(inputVecs){
-    //do 4d x-prod
-
-    //apparently determinant is something like 
-    //multiplying together diagonals... 
-    // https://www.youtube.com/watch?v=z5Yf7QwrotE
-
-    var results = [];
-
-    for (var cc=0;cc<4;cc++){
-        var sum = 0;
-        for (var aa=0;aa<3;aa++){
-            var positiveproduct=1;
-            var negativeproduct=1;
-            for (var bb=0;bb<3;bb++){
-                positiveproduct *= inputVecs[bb][(cc+1+(aa+bb)%3)%4];
-                negativeproduct *= inputVecs[bb][(cc+1+(aa+2-bb)%3)%4];
-            }
-            //console.log(positiveproduct, negativeproduct);
-            sum+=positiveproduct-negativeproduct;
-        }
-
-        //console.log(sum);
-
-        results.push(sum);
-    }
-
-    results[0]=-results[0]; //this apparently works. not sure why! guess could flip indices 1,3 instead
-    results[2]=-results[2];
- 
-    return results;
+    // this is findOrthoVecByDiags3 from orthogonal-4vecs.js test node project
+    // the 6 terms below are 2x2 determinants
+    var a01 = inputVecs[0][0]*inputVecs[1][1] - inputVecs[0][1]*inputVecs[1][0];
+    var a02 = inputVecs[0][0]*inputVecs[1][2] - inputVecs[0][2]*inputVecs[1][0];
+    var a03 = inputVecs[0][0]*inputVecs[1][3] - inputVecs[0][3]*inputVecs[1][0];
+    var a12 = inputVecs[0][1]*inputVecs[1][2] - inputVecs[0][2]*inputVecs[1][1];
+    var a13 = inputVecs[0][1]*inputVecs[1][3] - inputVecs[0][3]*inputVecs[1][1];
+    var a23 = inputVecs[0][2]*inputVecs[1][3] - inputVecs[0][3]*inputVecs[1][2];
+    return [
+        a13*inputVecs[2][2] -a23*inputVecs[2][1] -a12*inputVecs[2][3],
+        a02*inputVecs[2][3] -a03*inputVecs[2][2] +a23*inputVecs[2][0],
+        -a01*inputVecs[2][3] +a03*inputVecs[2][1] -a13*inputVecs[2][0],
+        a01*inputVecs[2][2] -a02*inputVecs[2][1] +a12*inputVecs[2][0]
+    ];
 }
 
 function findClosePointsBetweenGreatCircles(greatCircle1, greatCircle2){

@@ -30,6 +30,8 @@ for (var ii=0;ii<2;ii++){
     testIt(tri);
 }
 
+perfTest(100000);
+
 // testIt([
 //     [1,0,0,0],
 //     [0,1,0,0],
@@ -44,8 +46,74 @@ for (var ii=0;ii<2;ii++){
 function testIt(triVerts){
     console.log(triVerts);
     var faceVec = findOthoFunc(triVerts);
+    var faceVec2 = findOrthoVecByDiags2(triVerts);
+    var faceVec3 = findOrthoVecByDiags3(triVerts);
+    var faceVec4 = findOrthoVecByDiags4(triVerts);
+    var faceVec5 = findOrthoVecByDiags5(triVerts);
+
     checkOrthogonality(faceVec, triVerts);
+
+    var faceVec2 = findOrthoVecByDiags2(triVerts);
+
+    console.log({
+        faceVec,
+        faceVec2,
+        faceVec3,
+        faceVec4
+    })
 }
+
+function perfTest(howManyCalcs){
+    var testTriverts = [];
+    for (var ii=0;ii<howManyCalcs;ii++){
+        testTriverts.push(makeRandomTriVerts());
+    }
+    
+    var results1 = new Array(howManyCalcs);
+    var results2 = new Array(howManyCalcs);
+    var results3 = new Array(howManyCalcs);
+    var results4 = new Array(howManyCalcs);
+    var results5 = new Array(howManyCalcs);
+    
+    var time0=performance.now();
+    
+    for (var ii=0;ii<howManyCalcs;ii++){
+        results1[ii] = findOrthoVecByDiags(testTriverts[ii]);
+    }
+    var time1=performance.now();
+
+    for (var ii=0;ii<howManyCalcs;ii++){
+        results2[ii] = findOrthoVecByDiags2(testTriverts[ii]);
+    }
+    var time2=performance.now();
+
+    for (var ii=0;ii<howManyCalcs;ii++){
+        results3[ii] = findOrthoVecByDiags3(testTriverts[ii]);
+    }
+    var time3=performance.now();
+
+    for (var ii=0;ii<howManyCalcs;ii++){
+        results4[ii] = findOrthoVecByDiags4(testTriverts[ii]);
+    }
+    var time4=performance.now();
+
+    for (var ii=0;ii<howManyCalcs;ii++){
+        results5[ii] = findOrthoVecByDiags5(testTriverts[ii]);
+    }
+    var time5=performance.now();
+
+    console.log({
+        findOrthoVecByDiags : time1-time0,  //surprisingly quick!
+        findOrthoVecByDiags2 : time2-time1,
+        findOrthoVecByDiags3 : time3-time2, //usually fastest (but not by much)
+        findOrthoVecByDiags4 : time4-time3,
+        findOrthoVecByDiags5 : time5-time4
+    })
+
+
+}
+
+
 
 
 function findOrthoVecByGlMatrix(inputVecs){
@@ -87,6 +155,85 @@ function findOrthoVecByDiags(inputVecs){
 }
 
 
+function findOrthoVecByDiags2(inputVecs){
+    //expand findOrthoVecByDiags
+    return [
+        -inputVecs[0][1]*inputVecs[1][2]*inputVecs[2][3] + inputVecs[0][3]*inputVecs[1][2]*inputVecs[2][1]
+        -inputVecs[0][2]*inputVecs[1][3]*inputVecs[2][1] + inputVecs[0][1]*inputVecs[1][3]*inputVecs[2][2]
+        -inputVecs[0][3]*inputVecs[1][1]*inputVecs[2][2] + inputVecs[0][2]*inputVecs[1][1]*inputVecs[2][3]
+        ,
+        inputVecs[0][2]*inputVecs[1][3]*inputVecs[2][0] - inputVecs[0][0]*inputVecs[1][3]*inputVecs[2][2]
+        +inputVecs[0][3]*inputVecs[1][0]*inputVecs[2][2] - inputVecs[0][2]*inputVecs[1][0]*inputVecs[2][3]
+        +inputVecs[0][0]*inputVecs[1][2]*inputVecs[2][3] - inputVecs[0][3]*inputVecs[1][2]*inputVecs[2][0]
+        ,
+        -inputVecs[0][3]*inputVecs[1][0]*inputVecs[2][1] + inputVecs[0][1]*inputVecs[1][0]*inputVecs[2][3]
+        -inputVecs[0][0]*inputVecs[1][1]*inputVecs[2][3] + inputVecs[0][3]*inputVecs[1][1]*inputVecs[2][0]
+        -inputVecs[0][1]*inputVecs[1][3]*inputVecs[2][0] + inputVecs[0][0]*inputVecs[1][3]*inputVecs[2][1]
+        ,
+        inputVecs[0][0]*inputVecs[1][1]*inputVecs[2][2] - inputVecs[0][2]*inputVecs[1][1]*inputVecs[2][0]
+        +inputVecs[0][1]*inputVecs[1][2]*inputVecs[2][0] - inputVecs[0][0]*inputVecs[1][2]*inputVecs[2][1]
+        +inputVecs[0][2]*inputVecs[1][0]*inputVecs[2][1] - inputVecs[0][1]*inputVecs[1][0]*inputVecs[2][2]
+    ];
+}
+
+function findOrthoVecByDiags3(inputVecs){
+    //pair up terms from findOrthoVecByDiags2.
+    // the 6 terms below are 2x2 determinants
+    var a01 = inputVecs[0][0]*inputVecs[1][1] - inputVecs[0][1]*inputVecs[1][0];
+    var a02 = inputVecs[0][0]*inputVecs[1][2] - inputVecs[0][2]*inputVecs[1][0];
+    var a03 = inputVecs[0][0]*inputVecs[1][3] - inputVecs[0][3]*inputVecs[1][0];
+    var a12 = inputVecs[0][1]*inputVecs[1][2] - inputVecs[0][2]*inputVecs[1][1];
+    var a13 = inputVecs[0][1]*inputVecs[1][3] - inputVecs[0][3]*inputVecs[1][1];
+    var a23 = inputVecs[0][2]*inputVecs[1][3] - inputVecs[0][3]*inputVecs[1][2];
+    //TODO put inputVecs[2] to a variable to avoid looking up from here on?
+    return [
+        a13*inputVecs[2][2] -a23*inputVecs[2][1] -a12*inputVecs[2][3],
+        a02*inputVecs[2][3] -a03*inputVecs[2][2] +a23*inputVecs[2][0],
+        -a01*inputVecs[2][3] +a03*inputVecs[2][1] -a13*inputVecs[2][0],
+        a01*inputVecs[2][2] -a02*inputVecs[2][1] +a12*inputVecs[2][0]
+    ];
+}
+
+
+function findOrthoVecByDiags4(inputVecs){
+    //pair up terms from findOrthoVecByDiags2.
+    // the 6 terms below are 2x2 determinants
+    var iv2 = inputVecs[2];
+    var a01 = inputVecs[0][0]*inputVecs[1][1] - inputVecs[0][1]*inputVecs[1][0];
+    var a02 = inputVecs[0][0]*inputVecs[1][2] - inputVecs[0][2]*inputVecs[1][0];
+    var a03 = inputVecs[0][0]*inputVecs[1][3] - inputVecs[0][3]*inputVecs[1][0];
+    var a12 = inputVecs[0][1]*inputVecs[1][2] - inputVecs[0][2]*inputVecs[1][1];
+    var a13 = inputVecs[0][1]*inputVecs[1][3] - inputVecs[0][3]*inputVecs[1][1];
+    var a23 = inputVecs[0][2]*inputVecs[1][3] - inputVecs[0][3]*inputVecs[1][2];
+    return [
+        a13*iv2[2] -a23*iv2[1] -a12*iv2[3],
+        a02*iv2[3] -a03*iv2[2] +a23*iv2[0],
+        -a01*iv2[3] +a03*iv2[1] -a13*iv2[0],
+        a01*iv2[2] -a02*iv2[1] +a12*iv2[0]
+    ];
+}
+
+
+function findOrthoVecByDiags5(inputVecs){
+    //pair up terms from findOrthoVecByDiags2.
+    // the 6 terms below are 2x2 determinants
+    var a = [
+        inputVecs[0][0]*inputVecs[1][1] - inputVecs[0][1]*inputVecs[1][0],  //a01 = a[0]
+        inputVecs[0][0]*inputVecs[1][2] - inputVecs[0][2]*inputVecs[1][0],  //a02 = a[1]
+        inputVecs[0][0]*inputVecs[1][3] - inputVecs[0][3]*inputVecs[1][0],  //a03 = a[2]
+        inputVecs[0][1]*inputVecs[1][2] - inputVecs[0][2]*inputVecs[1][1],  //a12 = a[3]
+        inputVecs[0][1]*inputVecs[1][3] - inputVecs[0][3]*inputVecs[1][1],  //a13 = a[4]
+        inputVecs[0][2]*inputVecs[1][3] - inputVecs[0][3]*inputVecs[1][2]   //a23 = a[5]
+    ];
+    return [
+        a[4]*inputVecs[2][2] -a[5]*inputVecs[2][1] -a[3]*inputVecs[2][3],
+        a[1]*inputVecs[2][3] -a[2]*inputVecs[2][2] +a[5]*inputVecs[2][0],
+        -a[0]*inputVecs[2][3] +a[2]*inputVecs[2][1] -a[4]*inputVecs[2][0],
+        a[0]*inputVecs[2][2] -a[1]*inputVecs[2][1] +a[3]*inputVecs[2][0]
+    ];
+}
+
+
 //apparently the is no "rule of sarrus" for 4x4 matrices, so removing this previously committed function
 // function findOrthoVecByDiags2(inputVecs){
 // ...
@@ -103,9 +250,9 @@ function checkOrthogonality(vec1, vecsToTestVs){
 
 function makeRandomTriVerts(){
     return [
-        [10,2+Math.random(),2+Math.random(),0],
-        [10,2+Math.random(),0,0],
-        [10,0,2+Math.random(),0]
+        [1+Math.random(),2+Math.random(),2+Math.random(),Math.random()],
+        [1+Math.random(),2+Math.random(),Math.random(),Math.random()],
+        [1+Math.random(),0,2+Math.random(),Math.random()]
 
         // [10,1,1,0],
         // [10,1,0,0],
