@@ -1295,8 +1295,8 @@ function crossProduct(vec1, vec2){
     ];
 }
 
-function normalise(inputVector){
-    var len = Math.hypot.apply(null, inputVector);
+function normalise(inputVector){   //TODO try explicit indexing
+    var len = Math.sqrt(inputVector.reduce((accum,current)=>accum+current*current,0));
     return inputVector.map(cc => cc/len);
 }
 
