@@ -1554,15 +1554,30 @@ function aabb4DForLine(startPos, endPos){
     return [-1,1].map(direction => centre.map(xx => xx+direction*rad ));
 }
 
+function aabbForTwo4_2(startPos, endPos){
+    return [[
+        startPos[0]<endPos[0]?startPos[0]:endPos[0],
+        startPos[1]<endPos[1]?startPos[1]:endPos[1],
+        startPos[2]<endPos[2]?startPos[2]:endPos[2],
+        startPos[3]<endPos[3]?startPos[3]:endPos[3]
+    ],[
+        startPos[0]>endPos[0]?startPos[0]:endPos[0],
+        startPos[1]>endPos[1]?startPos[1]:endPos[1],
+        startPos[2]>endPos[2]?startPos[2]:endPos[2],
+        startPos[3]>endPos[3]?startPos[3]:endPos[3]
+    ]];
+}
+
+function randomFourvec(){
+    return normalise4([Math.random()-0.5, Math.random()-0.5, Math.random()-0.5, Math.random()-0.5]);
+}
+
 //fastest analytic aabb func from aabb4d.js test project.
 function aabb4DForLineAnalytic(startPos, endPos){
     //assume input is normalised 4vecs
 
     //initial AABB just taking start, end points into account 
-    var aabb = [
-        startPos.map((xx,ii)=>Math.min(xx, endPos[ii])),
-        startPos.map((xx,ii)=>Math.max(xx, endPos[ii]))
-    ];
+    var aabb = aabbForTwo4_2(startPos, endPos);
 
     var dp = dotProduct4(startPos, endPos);
     //angle two points these is then acos(dp)
