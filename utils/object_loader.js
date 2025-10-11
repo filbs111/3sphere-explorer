@@ -18,7 +18,7 @@ function loadConvexHullDataFromObjFile(chullObj, scale, location, expectedVertLe
         var in_verts = arrayToGroups(sd.vertices, sd.vertices_len).map(xx=>xx.slice(0,3)); //AFAIK slice is redundant because vertices_len = 3
         var verts = in_verts.map(xx=>xx.map(cc=>cc*scale)).map(xx=>{
             xx.push(1);
-            return normalise(xx)});   //unit 4-vec vertices
+            return normalise4(xx)});   //unit 4-vec vertices
 
         var in_faces = arrayToGroups(sd.indices, 3);
 
@@ -27,7 +27,7 @@ function loadConvexHullDataFromObjFile(chullObj, scale, location, expectedVertLe
         var edgeVertIndices = [];   //only used to draw debug points at ends of a selected edge.
         in_faces.forEach(ff => {
             var facePoints = ff.map(ii=>verts[ii]);
-            faces.push(normalise(findOrthoVecByDiags(facePoints)));
+            faces.push(normalise4(findOrthoVecByDiags(facePoints)));
             //edge great circles that are perpendicular to face, edge normal, and a point on edge. used for convex hull edge-edge separating axis tests (SAT)
 		    //stored as 2 points on great circle PI/2 apart (quarter way around world along edge)
             for (ee=0;ee<3;ee++){
@@ -36,7 +36,7 @@ function loadConvexHullDataFromObjFile(chullObj, scale, location, expectedVertLe
                 if (ff[index1]>ff[index2]){   // to avoid edge duplicates. assumes closed mesh without edge splits.
                     var point1 = facePoints[index1];
                     var point2 = facePoints[index2];
-                    edgeGcs.push([vectorSum4d(point1, point2), vectorDifference4d(point1, point2)].map(xx=>normalise(xx)));
+                    edgeGcs.push([vectorSum4d(point1, point2), vectorDifference4d(point1, point2)].map(xx=>normalise4(xx)));
                         //NOTE could just point to one of existing verts and only introduce single new point here, but above formulation more readable.
 
                     edgeVertIndices.push([ff[index1], ff[index2]]);

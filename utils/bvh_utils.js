@@ -54,7 +54,7 @@ function createBvhFrom3dObjectData(sourceData, bvhToPopulate, vertAttrs=3){
             vectorDifference(triVerts[0], triVerts[2])
         ];
         var crossp = crossProduct(edgeVecs[0], edgeVecs[1]);
-        var normal = normalise(crossp);
+        var normal = normalise3(crossp);
         
         // if (isNaN(normal[0])){
         //     //seems frigate has some degenerate tris! will do post filter. ideally should clean up 3d model data
@@ -66,7 +66,7 @@ function createBvhFrom3dObjectData(sourceData, bvhToPopulate, vertAttrs=3){
         //edge normals
         var edgeData = edgeVecs.map((edgeVec, ii) => {
             var crossp = crossProduct(edgeVec, normal);
-            var edgeNormal = normalise(crossp);
+            var edgeNormal = normalise3(crossp);
             var edgeDistFromOrigin = dotProduct(triVerts[ii], edgeNormal);
             return {
                 normal: edgeNormal,
@@ -1295,9 +1295,14 @@ function crossProduct(vec1, vec2){
     ];
 }
 
-function normalise(inputVector){   //TODO try explicit indexing
-    var len = Math.sqrt(inputVector.reduce((accum,current)=>accum+current*current,0));
-    return inputVector.map(cc => cc/len);
+function normalise3(vv){
+    var len = Math.sqrt(vv[0]*vv[0]+ vv[1]*vv[1] + vv[2]*vv[2]);
+    return [vv[0]/len, vv[1]/len, vv[2]/len];
+}
+
+function normalise4(vv){
+    var len = Math.sqrt(vv[0]*vv[0]+ vv[1]*vv[1] + vv[2]*vv[2]+ vv[3]*vv[3]);
+    return [vv[0]/len, vv[1]/len, vv[2]/len, vv[3]/len];
 }
 
 function vectorSum(vec1, vec2){
@@ -1566,7 +1571,7 @@ function aabb4DForLineAnalytic(startPos, endPos){
     var componentOfEndPosInStartPosDirection = startPos.map(xx => xx*dp);
 
     var orthogonalisedEndPos = vectorDifference4d(endPos, componentOfEndPosInStartPosDirection);
-    var normalisedOrthoEndPos = normalise(orthogonalisedEndPos);
+    var normalisedOrthoEndPos = normalise4(orthogonalisedEndPos);
 
     //this point is 90 deg from startpoint in direction of endpoint.
 

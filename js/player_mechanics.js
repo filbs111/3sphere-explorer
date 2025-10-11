@@ -1120,8 +1120,8 @@ var playerMechanics = (() => {
                             if ((minPenetrationEdgeEdge<leastPenetrationThisObjectTriangle) && !edgeCaseDetected && isAcceptableEdgeCollision){
                                 leastPenetrationThisObjectTriangle = minPenetrationEdgeEdge;
                                 chosenChullCollisionPointTypeThisObjectTriangle = 1; //edge
-                                //var avgPoint = normalise(vectorSum4d(closePoints[0], closePoints[1]));
-                                var avgPoint = normalise(findAxisResult.sumPoint);
+                                //var avgPoint = normalise4(vectorSum4d(closePoints[0], closePoints[1]));
+                                var avgPoint = normalise4(findAxisResult.sumPoint);
                                 collisionPointInObjectFrame = avgPoint;
                                 contactNormalInObjectFrame = pointDifferenceDirection.map(xx=>xx*sign);
                                 extraInfoThisFace = {
@@ -1172,7 +1172,7 @@ var playerMechanics = (() => {
                     putDebugPointInObjFrame(collisionPointResult.objInfo, collisionPointResult.collisionPointInObjectFrame, [colorArrs.red,colorArrs.green,colorArrs.blue,colorArrs.magenta][chosenChullCollisionPointType]);
 
                     //add an extra point offset in contact normal position.
-                    var offsetPoint = normalise(vectorSum4d(collisionPointResult.collisionPointInObjectFrame, 
+                    var offsetPoint = normalise4(vectorSum4d(collisionPointResult.collisionPointInObjectFrame, 
                         collisionPointResult.contactNormalInObjectFrame.map(xx=>xx*-0.0001)));
                     putDebugPointInObjFrame(collisionPointResult.objInfo, offsetPoint, colorArrs.white);
 

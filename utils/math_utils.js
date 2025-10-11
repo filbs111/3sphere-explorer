@@ -61,7 +61,7 @@ function findAxisBetweenGreatCircles(greatCircle1, greatCircle2){
 
     var axis = findOrthoVecByDiags([sumPoint, closestPointAnalytic1.ninetyDegAround, closestPointAnalytic2.ninetyDegAround]);
 
-    return {sumPoint, axis:normalise(axis)};
+    return {sumPoint, axis:normalise4(axis)};
 }
 
 function greatCirclePositionForAngle(gs, ang){
