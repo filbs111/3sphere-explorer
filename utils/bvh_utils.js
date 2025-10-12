@@ -1625,11 +1625,18 @@ function aabb4DForLineAnalytic(startPos, endPos){
     return aabb;
 }
 
-function combinedAABB(aabb, aabb2){
-    return [
-        aabb[0].map((xx,ii) => Math.min(xx, aabb2[0][ii])),
-        aabb[1].map((xx,ii) => Math.max(xx, aabb2[1][ii])),
-    ]
+function combinedAABB4(aabb, aabb2){
+    return [[
+        Math.min(aabb[0][0],aabb2[0][0]),
+        Math.min(aabb[0][1],aabb2[0][1]),
+        Math.min(aabb[0][2],aabb2[0][2]),
+        Math.min(aabb[0][3],aabb2[0][3])
+    ],[
+        Math.max(aabb[1][0],aabb2[1][0]),
+        Math.max(aabb[1][1],aabb2[1][1]),
+        Math.max(aabb[1][2],aabb2[1][2]),
+        Math.max(aabb[1][3],aabb2[1][3])
+    ]];
 }
 
 function minMaxDistanceFromPointToBoundingSphere(pointPos, spherePos, sphereRad){

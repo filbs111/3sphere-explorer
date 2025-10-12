@@ -227,7 +227,7 @@ function makeCollisionDataForTriangle4d(triVerts){
 	var aabb = [triVerts[0],triVerts[0]];   //some point that will be in the final aabb
 	for (ee=0;ee<3;ee++){
 		edgeaabb = aabb4DForLineAnalytic(triVerts[ee],triVerts[(ee+1)%3]);
-		aabb = combinedAABB(aabb, edgeaabb);
+		aabb = combinedAABB4(aabb, edgeaabb);
 	}
 
 	//include extreme point if some condition true
