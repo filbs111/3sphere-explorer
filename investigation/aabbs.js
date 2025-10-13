@@ -41,7 +41,32 @@ function normalise4(vv){
     return [vv[0]/len, vv[1]/len, vv[2]/len, vv[3]/len];
 }
 
-function testAAbbForTwoFuncs(numToTest){
+
+
+function combinedAABB(aabb, aabb2){
+    return [
+        aabb[0].map((xx,ii) => Math.min(xx, aabb2[0][ii])),
+        aabb[1].map((xx,ii) => Math.max(xx, aabb2[1][ii])),
+    ]
+}
+
+function combinedAABB4(aabb, aabb2){
+    return [[
+        Math.min(aabb[0][0],aabb2[0][0]),
+        Math.min(aabb[0][1],aabb2[0][1]),
+        Math.min(aabb[0][2],aabb2[0][2]),
+        Math.min(aabb[0][3],aabb2[0][3])
+    ],[
+        Math.max(aabb[1][0],aabb2[1][0]),
+        Math.max(aabb[1][1],aabb2[1][1]),
+        Math.max(aabb[1][2],aabb2[1][2]),
+        Math.max(aabb[1][3],aabb2[1][3])
+    ]];
+}
+
+
+
+function testAAbbForFuncs(numToTest){
     var pairsOfPositions = [];
     for (var xx=0;xx<numToTest;xx++){
         pairsOfPositions.push([randomFourvec(),randomFourvec()]);
@@ -74,4 +99,32 @@ function testAAbbForTwoFuncs(numToTest){
 }
 
 
-testAAbbForTwoFuncs(100000);
+function testAAbbCombineForFuncs(numToTest){
+    var aabbPairs = [];
+    for (var xx=0;xx<numToTest;xx++){
+        aabbPairs.push(aabbForTwo4_2([randomFourvec(),randomFourvec()],[randomFourvec(),randomFourvec()]));
+    }
+    var time0 = performance.now();
+
+    for (var xx=0;xx<numToTest;xx++){
+        var aabbs= aabbPairs[xx];
+        combinedAABB(aabbs[0], aabbs[1]);
+    }
+    var time1 = performance.now();
+
+    for (var xx=0;xx<numToTest;xx++){
+        var aabbs= aabbPairs[xx];
+        combinedAABB4(aabbs[0], aabbs[1]);
+    }
+    var time2 = performance.now();
+    
+
+    console.log({
+        combinedAABB: time1-time0,
+        combinedAABB4: time2-time1,
+    });
+}
+
+
+testAAbbForFuncs(100000);
+testAAbbCombineForFuncs(100000);
