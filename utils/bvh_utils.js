@@ -40,8 +40,8 @@ function createBvhFrom3dObjectData(sourceData, bvhToPopulate, vertAttrs=3){
         var triVerts = tri.map( idx => verts[idx]);
         
         var components = temp3Vec.map( (_,component) => triVerts.map(vv => vv[component])); //component[0] is array of values of x for each vert
-        var minAABB = components.map( minAABBPointsForComponent => Math.min.apply(null, minAABBPointsForComponent));
-        var maxAABB = components.map( maxAABBPointsForComponent => Math.max.apply(null, maxAABBPointsForComponent));
+        var minAABB = components.map( minAABBPointsForComponent => minAll(minAABBPointsForComponent));
+        var maxAABB = components.map( maxAABBPointsForComponent => maxAll(maxAABBPointsForComponent));
 
         var normalisedBoxCentre = minAABB.map( (minval, ii) => {return (minval + maxAABB[ii])/boundingSphereDiam;} );  //between -1, 1
         var centreMorton = morton3(normalisedBoxCentre);
@@ -219,12 +219,11 @@ function generateBvh(items, tempVec, groupSize){
     var nextLayerUp = groups.map(group => {
         
         var minAABBPoints = tempVec.map( (_,component) => group.map(item => item.AABB[0][component]));
-        var minAABB = minAABBPoints.map( minAABBPointsForComponent => Math.min.apply(null, minAABBPointsForComponent));
+        var minAABB = minAABBPoints.map( minAABBPointsForComponent => minAll(minAABBPointsForComponent));
 
         var maxAABBPoints = tempVec.map( (_,component) => group.map(item => item.AABB[1][component]));
-        var maxAABB = maxAABBPoints.map( maxAABBPointsForComponent => Math.max.apply(null, maxAABBPointsForComponent));
+        var maxAABB = maxAABBPoints.map( maxAABBPointsForComponent => maxAll(maxAABBPointsForComponent));
 
-        
         // var morton = [
         //     Math.min.apply(null, group.map(item => item.morton[0])),
         //     Math.max.apply(null, group.map(item => item.morton[1]))
@@ -241,6 +240,15 @@ function generateBvh(items, tempVec, groupSize){
 
     return generateBvh(nextLayerUp, tempVec, groupSize);
 }
+
+function minAll(inputArr){
+    return inputArr.reduce((accum, current)=>Math.min(accum, current), Number.POSITIVE_INFINITY);
+}
+
+function maxAll(inputArr){
+    return inputArr.reduce((accum, current)=>Math.max(accum, current), Number.NEGATIVE_INFINITY);
+}
+
 
 
 //TODO: 

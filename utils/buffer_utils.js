@@ -110,7 +110,7 @@ function loadDuocylinderBufferData(bufferObj, sourceData){
     bufferObj.vertexIndexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, bufferObj.vertexIndexBuffer);
     if (Array.isArray(sourceData.faces[0])){	//if faces is an array of length 3 arrays
-        sourceData.indices = [].concat.apply([],sourceData.faces);
+        sourceData.indices = sourceData.faces.flat();
     } else {									//faces is just a set of indices - used for procTerrain indexed strips. TODO maybe don't use "faces"
         sourceData.indices = sourceData.faces;
     }
