@@ -112,10 +112,9 @@ function ensureBvhHas4dDataForScale(objBvh, objScale){
     var verts4d = objBvh.verts.map(tp => {
     //unproject 3d->4d. TODO precalculate some or all of this? (dist from origin 3d, or full 4d points. then might
     // use same collision methods for world size meshes
-        var tp4d = tp.slice()
+        var tp4d = tp.slice();
         tp4d.push(1/objScale);
-        var len= Math.sqrt( tp4d.reduce((accum, current)=>accum+current*current,0) );
-        return tp4d.map(xx => xx/len);
+        return normalise4(tp4d);
     });
 
     var planes4d = objBvh.trisWithAABB.map( tri => {
@@ -130,9 +129,7 @@ function ensureBvhHas4dDataForScale(objBvh, objScale){
                 var vecToSubtract = faceVec4d.map(xx => xx*fractionOfFaceVecToSubtract);
                 var correctedEdgePlaneVec = vectorDifference4d(initialEdgePlaneVec, vecToSubtract);
                 //renormalise
-                var lenEdgeVec = Math.sqrt(correctedEdgePlaneVec.reduce((accum, current) => accum+current*current,0));
-                correctedEdgePlaneVec = correctedEdgePlaneVec.map(xx=>xx/lenEdgeVec);
-                return correctedEdgePlaneVec;
+                return normalise4(correctedEdgePlaneVec);
             });
         
         return {
