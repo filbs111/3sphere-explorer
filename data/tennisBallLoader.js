@@ -244,8 +244,14 @@ function makeCollisionDataForTriangle4d(triVerts){
 	//stored as 2 points on great circle PI/2 apart
 	var edgeGcs = [];
 	for (ee=0;ee<3;ee++){
-		var otherPoint = normalise4(findOrthoVecByDiags([face, edges[ee], triVerts[ee]]));
-		edgeGcs.push([triVerts[ee], otherPoint]);	//could avoid storing triVerts[ee] here since already know it from verts, but like this is more explicit
+		// var otherPoint = normalise4(findOrthoVecByDiags([face, edges[ee], triVerts[ee]]));
+		// edgeGcs.push([triVerts[ee], otherPoint]);	//could avoid storing triVerts[ee] here since already know it from verts, but like this is more explicit
+	
+		var point1 = triVerts[ee];
+		var point2 = triVerts[(ee+1)%3];
+		edgeGcs.push([vectorSum4d(point1, point2), vectorDifference4d(point1, point2)].map(xx=>normalise4(xx))); //avoid expensive call to findOrthoVecByDiags.
+		// 	// NOTE this generates 2 new 4vecs - between the verts and 90 deg along great circle, rather than just 1 new 4vec, reusing triVerts[ee]
+			//probably could still calculate equivalent of otherPoint and reuse triVerts[ee] here for intermediate cost TODO?
 	}
 
 	var face = normalise4(face);
