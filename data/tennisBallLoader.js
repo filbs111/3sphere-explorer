@@ -221,7 +221,7 @@ function loadGridData(toLoad, generateCollisionData){
 
 		toLoad.collisionTriangleData = generateBvh(allTris, temp4vec, 8);
 
-		toLoad.collisionTriangleData.cache = createTriCollisionDataCach(facesAsTriVerts, verts4d);
+		toLoad.collisionTriangleData.cache = createTriCollisionDataCache(facesAsTriVerts, verts4d);
 	}
 
 };
@@ -365,7 +365,7 @@ function makeCollisionDataForTriangle4dNoAABB(triVerts){
 	};
 }
 
-function createTriCollisionDataCach(facesAsTriVerts, verts4d){
+function createTriCollisionDataCache(facesAsTriVerts, verts4d){
 	var maxCacheEntries = 1024;	//TODO tune.
 	var cache = new Map();	//TODO LRU cache (limited size). for now, just store everything.
 	var cacheQueries = 0;

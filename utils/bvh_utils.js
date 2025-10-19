@@ -150,7 +150,7 @@ function ensureBvhHas4dDataForScale(objBvh, objScale){
     objBvh.triCollisionData4dBvh[objScale] = generateBvh(allTris, temp4vec, 8);
 
     //copy paste from tennisBallLoader. TODO deduplicate.
-    objBvh.triCollisionData4dBvh[objScale].cache = createTriCollisionDataCach(objBvh.trisWithAABB.map(xx=>xx.triangleIndices), verts4d);
+    objBvh.triCollisionData4dBvh[objScale].cache = createTriCollisionDataCache(objBvh.trisWithAABB.map(xx=>xx.triangleIndices), verts4d);
         //TODO why objBvh.trisWithAABB instead of allTris works here? sort order is different. TODO tidy?
 
     function calc4dFrom3dPlane(threeVecDirection,distPlaneFromOrigin3d){
