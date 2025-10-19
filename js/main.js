@@ -1356,13 +1356,13 @@ function drawRegularScene(frameTime){
 			bind2dTextureIfRequired(fontTexture);
 
 			//drawText("World " + playerContainer.world, 0.6, 0.15, 1); //(below) centre of screen, suitable if flash up on cross portal
-			drawText("World " + playerContainer.world, 2.5, 1.5, 0.45, 1.5); //bottom left. note scales with FOV!
+			drawText("World " + playerContainer.world, 2.5, 1.5, 0.6, 1.2); //bottom left. note scales with FOV!
 
 			portalTexts.forEach(pp=>{
 				drawText(pp.text, pp.pos[0], pp.pos[1], pp.pos[2], 0.6);
 			});
 
-			if (guiParams["player model"] == "convexHullTest"){
+			if (guiParams.debug.showChullStats && guiParams["player model"] == "convexHullTest"){
 				drawText(chullCollisionScreenInfo, 0.6, 0.15, 1, 0.6);
 				drawText(chullCollisionScreenInfo2, 0.6, 0.4, 1, 0.6);
 			}
@@ -4348,8 +4348,8 @@ var guiParams={
 	display:{
 		cameraType:"far 3rd person",
 		cameraAttachedTo:"player vehicle",
-		cameraZoom:2.4,
-		uVarOne:-0.0525,
+		cameraZoom:3.3,		//cameraZoom: 5.4 , uVarOne: 0.09 good for plane. 160 deg hFOV allegedly
+		uVarOne:-0.1,
 		cameraMoveSide:0,
 		vFOV:"",
 		hFOV:"",
@@ -4398,8 +4398,8 @@ var guiParams={
 		hudTest:false,
 		closestPoint:false,
 		drawPlayerPosMarkers:false,
-		drawExtraMarkers:true,
-		closestPointNearby:true,
+		drawExtraMarkers:false,
+		closestPointNearby:false,
 		buoys:false,
 		nmapUseShader2:true,
 		showSpeedOverlay:false,
@@ -4408,6 +4408,7 @@ var guiParams={
 		fireworks:false,
 		textTextBox:false,
 		textWorldNum:true,
+		showChullStats:false,	//convex hull collision stats
 		bvhBoundingSpheres:false,
 		worldCollisionTest1:"grid2OnlyOne",
 		worldCollisionTest2:"sphere",
@@ -4418,7 +4419,7 @@ var guiParams={
 		skipSatPlayerFaceTests:false,
 		skipEdgeColAcc:true,	//suspect do want this
 		skipEdgeCaseCheck:false,
-		flickerPlayerDisplay:true
+		flickerPlayerDisplay:false
 	},
 	audio:{
 		volume:0.2,
@@ -4627,7 +4628,7 @@ function init(){
 	var displayFolder = gui.addFolder('display');	//control and movement
 	displayFolder.add(guiParams.display, "cameraType", ["cockpit", "near 3rd person", "far 3rd person", "really far 3rd person", "side","none"]);
 	displayFolder.add(guiParams.display, "cameraAttachedTo", ["player vehicle", "turret","none"]);	//"none" acts like drop camera
-	displayFolder.add(guiParams.display, "cameraZoom", 1,5,0.1);
+	displayFolder.add(guiParams.display, "cameraZoom", 1,10,0.05);
 	displayFolder.add(guiParams.display, "uVarOne", -0.125,0,0.0025);
 	displayFolder.add(guiParams.display, "cameraMoveSide", -0.002,0.002,0.00001);
 	displayFolder.add(guiParams.display, "vFOV").listen();
@@ -4685,6 +4686,7 @@ function init(){
 	debugFolder.add(guiParams.debug, "fireworks");
 	debugFolder.add(guiParams.debug, "textTextBox");
 	debugFolder.add(guiParams.debug, "textWorldNum");
+	debugFolder.add(guiParams.debug, "showChullStats");
 	debugFolder.add(guiParams.debug, "bvhBoundingSpheres");
 	debugFolder.add(guiParams.debug, "worldCollisionTest1", ["none", "worldBvh", "worldBvh2", "worldBvhHilbert", "grid", "grid2", "grid2OnlyOne"]);
 	debugFolder.add(guiParams.debug, "worldCollisionTest2", ["none", "aabb", "sphere"]);
