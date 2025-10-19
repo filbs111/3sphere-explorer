@@ -322,8 +322,6 @@ function initBuffers(){
 
 			//update all object info. TODO change to reference a single object that will be updated later.
 			terrainObj.objInfoArr.forEach(objInfo=>objInfo.collisionTriangleData = terrainObj.data);
-
-			terrainObj.isLoaded = true;
 		}, 6);
 	}
 

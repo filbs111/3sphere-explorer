@@ -121,6 +121,8 @@ function loadDuocylinderBufferData(bufferObj, sourceData){
     bufferObj.vertexIndexBuffer.itemSize = 3;
     bufferObj.vertexIndexBuffer.numItems = sourceData.indices.length;
 
+    bufferObj.isLoaded = true;
+
      console.log({
         mssg:"dc data",
         sourceData,
