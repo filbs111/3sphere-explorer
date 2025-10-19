@@ -141,15 +141,62 @@ function ensureBvhHas4dDataForScale(objBvh, objScale){
 
     objBvh.triCollisionData4d[objScale] = planes4d;
     
-    
     //add bvh version.
-    var allTris = objBvh.trisWithAABB.map(tri => {
-        var triVerts = tri.triangleIndices.map(xx => verts4d[xx]);
-        return makeCollisionDataForTriangle4d(triVerts);
+    var allTris = objBvh.trisWithAABB.map((tri,faceIdx) => {
+        return makeAABBDataForTriangle4d(tri.triangleIndices, faceIdx, verts4d); //NOTE this generates 4D AABB data from 3D
     });
+
     allTris.sort((a,b) => a.morton - b.morton);
     objBvh.triCollisionData4dBvh[objScale] = generateBvh(allTris, temp4vec, 8);
 
+    //copy paste from tennisBallLoader. TODO deduplicate.
+    objBvh.triCollisionData4dBvh[objScale].cache = ((facesAsTriVerts, verts4d) => {
+        var maxCacheEntries = 1024;	//TODO tune.
+        var cache = new Map();	//TODO LRU cache (limited size). for now, just store everything.
+        var cacheQueries = 0;
+        var cacheMisses = 0;
+
+        function getTriDataForFace(faceIdx){
+            cacheQueries++;
+            var cachedVal = cache.get(faceIdx);
+            if (cachedVal){
+                //move to front of cache (most recently accessed)
+
+                cache.delete(faceIdx);
+                cache.set(faceIdx, cachedVal);
+                
+                return cachedVal;
+            }
+            cacheMisses++;
+
+            if (cache.size >= maxCacheEntries){	//equals check should be sufficient.
+                cache.delete(cache.keys().next().value);	//delete least recently accessed cache entry
+            }
+            
+            console.log({
+                info:"attempting to makeCollisionDataForTriangle4dNoAABB",
+                faceIdx,
+                facesAsTriVerts,
+                verts4d
+            })
+
+            var calculatedVal = makeCollisionDataForTriangle4dNoAABB(facesAsTriVerts[faceIdx].map(vv => verts4d[vv]));
+            
+            cache.set(faceIdx, calculatedVal);
+            return calculatedVal;
+        }
+
+        return {
+            getTriDataForFace,
+            getStats(){ return {
+                size: cache.size,
+                cacheQueries,
+                cacheMisses,
+                missRatio: cacheMisses/cacheQueries
+            }}
+        }
+    })(objBvh.trisWithAABB.map(xx=>xx.triangleIndices), verts4d);	//don't really need to pass this in since accessible here, but will want if move function outside
+        //TODO why objBvh.trisWithAABB instead of allTris works here? sort order is different. TODO tidy?
 
     function calc4dFrom3dPlane(threeVecDirection,distPlaneFromOrigin3d){
         var D = threeVecDirection.slice();
