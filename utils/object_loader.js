@@ -237,6 +237,8 @@ function sourceDataFromObj2Or3Or5FileResponse(response, expectedVertLength, inde
         });
     }
 
+    var startTime = performance.now();
+
     var sourceData = {
         vertices: (hasVertexColours? 
             //halfway house - code that uses result expects vertex positions and colours to be stuck together.
@@ -251,6 +253,9 @@ function sourceDataFromObj2Or3Or5FileResponse(response, expectedVertLength, inde
     if (uvs.length > 0){
         sourceData.uvcoords = newVerts.map(x=>uvs[x[1]]).flat();
     }
+
+
+    console.log("loaded object in " + (performance.now()-startTime));
 
     console.log("custom Obj data:");
     console.log(newVerts);
