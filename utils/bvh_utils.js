@@ -242,11 +242,11 @@ function generateBvh(items, tempVec, groupSize){
 }
 
 function minAll(inputArr){
-    return inputArr.reduce((accum, current)=>Math.min(accum, current), Number.POSITIVE_INFINITY);
+    return inputArr.reduce((accum, current)=>Math.min(accum, current), Infinity);
 }
 
 function maxAll(inputArr){
-    return inputArr.reduce((accum, current)=>Math.max(accum, current), Number.NEGATIVE_INFINITY);
+    return inputArr.reduce((accum, current)=>Math.max(accum, current), -Infinity);
 }
 
 
@@ -417,7 +417,7 @@ function collisionTestBvh4d2(aabb, bvh){
 var triObjClosestPointType=0; //0=vert, 1=edge, 2=face
 
 function closestPointBvhBruteForce(fromPoint, bvh){
-    var matchAllAABB = [Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY].map(xx=>[xx,xx,xx]);
+    var matchAllAABB = [-Infinity, Infinity].map(xx=>[xx,xx,xx]);
     var allTris = collisionTestBvh(matchAllAABB, bvh.tris);
     return closestPointForTris(fromPoint, bvh.verts, allTris);    //tris returned from bvh func
 }
@@ -450,7 +450,7 @@ function closestPointBvhEfficient4d(posInObjFrame, objInfo, greatestAcceptedDist
     //                     //TODO precalc 4d aabbs for scale. also could be tighter than 4d AABB from the 3d AABB
     //                     //TODO don't get min val if not used to filter
 
-    // var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
+    // var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Infinity);
 
     // var possibles = collisionTriangleData.map((_,ii) => {return {triIdx:ii}}).  //bodge!
     //    filter((_, ii) => minMaxVals[ii][0]<lowestMax);
@@ -522,14 +522,14 @@ function calcProjectedAABB(position, radius){
 
 
 // function closestPointBvhEfficientA(fromPoint, bvh){
-//     //var possibles = collisionTestPossibleClosest(fromPoint, bvh.tris, Number.POSITIVE_INFINITY);
+//     //var possibles = collisionTestPossibleClosest(fromPoint, bvh.tris, Infinity);
 
 //     var collisionFunc = guiParams.debug.useThirdCollisionFunc ? collisionTestPossibleClosest2a : collisionTestPossibleClosest2;
 
 //         var timeStart = performance.now();
 
-//     //var possibles = collisionTestPossibleClosest2(fromPoint, [bvh.tris], Number.POSITIVE_INFINITY);
-//     //var possibles = collisionFunc(fromPoint, [bvh.tris], Number.POSITIVE_INFINITY);
+//     //var possibles = collisionTestPossibleClosest2(fromPoint, [bvh.tris], Infinity);
+//     //var possibles = collisionFunc(fromPoint, [bvh.tris], Infinity);
 //     var possibles = collisionFunc(fromPoint, [bvh.tris], 0.1);
 
 //     if (possibles.length == 0){
@@ -550,7 +550,7 @@ function calcProjectedAABB(position, radius){
 // /*
 //     //do minmax filter. seems already part of first part
 //     var minMaxVals = possibles.map(item => aabbMinMaxDistanceFromPoint(fromPoint, item.AABB));
-//     var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
+//     var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Infinity);
 
 //     var filtered = possibles.filter(
 //         (item, ii) =>
@@ -597,7 +597,7 @@ function calcProjectedAABB(position, radius){
 //     // can do this by separating axis test
 //     tris.forEach(tri => {
         
-//         var greatestSeparationSq = Number.NEGATIVE_INFINITY;
+//         var greatestSeparationSq = -Infinity;
 //         var chosenPointTypeThisFace = -1;
 //         var vectorToClosestPoint;
 //         var triPoints = tri.triangleIndices.map(pp => verts[pp]);
@@ -692,7 +692,7 @@ function closestPointForTris4dOld(fromPoint, objInfo, tris){
     // can do this by separating axis test
     tris.forEach(tri => {
         
-        var greatestSeparationSq = Number.NEGATIVE_INFINITY;
+        var greatestSeparationSq = -Infinity;
         var chosenPointTypeThisFace = -1;
         var vectorToClosestPoint;
         var triPoints = tri.triangleIndices.map(pp => verts[pp]).map(tp => {
@@ -868,7 +868,7 @@ function closestPointForTris4d(fromPoint, tris){
     // can do this by separating axis test
     tris.forEach(thisTriCollisionData => {
 
-        var greatestSeparationSq = Number.NEGATIVE_INFINITY;
+        var greatestSeparationSq = -Infinity;
         var chosenPointTypeThisFace = -1;
         var vectorToClosestPoint;
         var triPointsFromPoint = thisTriCollisionData.verts.map(pp => vectorDifference4d(fromPoint, pp));
@@ -976,7 +976,7 @@ function collisionTestPossibleClosest(fromPoint, bvh, lowestAccepted){
     //then filter any where the minimum possible distance is greater than this.
 
     var minMaxVals = bvh.group.map(item => aabbMinMaxDistanceFromPoint(fromPoint, item.AABB));
-    var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
+    var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Infinity);
 
     lowestMax = Math.min(lowestMax, lowestAccepted);    //TODO rule out groups earlier using lowestAccepted?
 
@@ -992,7 +992,7 @@ function collisionTestPossibleClosest(fromPoint, bvh, lowestAccepted){
 function collisionTestPossibleClosest2(fromPoint, bvhGroup, furthestAcceptedSq){
 
     var minMaxVals = bvhGroup.map(item => aabbMinMaxDistanceFromPoint(fromPoint, item.AABB));
-    var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
+    var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Infinity);
 
     //IIRC in practice, all leaves are at same depth.
     //if want to have leaves at multiple depths should split out leaves, recurse with non-leaves
@@ -1030,7 +1030,7 @@ function collisionTestPossibleClosest2(fromPoint, bvhGroup, furthestAcceptedSq){
 //     lowestAccepted*=lowestAccepted;   //using squared distances.
 
 //     var minMaxVals = bvhGroup.map(item =>  aabbMinMaxDistanceFromPoint(fromPoint, aabb4dFrom3D(item.AABB, objScale)));
-//     var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
+//     var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Infinity);
 
 //     //IIRC in practice, all leaves are at same depth.
 //     //if want to have leaves at multiple depths should split out leaves, recurse with non-leaves

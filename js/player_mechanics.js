@@ -474,7 +474,7 @@ var playerMechanics = (() => {
                     //filter using minmax logic. TODO take 4d into account properly (currently this is in object space, so could rule out true closest tri)
                     var minMaxVals = nearby.map(item => aabbMinMaxDistanceFromPoint(projectedPosInObjFrame, item.AABB));
                         
-                    var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
+                    var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Infinity);
 
                     var nearbyFiltered = nearby.filter(
                         (_, ii) =>
@@ -489,7 +489,7 @@ var playerMechanics = (() => {
                     //     //TODO precalc 4d aabbs for scale. also could be tighter than 4d AABB from the 3d AABB
                     //     //TODO don't get min val if not used to filter
 
-                    // var lowestMax2 = minMaxVals2.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
+                    // var lowestMax2 = minMaxVals2.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Infinity);
 
                     // var nearbyFiltered2 = nearby.filter(
                     //     (_, ii) =>
@@ -788,7 +788,7 @@ var playerMechanics = (() => {
 
 
         function processTrianglePossibles(resultMat, possibleObjects, greatestAcceptedDistance, closestPointFunc){
-            var closestRoughSqDistanceFound = Number.POSITIVE_INFINITY;
+            var closestRoughSqDistanceFound = Infinity;
             var bestResult = false;
 
             possibleObjects.forEach(objInfo =>
@@ -859,7 +859,7 @@ var playerMechanics = (() => {
             //this should work for player convex hull shape. 
             //later may wish to generalise so sphere collision also uses this code - perhaps describe as a single point, allow expanded/rounded convex hull
             
-            var greatestPenetrationFound = Number.NEGATIVE_INFINITY;
+            var greatestPenetrationFound = -Infinity;
             var chosenChullCollisionPointType = -1;
             var collisionPointResult;
 
@@ -982,7 +982,7 @@ var playerMechanics = (() => {
                 nearby.forEach(tt => {
                     var collisionPointInObjectFrame;
                     var contactNormalInObjectFrame;
-                    var leastPenetrationThisObjectTriangle = Number.POSITIVE_INFINITY;
+                    var leastPenetrationThisObjectTriangle = Infinity;
                     var chosenChullCollisionPointTypeThisObjectTriangle = -1;
 
                     var extraInfoThisFace;
@@ -1233,7 +1233,7 @@ var playerMechanics = (() => {
                 var normInPlayerFrame = vec4.create(collisionPointResult.contactNormalInObjectFrame);
                 mat4.multiplyVec4(relativeMat, normInPlayerFrame, normInPlayerFrame);
 
-                if (greatestPenetrationFound>0 && lastChullPenetration != Number.NEGATIVE_INFINITY){  //TODO better logic here! 
+                if (greatestPenetrationFound>0 && lastChullPenetration != -Infinity){  //TODO better logic here! 
                     var penChange = greatestPenetrationFound - lastChullPenetration;
                     var reactionForce = Math.max(200*greatestPenetrationFound + 5000*penChange, 0);
 
