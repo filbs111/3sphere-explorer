@@ -314,8 +314,13 @@ function bvhRayOverlapTest4d(rayStart, rayEnd, rayAABB, collisionTriangleData){
     var closestFractionAlong = 1;    //1 is useful since eg for camera collision want to move full dist if no collide
     var collided = false;
 
-    possibles.forEach(thisTri => {
-        if (aabbsOverlap(rayAABB, thisTri.AABB)){
+    possibles.forEach(thisTriBasic => {
+        if (aabbsOverlap(rayAABB, thisTriBasic.AABB)){
+
+            //get tri face, edge, edgeGc data from cache
+            var thisTri = collisionTriangleData.getTriDataForFace(thisTriBasic.faceIdx);
+            //TODO skip generation of edgeGcs? (unneeded for ray test, used for convex hull collision)
+
 
             // to find point on plane, consider in some projected space.
             // each point start or end has some component in direction of the face,
@@ -471,7 +476,10 @@ function closestPointBvhEfficient4d(posInObjFrame, objInfo, greatestAcceptedDist
         return false;
     }
 
-    return closestPointForTris4d(posInObjFrame, possibles);
+    var detailedTriCollisionData = possibles.map(pp => collisionTriangleData.getTriDataForFace(pp.faceIdx));
+    var closestPointForTris4dResult = closestPointForTris4d(posInObjFrame, detailedTriCollisionData);
+    closestPointInfo.closestPointForTris4dResult = closestPointForTris4dResult;
+    return closestPointForTris4dResult;
 }
 
 

@@ -631,21 +631,12 @@ var playerMechanics = (() => {
 
                 var nearby = collisionTestBvh4d(queryAABB, objInfo.collisionTriangleData);
                 
-                return nearby.length>0 ? closestPointForTris4d(posInObjFrame, nearby) : false;
+                if (nearby.length<1){return false;} 
+                
+                var detailedTriCollisionData = nearby.map(pp => objInfo.collisionTriangleData.getTriDataForFace(pp.faceIdx));
+                var closestPoint = closestPointForTris4d(posInObjFrame, detailedTriCollisionData);
 
-                //TODO implement below for performance.
-
-                //filter using minmax logic. TODO take 4d into account properly (currently this is in object space, so could rule out true closest tri)
-                // var minMaxVals = nearby.map(item => aabbMinMaxDistanceFromPoint(projectedPosInObjFrame, item.AABB));
-                    
-                // var lowestMax = minMaxVals.map(xx => xx[1]).reduce((accum, yy) => Math.min(accum, yy), Number.POSITIVE_INFINITY);
-
-                // var nearbyFiltered = nearby.filter(
-                //     (_, ii) =>
-                //     minMaxVals[ii][0]<lowestMax
-                // );
-
-                // return nearbyFiltered.length>0 ? closestPointForTris4d(posInObjFrame, nearbyFiltered) : false;
+                return closestPoint;    //TODO augment with penetration, normal
             });
 
             // draw debug points for nearby collision tests. note this inefficient! (makes matrices)
@@ -979,7 +970,13 @@ var playerMechanics = (() => {
                     return [minResult, maxResult];
                 }
 
-                nearby.forEach(tt => {
+                //currently using cache system for data for 4d objects, not for projected 3d objects yet.
+                // getTriDataForFace method exists if using cache system.
+                detailedNearby = objInfo.collisionTriangleData.getTriDataForFace ? 
+                    nearby.map(pp => objInfo.collisionTriangleData.getTriDataForFace(pp.faceIdx)):
+                    nearby;
+
+                detailedNearby.forEach(tt => {
                     var collisionPointInObjectFrame;
                     var contactNormalInObjectFrame;
                     var leastPenetrationThisObjectTriangle = Infinity;
