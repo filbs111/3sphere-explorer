@@ -318,7 +318,7 @@ function bvhRayOverlapTest4d(rayStart, rayEnd, rayAABB, collisionTriangleData){
         if (aabbsOverlap(rayAABB, thisTriBasic.AABB)){
 
             //get tri face, edge, edgeGc data from cache
-            var thisTri = collisionTriangleData.getTriDataForFace(thisTriBasic.faceIdx);
+            var thisTri = collisionTriangleData.cache.getTriDataForFace(thisTriBasic.faceIdx);
             //TODO skip generation of edgeGcs? (unneeded for ray test, used for convex hull collision)
 
 
@@ -476,7 +476,7 @@ function closestPointBvhEfficient4d(posInObjFrame, objInfo, greatestAcceptedDist
         return false;
     }
 
-    var detailedTriCollisionData = possibles.map(pp => collisionTriangleData.getTriDataForFace(pp.faceIdx));
+    var detailedTriCollisionData = possibles.map(pp => collisionTriangleData.cache.getTriDataForFace(pp.faceIdx));
     var closestPointForTris4dResult = closestPointForTris4d(posInObjFrame, detailedTriCollisionData);
     closestPointInfo.closestPointForTris4dResult = closestPointForTris4dResult;
     return closestPointForTris4dResult;

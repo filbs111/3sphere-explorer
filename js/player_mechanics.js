@@ -633,7 +633,7 @@ var playerMechanics = (() => {
                 
                 if (nearby.length<1){return false;} 
                 
-                var detailedTriCollisionData = nearby.map(pp => objInfo.collisionTriangleData.getTriDataForFace(pp.faceIdx));
+                var detailedTriCollisionData = nearby.map(pp => objInfo.collisionTriangleData.cache.getTriDataForFace(pp.faceIdx));
                 var closestPoint = closestPointForTris4d(posInObjFrame, detailedTriCollisionData);
 
                 return closestPoint;    //TODO augment with penetration, normal
@@ -972,8 +972,8 @@ var playerMechanics = (() => {
 
                 //currently using cache system for data for 4d objects, not for projected 3d objects yet.
                 // getTriDataForFace method exists if using cache system.
-                detailedNearby = objInfo.collisionTriangleData.getTriDataForFace ? 
-                    nearby.map(pp => objInfo.collisionTriangleData.getTriDataForFace(pp.faceIdx)):
+                detailedNearby = objInfo.collisionTriangleData.cache ? 
+                    nearby.map(pp => objInfo.collisionTriangleData.cache.getTriDataForFace(pp.faceIdx)):
                     nearby;
 
                 detailedNearby.forEach(tt => {
