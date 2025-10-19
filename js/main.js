@@ -404,28 +404,28 @@ function initBuffers(){
 
 	loadConvexHullDataFromObjFile(chullObj, 0.0005, "./data/miscobjs/conv-hull-test.obj");
 
-	var frigateWorldData = someObjectMatrices.map(xx=> {
+	var frigateWorldData = someObjectMatrices.slice(4,8).map(xx=> {
 		return {mat: xx.mat, transposedMat: xx.transposedMat, world:2}});
 	loadObjThenAddBvhToLevels(loadBuffersFromObj2Or3File, "./data/frigate/frigate.obj2", 
-		frigateBuffers, frigateBvh, 0.004, frigateWorldData, 3);
+		frigateBuffers, frigateBvh, 0.003, frigateWorldData, 3);
 
 	loadBuffersFromObjFile(meshSphereBuffers, "./data/miscobjs/mesh-sphere.obj", loadBufferData);
 	
 	loadObjThenAddBvhToLevels(loadBuffersFromObj5File, "./data/miscobjs/menger-texmap2.obj5",
-		buildingBuffers, buildingBvh, 0.1, [{mat:buildingMatrix, transposedMat: makeTransposedMat(buildingMatrix), world:1}],6);
+		buildingBuffers, buildingBvh, 0.1, [{mat:buildingMatrix, transposedMat: makeTransposedMat(buildingMatrix), world:2}],6);
 	
-	var lucyWorldData = someObjectMatrices.slice(0,3).map(xx=> {
-		return {mat: xx.mat, transposedMat: xx.transposedMat, world:1}});
+	var lucyWorldData = someObjectMatrices.slice(0,1).map(xx=> {
+		return {mat: xx.mat, transposedMat: xx.transposedMat, world:0}});
 	loadObjThenAddBvhToLevels(loadBuffersFromObj5File, "./data/miscobjs/lucy-withvertcolor.obj5",
 		lucyBuffers, lucyBvh, 0.0016, lucyWorldData,6);
 	
 	var mushroomWorldData = someObjectMatrices.slice(4).map(xx=> {
-		return {mat: xx.mat, transposedMat: xx.transposedMat, world:1}});
+		return {mat: xx.mat, transposedMat: xx.transposedMat, world:0}});
 	loadObjThenAddBvhToLevels(loadBuffersFromObj5File, "./data/miscobjs/Pleurotus_eryngii-2-in-a-new-blend-file.obj5",
 		mushroomBuffers, mushroomBvh, 0.025, mushroomWorldData,6);
 
 	loadObjThenAddBvhToLevels(loadBuffersFromObj2Or3File, "./data/miscobjs/fractal-octahedron4.obj3",
-		octoFractalBuffers, octoFractalBvh, 0.2, [{mat:octoFractalMatrix, transposedMat: makeTransposedMat(octoFractalMatrix), world:1}],6);
+		octoFractalBuffers, octoFractalBvh, 0.2, [{mat:octoFractalMatrix, transposedMat: makeTransposedMat(octoFractalMatrix), world:2}],6);
 
 	function loadObjThenAddBvhToLevels(objLoader, objFile, objBuffers, objBvh, scale, worldAndMatArr, vertAttrs){
 		objLoader(objBuffers, objFile, (bufferObj, sourceData) => {
@@ -445,7 +445,7 @@ function initBuffers(){
 
 	//now bvhs ready, create the following which references them.
 
-	addManyObjectsToWorld2(0, someObjectMatrices, teapotBuffers, teapotBvh, teapotScale);
+	addManyObjectsToWorld2(0, someObjectMatrices.slice(1,4), teapotBuffers, teapotBvh, teapotScale);
 	//addManyObjectsToWorld2(2, someObjectMatrices, dodecaFrameBuffers2, dodecaFrameBvh2, 0.2);
 
 	//TODO array for each object type? include direct reference to rendering info (instead of matching bvh later)
