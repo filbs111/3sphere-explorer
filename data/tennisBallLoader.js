@@ -224,10 +224,14 @@ function loadGridData(toLoad, generateCollisionData){
 		toLoad.collisionTriangleData.cache = ((facesAsTriVerts, verts4d) => {
 
 			var cache = new Map();	//TODO LRU cache (limited size). for now, just store everything.
+			var cacheQueries = 0;
+			var cacheMisses = 0;
 
 			function getTriDataForFace(faceIdx){
+				cacheQueries++;
 				var cachedVal = cache.get(faceIdx);
 				if (cachedVal){return cachedVal;}
+				cacheMisses++;
 				var calculatedVal = makeCollisionDataForTriangle4dNoAABB(facesAsTriVerts[faceIdx].map(vv => verts4d[vv]));
 				cache.set(faceIdx, calculatedVal);
 				return calculatedVal;
@@ -235,7 +239,12 @@ function loadGridData(toLoad, generateCollisionData){
 
 			return {
 				getTriDataForFace,
-				getStats(){ return {size: cache.size}}
+				getStats(){ return {
+					size: cache.size,
+					cacheQueries,
+					cacheMisses,
+					missRatio: cacheMisses/cacheQueries
+				}}
 			}
 		})(facesAsTriVerts, verts4d);	//don't really need to pass this in since accessible here, but will want if move function outside
 
