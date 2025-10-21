@@ -24,6 +24,8 @@
 	uniform float uReflectorCos2;
 	uniform float uReflectorCos3;
 
+	uniform float uMaxAlbedo;
+
 	in vec4 adjustedPos;
 	in vec4 transformedNormal;	
 	in vec4 transformedCoord;	
@@ -97,8 +99,6 @@ out vec4 fragColor;
 		vec4 vChanWeightsG = vec4(modifiedLightDirectionG, averageLight.g-dot(modifiedLightDirectionG,vec3(0.5)));
 		vec4 vChanWeightsB = vec4(modifiedLightDirectionB, averageLight.b-dot(modifiedLightDirectionB,vec3(0.5)));
 		
-
-		float uMaxAlbedo = 0.4;	//todo use uColor? (baked maps assume some albedo though)
 		vChanWeightsR*=uMaxAlbedo;
 		vChanWeightsG*=uMaxAlbedo;
 		vChanWeightsB*=uMaxAlbedo;	//todo just apply after litColor

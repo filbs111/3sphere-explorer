@@ -400,9 +400,9 @@ function initBuffers(){
 		gunBuffers, gunBvh, 0.1, gunWorldData, 3);
 
 	loadBuffersFromObj2Or3File(su57Buffers, "./data/miscobjs/t50/su57yz-4a.obj2", loadBufferData);
-	loadBuffersFromObj2Or3File(chullBuffers, "./data/miscobjs/conv-hull-test.obj3", loadBufferData);
+	loadBuffersFromObj2Or3File(chullBuffers, "./data/miscobjs/wedge-ship2a-texmapped_2.obj3", loadBufferData);
 
-	loadConvexHullDataFromObjFile(chullObj, 0.0005, "./data/miscobjs/conv-hull-test.obj");
+	loadConvexHullDataFromObjFile(chullObj, 0.0005, "./data/miscobjs/wedge-ship2a-simple_2.obj");
 
 	var frigateWorldData = someObjectMatrices.slice(4,8).map(xx=> {
 		return {mat: xx.mat, transposedMat: xx.transposedMat, world:2}});
@@ -2935,21 +2935,21 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	
 	function drawSpaceship(matrix){
 		if (sshipBuffers.isLoaded){
-			drawPlayerGradlightObject(matrix, sshipBuffers, sshipTexture, sshipTexture2, sshipModelScale, 1,true);
+			drawPlayerGradlightObject(matrix, sshipBuffers, sshipTexture, sshipTexture2, sshipModelScale, 1,true, true);
 			//TODO use object that doesn't require scaling
 		}
 	}
 
 	function drawPlane(matrix){
-		drawPlayerGradlightObject(matrix, su57Buffers, su57texture, su57texture2, 0.002, -1,false);
+		drawPlayerGradlightObject(matrix, su57Buffers, su57texture, su57texture2, 0.002, -1,false, true);
 	}
 
 	function drawConvexHull(matrix){
 		//TODO appropriate shader
-		drawPlayerGradlightObject(matrix, chullBuffers, su57texture, su57texture2, 0.0005, -1,false);
+		drawPlayerGradlightObject(matrix, chullBuffers, wedgeShipTexture, su57texture2, 0.0005, -1);
 	}
 
-	function drawPlayerGradlightObject(matrix, buffers, tex, tex2, modelScale, lightBodge, includeGuns){
+	function drawPlayerGradlightObject(matrix, buffers, tex, tex2, modelScale, lightBodge, includeGuns, rotateBodge){
 
 		var rotatedMatrix = drawSsshipRotatedMat;	//avoid repeatedly looking up global scope variables
 		var inverseSshipMat = drawSsshipInverseSshipMat; //""
@@ -2978,12 +2978,23 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		}				//note muzzleFlashAmounts should be summed over all guns, just doing 2 because symmetric
 		
 		mat4.set(matrix, rotatedMatrix);	//because using rotated model data for sship model
-	//	xyzrotate4mat(rotatedMatrix, [-Math.PI/2,0,0]);
+
+		gl.uniform1f(activeShaderProgram.uniforms.uMaxAlbedo, rotateBodge ? 0.4: 0.7);	//wedge spaceship albedo 0.7 (light gray), others albedo 0.4 (dark gray)
+
+		if (rotateBodge){	//do this for older objects. export new objects so don't need to.
+			xyzrotate4mat(rotatedMatrix, [-Math.PI/2,0,0]);
+		}
 		
-		//uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.gray);
 		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
 		
+		if (rotateBodge){
+			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, 0.8*modelScale,modelScale,modelScale);
+				// make spaceship narrower(squarer), length , height (bodge) - TODO scale spaceship properly
+		}else{
+			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
+				//for new conv hull obj, width, height, length.
+		}
+
 		//set special uniform for this shader (currently 1st portal only)
 		//TODO make below more efficient (do with fewer matrix mults, less garbage - committing because it works!
 		// also can likely use rotatedMatrix
@@ -3598,7 +3609,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 		
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", new Float32Array([0.2,1,1.5,1]));
 		modelScale = sshipModelScale;
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale*0.8,modelScale,modelScale);
 				
 		//elsewhere using drawSsshipRotatedMat, but to avoid possible side effects, just make another mat.
 		var rotatedMatrix2 = mat4.create();
@@ -4241,6 +4252,8 @@ function initTexture(){
 	
 	su57texture = makeTexture("data/miscobjs/t50/TexCombo4.png");
 	su57texture2 = makeTexture("data/miscobjs/t50/black.png");	//TODO add thruster texture
+
+	wedgeShipTexture = makeTexture("data/miscobjs/wedge-ship-combo-z180reflect_1.png");
 
 	frigateTexture = makeTexture("data/frigate/frigate-tex.webp");
 
