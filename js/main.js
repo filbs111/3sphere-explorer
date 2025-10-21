@@ -3763,6 +3763,10 @@ var enableDisableAttributes = (function generateEnableDisableAttributesFunc(){
 
 
 function drawTennisBall(duocylinderObj, shader, worldDrawingNow, duocylinderSpin, depthMap){
+	if (!duocylinderObj.isLoaded){
+		return;
+	}
+	
 	enableDisableAttributes(shader);
 
 	gl.bindBuffer(gl.ARRAY_BUFFER, duocylinderObj.vertexPositionBuffer);
