@@ -1226,8 +1226,12 @@ function drawRegularScene(frameTime){
 		//direction of flight
 		bind2dTextureIfRequired(hudTexturePlus);		//todo texture atlas for all hud
 		var airSpdVec = playerVelVec.map((val, idx) => val-savedSpinVelPlayerCoordsForHud[idx]);	//speed relative to local air speed due to duocylinder rotation.
-		var reversed = airSpdVec.map(x=>-x);
-		drawTargetDecal(standardDecalScale, colorArrs.hudFlightDir, adjustedDirectionForFisheye(reversed));
+		
+		var airSpdSq = airSpdVec.reduce((accum, current)=>accum+current*current,0);
+		if (airSpdSq > 0.001){	//only draw above some threshold speed, to avoid rapid movement across screen, jiggling when landed (poor collision system)
+			var reversed = airSpdVec.map(x=>-x);
+			drawTargetDecal(standardDecalScale, colorArrs.hudFlightDir, adjustedDirectionForFisheye(reversed));
+		}
 
 		bind2dTextureIfRequired(hudTexture);	
 		
