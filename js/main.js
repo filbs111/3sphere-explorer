@@ -1224,9 +1224,12 @@ function drawRegularScene(frameTime){
 		var standardDecalScale = [0.002,0.002,0];
 		//direction of flight
 		bind2dTextureIfRequired(hudTexturePlus);		//todo texture atlas for all hud
-		var reversed = playerVelVec.map(x=>-x);
-		drawTargetDecal(standardDecalScale, colorArrs.hudFlightDir, adjustedDirectionForFisheye(reversed));
 		
+		//var reversed = playerVelVec.map(x=>-x);
+		var reversed = savedAirSpdVecForHud.map(x=>-x);	//speed relative to local air speed due to duocylinder rotation.
+
+		drawTargetDecal(standardDecalScale, colorArrs.hudFlightDir, adjustedDirectionForFisheye(reversed));
+
 		bind2dTextureIfRequired(hudTexture);	
 		
 		//drawTargetDecal(0.004, [1.0, 1.0, 0.0, 0.5], [0,0,0.01]);	//camera near plane. todo render with transparency
@@ -1256,6 +1259,7 @@ function drawRegularScene(frameTime){
 			bind2dTextureIfRequired(hudTextureX);
 
 			var reversed = fireDirectionVec.map(x=>-x);	//needs to do this for fisheye correction to work consistent with other hud icons
+				//TODO subtract air speed from fire direction for indicator (rough approximation of direction that should work for shooting at nearby things)?
 			drawTargetDecal(standardDecalScale, colorArrs.hudYellow, adjustedDirectionForFisheye(reversed), 0.1);	//todo check whether this colour already set
 			drawTargetDecal(standardDecalScale, colorArrs.hudYellow, adjustedDirectionForFisheye(reversed), -0.1);
 		}

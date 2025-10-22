@@ -1,6 +1,7 @@
 var mostRecentInfo={};
 var chullCollisionScreenInfo = "";
 var chullCollisionScreenInfo2 = "";
+var savedAirSpdVecForHud = [0,0,0];
 
 var playerMechanics = (() => {
 
@@ -159,6 +160,9 @@ var playerMechanics = (() => {
         //square drag //want something like spd = spd - const*spd*spd = spd (1 - const*|spd|)
 
         var airSpdVec = playerVelVec.map((val, idx) => val-spinVelPlayerCoords[idx]);
+
+        savedAirSpdVecForHud = airSpdVec.map(x=>x); //bodge global so can use when drawing HUD
+
         //spd = Math.sqrt(airSpdVec.map(val => val*val).reduce((val, sum) => val+sum));
         var spd = Math.hypot.apply(null, airSpdVec);
         
