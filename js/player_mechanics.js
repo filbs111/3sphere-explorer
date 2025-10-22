@@ -1,7 +1,7 @@
 var mostRecentInfo={};
 var chullCollisionScreenInfo = "";
 var chullCollisionScreenInfo2 = "";
-var savedAirSpdVecForHud = [0,0,0];
+var savedSpinVelPlayerCoordsForHud = [0,0,0];
 
 var playerMechanics = (() => {
 
@@ -161,7 +161,7 @@ var playerMechanics = (() => {
 
         var airSpdVec = playerVelVec.map((val, idx) => val-spinVelPlayerCoords[idx]);
 
-        savedAirSpdVecForHud = airSpdVec.map(x=>x); //bodge global so can use when drawing HUD
+        savedSpinVelPlayerCoordsForHud = spinVelPlayerCoords; //bodge global so can use when drawing HUD
 
         //spd = Math.sqrt(airSpdVec.map(val => val*val).reduce((val, sum) => val+sum));
         var spd = Math.hypot.apply(null, airSpdVec);
