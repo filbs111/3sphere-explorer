@@ -28,6 +28,8 @@ var offsetCam = (function(){
     var desiredCamMoveVec=[0,0,0];  //?
     var smoothedDesiredCamMoveVec=[0,0,0]
 
+    var smoothedHackPositionOffset=[0,0,0];
+
     var smoothedCurrentVec = [0,0,0];
     var lastType;
     var lastReverse=true;
@@ -85,6 +87,16 @@ var offsetCam = (function(){
 
             var toReturn=smoothedCurrentVec;
             toReturn[0] -= guiParams.display.cameraMoveSide;    //bodge on side shift to aid debugging. [1]= up,down
+
+
+            //bodge - shift by smoothed thrust.
+            // TODO include drag for overall acceleration
+            // TODO proper spring/damper
+            var unsmoothedOffset = playerMechanics.currentThrustInput; 
+            smoothedHackPositionOffset = smoothedHackPositionOffset.map((xx,ii)=>xx*mult1 + mult2*unsmoothedOffset[ii]);
+
+            toReturn = toReturn.map((xx,ii) => xx - 0.1*smoothedHackPositionOffset[ii]);
+
             return toReturn;
         }
 	}
