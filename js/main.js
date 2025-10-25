@@ -1233,6 +1233,17 @@ function drawRegularScene(frameTime){
 			drawTargetDecal(standardDecalScale, colorArrs.hudFlightDir, adjustedDirectionForFisheye(reversed));
 		}
 
+		//show a mark intermediate between flight dir and forward pointing dir. TODO tilt camera in this direction.
+		//want to avoid snapping from side to side when switch from backwards-left to backwards0right travel etc.
+		//simpleish solution something like stereographic direction. put a point on circle in flight direction, centre circle 1 unit ahead, make radius 
+		// of circle tend to 1 for high speed.
+		var tiltCameraCircleRad = airSpdSq / (0.1+airSpdSq);	//something that goes 1 1 as airSpdSq=>inf. other number is some speed approx below which circle small
+		var airSpd = Math.sqrt(airSpdSq);
+		var tiltCameraDirection = playerVelVec.map(xx=>tiltCameraCircleRad*xx/airSpd);
+		tiltCameraDirection[2]+=1;	//z coord?
+
+		drawTargetDecal(standardDecalScale, colorArrs.magenta, adjustedDirectionForFisheye(tiltCameraDirection.map(x=>-x)));
+
 		bind2dTextureIfRequired(hudTexture);	
 		
 		//drawTargetDecal(0.004, [1.0, 1.0, 0.0, 0.5], [0,0,0.01]);	//camera near plane. todo render with transparency
