@@ -1,6 +1,7 @@
 var shouldDumpDebug = false;
 var shouldDumpDebug2 = false;
 var flickerFlag=true;
+var cameraTilt=[0,0,0];
 
 var quadplane={	//temp...
 	fx:5,
@@ -653,6 +654,10 @@ function drawRegularScene(frameTime){
 		var cameraToMoveVec = offsetCam.getSmoothedWithCamCollision(offsetCameraContainer);
 		moveMatHandlingPortal(offsetCameraContainer, cameraToMoveVec);
 	}
+	
+	//note this may be small angle approximation/incorrect because expect magenta marker to be in middle of screen after tilt, and it isn't.
+	//TODO don't just rotate camera where it is - rotate spring boom camera about starting point (otherwise swinging camera from side to side looks wierd)
+	xyzrotate4mat(offsetCameraContainer.matrix, cameraTilt);
 
 
 	//TODO put this elsewhere - assumes some stuff is in scope though!
@@ -1226,23 +1231,27 @@ function drawRegularScene(frameTime){
 		//direction of flight
 		bind2dTextureIfRequired(hudTexturePlus);		//todo texture atlas for all hud
 		var airSpdVec = playerVelVec.map((val, idx) => val-savedSpinVelPlayerCoordsForHud[idx]);	//speed relative to local air speed due to duocylinder rotation.
-		
 		var airSpdSq = airSpdVec.reduce((accum, current)=>accum+current*current,0);
-		if (airSpdSq > 0.001){	//only draw above some threshold speed, to avoid rapid movement across screen, jiggling when landed (poor collision system)
-			var reversed = airSpdVec.map(x=>-x);
-			drawTargetDecal(standardDecalScale, colorArrs.hudFlightDir, adjustedDirectionForFisheye(reversed));
-		}
+		
 
 		//show a mark intermediate between flight dir and forward pointing dir. TODO tilt camera in this direction.
 		//want to avoid snapping from side to side when switch from backwards-left to backwards0right travel etc.
 		//simpleish solution something like stereographic direction. put a point on circle in flight direction, centre circle 1 unit ahead, make radius 
 		// of circle tend to 1 for high speed.
+		//TODO remove this code if don't to show mark - it is also used elsewhere =====================================
 		var tiltCameraCircleRad = airSpdSq / (0.1+airSpdSq);	//something that goes 1 1 as airSpdSq=>inf. other number is some speed approx below which circle small
 		var airSpd = Math.sqrt(airSpdSq);
 		var tiltCameraDirection = playerVelVec.map(xx=>tiltCameraCircleRad*xx/airSpd);
-		tiltCameraDirection[2]+=1;	//z coord?
+		tiltCameraDirection[2]+=1;	//z coord
+		drawTargetDecal(standardDecalScale, colorArrs.magenta, adjustedDirectionForFisheye(tiltCameraDirection.map(x=>-x), cameraTilt));
+		//=============================================================================================================
 
-		drawTargetDecal(standardDecalScale, colorArrs.magenta, adjustedDirectionForFisheye(tiltCameraDirection.map(x=>-x)));
+
+		if (airSpdSq > 0.001){	//only draw above some threshold speed, to avoid rapid movement across screen, jiggling when landed (poor collision system)
+			var reversed = airSpdVec.map(x=>-x);
+			drawTargetDecal(standardDecalScale, colorArrs.hudFlightDir, adjustedDirectionForFisheye(reversed, cameraTilt));
+		}
+
 
 		bind2dTextureIfRequired(hudTexture);	
 		
@@ -1273,11 +1282,27 @@ function drawRegularScene(frameTime){
 			bind2dTextureIfRequired(hudTextureX);
 			var fireDirectionVecAdjusted = fireDirectionVec.map((val, idx) => val-savedSpinVelPlayerCoordsForHud[idx]);
 			var reversed = fireDirectionVecAdjusted.map(x=>-x);	//needs to do this for fisheye correction to work consistent with other hud icons
-			drawTargetDecal(standardDecalScale, colorArrs.hudYellow, adjustedDirectionForFisheye(reversed), 0.1);	//todo check whether this colour already set
-			drawTargetDecal(standardDecalScale, colorArrs.hudYellow, adjustedDirectionForFisheye(reversed), -0.1);
+			drawTargetDecal(standardDecalScale, colorArrs.hudYellow, adjustedDirectionForFisheye(reversed, cameraTilt), 0.1);	//todo check whether this colour already set
+			drawTargetDecal(standardDecalScale, colorArrs.hudYellow, adjustedDirectionForFisheye(reversed, cameraTilt), -0.1);
 		}
 		
-		function adjustedDirectionForFisheye(inPos){
+		function adjustedDirectionForFisheye(inPos, cameraTilt){
+
+			cameraTilt = cameraTilt || [0,0,0];
+
+			//apply cameraTilt. rotate about cameraTilt axis
+			//NOTE hideous kludge! - much more efficient formulation available to just rotate a vector by another, but just use what have.
+			var dummy4mat = mat4.identity();
+			xyzrotate4mat(dummy4mat, cameraTilt);
+			//rotate input vec using this matrix
+			var newInPos = [0,0,0];
+			for (var ii=0;ii<3;ii++){
+				for (var jj=0;jj<3;jj++){
+					newInPos[ii]+=dummy4mat[4*ii+jj]*inPos[jj];
+				}
+			} 
+			inPos = newInPos;
+			//========================================================================
 
 			if (!guiParams.display.fisheyeEnabled){
 				return inPos;

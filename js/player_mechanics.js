@@ -166,6 +166,24 @@ var playerMechanics = (() => {
         //spd = Math.sqrt(airSpdVec.map(val => val*val).reduce((val, sum) => val+sum));
         var spd = Math.hypot.apply(null, airSpdVec);
         
+
+        //for camera view. 
+        //show a mark intermediate between flight dir and forward pointing dir. TODO tilt camera in this direction.
+		//want to avoid snapping from side to side when switch from backwards-left to backwards0right travel etc.
+		//simpleish solution something like stereographic direction. put a point on circle in flight direction, centre circle 1 unit ahead, make radius 
+		// of circle tend to 1 for high speed.
+        var airSpdSq = spd*spd;
+		var tiltCameraCircleRad = airSpdSq / (0.1+airSpdSq);	//something that goes 1 1 as airSpdSq=>inf. other number is some speed approx below which circle small
+		var tiltCameraDirection = playerVelVec.map(xx=>tiltCameraCircleRad*xx/spd);
+		tiltCameraDirection[2]+=1;	//z coord?		
+
+		//TODO check this - is it correct for larger angles? - perhaps doesn't matter - direction wanted is only approximate.
+		cameraTilt = [ Math.atan(-tiltCameraDirection[1]), Math.atan(tiltCameraDirection[0]), 0]; //pitch, yaw, roll
+		//cameraTilt = [ Math.atan2(-tiltCameraDirection[1],tiltCameraDirection[2]), Math.atan2(tiltCameraDirection[0],tiltCameraDirection[2]), 0]; //pitch, yaw, roll
+				//expected atan2 to work better, but prefer just atan (afaik atan(x) = atan2(x,1))
+
+
+
         //print speed
         if (guiParams.debug.showSpeedOverlay){
             var infoToShow ="";
