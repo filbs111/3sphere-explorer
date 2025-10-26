@@ -89,6 +89,13 @@ var offsetCam = (function(){
             toReturn[0] -= guiParams.display.cameraMoveSide;    //bodge on side shift to aid debugging. [1]= up,down
 
 
+            //tilt camera movement vector so when camera tilted at its final rotation, result is that spaceship doesn't change screen position - 
+            // if don't do this, can look like a windscreen wiper!
+            //note this is a bodge, and might avoid rotating twice - here rotate the movement vector AND rotate after movement.
+            // could alternatively rotate camera before movement and just move along unrotated vector in camera frame.
+            toReturn = rotateVecByAxisAngleVec(toReturn, cameraTilt.map(x=>-x));
+
+
             //bodge - shift by smoothed thrust.
             // TODO include drag for overall acceleration
             // TODO proper spring/damper

@@ -1291,19 +1291,8 @@ function drawRegularScene(frameTime){
 			cameraTilt = cameraTilt || [0,0,0];
 
 			//apply cameraTilt. rotate about cameraTilt axis
-			//NOTE hideous kludge! - much more efficient formulation available to just rotate a vector by another, but just use what have.
-			var dummy4mat = mat4.identity();
-			xyzrotate4mat(dummy4mat, cameraTilt);
-			//rotate input vec using this matrix
-			var newInPos = [0,0,0];
-			for (var ii=0;ii<3;ii++){
-				for (var jj=0;jj<3;jj++){
-					newInPos[ii]+=dummy4mat[4*ii+jj]*inPos[jj];
-				}
-			} 
-			inPos = newInPos;
-			//========================================================================
-
+			inPos = rotateVecByAxisAngleVec(inPos, cameraTilt);
+			
 			if (!guiParams.display.fisheyeEnabled){
 				return inPos;
 			}
