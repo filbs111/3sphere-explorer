@@ -742,10 +742,29 @@ var playerMechanics = (() => {
             //do triangle collision for 4d terrain objects.
             //TODO deduplicate with regular projected 3d triangle objects.
             //TODO what should initialcandidates be?
-            var dcInfo = duocylinderObjects[guiSettingsForWorld[playerContainer.world].duocylinderModel];
+            var worldSettings = guiSettingsForWorld[playerContainer.world];
+            var dcInfo = duocylinderObjects[worldSettings.duocylinderModel];
             if (dcInfo?.data){
                 var terrainCollisionResultMat = mat4.identity();
-                processTrianglePossibles(terrainCollisionResultMat, dcInfo.objInfoArr, 0.2,
+
+                var startProcessTrianglePossiblesTime=performance.now();
+                closestPointInfo.terrainProcessingTimes = [];
+
+                //rotate objects. NOTE maybe better to just adjust moving object array into frame of objects.
+                //TODO deduplicate objInfoArr terrain collision with other large object collision
+                var hackObjInfoArr = dcInfo.objInfoArr.map(objInfo => {
+                    var mat = mat4.create(objInfo.mat);
+                    rotate4mat(mat, 0, 1, worldSettings.spin);
+                    var transposedMat = mat4.create(mat);
+                    mat4.transpose(transposedMat);
+                    return {
+                        mat,
+                        transposedMat,
+                        collisionTriangleData: objInfo.collisionTriangleData,
+                    }
+                });
+
+                processTrianglePossibles(terrainCollisionResultMat, hackObjInfoArr, 0.2,
                         //lowestAcceptedMultiplier - rules out distant aabbs quicker to improve perf
                         // surprised this can't be smaller!
                     (posInObjFrame, objScaleUnused, rad, objInfo, greatestAcceptedDistance) => {
