@@ -174,7 +174,7 @@ var playerMechanics = (() => {
 		// of circle tend to 1 for high speed.
         var airSpdSq = spd*spd;
 		var tiltCameraCircleRad = airSpdSq / (0.1+airSpdSq);	//something that goes 1 1 as airSpdSq=>inf. other number is some speed approx below which circle small
-		var tiltCameraDirection = playerVelVec.map(xx=>tiltCameraCircleRad*xx/spd);
+		var tiltCameraDirection = airSpdVec.map(xx=>tiltCameraCircleRad*xx/spd);
 		tiltCameraDirection[2]+=1;	//z coord?		
 
 		//TODO check this - is it correct for larger angles? - perhaps doesn't matter - direction wanted is only approximate.
@@ -187,7 +187,7 @@ var playerMechanics = (() => {
         //print speed
         if (guiParams.debug.showSpeedOverlay){
             var infoToShow ="";
-            var speed = Math.hypot.apply(null, playerVelVec);
+            var speed = Math.hypot.apply(null, airSpdVec);
             infoToShow += "spd:" + speed.toFixed(2);
 
             infoToShow+=", airspd: " + spd.toFixed(2);

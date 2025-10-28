@@ -1241,7 +1241,7 @@ function drawRegularScene(frameTime){
 		//TODO remove this code if don't to show mark - it is also used elsewhere =====================================
 		var tiltCameraCircleRad = airSpdSq / (0.1+airSpdSq);	//something that goes 1 1 as airSpdSq=>inf. other number is some speed approx below which circle small
 		var airSpd = Math.sqrt(airSpdSq);
-		var tiltCameraDirection = playerVelVec.map(xx=>tiltCameraCircleRad*xx/airSpd);
+		var tiltCameraDirection = airSpdVec.map(xx=>tiltCameraCircleRad*xx/airSpd);
 		tiltCameraDirection[2]+=1;	//z coord
 		drawTargetDecal(standardDecalScale, colorArrs.magenta, adjustedDirectionForFisheye(tiltCameraDirection.map(x=>-x), cameraTilt));
 		//=============================================================================================================
