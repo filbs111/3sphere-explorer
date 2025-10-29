@@ -738,12 +738,38 @@ var playerMechanics = (() => {
             }
 
             var worldBvhObj = bvhObjsForWorld[playerContainer.world];
+            var worldSettings = guiSettingsForWorld[playerContainer.world];
 
-            var initialCandidates = guiParams.debug.worldBvhCollisionTestPlayer ? getSlowPossibles(worldBvhObj.objList):worldBvhObj.objList;
-            
+            //var initialCandidates = guiParams.debug.worldBvhCollisionTestPlayer ? getSlowPossibles(worldBvhObj.objList):worldBvhObj.objList;
+            var initialCandidates = worldBvhObj.objList;    //TODO reinstate above after accounting for world spin
+
+
+            var rotatedRefMat = mat4.identity();
+            rotate4mat(rotatedRefMat, 0, 1, worldSettings.spin);
+
+            //rotate objects. NOTE maybe better to just adjust moving object array into frame of objects.
+            //TODO deduplicate objInfoArr terrain collision with other large object collision
+            var hackObjInfoArr = initialCandidates.map(objInfo => {
+
+                var copiedObject = Object.assign({},objInfo);
+                    
+                var mat = mat4.create(rotatedRefMat);
+                mat4.multiply(mat, objInfo.mat);
+
+                var transposedMat = mat4.create(mat);
+                mat4.transpose(transposedMat);
+                
+                Object.assign(copiedObject,{
+                    mat,
+                    transposedMat});
+
+                return copiedObject;
+            });
+
+
             var resultMat = mat4.create();
             
-            foundClosestPointTriangleObj = processTrianglePossibles(resultMat, initialCandidates, 0.2, (posInObjFrame, objScale, rad, objInfo, greatestAcceptedDistance) => {
+            foundClosestPointTriangleObj = processTrianglePossibles(resultMat, hackObjInfoArr, 0.2, (posInObjFrame, objScale, rad, objInfo, greatestAcceptedDistance) => {
             
                 if (posInObjFrame[3]<=0.3){
                     return;
@@ -756,7 +782,6 @@ var playerMechanics = (() => {
             //do triangle collision for 4d terrain objects.
             //TODO deduplicate with regular projected 3d triangle objects.
             //TODO what should initialcandidates be?
-            var worldSettings = guiSettingsForWorld[playerContainer.world];
             var dcInfo = duocylinderObjects[worldSettings.duocylinderModel];
             if (dcInfo?.data){
                 var terrainCollisionResultMat = mat4.identity();
