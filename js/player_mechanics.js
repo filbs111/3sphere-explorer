@@ -411,7 +411,7 @@ var playerMechanics = (() => {
             //TODO update variables to do with duocylinder between substeps? 
             terrainCollisionFunc(ii==0 ? terrainAudio : false);
 
-            processTriangleObjectCollisionFast();   //collision detection
+            processTriangleObjectCollisionFast(timestepFraction);   //collision detection
             processTriangleTerrainCollisionFast(timestepFraction);  //for terrain objects using 4d tris
 
             rotatePlayer(scalarvectorprod(subTimeStep * rotateSpeed,playerAngVelVec));
@@ -438,7 +438,7 @@ var playerMechanics = (() => {
         myAudioPlayer.setJetSound({delay:0, gain:thrustVolume, pan:0});
 
         
-        function processTriangleObjectCollisionFast(){
+        function processTriangleObjectCollisionFast(timestepFraction){
 
             if (guiParams.debug.drawPlayerPosMarkers){
                 debugDraw.addTestPoint(playerContainer.matrix, colorArrs.white);
@@ -446,14 +446,28 @@ var playerMechanics = (() => {
 
             var worldBvhObj = bvhObjsForWorld[playerContainer.world];
 
-            var initialCandidates = guiParams.debug.worldBvhCollisionTestPlayer ? getFastPossibles():worldBvhObj.objList;
+            var wSettings = guiSettingsForWorld[playerContainer.world];
+            var dcSpin = wSettings.spin * timestepFraction + (1-timestepFraction)*wSettings.spinOld;
+
+            //var initialCandidates = guiParams.debug.worldBvhCollisionTestPlayer ? getFastPossibles():worldBvhObj.objList;
+            var initialCandidates = worldBvhObj.objList;   //switch off initially for rotating objects (TODO reinstate by calculating player pos in rotated frame)
+
+
+            var rotatedRefMat = mat4.identity();
+            rotate4mat(rotatedRefMat, 0, 1, dcSpin);
 
 
             if (guiParams["player model"] == "convexHullTest"){
 
                 var hackObjInfoArr = initialCandidates.map(objInfo => {
-                    var mat = mat4.create(objInfo.mat);
-                    //rotate4mat(mat, 0, 1, dcSpin);    //TODO SPIN?
+                    //var mat = mat4.create(objInfo.mat);
+                    //rotate4mat(mat, 0, 1, dcSpin);  //this works for terrain objects, but not here! perhaps terrain object orientation just happens to 
+                        //work with this instruction...
+                    
+                    var mat = mat4.create(rotatedRefMat);
+                    mat4.multiply(mat, objInfo.mat);
+                    
+
                     var transposedMat = mat4.create(mat);
                     mat4.transpose(transposedMat);
                     return {

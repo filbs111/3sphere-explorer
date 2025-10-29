@@ -1665,10 +1665,11 @@ function minMaxDistanceFromPointToBoundingSphere(pointPos, spherePos, sphereRad)
 function rayBvhCollision(cameraRayStartPos, cameraRayEndPos, cameraRayStartPosSpun, cameraRayEndPosSpun, world){
 
     var collided = false;
-    var objectIsSpinning = false;   //currently all terrain objects spin, other objects don't
+    var objectIsSpinning = true;   //currently all objects spin with world
     var closestFractionAlong = 1;
 
-    processObjs(cameraRayStartPos, cameraRayEndPos, bvhObjsForWorld[world]);
+    //processObjs(cameraRayStartPos, cameraRayEndPos, bvhObjsForWorld[world]);    //non-spinning objects
+    processObjs(cameraRayStartPosSpun, cameraRayEndPosSpun, bvhObjsForWorld[world]);    //spinning objects
     processTerrain(cameraRayStartPosSpun, cameraRayEndPosSpun);
 
     function processObjs(rayStart, rayEnd, worldBvh){

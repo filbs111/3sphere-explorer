@@ -2473,22 +2473,17 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.darkGray);
 
-	var cubeFrames = bvhObjsForWorld[worldA].objList.filter(objInfo=> objInfo.bvh == cubeFrameBvh)	//TODO prefilter
-	if (cubeFrames.length>0){
-		drawArrayOfModels2(cubeFrames, cubeFrameBuffers, activeShaderProgram);
-	}
-	var dodecaFrames = bvhObjsForWorld[worldA].objList.filter(objInfo=> objInfo.bvh == dodecaFrameBvh2)	//TODO prefilter
-	if (dodecaFrames.length>0){
-		drawArrayOfModels2(dodecaFrames, dodecaFrameBuffers2, activeShaderProgram);
-	}
-	var tetraFrames = bvhObjsForWorld[worldA].objList.filter(objInfo=> objInfo.bvh == tetraFrameBvh)	//TODO prefilter
-	if (tetraFrames.length>0){
-		drawArrayOfModels2(tetraFrames, tetraFrameBuffers, activeShaderProgram);
-	}
-	var octoFrames = bvhObjsForWorld[worldA].objList.filter(objInfo=> objInfo.bvh == octoFrameBvh)	//TODO prefilter
-	if (octoFrames.length>0){
-		drawArrayOfModels2(octoFrames, octoFrameSubdivBuffers, activeShaderProgram);
-	}
+	[
+		{bvh:cubeFrameBvh, buffers:cubeFrameBuffers},
+		{bvh:dodecaFrameBvh2, buffers:dodecaFrameBuffers2},
+		{bvh:tetraFrameBvh, buffers:tetraFrameBuffers},
+		{bvh:octoFrameBvh, buffers:octoFrameSubdivBuffers}
+	].forEach(objTypeInfo => {
+		var objs = bvhObjsForWorld[worldA].objList.filter(objInfo=> objInfo.bvh == objTypeInfo.bvh)	//TODO prefilter
+		if (objs>0){
+			drawArrayOfModels2(objs, objTypeInfo.buffers, activeShaderProgram);
+		}
+	});
 	
 	//todo this should take buffers, shaders and call prepBuffersForDrawing, drawObjectFromPreppedBuffers
 	function drawArrayOfModels(cellMats, cullRad, buffers, shaderProg){
@@ -2535,9 +2530,13 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 				var thisObj = objDataArr[dd];
 				var myscale = thisObj.scale;
 				gl.uniform3f(activeShaderProgram.uniforms.uModelScale, myscale,myscale,myscale);
+
 				mat4.set(invertedWorldCamera, mvMatrix);
+				rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
 				mat4.multiply(mvMatrix,thisObj.mat);
-				mat4.set(thisObj.mat, mMatrix);	//not needed in all shaders
+
+				mat4.identity(mMatrix);rotate4mat(mMatrix, 0, 1, duocylinderSpin);
+				mat4.multiply(mMatrix, thisObj.mat);	//not needed in all shaders
 				drawFunc2();
 			}
 		}
