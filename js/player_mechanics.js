@@ -449,13 +449,18 @@ var playerMechanics = (() => {
             var wSettings = guiSettingsForWorld[playerContainer.world];
             var dcSpin = wSettings.spin * timestepFraction + (1-timestepFraction)*wSettings.spinOld;
 
-            //var initialCandidates = guiParams.debug.worldBvhCollisionTestPlayer ? getFastPossibles():worldBvhObj.objList;
-            var initialCandidates = worldBvhObj.objList;   //switch off initially for rotating objects (TODO reinstate by calculating player pos in rotated frame)
-
-
             var rotatedRefMat = mat4.identity();
             rotate4mat(rotatedRefMat, 0, 1, dcSpin);
 
+            var playerPosInRotatedFrame = new Array(4).fill(0);
+            for (var ii=0;ii<4;ii++){
+                for(var jj=0;jj<4;jj++){
+                    playerPosInRotatedFrame[ii]+=playerPos[jj]*rotatedRefMat[4*ii+jj];
+                }
+            }
+
+            var initialCandidates = guiParams.debug.worldBvhCollisionTestPlayer ? getFastPossibles(playerPosInRotatedFrame):worldBvhObj.objList;
+            
 
             if (guiParams["player model"] == "convexHullTest"){
 
@@ -557,18 +562,19 @@ var playerMechanics = (() => {
                 }
             }
 
-            function getFastPossibles(){
+            function getFastPossibles(playerPosInRotatedFrame){
+
                 var paddedRad = settings.playerBallRadPadded;
                     //add padding so detect distance to object before collide (rate of penetration used for damping)
 
-                var playerAABB = aabb4DForSphere(playerPos, paddedRad);  
+                var playerAABB = aabb4DForSphere(playerPosInRotatedFrame, paddedRad);
                 //var possiblities = worldBvhObj.grids4d ?Array.from(gridSystem4d.getGridItemsForAABB(worldBvhObj.grids4d, playerAABB)): [];
                 var possiblities = worldBvhObj.grids4dPadded ?Array.from(gridSystem4d.getGridItemsForAABB(worldBvhObj.grids4dPadded, playerAABB)): [];
                     //player rad AFAIK less than padding so should work
 
                 //sphere filter (currently typically returns more candidates than slow version)
                 var testSphere = {
-                    position: playerPos,
+                    position: playerPosInRotatedFrame,
                     cosAng:Math.cos(paddedRad),
                     sinAng:Math.sin(paddedRad)
                 };  //TODO precalculate
@@ -740,13 +746,19 @@ var playerMechanics = (() => {
             var worldBvhObj = bvhObjsForWorld[playerContainer.world];
             var worldSettings = guiSettingsForWorld[playerContainer.world];
 
-            //var initialCandidates = guiParams.debug.worldBvhCollisionTestPlayer ? getSlowPossibles(worldBvhObj.objList):worldBvhObj.objList;
-            var initialCandidates = worldBvhObj.objList;    //TODO reinstate above after accounting for world spin
-
-
             var rotatedRefMat = mat4.identity();
             rotate4mat(rotatedRefMat, 0, 1, worldSettings.spin);
 
+            var playerPosInRotatedFrame = new Array(4).fill(0);
+            for (var ii=0;ii<4;ii++){
+                for(var jj=0;jj<4;jj++){
+                    playerPosInRotatedFrame[ii]+=playerPos[jj]*rotatedRefMat[4*ii+jj];
+                }
+            }
+
+            var initialCandidates = guiParams.debug.worldBvhCollisionTestPlayer ? getSlowPossibles(worldBvhObj.objList, playerPosInRotatedFrame):worldBvhObj.objList;
+
+            
             //rotate objects. NOTE maybe better to just adjust moving object array into frame of objects.
             //TODO deduplicate objInfoArr terrain collision with other large object collision
             var hackObjInfoArr = initialCandidates.map(objInfo => {
@@ -826,7 +838,7 @@ var playerMechanics = (() => {
             }
             
 
-            function getSlowPossibles(possibleObjects){
+            function getSlowPossibles(possibleObjects, playerPosInRotatedFrame){
                 //find set of candiate objects by their bounding spheres - 
                 //provided each object has something solid within its bounding sphere
                 //any each object has a maximum and minimum possible distance from a given point
@@ -835,7 +847,7 @@ var playerMechanics = (() => {
                 //which in practice is likely to be the bulk of objects. 
                 var objsWithMinMaxDistances = possibleObjects.map(objInfo => {return {
                     objInfo,
-                    minMaxDist: minMaxDistanceFromPointToBoundingSphere(playerPos, objInfo.mat.slice(12), objInfo.scale*objInfo.bvh.boundingSphereRadius)
+                    minMaxDist: minMaxDistanceFromPointToBoundingSphere(playerPosInRotatedFrame, objInfo.mat.slice(12), objInfo.scale*objInfo.bvh.boundingSphereRadius)
                 }});
                 var maxPossibleDistance = objsWithMinMaxDistances.map(xx=>xx.minMaxDist[1]).reduce((a,b)=>Math.min(a,b), 0.1);
                 return objsWithMinMaxDistances
