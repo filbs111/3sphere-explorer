@@ -4812,21 +4812,7 @@ var iterateMechanics = (function iterateMechanics(){
 
 		//slightly less ridiculous place for this - not declaring functions inside for loop!
 		function checkBulletCollision(bullet, bulletMoveAmount){
-			function boxCollideCheck(cellMatT,thisBoxSize,boxCritValue, bulletPos4V, moveWithDuocylinder){
-					mat4.multiplyVec4(cellMatT, bulletPos4V, tmpVec4);
-					if (tmpVec4[3]<boxCritValue){return;}	//early sphere check
-					if (Math.max(Math.abs(tmpVec4[0]),
-								Math.abs(tmpVec4[1]),
-								Math.abs(tmpVec4[2]))<thisBoxSize*tmpVec4[3]){
-						detonateBullet(bullet, moveWithDuocylinder, [1,0.8,0.6,1]);
-				}
-			}
-			function checkCollisionForBoxRing(ringCellMatsT){
-				for (var ii=0;ii<ringCellMatsT.length;ii++){
-					boxCollideCheck(ringCellMatsT[ii],ringBoxSize,critValueRingBox,bulletPos4V);
-				}
-			}
-
+			
 			var worldInfo = guiSettingsForWorld[bullet.world];
 			var dcSpin = worldInfo.spin;
 			var dcSpinOld = worldInfo.spinOld;
@@ -4892,27 +4878,6 @@ var iterateMechanics = (function iterateMechanics(){
 				}
 			}
 			
-			//slow collision detection between bullet and array of boxes.
-			//todo 1 try simple optimisation by matrix/scalar multiplication instead of matrix-matrix
-			//todo 2 another simple optimisation - sphere check by xyzw distance. previous check only if passes
-			//todo 3 heirarchical bounding boxes or gridding system!
-			
-
-			//box rings
-			var guiBoxes= guiParams.drawShapes.boxes;
-			if (guiBoxes['y=z=0']){checkCollisionForBoxRing(ringCellsT[0]);}
-			if (guiBoxes['x=z=0']){checkCollisionForBoxRing(ringCellsT[1]);}
-			if (guiBoxes['x=y=0']){checkCollisionForBoxRing(ringCellsT[2]);}
-			if (guiBoxes['z=w=0']){checkCollisionForBoxRing(ringCellsT[3]);}
-			if (guiBoxes['y=w=0']){checkCollisionForBoxRing(ringCellsT[4]);}
-			if (guiBoxes['x=w=0']){checkCollisionForBoxRing(ringCellsT[5]);}
-			
-			if (numRandomBoxes>0 && guiParams["random boxes"].collision){
-				for (var ii=0;ii<numRandomBoxes;ii++){
-					boxCollideCheck(randomMatsT[ii],boxSize,critValueRandBox,bulletPos4V);
-				}
-			}
-
 			var bvhCollisionResult = rayBvhCollision(bulletPos, newBulletPos, bulletPosDCF4V, bulletPosNewDCF4V, bullet.world);
 			if (bvhCollisionResult.collided){
 				//move bullet to point on surface (note approximate, since closestFractionAlong is in projected 3d space)
