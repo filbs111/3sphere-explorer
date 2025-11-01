@@ -217,9 +217,14 @@ function loadGridData(toLoad, generateCollisionData){
 		//filter bad tris, apparently degenerate tris with repeated verts (TODO remove earlier - ideally from object before loading!)
 		allTris = allTris.filter(tri => !tri.isDegenerate);
 		allTris.sort((a,b) => a.morton - b.morton);
-		//TODO strip out morton once used for sort, since wastes memory.
 
-		toLoad.collisionTriangleData = generateBvh(allTris, temp4vec, 8);
+		//TODO don't put faceIdx here, imply from bvh position. to do this, should also remake facesAsTriVerts after stripping, ordering to pass in
+		// to createTriCollisionDataCache
+		var strippedTriData = allTris.map(tri=>{return {
+			faceIdx:tri.faceIdx, 
+			AABB: tri.AABB}});
+
+		toLoad.collisionTriangleData = generateBvh(strippedTriData, temp4vec, 8);
 
 		toLoad.collisionTriangleData.cache = createTriCollisionDataCache(facesAsTriVerts, verts4d);
 	}
