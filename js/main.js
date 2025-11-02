@@ -3649,7 +3649,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 		gl.uniform1f(transpShadProg.uniforms.uOpacity, flashAmount);
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,gunMatrices[gg]);
-		xyzmove4mat(mvMatrix,[0,0,0.0075]);
+		xyzmove4mat(mvMatrix,[0,0,0.005]);
 
 		for (var xx=0;xx<3;xx++){	//nested spheres
 			gl.uniform3f(transpShadProg.uniforms.uModelScale, mfRad/5,mfRad/5,mfRad);
