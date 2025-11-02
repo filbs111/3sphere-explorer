@@ -2969,6 +2969,13 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		gl.useProgram(activeShaderProgram);
 	}
 	
+	//draw bombs
+	for (var b of bullets){
+		if (b.active && b.isBomb && b.world == worldA){
+			drawBall(b.matrix, 0.02);	//TODO draw array
+		}
+	}
+
 	var drawFunc = {
 		"spaceship" : drawSpaceship,
 		"plane": drawPlane,
@@ -3181,8 +3188,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	}
 	
 	//draw "light" object
-	function drawBall(matrix){
-		drawSimplePlayerObject(matrix, sphereBuffers, 1);
+	function drawBall(matrix, size=1){
+		drawSimplePlayerObject(matrix, sphereBuffers, size);
 	}
 
 	function drawSimplePlayerObject(matrix, objectBuffers, scaleFactor){
@@ -3576,7 +3583,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 	
 	
 	for (var b of bullets){
-		if (b.active && b.world == worldA){
+		if (b.active && !b.isBomb && b.world == worldA){
 			var bulletMatrix=b.matrix;
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix,bulletMatrix);
@@ -5265,7 +5272,9 @@ function fireGun(){
 }
 
 function dropBomb(){
-	launchProjectile(sshipMatrix, [0,0,-0.01], true);
+	var bombMat = mat4.create(sshipMatrix);
+	xyzmove4mat(bombMat,[0,0,-0.0008]);
+	launchProjectile(bombMat, [0,0,-0.01], true);
 }
 
 //now using bullets array to contain both bullets and bombs.
