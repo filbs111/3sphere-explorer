@@ -117,6 +117,7 @@ var octoFractalBvh={};
 var bridgeBuffers={};
 var bridgeBvh={}
 var thrusterBuffers={};
+var thrusterBuffers2={};
 
 var polytopeBvhObjs={};
 var dodecaScale=0.515;	//guess TODO use right value (0.5 is too small)
@@ -440,7 +441,7 @@ function initBuffers(){
 	}, 6);
 
 	loadBuffersFromObj2Or3File(thrusterBuffers, "./data/miscobjs/thrusters-with-normals-and-vcolor.obj3", loadBufferData, 6);
-
+	loadBuffersFromObj2Or3File(thrusterBuffers2, "./data/miscobjs/thrusters-with-normals-and-vcolor2.obj3", loadBufferData, 6);
 
 	//now bvhs ready, create the following which references them.
 
@@ -3684,6 +3685,32 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 
 			setupShaderAtmos(activeShaderProgram, worldA);
 			drawObjectFromBuffers(thrusterBuffers, activeShaderProgram);
+		}
+	}
+
+	//draw thrusters for pyramid spaceship. (TODO different thruster object.)
+	if (guiParams["player model"] == "convexHullTest" && thrusterBuffers2.isLoaded && playerMechanics.currentThrustInput[2]>0){
+		
+		//NOTE this shader is inefficient since does world/portal lighting calculation, but has zero effect.
+		var activeShaderProgram = shaderPrograms.coloredPerPixelDiscardVertexColoredEmit[ guiParams.display.atmosShader ];
+		shaderSetup(activeShaderProgram);
+		
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", new Float32Array([0.2,1,1.5,1]));
+		modelScale =  0.0005;
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
+				
+		//elsewhere using drawSsshipRotatedMat, but to avoid possible side effects, just make another mat.
+		var rotatedMatrix2 = mat4.create();
+
+		for (var drawMat of sshipDrawMatrices){
+			//copy matrix stuff for when drawing main spaceship body
+			mat4.set(invertedWorldCamera, mvMatrix);
+			
+			mat4.multiply(mvMatrix,drawMat);
+			mat4.set(drawMat, mMatrix);
+
+			setupShaderAtmos(activeShaderProgram, worldA);
+			drawObjectFromBuffers(thrusterBuffers2, activeShaderProgram);
 		}
 	}
 	
