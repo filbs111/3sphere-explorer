@@ -2477,7 +2477,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		{bvh:octoFrameBvh, buffers:octoFrameSubdivBuffers}
 	].forEach(objTypeInfo => {
 		var objs = bvhObjsForWorld[worldA].objList.filter(objInfo=> objInfo.bvh == objTypeInfo.bvh)	//TODO prefilter
-		if (objs>0){
+		if (objs.length>0){
 			drawArrayOfModels2(objs, objTypeInfo.buffers, activeShaderProgram);
 		}
 	});
