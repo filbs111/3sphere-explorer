@@ -65,8 +65,9 @@ var playerMechanics = (() => {
         rotatePlayer([ amountToMove[1], amountToMove[0], 0]);
 
         currentThrustInput[0]=keyThing.keystate(65)-keyThing.keystate(68);	//lateral
-        currentThrustInput[1]=keyThing.keystate(32)-keyThing.keystate(220);	//vertical
-        currentThrustInput[2]=keyThing.keystate(87)-keyThing.keystate(83);	//fwd/back
+        currentThrustInput[1]=-keyThing.keystate(87)+keyThing.keystate(83);	//vertical W,S = up, down
+        currentThrustInput[2]=keyThing.keystate(32)-keyThing.keystate(220);	//logtitudinal. space. \ = forward, back
+
         currentThrustInput.forEach((elem,ii) => currentThrustInput[ii]=elem*thrust);
 
         var currentRotateInput=[keyThing.keystate(40)-keyThing.keystate(38), //pitch
