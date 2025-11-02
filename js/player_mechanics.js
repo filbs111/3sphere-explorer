@@ -182,7 +182,10 @@ var playerMechanics = (() => {
 		//cameraTilt = [ Math.atan2(-tiltCameraDirection[1],tiltCameraDirection[2]), Math.atan2(tiltCameraDirection[0],tiltCameraDirection[2]), 0]; //pitch, yaw, roll
 				//expected atan2 to work better, but prefer just atan (afaik atan(x) = atan2(x,1))
 
-
+        //add accumulated camera rotation lag
+        for (var cc=0;cc<3;cc++){
+            cameraTilt[cc]-=accumulatedPlayerCameraLag[cc];
+        }
 
         //print speed
         if (guiParams.debug.showSpeedOverlay){

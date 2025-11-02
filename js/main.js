@@ -5086,6 +5086,12 @@ function rotatePlayer(vec){
 	if (!guiParams.control.onRails){
 		//turning player makes velocity rotate relative to player.
 		playerVelVec = rotateVelVec(playerVelVec,vec);
+
+		//TODO something similar to rotateVelVec like this for camera lag - possibly like code below (not sure is right)
+		//accumulatedPlayerCameraLag = rotateVecByAxisAngleVec(accumulatedPlayerCameraLag, vec);
+		for (var cc=0;cc<3;cc++){
+			accumulatedPlayerCameraLag[cc]+=vec[cc];
+		}
 	};
 	
 	xyzrotate4mat(playerCamera,vec);
