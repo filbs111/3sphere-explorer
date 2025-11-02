@@ -1,6 +1,7 @@
 var shouldDumpDebug = false;
 var shouldDumpDebug2 = false;
 var flickerFlag=true;
+var shouldShowControls=false;
 var cameraTilt=[0,0,0];
 
 var quadplane={	//temp...
@@ -1412,6 +1413,21 @@ function drawRegularScene(frameTime){
 					xpos-=2* cInfo.xadvance/512;
 				});
 			}
+		}
+
+		if (shouldShowControls){
+			drawText("DISPLAY:",                  4.2, -1.5, 1, 0.5);	//left from centre, down from centre, depth, scale
+			drawText("C: TOGGLE CONTROL DISPLAY", 4, -1.35, 1, 0.5);
+			drawText("F: FULL SCREEN", 	          4, -1.2, 1, 0.5);
+			drawText("ESC: EXIT FULL SCREEN", 	  4, -1.05, 1, 0.5);
+			drawText("H: TOGGLE DEBUG MENU",      4, -0.9, 1, 0.5);
+
+			drawText("MOVEMENT CONTROLS:",        4.2, -0.7, 1, 0.5);
+			drawText("MOUSE/ARROWS: PITCH/YAW (CLICK AND DRAG WHEN NOT FULL SCREEN)", 
+				                                  4, -0.55, 1, 0.5);
+			drawText("Q,E: ROLL",                 4, -0.4, 1, 0.5);
+			drawText("SPACE BAR: THRUST",         4, -0.25, 1, 0.5);
+			drawText("W,A,S,D: SIDE THRUST",      4, -0.1, 1, 0.5);
 		}
 
 		gl.disable(gl.BLEND);
@@ -4462,6 +4478,9 @@ function init(){
 				break;
 			case 70:	//F
 				goFullscreen(canvas);
+				break;
+			case 67:	//C
+				shouldShowControls=!shouldShowControls;
 				break;
 			default:
 				willPreventDefault=false;
