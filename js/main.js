@@ -3005,7 +3005,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 	function drawConvexHull(matrix){
 		//TODO appropriate shader
-		drawPlayerGradlightObject(matrix, chullBuffers, wedgeShipTexture, su57texture2, 0.0005, -1);
+		drawPlayerGradlightObject(matrix, chullBuffers, wedgeShipTexture, wedgeShipTexture2, 0.0005, -1);
 	}
 
 	function drawPlayerGradlightObject(matrix, buffers, tex, tex2, modelScale, lightBodge, includeGuns, rotateBodge){
@@ -4344,6 +4344,8 @@ function initTexture(){
 	su57texture2 = makeTexture("data/miscobjs/t50/black.png");	//TODO add thruster texture
 
 	wedgeShipTexture = makeTexture("data/miscobjs/wedge-ship-combo-z180reflect_1.png");
+	wedgeShipTexture2 = makeTexture("data/miscobjs/wedge-ship-color-z180reflect_1_thruster.png");
+
 
 	frigateTexture = makeTexture("data/frigate/frigate-tex.webp");
 
