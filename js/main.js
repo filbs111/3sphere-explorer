@@ -1329,18 +1329,19 @@ function drawRegularScene(frameTime){
 			return outPos;
 		}
 
+		function screenPosForMatrix(mat){
+			var relativeMat = mat4.create(invertedWorldCamera);
+			mat4.multiply(relativeMat, mat);
+			var pos = relativeMat.slice(12,15);	//12,13,14
+			return adjustedDirectionForFisheye(pos);
+		}
 
 		//draw something to show each portal.
 		var portalTexts = [];
 			//note using offsetCameraContainer for this, but use playerContainer to display current world.
 		for (var portal of portalsForWorld[offsetCameraContainer.world]){
-			//get position relative to camera. 
-			var mat = portal.matrix;
-			var relativeMat = mat4.create(invertedWorldCamera);
-			mat4.multiply(relativeMat, mat);
-			var pos = relativeMat.slice(12,15);	//12,13,14
-
-			pos = adjustedDirectionForFisheye(pos);
+			
+			pos = screenPosForMatrix(portal.matrix);
 
 			if (pos[2]<0){	//note unintuitive sign
 				drawTargetDecal(standardDecalScale, colorArrs.white, pos, -0.35);
@@ -1387,6 +1388,13 @@ function drawRegularScene(frameTime){
 
 			portalTexts.forEach(pp=>{
 				drawText(pp.text, pp.pos[0], pp.pos[1], pp.pos[2], 0.6);
+			});
+
+			bullets.values().filter(x=>x.active && x.isBomb && x.world == playerContainer.world).forEach(bb=>{
+				var pos = screenPosForMatrix(bb.matrix);
+				if (pos[2]<0){	//note unintuitive sign
+					drawText("BOMB", pos[0], pos[1], pos[2], 0.4);
+				}
 			});
 
 			if (guiParams.debug.showChullStats && guiParams["player model"] == "convexHullTest"){
@@ -4482,6 +4490,9 @@ function init(){
 			case 67:	//C
 				shouldShowControls=!shouldShowControls;
 				break;
+			case 66:	//B
+				dropBomb();	//TODO limit drop rate
+				break;
 			default:
 				willPreventDefault=false;
 				break;
@@ -5235,41 +5246,12 @@ function fireGun(){
 			
 			xyzrotate4mat(gunMatrix,[0.02*(Math.random()-0.5),0.02*(Math.random()-0.5),0]);	//random spread TODO gaussian
 			
-			var newBulletMatrix = matPool.create(); 
-			mat4.set(gunMatrix,newBulletMatrix);
-			
-			//work out what fireDirectionVec should be in frame of gun/bullet (rather than player ship body)
-			//this maybe better done alongside targeting code.
-			var relativeMatrix = matPool.create();
-			mat4.set(sshipMatrix,relativeMatrix);
-			mat4.transpose(relativeMatrix);
-			mat4.multiply(relativeMatrix, gunMatrix);
-			
-			var newFireDirectionVec = new Array(3);
-			for (var ii=0;ii<3;ii++){
-				var sum=0;
-				for (var jj=0;jj<3;jj++){
-					sum+=relativeMatrix[ii*4+jj]*playerVelVec[jj];
-				}
-				newFireDirectionVec[ii]=sum;
-			}			
-			newFireDirectionVec[2]+=muzzleVel;
-			bullets.add({matrix:newBulletMatrix,vel:newFireDirectionVec,world:sshipWorld,active:true});
+			launchProjectile(gunMatrix, [0,0,muzzleVel], false);
 			
 			new Explosion({matrix:gunMatrix,world:sshipWorld}, sshipModelScale*0.5, [0.06,0.06,0.06]);	//smoke/steam fx.
 															//TODO emit from hot gun (continue after firing), lighting for smoke (don't see in dark) ...
 															//TODO get correct world (which side of portal end of gun is in)
-			matPool.destroy(relativeMatrix);
 			
-			//limit number of bullets
-			if (bullets.size>200){
-				var bulletToDestroy = bullets.keys().next().value;
-				//console.log("removing bullet because too many. ",bulletToDestroy.matrix,"pool:",matPool.getMats());
-				if (bulletToDestroy.active){
-					matPool.destroy(bulletToDestroy.matrix);
-				}
-				bullets.delete(bulletToDestroy);
-			}
 		}
 	}
 	myAudioPlayer.playGunSound(0);	//todo use delay param to play at exact time.
@@ -5277,6 +5259,56 @@ function fireGun(){
 	
 //	var gunJerkAmount = 0.004;
 //	rotatePlayer([(Math.random()-0.5)*gunJerkAmount, (Math.random()-0.5)*gunJerkAmount,0]);
+}
+
+function dropBomb(){
+	launchProjectile(sshipMatrix, [0,0,-0.01], true);
+}
+
+//now using bullets array to contain both bullets and bombs.
+function launchProjectile(projectileMatrix, muzzleVelVec, isBomb){
+
+	var newBulletMatrix = matPool.create(); 
+	mat4.set(projectileMatrix,newBulletMatrix);
+	
+	//work out what fireDirectionVec should be in frame of gun/bullet (rather than player ship body)
+	//this maybe better done alongside targeting code.
+	var relativeMatrix = matPool.create();
+	mat4.set(sshipMatrix,relativeMatrix);
+	mat4.transpose(relativeMatrix);
+	mat4.multiply(relativeMatrix, projectileMatrix);
+	
+	var newFireDirectionVec = new Array(3);
+	for (var ii=0;ii<3;ii++){
+		var sum=0;
+		for (var jj=0;jj<3;jj++){
+			sum+=relativeMatrix[ii*4+jj]*playerVelVec[jj];
+		}
+		newFireDirectionVec[ii]=sum;
+	}
+	for (var cc=0;cc<3;cc++){
+		newFireDirectionVec[cc]+=muzzleVelVec[cc];
+	}
+
+	bullets.add({
+		matrix:newBulletMatrix,
+		vel:newFireDirectionVec,
+		world:sshipWorld,
+		isBomb,
+		active:true}
+	);
+
+	matPool.destroy(relativeMatrix);
+			
+	//limit number of bullets
+	if (bullets.size>200){
+		var bulletToDestroy = bullets.keys().next().value;
+		//console.log("removing bullet because too many. ",bulletToDestroy.matrix,"pool:",matPool.getMats());
+		if (bulletToDestroy.active){
+			matPool.destroy(bulletToDestroy.matrix);
+		}
+		bullets.delete(bulletToDestroy);
+	}
 }
 
 function smokeGuns(){
