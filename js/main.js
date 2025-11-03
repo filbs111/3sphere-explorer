@@ -23,13 +23,24 @@ var duocylinderObjects=(function(){
 	function initialiseDuocylinderObjectData(duocylinderObj){
 		var mat = mat4.identity();
 		var objInfoArr = [];
-		for (var xg=0;xg<duocylinderObj.divs;xg+=1){
-			for (var yg=0;yg<duocylinderObj.divs;yg+=1){
-				objInfoArr.push(matAndTransposedMat(mat, duocylinderObj.data));
-				rotate4mat(mat, 0, 1, duocylinderObj.step);
+
+		var numOuterReps= duocylinderObj.addFlippedCopy?2:1;
+
+		for (var outer=0;outer<numOuterReps;outer++){
+
+			for (var xg=0;xg<duocylinderObj.divs;xg+=1){
+				for (var yg=0;yg<duocylinderObj.divs;yg+=1){
+					objInfoArr.push(matAndTransposedMat(mat, duocylinderObj.data));
+					rotate4mat(mat, 0, 1, duocylinderObj.step);
+				}
+				rotate4mat(mat, 2, 3, duocylinderObj.step);
 			}
-			rotate4mat(mat, 2, 3, duocylinderObj.step);
+
+			//magic spells. not sure why works, likely more efficient formulation is available!
+			rotate4mat(mat, 0, 2, Math.PI/2);	//combo of 2 gets inverted piece! (NOTE not in same place as other piece created in inner loop)
+			rotate4mat(mat, 1, 3, Math.PI/2);
 		}
+
 		duocylinderObj.objInfoArr = objInfoArr;
 	}
 	function matAndTransposedMat(mat, collisionTriangleData){
@@ -50,7 +61,7 @@ var duocylinderObjects=(function(){
 // tballGridDataPantheonStyle.tricoords.filter((_,ii)=>ii%3==1).reduce((a,b)=>Math.min(a,b),Number.MAX_VALUE)
 // -0.00000725
 		terrain:{divs:2,step:Math.PI,minXY:[-0.25,-0.25],data:terrainData.collisionTriangleData},
-		greebleTerrain:{divs:2,step:Math.PI,minXY:[0,0],vertexColors:true},
+		greebleTerrain:{divs:2,step:Math.PI,minXY:[0,0],vertexColors:true,addFlippedCopy:true},
 		procTerrain:{divs:1,step:2*Math.PI,isStrips:true,minXY:[0,0],data:proceduralTerrainData.collisionTriangleData},
 		sea:{divs:1,step:2*Math.PI,isStrips:true},
 		voxTerrain:{divs:2,step:Math.PI,minXY:[0, -0.5]},
@@ -315,7 +326,7 @@ function initBuffers(){
 	function loadDuocylinderObjAndDoStuff(objLoader, objFile, terrainObj){
 		objLoader(terrainObj, objFile, (terrainObj, sourceData) => {
 			sourceData.faces = arrayToGroups(sourceData.indices, 3);	//augment sourceData with faces object that loadGridData expects
-			loadGridData(sourceData, true);
+			loadGridData(sourceData, true, -0.18);
 			
 			loadDuocylinderBufferData(terrainObj, sourceData);
 			terrainObj.data = sourceData.collisionTriangleData;
