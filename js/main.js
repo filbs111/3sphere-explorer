@@ -1402,12 +1402,13 @@ function drawRegularScene(frameTime){
 				drawText(pp.text, pp.pos[0], pp.pos[1], pp.pos[2], 0.6);
 			});
 
-			bullets.values().filter(x=>x.active && x.isBomb && x.world == playerContainer.world).forEach(bb=>{
+			bullets.forEach(bb=> {
+				if (bb.active && bb.isBomb && bb.world == playerContainer.world){
 				var pos = screenPosForMatrix(bb.matrix);
 				if (pos[2]<0){	//note unintuitive sign
 					drawText("BOMB", pos[0], pos[1], pos[2], 0.4);
 				}
-			});
+			}});
 
 			if (guiParams.debug.showChullStats && guiParams["player model"] == "convexHullTest"){
 				drawText(chullCollisionScreenInfo, 0.6, 0.15, 1, 0.6);
