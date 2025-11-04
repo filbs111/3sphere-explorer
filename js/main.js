@@ -1444,7 +1444,7 @@ function drawRegularScene(frameTime){
 			drawText("H: TOGGLE DEBUG MENU",      4, -0.9, 1, 0.5);
 
 			drawText("MOVEMENT CONTROLS:",        4.2, -0.7, 1, 0.5);
-			drawText("MOUSE/ARROWS: PITCH/YAW (CLICK AND DRAG WHEN NOT FULL SCREEN)", 
+			drawText("ARROWS, MOUSE MOVE WHEN FULLSCREENED: PITCH/YAW", 
 				                                  4, -0.55, 1, 0.5);
 			drawText("Q,E: ROLL",                 4, -0.4, 1, 0.5);
 			drawText("SPACE BAR: THRUST",         4, -0.25, 1, 0.5);
@@ -4388,10 +4388,7 @@ function initTexture(){
 var mouseInfo = {
 	x:0,
 	y:0,
-	dragging: false,
-	lastPointingDir:{},
 	pendingMovement:[0,0],
-	currentPointingDir:{x:0,y:0,z:1,w:1}
 };
 var stats;
 
@@ -4564,47 +4561,21 @@ function init(){
 	canvas.addEventListener("mousedown", function(evt){
 		mouseInfo.x = evt.offsetX;
 		mouseInfo.y = evt.offsetY;
-		mouseInfo.dragging = evt.buttons & 1;
-		mouseInfo.lastPointingDir = getPointingDirectionFromScreenCoordinate(mouseInfo.x, mouseInfo.y);
 		mouseInfo.buttons = evt.buttons;
 		evt.preventDefault();
 	});
 	canvas.addEventListener("mouseup", function(evt){
-		mouseInfo.dragging = evt.buttons & 1;
 		mouseInfo.buttons = evt.buttons;
 	});
 	canvas.addEventListener("mouseout", function(evt){
-		mouseInfo.dragging = false;
 		mouseInfo.buttons = 0;
 	});
 	canvas.addEventListener("mousemove", function(evt){
-		mouseInfo.currentPointingDir = getPointingDirectionFromScreenCoordinate(evt.offsetX, evt.offsetY);
-		if (mouseInfo.dragging){
-			var pointingDir = mouseInfo.currentPointingDir;
-			//console.log("pointingDir = " + pointingDir);
-			
-			//get the direction of current and previous mouse position.
-			//do a cross product to work out the angle rotated
-			//and rotate the player by this amount
-			
-			var crossProd = crossProductHomgenous(pointingDir, mouseInfo.lastPointingDir);
-			mouseInfo.lastPointingDir = pointingDir;
-			
-			//rotate player 
-			//guess have signs here because of unplanned handedness of screen, 3d co-ord systems
-			var rotateAmt = [crossProd.x / crossProd.w, -crossProd.y / crossProd.w, -crossProd.z / crossProd.w];
-			rotatePlayer(rotateAmt);
-			
-		}
 		if (pointerLocked){
 			mouseInfo.pendingMovement[0]+=-0.001* evt.movementX;	//TODO screen resolution dependent sensitivity.
 			mouseInfo.pendingMovement[1]+=-0.001* evt.movementY;				
 		}
 	});
-	
-	canvas.addEventListener("touchstart", handleTouchStart, false);
-	canvas.addEventListener("touchend", handleTouchEnd, false);
-	canvas.addEventListener("touchmove", handleTouchMove, false);
 	
 	initGL();
 
@@ -5179,27 +5150,6 @@ function rotatePlayer(vec){
 }
 
 
-function getPointingDirectionFromScreenCoordinate(coordx, coordy){
-	
-	var maxyvert = 1.0;	
-	var maxxvert = screenAspect;
-	
-	var xpos = maxxvert*(coordx*2.0/gl.viewportWidth   -1.0 );
-	var ypos = maxyvert*(coordy*2.0/gl.viewportHeight   -1.0 );
-	var radsq = xpos*xpos + ypos*ypos;
-	var zpos = 1.0/Math.tan(mainCamFov*Math.PI/360); //TODO precalc
-
-	//normalise - use sending back homogenous co-ords because maybe a tiny amount more efficient since cross producting anyway
-	var mag= Math.sqrt(radsq + zpos*zpos);
-	
-	return {
-		x: xpos,
-		y: ypos,
-		z: zpos,
-		w: mag
-	}
-}
-
 function crossProductHomgenous(dir1, dir2){
 	var output ={};
 	output.x = dir1.y * dir2.z - dir1.z * dir2.y; 
@@ -5207,79 +5157,6 @@ function crossProductHomgenous(dir1, dir2){
 	output.z = dir1.x * dir2.y - dir1.y * dir2.x;
 	output.w = dir1.w * dir2.w;
 	return output;
-}
-
-
-var ongoingTouches = {};
-
-function handleTouchStart(evt){
-	evt.preventDefault();
-	var touches = evt.changedTouches;
-	log( touches.length + " touches starting");
-		
-	for (var i = 0; i < touches.length; i++) {
-		var thisTouch = copyTouch(touches[i]);
-		var touchIdx = touches[i].identifier;
-		ongoingTouches[touchIdx] = thisTouch;
-		logtouchevent(touches[i],i);
-	}
-}
-
-function handleTouchMove(evt){
-	evt.preventDefault();
-	var touches = evt.changedTouches;
-	log( touches.length + " touches moving");
-	
-	for (var i = 0; i < touches.length; i++) {
-		
-		var thisTouch = copyTouch(touches[i]);
-		var touchIdx = touches[i].identifier;
-		
-		//copy previous position to new touch
-		toTouch = ongoingTouches[touchIdx];
-		thisTouch.oldx = toTouch.x;
-		thisTouch.oldy = toTouch.y;
-		ongoingTouches[touchIdx] = thisTouch;
-		
-		//do do the equivalent of mouse move
-		if (i==0){
-			//what behaviour will be if there are >1 touches?
-			
-			var oldPointingDir = getPointingDirectionFromScreenCoordinate(thisTouch.oldx, thisTouch.oldy);
-			var pointingDir = getPointingDirectionFromScreenCoordinate(thisTouch.x, thisTouch.y);
-			
-			var crossProd = crossProductHomgenous(pointingDir, oldPointingDir);
-			mouseInfo.lastPointingDir = pointingDir;
-			
-			//rotate player 
-			//guess have signs here because of unplanned handedness of screen, 3d co-ord systems
-			var rotAmount = [crossProd.x / crossProd.w, -crossProd.y / crossProd.w, -crossProd.z / crossProd.w];
-			rotatePlayer(rotAmount);
-		}
-		
-		logtouchevent(touches[i],i);
-	}
-}
-
-function handleTouchEnd(evt){
-	evt.preventDefault();
-	var touches = evt.changedTouches;
-	log( touches.length + " touches ending");
-	for (var i = 0; i < touches.length; i++) {
-		logtouchevent(touches[i],i);
-		delete ongoingTouches[touches.identifier];
-	}
-}
-
-function logtouchevent(t,i){
-	//log("i = " + i + " , idx = " + t.identifier + ". radiusX : " + t.radiusX + " , radiusY : " + t.radiusY);
-	log("i = " + i + " , idx = " + t.identifier + ". x : " + t.pageX + " , y : " + t.pageY);
-}
-
-//https://developer.mozilla.org/en-US/docs/Web/API/Touch_events
-//says this is useful since the touch object might change.
-function copyTouch(touch) {
-  return { x: touch.pageX, y: touch.pageY, force:touch.force };
 }
 
 function log(info){		//can to enable/disable logging globally
