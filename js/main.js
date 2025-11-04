@@ -1253,9 +1253,8 @@ function drawRegularScene(frameTime){
 		var airSpd = Math.sqrt(airSpdSq);
 		var tiltCameraDirection = airSpdVec.map(xx=>tiltCameraCircleRad*xx/airSpd);
 		tiltCameraDirection[2]+=1;	//z coord
-		drawTargetDecal(standardDecalScale, colorArrs.magenta, adjustedDirectionForFisheye(tiltCameraDirection.map(x=>-x), cameraTilt));
+		//drawTargetDecal(standardDecalScale, colorArrs.magenta, adjustedDirectionForFisheye(tiltCameraDirection.map(x=>-x), cameraTilt));
 		//=============================================================================================================
-
 
 		if (airSpdSq > 0.001){	//only draw above some threshold speed, to avoid rapid movement across screen, jiggling when landed (poor collision system)
 			var reversed = airSpdVec.map(x=>-x);
@@ -1382,6 +1381,18 @@ function drawRegularScene(frameTime){
 			drawTargetDecal(standardDecalScale, colorArrs.green, adjustedDirectionForFisheye([0,1,-1]), 0);
 			drawTargetDecal(standardDecalScale, colorArrs.green, adjustedDirectionForFisheye([0,-1,-1]), 0);
 		}
+
+		var bombHudSpin = (frameTime/300) % Math.PI;
+		var halfDecalScale = standardDecalScale.map(xx=>xx/2);
+
+		bullets.forEach(bb=> {
+			if (bb.active && bb.isBomb && bb.world == playerContainer.world){
+			var pos = screenPosForMatrix(bb.matrix);
+			if (pos[2]<0){	//note unintuitive sign
+				drawTargetDecal(halfDecalScale, colorArrs.magenta, pos, bombHudSpin);
+				drawTargetDecal(halfDecalScale, colorArrs.magenta, pos, -bombHudSpin);
+			}
+		}});
 
 		if (guiParams.debug.textWorldNum){
 			//drawing of text
