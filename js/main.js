@@ -2425,7 +2425,11 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		gl.uniform3f(activeShaderProgram.uniforms.uInstanceScale, instanceScale,instanceScale,instanceScale);
 
 		//gl.uniform3f(activeShaderProgram.uniforms.uScroll, 0,0,0);	//static. fly through to get impression of final effect
-		gl.uniform3f(activeShaderProgram.uniforms.uScroll, 0,0,frameTime/500);	//constant scroll
+		//gl.uniform3f(activeShaderProgram.uniforms.uScroll, 0,0,frameTime/500);	//constant scroll
+
+		
+
+		gl.uniform3fv(activeShaderProgram.uniforms.uScroll, dustMotesInfo.accumulatedScroll);	//player velocity. Should look right when player not rotating.
 
 		enableDisableAttributes(activeShaderProgram);
 		//temporarily instance existing mesh. TODO dedicated mesh with 8-vert cube, cluter of cubes, octohedron or similar
@@ -2448,6 +2452,24 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		gl.vertexAttribPointer(activeShaderProgram.attributes.aParticlePosPreOffset, 3, gl.FLOAT, false, 0,0);
 
 		gl.drawElementsInstanced(gl.TRIANGLES, cubeFrameBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, dustMotesInfo.numInstances);
+
+
+		//draw at player position
+
+		
+		//mat4.transpose(mvMatrix);
+
+		mat4.set(invertedWorldCamera, mvMatrix);
+		
+
+
+
+		mat4.multiply(mvMatrix,playerContainer.matrix);
+
+		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uMVMatrix, false, mvMatrix);
+		gl.drawElementsInstanced(gl.TRIANGLES, cubeFrameBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, dustMotesInfo.numInstances);
+
+
 
 		zeroAttributeDivisors(activeShaderProgram);
 	}
@@ -4539,6 +4561,7 @@ var dustMotesInfo = (function(){
 		scale:0.05,	//TODO expose in debug ui?
 		instanceScale:0.002,
 		numInstances:1000,
+		accumulatedScroll:new Array(3).fill(0),
 	}
 })();
 

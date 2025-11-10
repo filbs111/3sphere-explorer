@@ -427,6 +427,10 @@ var playerMechanics = (() => {
             mat4.transpose(playerMatrixTransposed);
         }
 
+        for (var ii=0;ii<3;ii++){
+			dustMotesInfo.accumulatedScroll[ii]+=timeStep*moveSpeed*playerVelVec[ii]/dustMotesInfo.scale;
+		}
+
 
 
         //whoosh sound. simple educated guess model for sound of passing by objects. maybe with a some component of pure wind noise
