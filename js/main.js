@@ -2466,6 +2466,10 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 		mat4.multiply(mvMatrix,playerContainer.matrix);
 
+		
+						mat4.multiply(mvMatrix, dustMotesInfo.matRelativeToPlayer);	//TODO what order of rotations?
+
+
 		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uMVMatrix, false, mvMatrix);
 		gl.drawElementsInstanced(gl.TRIANGLES, cubeFrameBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, dustMotesInfo.numInstances);
 
@@ -4562,6 +4566,8 @@ var dustMotesInfo = (function(){
 		instanceScale:0.002,
 		numInstances:1000,
 		accumulatedScroll:new Array(3).fill(0),
+		matRelativeToPlayer:mat4.identity()	//perhaps could just store as a single quat or mat3 but mat4 makes more similar to other code,
+			//perhaps at expense of drift. (dust motes box might move away from player over long time)
 	}
 })();
 
@@ -5243,6 +5249,12 @@ function moveMatrixThruPortal(matrix, rad, hackMultiplier, portal, skipStartEndR
 
 function movePlayer(vec){
 	xyzmove4mat(playerCamera, vec);
+
+	for (var cc=0;cc<3;cc++){
+		for (var kk=0;kk<3;kk++){
+			dustMotesInfo.accumulatedScroll[cc]+=vec[kk]*dustMotesInfo.matRelativeToPlayer[kk + 4*cc]/dustMotesInfo.scale;;
+		}
+	}
 }
 
 function rotatePlayer(vec){
@@ -5258,6 +5270,14 @@ function rotatePlayer(vec){
 	};
 	
 	xyzrotate4mat(playerCamera,vec);
+
+
+	//NOTE hacky! this is only used for a 3d rotation anyway
+	//maybe should just store this as a single quat.
+	//also seen this break and matRelativeToPlayer become NaNs, causing dust motes to disappear.
+	mat4.transpose(dustMotesInfo.matRelativeToPlayer);
+	xyzrotate4mat(dustMotesInfo.matRelativeToPlayer, vec);
+	mat4.transpose(dustMotesInfo.matRelativeToPlayer);
 }
 
 
