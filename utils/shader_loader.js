@@ -193,7 +193,9 @@ function initShaders(shaderProgs){
 		mapShaderTwo:["map-two-vs","flatcolor-fs"],
 		mapShaderTwoVertColors:["map-two-vs","vertcolor-fs",["VERTCOLORS","DISCARD_OUTSIDE"],["DISCARD_OUTSIDE"]],
 		mapTerrainShader:["map-terrain-vs","flatcolor-fs",[],["DISCARD_OUTSIDE"]],	//if have terrain stored "flat" not mapped onto duocylinder...
-		mapTerrainVertColors:["map-terrain-vs","vertcolor-fs",["VERTCOLORS"],["DISCARD_OUTSIDE"]]
+		mapTerrainVertColors:["map-terrain-vs","vertcolor-fs",["VERTCOLORS"],["DISCARD_OUTSIDE"]],
+
+		wrappedDustMotes:["wrapped-dust-mote-vs", "very-simple-fs",['CUSTOM_DEPTH'],['CUSTOM_DEPTH']],
 	};
 	var shaderProgWithVariationsList = {
 		coloredPerPixelDiscard:["perpixel-discard-vs", "perpixel-discard-fs", [],[],true],

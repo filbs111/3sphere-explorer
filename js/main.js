@@ -2412,6 +2412,48 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		zeroAttributeDivisors(activeShaderProgram);
 	}
 	
+
+	//draw dust motes in cube
+	if (true){
+		activeShaderProgram = shaderPrograms.wrappedDustMotes;
+		gl.useProgram(activeShaderProgram);
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
+
+		var scale = dustMotesInfo.scale;
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, scale,scale,scale);
+		var instanceScale = dustMotesInfo.instanceScale;
+		gl.uniform3f(activeShaderProgram.uniforms.uInstanceScale, instanceScale,instanceScale,instanceScale);
+
+		//gl.uniform3f(activeShaderProgram.uniforms.uScroll, 0,0,0);	//static. fly through to get impression of final effect
+		gl.uniform3f(activeShaderProgram.uniforms.uScroll, 0,0,frameTime/500);	//constant scroll
+
+		enableDisableAttributes(activeShaderProgram);
+		//temporarily instance existing mesh. TODO dedicated mesh with 8-vert cube, cluter of cubes, octohedron or similar
+		gl.bindBuffer(gl.ARRAY_BUFFER, cubeFrameBuffers.vertexPositionBuffer);
+		gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexPosition, cubeFrameBuffers.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeFrameBuffers.vertexIndexBuffer);
+		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uPMatrix, false, pMatrix);
+		
+		mat4.set(invertedWorldCamera, mvMatrix);
+		//TODO include duocylinder spin to rotate with container cube
+		mat4.multiply(mvMatrix,dustMotesInfo.mat);
+
+		//normally in drawObjectFromPreppedBuffers
+		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uMVMatrix, false, mvMatrix);
+
+		
+		// set aParticlePosPreOffset using dustMotesInfo.random3VecsBuf
+		gl.vertexAttribDivisor(activeShaderProgram.attributes.aParticlePosPreOffset, 1);
+		gl.bindBuffer(gl.ARRAY_BUFFER, dustMotesInfo.random3VecsBuf);
+		gl.vertexAttribPointer(activeShaderProgram.attributes.aParticlePosPreOffset, 3, gl.FLOAT, false, 0,0);
+
+		gl.drawElementsInstanced(gl.TRIANGLES, cubeFrameBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, dustMotesInfo.numInstances);
+
+		zeroAttributeDivisors(activeShaderProgram);
+	}
+
+
+
 	function zeroAttributeDivisors(shaderProg){
 		//seems like these carry over between invokations of drawElementsInstancedANGLE, loading different shaders.
 		//for now, set all to zero before setting those wanted to 1
@@ -2516,8 +2558,23 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		mat4.multiply(mvMatrix,mMatrix);
 	}
 		
-	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.darkGray);
+	
+	
 
+	//dust motes around player - note separate to previous "dust motes" code here.
+	// for 1st version, draw a container cube at fixed position in the world. later will position at camera. 
+	// use instanced drawing to render many small objects with position modded/wrapped to within the cube
+	// uniforms that apply to all instances: 3d scroll of objects within the container, the matrices, scale for posing the container in camera.
+	// uniforms for each instance - offset position within unscrolled container, particle colour?.
+	// attributes for instanced object - vert position. normal? (normal maybe irrelevant - want small particles)
+	
+	//1 draw a cube frame at same position, scale as container.
+	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.red);
+	drawArrayOfModels2([dustMotesInfo], cubeFrameBuffers, activeShaderProgram);
+
+
+
+	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.darkGray);
 	[
 		{bvh:cubeFrameBvh, buffers:cubeFrameBuffers},
 		{bvh:dodecaFrameBvh2, buffers:dodecaFrameBuffers2},
@@ -4466,8 +4523,24 @@ var turretBaseMatrix=newIdMatWithQuats();
 xyzrotate4mat(turretBaseMatrix,[0,0,0.5]);	//TODO put in xy map position.
 xyzmove4mat(turretBaseMatrix,[0,.78,0]);
 
+var dustMotesInfo = (function(){
+	var mat=mat4.identity();
+	xyzmove4mat(mat,[0,.6,0]);
+	//var transposedMat = mat4.create(mat);
+	//mat4.transpose(transposedMat);
+	//var random3Vecs = Array.from({length:3},_=>2*Math.random()-1);	//TODO check range of numbers vs wrapping code in shader.
+	//var random3VecsBuf = glBuffer3VecsForInstancedDrawing(random3Vecs);
+		//do this onload once gl ref exists?
 
-
+	return {
+		mat,
+		//transposedMat,
+		//random3VecsBuf,
+		scale:0.05,	//TODO expose in debug ui?
+		instanceScale:0.002,
+		numInstances:1000,
+	}
+})();
 
 
 var pillarMatrices=[];
@@ -4612,6 +4685,10 @@ function init(){
     gl.enable(gl.DEPTH_TEST);
 	gl.enable(gl.CULL_FACE);
 	setupScene();
+	var random3Vecs = Array.from({length:dustMotesInfo.numInstances},_=>
+						Array.from({length:3},_=>2*Math.random()-1));	//TODO check range of numbers vs wrapping code in shader.
+	dustMotesInfo.random3Vecs = random3Vecs;	//only for console inspection. TODO remove
+	dustMotesInfo.random3VecsBuf = glBuffer3VecsForInstancedDrawing(random3Vecs);
 }
 
 var playerVelVec = [0,0,0];	//TODO use matrix/quaternion for this

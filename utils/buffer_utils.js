@@ -64,6 +64,18 @@ function glBufferMatrixUniformDataForInstancedDrawing(sourceMatArr){
     return matA;
 }
 
+function glBuffer3VecsForInstancedDrawing(input3VecArr){
+    var num3Vecs = input3VecArr.length;
+    var f32Arr = new Float32Array(num3Vecs*3);
+    for (var ii=0,pp=0;ii<num3Vecs;ii++,pp+=3){
+        f32Arr.set(input3VecArr[ii], pp); //TODO check this works - copied matrix code, but glmatrices are f32 already
+    }
+    var buf = gl.createBuffer();
+    bufferArrayDataGeneral(buf, f32Arr, 3);
+    return buf;
+}
+//TODO generalise glBufferMatrixUniformDataForInstancedDrawing, glBuffer3VecsForInstancedDrawing
+
 function createBuffersForInstancedDrawingFromList(container){
 	matrixArrWithExtraElem = container.list.map(x=>x.matrix);
 	matrixArrWithExtraElem.push(matrixArrWithExtraElem[0]);
