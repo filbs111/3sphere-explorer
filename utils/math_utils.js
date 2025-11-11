@@ -71,3 +71,46 @@ function greatCirclePositionForAngle(gs, ang){
         ninetyDegAround:[0,0,0,0].map((_,ii)=> gs[0][ii]*cosSinAng[1] - gs[1][ii]*cosSinAng[0]*cosSinAng[0])
     };
 }
+
+function matStats(mat){
+    return [0,4,8,12].map(xx=> Math.hypot.apply(null,mat.slice(xx,xx+4)));
+    //to test orthogonality, perhaps want mat time itself transposed. for good result is identity matrix.
+}
+
+function multiplyMatsWithProblemCheck(mat1, mat2, comment){
+    //detect when get a NaN, print what caused it.
+    if (!matHasNans(mat1) && !matHasNans(mat2)){
+        var copy1 = mat4.create(mat1);
+        var copy2 = mat4.create(mat2);
+        mat4.multiply(mat1, mat2);
+        if (matHasNans(mat1) || matHasNans(mat2)){
+            console.log({
+                mssg: "mat has NaNs!",
+                comment,
+                copy1,
+                copy2
+            });
+        }
+
+    }
+}
+
+function xyzrotate4matWithProblemCheck(mat, vec, comment){
+    if (!matHasNans(mat)){
+        var copy = mat4.create(mat);
+        xyzrotate4matNew(mat,vec);
+        if (matHasNans(mat)){
+            console.log({
+                mssg: "mat has NaNs 2!",
+                comment,
+                copy,
+                stats:matStats(copy),
+                vec
+            });
+        }
+    }
+}
+
+function matHasNans(mat){
+    return mat.reduce((accum, current) => accum|| isNaN(current),false);
+}

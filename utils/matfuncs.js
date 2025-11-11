@@ -116,6 +116,26 @@ function zmove4mat(mat, angle){
 function xyzrotate4mat(mat, rotatevector){
 	if (mat.qPair){
 		mat.qPair = multiply_qpairs( mat.qPair , makerotatequatpair(scalarvectorprod(0.5,rotatevector)));
+	//	convert_quats_to_4matrix(mat.qPair, mat);	//this func now sets a matrix passed in to be equivalent to qpair
+	//	return;
+		//seems like a bug that didn't have this before, but seems relying on this bug!
+	}
+	
+	//angle/axis rotation.
+	//just make a fresh matrix, then multiply the input matrix by that.
+	var newMatrix = matPool.create();
+	mat4.identity(newMatrix);
+	var rotationMag = Math.sqrt(rotatevector[0]*rotatevector[0] + rotatevector[1]*rotatevector[1] + rotatevector[2]*rotatevector[2]);
+	mat4.rotate(newMatrix, rotationMag, [rotatevector[0]/rotationMag, rotatevector[1]/rotationMag, rotatevector[2]/rotationMag] );
+	mat4.multiply(mat, newMatrix);
+	matPool.destroy(newMatrix);
+}
+
+function xyzrotate4matNew(mat, rotatevector){
+	if (mat.qPair){
+		mat.qPair = multiply_qpairs( mat.qPair , makerotatequatpair(scalarvectorprod(0.5,rotatevector)));
+		convert_quats_to_4matrix(mat.qPair, mat);	//this func now sets a matrix passed in to be equivalent to qpair
+		return;
 	}
 	
 	//angle/axis rotation.
