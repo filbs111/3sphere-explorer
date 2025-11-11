@@ -2598,8 +2598,11 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 	mat4.multiply(dustMotesInfo.matAboutPlayerPosition, matRelativeToPlayer);
 
-	drawArrayOfModels2([dustMotesInfo, {mat:dustMotesInfo.matAboutPlayerPosition, scale:0.0005}],
-		 cubeFrameBuffers, activeShaderProgram);
+	var dustMotesToDraw = [
+		dustMotesInfo,
+		//{mat:dustMotesInfo.matAboutPlayerPosition, scale:0.0005}	//shows frame that moves with player but does not rotate
+	];
+	drawArrayOfModels2(dustMotesToDraw, cubeFrameBuffers, activeShaderProgram);
 
 
 
