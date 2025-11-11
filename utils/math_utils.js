@@ -98,7 +98,7 @@ function multiplyMatsWithProblemCheck(mat1, mat2, comment){
 function xyzrotate4matWithProblemCheck(mat, vec, comment){
     if (!matHasNans(mat)){
         var copy = mat4.create(mat);
-        xyzrotate4matNew(mat,vec);
+        xyzrotate4mat(mat,vec);
         if (matHasNans(mat)){
             console.log({
                 mssg: "mat has NaNs 2!",
