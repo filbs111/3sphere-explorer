@@ -2433,9 +2433,9 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 		enableDisableAttributes(activeShaderProgram);
 		//temporarily instance existing mesh. TODO dedicated mesh with 8-vert cube, cluter of cubes, octohedron or similar
-		gl.bindBuffer(gl.ARRAY_BUFFER, cubeFrameBuffers.vertexPositionBuffer);
-		gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexPosition, cubeFrameBuffers.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
-		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeFrameBuffers.vertexIndexBuffer);
+		gl.bindBuffer(gl.ARRAY_BUFFER, cubeBuffers.vertexPositionBuffer);
+		gl.vertexAttribPointer(activeShaderProgram.attributes.aVertexPosition, cubeBuffers.vertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
+		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cubeBuffers.vertexIndexBuffer);
 		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uPMatrix, false, pMatrix);
 		
 		mat4.set(invertedWorldCamera, mvMatrix);
@@ -2451,7 +2451,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		gl.bindBuffer(gl.ARRAY_BUFFER, dustMotesInfo.random3VecsBuf);
 		gl.vertexAttribPointer(activeShaderProgram.attributes.aParticlePosPreOffset, 3, gl.FLOAT, false, 0,0);
 
-		gl.drawElementsInstanced(gl.TRIANGLES, cubeFrameBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, dustMotesInfo.numInstances);
+		gl.drawElementsInstanced(gl.TRIANGLES, cubeBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, dustMotesInfo.numInstances);
 
 
 		//draw at player position
@@ -2464,7 +2464,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		mat4.multiply(mvMatrix, dustMotesInfo.matAboutPlayerPosition);
 
 		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uMVMatrix, false, mvMatrix);
-		gl.drawElementsInstanced(gl.TRIANGLES, cubeFrameBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, dustMotesInfo.numInstances);
+		gl.drawElementsInstanced(gl.TRIANGLES, cubeBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, dustMotesInfo.numInstances);
 
 
 
@@ -4566,7 +4566,7 @@ var dustMotesInfo = (function(){
 		//transposedMat,
 		//random3VecsBuf,
 		scale:0.05,	//TODO expose in debug ui?
-		instanceScale:0.002,
+		instanceScale:0.001,
 		numInstances:1000,
 		accumulatedScroll:new Array(3).fill(0),
 		matAboutPlayerPosition:mat4.create(),
