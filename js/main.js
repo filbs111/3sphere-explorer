@@ -2453,20 +2453,16 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 		gl.drawElementsInstanced(gl.TRIANGLES, cubeBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, dustMotesInfo.numInstances);
 
-
 		//draw at player position
-
-		
-		//mat4.transpose(mvMatrix);
-
-		mat4.set(invertedWorldCamera, mvMatrix);
-		
-		mat4.multiply(mvMatrix, dustMotesInfo.matAboutPlayerPosition);
-
-		gl.uniformMatrix4fv(activeShaderProgram.uniforms.uMVMatrix, false, mvMatrix);
-		gl.drawElementsInstanced(gl.TRIANGLES, cubeBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, dustMotesInfo.numInstances);
-
-
+		var matRelativeToPlayer = mat4.create(dustMotesInfo.transposedMatRelativeToPlayer)
+		mat4.transpose(matRelativeToPlayer);
+		sshipDrawMatrices.forEach(mm =>{
+			mat4.set(invertedWorldCamera, mvMatrix);
+			mat4.multiply(mvMatrix, mm);
+			mat4.multiply(mvMatrix, matRelativeToPlayer);
+			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uMVMatrix, false, mvMatrix);
+			gl.drawElementsInstanced(gl.TRIANGLES, cubeBuffers.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0, dustMotesInfo.numInstances);
+		});
 
 		zeroAttributeDivisors(activeShaderProgram);
 	}
@@ -2589,22 +2585,20 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	
 	//1 draw a cube frame at same position, scale as container.
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.red);
+	drawArrayOfModels2([dustMotesInfo], cubeFrameBuffers, activeShaderProgram);	//static dust mote in unmoving box
 
-	//to draw dust motes at player position in frame that moves with player but doesn't rotate
-	mat4.set(playerContainer.matrix, dustMotesInfo.matAboutPlayerPosition);
-
-	var matRelativeToPlayer = mat4.create(dustMotesInfo.transposedMatRelativeToPlayer)
-	mat4.transpose(matRelativeToPlayer);
-
-	mat4.multiply(dustMotesInfo.matAboutPlayerPosition, matRelativeToPlayer);
-
-	var dustMotesToDraw = [
-		dustMotesInfo,
-		//{mat:dustMotesInfo.matAboutPlayerPosition, scale:0.0005}	//shows frame that moves with player but does not rotate
-	];
-	drawArrayOfModels2(dustMotesToDraw, cubeFrameBuffers, activeShaderProgram);
-
-
+	if (guiParams.debug.playerDustMotesFrames){
+		//draw dust motes at player position in frame that moves with player but doesn't rotate
+		var matRelativeToPlayer = mat4.create(dustMotesInfo.transposedMatRelativeToPlayer)
+		mat4.transpose(matRelativeToPlayer);
+		
+		var dustMotesFramesToDraw = sshipDrawMatrices.map(mm =>{
+			var mat = mat4.create(mm);
+			mat4.multiply(mat, matRelativeToPlayer);
+			return {mat, scale:0.0005};
+		});
+		drawArrayOfModels2(dustMotesFramesToDraw, cubeFrameBuffers, activeShaderProgram);
+	}
 
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.darkGray);
 	[
@@ -4572,7 +4566,6 @@ var dustMotesInfo = (function(){
 		instanceScale:0.001,
 		numInstances:1000,
 		accumulatedScroll:new Array(3).fill(0),
-		matAboutPlayerPosition:mat4.create(),
 		transposedMatRelativeToPlayer:newIdMatWithQuats()	//perhaps could just store as a single quat or mat3 but mat4 makes more similar to other code,
 			//perhaps at expense of drift. (dust motes box might move away from player over long time)
 	}
