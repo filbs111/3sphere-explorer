@@ -116,11 +116,8 @@ function zmove4mat(mat, angle){
 function xyzrotate4mat(mat, rotatevector){
 	if (mat.qPair){
 		mat.qPair = multiply_qpairs( mat.qPair , makerotatequatpair(scalarvectorprod(0.5,rotatevector)));
-
-		if (!mat.hack){
-			convert_quats_to_4matrix(mat.qPair, mat);	//this func now sets a matrix passed in to be equivalent to qpair
-			return;
-		}
+		convert_quats_to_4matrix(mat.qPair, mat);	//this func now sets a matrix passed in to be equivalent to qpair
+		return;
 	}
 	
 	//angle/axis rotation.
@@ -180,10 +177,9 @@ function scalarvectorprod(sca,vec){
 	return vec.map(function(val){return sca*val;});
 }
 
-function newIdMatWithQuats(hack){
+function newIdMatWithQuats(){
 	var newMat = mat4.identity();
 	newMat.qPair = [[1,0,0,0],[1,0,0,0]];
-	newMat.hack=hack;
 	return newMat;
 }
 

@@ -4189,7 +4189,7 @@ var portalMats = [firstPortalSide.matrix, firstPortalSide.otherps.matrix];	//doe
 
 
 var playerCameraInterp = newIdMatWithQuats();
-var offsetPlayerCamera = newIdMatWithQuats(true);	//needs hack
+var offsetPlayerCamera = newIdMatWithQuats();
 var playerContainer = {matrix:playerCamera, world:2}
 
 xyzmove4mat(playerCamera,[0,-0.4,0.1]);	//move start point towards problem area where collision distance testing many objs = slowdown
