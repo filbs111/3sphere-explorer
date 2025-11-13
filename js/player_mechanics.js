@@ -422,7 +422,14 @@ var playerMechanics = (() => {
             processTriangleTerrainCollisionFast(timestepFraction);  //for terrain objects using 4d tris
 
             rotatePlayer(scalarvectorprod(subTimeStep * rotateSpeed,playerAngVelVec));
-            movePlayer(scalarvectorprod(subTimeStep * moveSpeed,playerVelVec));
+
+            var toMovePlayer = scalarvectorprod(subTimeStep * moveSpeed,playerVelVec);
+            movePlayer(toMovePlayer);
+
+            var toMoveDustMotes = scalarvectorprod(subTimeStep * moveSpeed, playerVelVec.map((xx,ii)=>xx-savedSpinVelPlayerCoordsForHud[ii]));
+            scrollDustMotes(toMoveDustMotes);
+                //this accounts for inear motion (at player position) of spinning duocylinder terrain
+                //TODO also apply spin to dust motes object.
 
             //update things used in triangle collision code
             playerPos = playerCamera.slice(12);

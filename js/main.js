@@ -5246,7 +5246,9 @@ function moveMatrixThruPortal(matrix, rad, hackMultiplier, portal, skipStartEndR
 
 function movePlayer(vec){
 	xyzmove4mat(playerCamera, vec);
+}
 
+function scrollDustMotes(vec){
 	for (var cc=0;cc<3;cc++){
 		for (var kk=0;kk<3;kk++){
 			dustMotesInfo.accumulatedScroll[cc]+=vec[kk]*dustMotesInfo.transposedMatRelativeToPlayer[4*kk + cc]/dustMotesInfo.scale;;
