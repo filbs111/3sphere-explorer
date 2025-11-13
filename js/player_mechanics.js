@@ -7,11 +7,13 @@ var playerMechanics = (() => {
 
     var playerAngVelVec = [0,0,0];
     var currentThrustInput = [0,0,0];
-    var autoFireCountdown=0;
 	var currentTriangleObjectPlayerPen=0;
     var foundClosestPointTriangleObj=false;
     var currentTriangleObjectPlayerPen2=0;
     var foundClosestPointTriangleObj2=false;
+
+    var gunAutofire = createAutofire(fireGun, 50);
+    var bombAutofire = createAutofire(dropBomb, 500);
 
     return {
         update,
@@ -28,8 +30,7 @@ var playerMechanics = (() => {
         var thrust = 0.00025*timeStep*(guiParams.control.handbrake?0.1:1);	//TODO make keyboard/gamepad fair! currently thrust, moveSpeed config independent!
         var angVelDampMultiplier=Math.pow(0.85, timeStep/10);
         var duoCylinderAngVelConst = playerWorldSettings.spinRate;
-        var autoFireCountdownStartVal=Math.ceil(5 / (timeStep/10));
-
+        
         //auto-roll upright. with view to using for character controller
         //could put this outside stepspeed if didn't decay towards 0 roll (could do immediately like do with spinCorrection
         if (true){
@@ -271,15 +272,14 @@ var playerMechanics = (() => {
         playerVelVec=scalarvectorprod(1.0-atmosThick*spdScaled,scaledAirSpdVec).map((val,idx) => val*airSpdScale[idx]+spinVelPlayerCoords[idx]);
         
 
+        gunAutofire(
+            keyThing.keystate(71) ||( activeGp && activeGp.buttons[gpSettings.fireButton].value) || (pointerLocked && mouseInfo.buttons&1), //G key or joypad button or LMB (pointer locked)
+            timeStep
+        );
 
-        if (autoFireCountdown>0){
-            autoFireCountdown--;
-        }else{
-            if (keyThing.keystate(71) ||( activeGp && activeGp.buttons[gpSettings.fireButton].value) || (pointerLocked && mouseInfo.buttons&1)){	//G key or joypad button or LMB (pointer locked)
-                fireGun();
-                autoFireCountdown=autoFireCountdownStartVal;
-            }
-        }
+        bombAutofire(
+            keyThing.keystate(66), timeStep
+        )
 
         var heatEmit = gunHeat/(gunHeat+1.5);	//reuse logic from drawSpaceship
         if (10*Math.random()<heatEmit){
