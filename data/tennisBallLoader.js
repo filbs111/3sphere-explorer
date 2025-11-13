@@ -31,7 +31,7 @@ loadGridData(terrainData, true);
 loadGridData(proceduralTerrainData, true);
 
 //map 3d point data to 4d points, wrapping square onto duocylinder
-function loadGridData(toLoad, generateCollisionData){
+function loadGridData(toLoad, generateCollisionData, zShift = 0){
 	var verts = toLoad.vertices;
 	var newverts = [];
 	var tricoords = [];
@@ -47,7 +47,7 @@ function loadGridData(toLoad, generateCollisionData){
 
 	for (var vv=0, nn=0;vv<gridVertdataLen;vv+=vertStep, nn+=3){
 		var yo = verts[vv];
-		var zo = verts[vv+1];
+		var zo = verts[vv+1]+zShift;
 		var xo = verts[vv+2];
 		
 		var tricoord = [xo,yo,zo].map(xx=>xx/4);
