@@ -426,10 +426,9 @@ var playerMechanics = (() => {
             var toMovePlayer = scalarvectorprod(subTimeStep * moveSpeed,playerVelVec);
             movePlayer(toMovePlayer);
 
-            var toMoveDustMotes = scalarvectorprod(subTimeStep * moveSpeed, playerVelVec.map((xx,ii)=>xx-savedSpinVelPlayerCoordsForHud[ii]));
-            scrollDustMotes(toMoveDustMotes);
-                //this accounts for inear motion (at player position) of spinning duocylinder terrain
-                //TODO also apply spin to dust motes object.
+            var toMoveDustMotes = scalarvectorprod(-subTimeStep * moveSpeed, savedSpinVelPlayerCoordsForHud);
+            scrollDustMotes(toMoveDustMotes);   //this accounts for inear motion (at player position) of spinning duocylinder terrain
+                
 
             //update things used in triangle collision code
             playerPos = playerCamera.slice(12);

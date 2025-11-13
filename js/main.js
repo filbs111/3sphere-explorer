@@ -2585,7 +2585,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	
 	//1 draw a cube frame at same position, scale as container.
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.red);
-	drawArrayOfModels2([dustMotesInfo], cubeFrameBuffers, activeShaderProgram);	//static dust mote in unmoving box
+	drawArrayOfModels2([dustMotesInfo], cubeFrameBuffers, activeShaderProgram, false);	//static dust mote in unmoving box
 
 	if (guiParams.debug.playerDustMotesFrames){
 		//draw dust motes at player position in frame that moves with player but doesn't rotate
@@ -2597,7 +2597,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 			mat4.multiply(mat, matRelativeToPlayer);
 			return {mat, scale:0.0005};
 		});
-		drawArrayOfModels2(dustMotesFramesToDraw, cubeFrameBuffers, activeShaderProgram);
+		drawArrayOfModels2(dustMotesFramesToDraw, cubeFrameBuffers, activeShaderProgram, false);
 	}
 
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.darkGray);
@@ -2646,7 +2646,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	}
 
 	//drawArrayOfModels + setting scale, without option to cull by bounding sphere, used for new bvh objects
-	function drawArrayOfModels2(objDataArr, buffers, shaderProg){
+	function drawArrayOfModels2(objDataArr, buffers, shaderProg, applyDuocylinderSpin=true){
 		shaderProg = shaderProg || shaderProgramTexmap;
 		setupAtmosAndPrepBuffersForDrawing(buffers, shaderProg);
 		drawArrayForFunc(function(){
@@ -2660,10 +2660,12 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 				gl.uniform3f(activeShaderProgram.uniforms.uModelScale, myscale,myscale,myscale);
 
 				mat4.set(invertedWorldCamera, mvMatrix);
-				rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
+				mat4.identity(mMatrix);
+				if (applyDuocylinderSpin){
+					rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
+					rotate4mat(mMatrix, 0, 1, duocylinderSpin);
+				}
 				mat4.multiply(mvMatrix,thisObj.mat);
-
-				mat4.identity(mMatrix);rotate4mat(mMatrix, 0, 1, duocylinderSpin);
 				mat4.multiply(mMatrix, thisObj.mat);	//not needed in all shaders
 				drawFunc2();
 			}
@@ -4949,7 +4951,7 @@ var iterateMechanics = (function iterateMechanics(){
 				axisDirWorldCoords[2]*playerCamera[2] + axisDirWorldCoords[3]*playerCamera[3],
 				axisDirWorldCoords[2]*playerCamera[6] + axisDirWorldCoords[3]*playerCamera[7],
 				axisDirWorldCoords[2]*playerCamera[10] + axisDirWorldCoords[3]*playerCamera[11]];
-			rotatePlayer(scalarvectorprod(duocylinderRotate,axisDirPlayerCoords));	
+			rotatePlayer(scalarvectorprod(duocylinderRotate,axisDirPlayerCoords), false);
 		}
 		
 		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
@@ -5246,7 +5248,8 @@ function moveMatrixThruPortal(matrix, rad, hackMultiplier, portal, skipStartEndR
 
 function movePlayer(vec){
 	xyzmove4mat(playerCamera, vec);
-}
+	scrollDustMotes(vec);
+} 
 
 function scrollDustMotes(vec){
 	for (var cc=0;cc<3;cc++){
@@ -5256,7 +5259,8 @@ function scrollDustMotes(vec){
 	}
 }
 
-function rotatePlayer(vec){
+
+function rotatePlayer(vec, dustMotesRelativeToPlayerToo=true){
 	if (!guiParams.control.onRails){
 		//turning player makes velocity rotate relative to player.
 		playerVelVec = rotateVelVec(playerVelVec,vec);
@@ -5267,16 +5271,15 @@ function rotatePlayer(vec){
 			accumulatedPlayerCameraLag[cc]+=vec[cc];
 		}
 	};
-	
 	xyzrotate4mat(playerCamera,vec);
 
-
-	//NOTE hacky! this is only used for a 3d rotation anyway
-	//maybe should just store this as a single quat.
-	//also seen this break and matRelativeToPlayer become NaNs, causing dust motes to disappear.
-	xyzrotate4matWithProblemCheck(dustMotesInfo.transposedMatRelativeToPlayer, vec, "xxx");
+	if (dustMotesRelativeToPlayerToo){
+		//NOTE hacky! this is only used for a 3d rotation anyway
+		//maybe should just store this as a single quat.
+		//also seen this break and matRelativeToPlayer become NaNs, causing dust motes to disappear.
+		xyzrotate4matWithProblemCheck(dustMotesInfo.transposedMatRelativeToPlayer, vec, "xxx");
+	}
 }
-
 
 function crossProductHomgenous(dir1, dir2){
 	var output ={};
