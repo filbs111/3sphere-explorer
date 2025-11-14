@@ -5279,7 +5279,7 @@ function rotatePlayer(vec, dustMotesRelativeToPlayerToo=true){
 		//NOTE hacky! this is only used for a 3d rotation anyway
 		//maybe should just store this as a single quat.
 		//also seen this break and matRelativeToPlayer become NaNs, causing dust motes to disappear.
-		xyzrotate4matWithProblemCheck(dustMotesInfo.transposedMatRelativeToPlayer, vec, "xxx");
+		xyzrotate4mat(dustMotesInfo.transposedMatRelativeToPlayer, vec);
 	}
 }
 
