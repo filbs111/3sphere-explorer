@@ -24,6 +24,9 @@ out vec4 fragColor;
 	//TODO if this works, don't bother creating vZW in vert shader.
 	//if (vZW.y > -1.){discard;} //other side of world. shouldn't happen much with culling. TODO discard earlier?
 	//gl_FragDepth = .3183*atan((vZW.x*2.)/(vZW.y+1.)) + .5;
-	gl_FragDepth = -.3183*atan(vP.w/length(vP.xyz)) + .5;
+
+	float depthVal = -.3183*atan(vP.w/length(vP.xyz)) + .5;
+	gl_FragDepth = depthVal;
+	fragColor.a = depthVal;
 #endif
 	}
