@@ -2416,7 +2416,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	
 
 	//draw dust motes in cube
-	if (true){
+	if (guiParams.debug.drawDustMotes){
 		activeShaderProgram = shaderPrograms.wrappedDustMotes;
 		gl.useProgram(activeShaderProgram);
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);

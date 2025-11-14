@@ -139,7 +139,8 @@ var guiParams={
 		skipEdgeColAcc:true,	//suspect do want this
 		skipEdgeCaseCheck:false,
 		flickerPlayerDisplay:false,
-		playerDustMotesFrames:false
+		playerDustMotesFrames:false,
+		drawDustMotes:true
 	},
 	audio:{
 		volume:0.2,
@@ -296,6 +297,7 @@ function setupGui(){
 	debugFolder.add(guiParams.debug, "skipEdgeCaseCheck");
 	debugFolder.add(guiParams.debug, "flickerPlayerDisplay");
 	debugFolder.add(guiParams.debug, "playerDustMotesFrames");
+	debugFolder.add(guiParams.debug, "drawDustMotes");
 
 	var audioFolder = gui.addFolder('audio');
 	audioFolder.add(guiParams.audio, "volume", 0,1,0.1).onChange(MySound.setGlobalVolume);
