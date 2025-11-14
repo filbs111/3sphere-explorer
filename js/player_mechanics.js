@@ -278,7 +278,8 @@ var playerMechanics = (() => {
         );
 
         bombAutofire(
-            keyThing.keystate(66), timeStep
+            keyThing.keystate(66) || mouseInfo.buttons&2,
+            timeStep
         )
 
         var heatEmit = gunHeat/(gunHeat+1.5);	//reuse logic from drawSpaceship

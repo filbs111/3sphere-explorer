@@ -1454,12 +1454,14 @@ function drawRegularScene(frameTime){
 			drawText("ESC: EXIT FULL SCREEN", 	  4, -1.05, 1, 0.5);
 			drawText("H: TOGGLE DEBUG MENU",      4, -0.9, 1, 0.5);
 
-			drawText("MOVEMENT CONTROLS:",        4.2, -0.7, 1, 0.5);
+			drawText("ROCKET CONTROLS:",          4.2, -0.7, 1, 0.5);
 			drawText("ARROWS, MOUSE MOVE WHEN FULLSCREENED: PITCH/YAW", 
 				                                  4, -0.55, 1, 0.5);
 			drawText("Q,E: ROLL",                 4, -0.4, 1, 0.5);
 			drawText("SPACE BAR: THRUST",         4, -0.25, 1, 0.5);
 			drawText("W,A,S,D: SIDE THRUST",      4, -0.1, 1, 0.5);
+			drawText("LEFT CLICK: FIRE",          4, 0.05, 1, 0.5);
+			drawText("RIGHT CLICK,B: DROP BOMB",  4, 0.2, 1, 0.5);
 		}
 
 		gl.disable(gl.BLEND);
