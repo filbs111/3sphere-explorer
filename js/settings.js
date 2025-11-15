@@ -114,7 +114,6 @@ var guiParams={
 		test1:false
 	},
 	debug:{
-		hudTest:false,
 		closestPoint:false,
 		drawPlayerPosMarkers:false,
 		drawExtraMarkers:false,
@@ -126,7 +125,6 @@ var guiParams={
 		emitFire:false,
 		fireworks:false,
 		textTextBox:false,
-		textWorldNum:true,
 		showChullStats:false,	//convex hull collision stats
 		bvhBoundingSpheres:false,
 		worldCollisionTest1:"grid2OnlyOne",
@@ -141,6 +139,15 @@ var guiParams={
 		flickerPlayerDisplay:false,
 		playerDustMotesFrames:false,
 		drawDustMotes:true
+	},
+	hud:{
+		test:false,
+		portalMarkers:false,
+		textWorldNum:true,
+		flightDirection:false,
+		fireDirection:true,
+		bombMarkers:true,
+		bombText:true,
 	},
 	audio:{
 		volume:0.2,
@@ -264,7 +271,6 @@ function setupGui(){
 	mapFolder.add(guiParams.map, "tetrahedronism", 0,1,0.05);
 
 	var debugFolder = gui.addFolder('debug');
-	debugFolder.add(guiParams.debug, "hudTest");
 	debugFolder.add(guiParams.debug, "closestPoint");
 	debugFolder.add(guiParams.debug, "drawPlayerPosMarkers");
 	debugFolder.add(guiParams.debug, "drawExtraMarkers");
@@ -283,7 +289,6 @@ function setupGui(){
 	debugFolder.add(guiParams.debug, "emitFire");
 	debugFolder.add(guiParams.debug, "fireworks");
 	debugFolder.add(guiParams.debug, "textTextBox");
-	debugFolder.add(guiParams.debug, "textWorldNum");
 	debugFolder.add(guiParams.debug, "showChullStats");
 	debugFolder.add(guiParams.debug, "bvhBoundingSpheres");
 	debugFolder.add(guiParams.debug, "worldCollisionTest1", ["none", "worldBvh", "worldBvh2", "worldBvhHilbert", "grid", "grid2", "grid2OnlyOne"]);
@@ -298,6 +303,15 @@ function setupGui(){
 	debugFolder.add(guiParams.debug, "flickerPlayerDisplay");
 	debugFolder.add(guiParams.debug, "playerDustMotesFrames");
 	debugFolder.add(guiParams.debug, "drawDustMotes");
+
+	var hudFolder = gui.addFolder('hud');
+	hudFolder.add(guiParams.hud, "test");
+	hudFolder.add(guiParams.hud, "portalMarkers");
+	hudFolder.add(guiParams.hud, "textWorldNum");
+	hudFolder.add(guiParams.hud, "flightDirection");
+	hudFolder.add(guiParams.hud, "fireDirection");
+	hudFolder.add(guiParams.hud, "bombMarkers");
+	hudFolder.add(guiParams.hud, "bombText");
 
 	var audioFolder = gui.addFolder('audio');
 	audioFolder.add(guiParams.audio, "volume", 0,1,0.1).onChange(MySound.setGlobalVolume);

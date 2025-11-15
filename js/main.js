@@ -1256,9 +1256,11 @@ function drawRegularScene(frameTime){
 		//drawTargetDecal(standardDecalScale, colorArrs.magenta, adjustedDirectionForFisheye(tiltCameraDirection.map(x=>-x), cameraTilt));
 		//=============================================================================================================
 
-		if (airSpdSq > 0.001){	//only draw above some threshold speed, to avoid rapid movement across screen, jiggling when landed (poor collision system)
-			var reversed = airSpdVec.map(x=>-x);
-			drawTargetDecal(standardDecalScale, colorArrs.hudFlightDir, adjustedDirectionForFisheye(reversed, cameraTilt));
+		if (guiParams.hud.flightDirection){
+			if (airSpdSq > 0.001){	//only draw above some threshold speed, to avoid rapid movement across screen, jiggling when landed (poor collision system)
+				var reversed = airSpdVec.map(x=>-x);
+				drawTargetDecal(standardDecalScale, colorArrs.hudFlightDir, adjustedDirectionForFisheye(reversed, cameraTilt));
+			}
 		}
 
 
@@ -1287,14 +1289,16 @@ function drawRegularScene(frameTime){
 		}
 		
 		//show where guns will shoot
-		if (fireDirectionVec[2] > 0.1){	//??
-			bind2dTextureIfRequired(hudTextureX);
-			var fireDirectionVecAdjusted = fireDirectionVec.map((val, idx) => val-savedSpinVelPlayerCoordsForHud[idx]);
-			var reversed = fireDirectionVecAdjusted.map(x=>-x);	//needs to do this for fisheye correction to work consistent with other hud icons
-			drawTargetDecal(standardDecalScale, colorArrs.hudYellow, adjustedDirectionForFisheye(reversed, cameraTilt), 0.1);	//todo check whether this colour already set
-			drawTargetDecal(standardDecalScale, colorArrs.hudYellow, adjustedDirectionForFisheye(reversed, cameraTilt), -0.1);
+		bind2dTextureIfRequired(hudTextureX);
+		if (guiParams.hud.fireDirection){
+			if (fireDirectionVec[2] > 0.1){	//??
+				var fireDirectionVecAdjusted = fireDirectionVec.map((val, idx) => val-savedSpinVelPlayerCoordsForHud[idx]);
+				var reversed = fireDirectionVecAdjusted.map(x=>-x);	//needs to do this for fisheye correction to work consistent with other hud icons
+				drawTargetDecal(standardDecalScale, colorArrs.hudYellow, adjustedDirectionForFisheye(reversed, cameraTilt), 0.1);	//todo check whether this colour already set
+				drawTargetDecal(standardDecalScale, colorArrs.hudYellow, adjustedDirectionForFisheye(reversed, cameraTilt), -0.1);
+			}
 		}
-		
+
 		function adjustedDirectionForFisheye(inPos, cameraTilt){
 
 			cameraTilt = cameraTilt || [0,0,0];
@@ -1351,18 +1355,20 @@ function drawRegularScene(frameTime){
 		var portalTexts = [];
 			//note using offsetCameraContainer for this, but use playerContainer to display current world.
 		for (var portal of portalsForWorld[offsetCameraContainer.world]){
-			
 			pos = screenPosForMatrix(portal.matrix);
-
 			if (pos[2]<0){	//note unintuitive sign
-				drawTargetDecal(standardDecalScale, colorArrs.white, pos, -0.35);
-				drawTargetDecal(standardDecalScale, colorArrs.white, pos, 0.35);
-				var text = "world " + portal.otherps.world; 
-				portalTexts.push({pos,text});
+				portalTexts.push({pos, text: "world "+portal.otherps.world});
 			}
 		}
 
-		if (guiParams.debug.hudTest){
+		if (guiParams.hud.portalMarkers){
+			portalTexts.forEach(pt=>{
+				drawTargetDecal(standardDecalScale, colorArrs.white, pt.pos, -0.35);
+				drawTargetDecal(standardDecalScale, colorArrs.white, pt.pos, 0.35);
+			});
+		}
+
+		if (guiParams.hud.test){
 			//draw point to side
 			drawTargetDecal(standardDecalScale, colorArrs.red, adjustedDirectionForFisheye([1,0,0]), 0);
 			drawTargetDecal(standardDecalScale, colorArrs.red, adjustedDirectionForFisheye([-1,0,0]), 0);
@@ -1385,34 +1391,37 @@ function drawRegularScene(frameTime){
 		var bombHudSpin = (frameTime/300) % Math.PI;
 		var halfDecalScale = standardDecalScale.map(xx=>xx/2);
 
-		bullets.forEach(bb=> {
-			if (bb.active && bb.isBomb && bb.world == playerContainer.world){
-			var pos = screenPosForMatrix(bb.matrix);
-			if (pos[2]<0){	//note unintuitive sign
-				drawTargetDecal(halfDecalScale, colorArrs.magenta, pos, bombHudSpin);
-				drawTargetDecal(halfDecalScale, colorArrs.magenta, pos, -bombHudSpin);
-			}
-		}});
+		if (guiParams.hud.bombMarkers){
+			bullets.forEach(bb=> {
+				if (bb.active && bb.isBomb && bb.world == playerContainer.world){
+				var pos = screenPosForMatrix(bb.matrix);
+				if (pos[2]<0){	//note unintuitive sign
+					drawTargetDecal(halfDecalScale, colorArrs.magenta, pos, bombHudSpin);
+					drawTargetDecal(halfDecalScale, colorArrs.magenta, pos, -bombHudSpin);
+				}
+			}});
+		}
 
-		if (guiParams.debug.textWorldNum){
-			//drawing of text
-			//TODO efficient - currently many draw calls. could instance render, or create a mesh of multiple quads
-			var activeShaderProgram = shaderPrograms.decalSdf;
-			gl.useProgram(activeShaderProgram);
-			prepBuffersForDrawing(quadBuffers, activeShaderProgram);
-			gl.activeTexture(gl.TEXTURE0);
-			gl.enable(gl.BLEND);
-			gl.blendFunc(gl.SRC_ALPHA, gl.ONE);	
+		//drawing of text
+		//TODO efficient - currently many draw calls. could instance render, or create a mesh of multiple quads
+		var activeShaderProgram = shaderPrograms.decalSdf;
+		gl.useProgram(activeShaderProgram);
+		prepBuffersForDrawing(quadBuffers, activeShaderProgram);
+		gl.activeTexture(gl.TEXTURE0);
+		gl.enable(gl.BLEND);
+		gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+		bind2dTextureIfRequired(fontTexture);
 
-			bind2dTextureIfRequired(fontTexture);
-
+		if (guiParams.hud.textWorldNum){
 			//drawText("World " + playerContainer.world, 0.6, 0.15, 1); //(below) centre of screen, suitable if flash up on cross portal
 			drawText("World " + playerContainer.world, 2.5, 1.5, 0.6, 1.2); //bottom left. note scales with FOV!
 
 			portalTexts.forEach(pp=>{
 				drawText(pp.text, pp.pos[0], pp.pos[1], pp.pos[2], 0.6);
 			});
+		}
 
+		if (guiParams.hud.bombText){
 			bullets.forEach(bb=> {
 				if (bb.active && bb.isBomb && bb.world == playerContainer.world){
 				var pos = screenPosForMatrix(bb.matrix);
@@ -1420,32 +1429,33 @@ function drawRegularScene(frameTime){
 					drawText("BOMB", pos[0], pos[1], pos[2], 0.4);
 				}
 			}});
-
-			if (guiParams.debug.showChullStats && guiParams["player model"] == "convexHullTest"){
-				drawText(chullCollisionScreenInfo, 0.6, 0.15, 1, 0.6);
-				drawText(chullCollisionScreenInfo2, 0.6, 0.4, 1, 0.6);
-			}
-
-			function drawText(textToDraw, xpos, ypos, zpos, size){
-				if (!text_util.isLoaded){return;}
-
-				xpos/=size*zpos;
-				ypos/=size*zpos;
-				zpos=1/size;
-
-				textToDraw.toUpperCase().split('').forEach(ch => {
-					var cInfo = text_util.charInfo[ch.charCodeAt(0)];
-					
-					drawTargetDecalCharacter(
-						[0.01*size*cInfo.width/512, 0.01*size*cInfo.height/512, 0], colorArrs.teapot,
-						[xpos - 2*cInfo.xoffset/512 - (cInfo.width/512),
-						ypos + 2*cInfo.yoffset/512 + (cInfo.height/512), //note awkward passing in size since currently quads are drawn -1 to +1
-						zpos],
-						cInfo);
-					xpos-=2* cInfo.xadvance/512;
-				});
-			}
 		}
+
+		if (guiParams.debug.showChullStats && guiParams["player model"] == "convexHullTest"){
+			drawText(chullCollisionScreenInfo, 0.6, 0.15, 1, 0.6);
+			drawText(chullCollisionScreenInfo2, 0.6, 0.4, 1, 0.6);
+		}
+
+		function drawText(textToDraw, xpos, ypos, zpos, size){
+			if (!text_util.isLoaded){return;}
+
+			xpos/=size*zpos;
+			ypos/=size*zpos;
+			zpos=1/size;
+
+			textToDraw.toUpperCase().split('').forEach(ch => {
+				var cInfo = text_util.charInfo[ch.charCodeAt(0)];
+				
+				drawTargetDecalCharacter(
+					[0.01*size*cInfo.width/512, 0.01*size*cInfo.height/512, 0], colorArrs.teapot,
+					[xpos - 2*cInfo.xoffset/512 - (cInfo.width/512),
+					ypos + 2*cInfo.yoffset/512 + (cInfo.height/512), //note awkward passing in size since currently quads are drawn -1 to +1
+					zpos],
+					cInfo);
+				xpos-=2* cInfo.xadvance/512;
+			});
+		}
+		
 
 		if (shouldShowControls){
 			drawText("DISPLAY:",                  4.2, -1.5, 1, 0.5);	//left from centre, down from centre, depth, scale
