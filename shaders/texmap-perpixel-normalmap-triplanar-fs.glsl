@@ -1,4 +1,6 @@
 #version 300 es 
+	#define PIBYTWO 1.5707963
+
 	precision mediump float;
 	uniform sampler2D uSampler;
 	uniform sampler2D uSamplerB;
@@ -48,6 +50,33 @@
 
 out vec4 fragColor;
 
+
+//TODO move some or all of this calculation to vertex shader.
+// calculation of alpha, gamma factors can easily be per vertex
+// nmapNormal is per pixel so wants more thought.
+float calculatePortalLightContribution(vec3 vPortalLightPosTangentSpace, vec3 nmapNormal, float uReflectorCos, vec4 surfPos, vec4 portalPos){
+	float cosElevation = dot(vPortalLightPosTangentSpace, nmapNormal); //elevation = phi in notes
+	float elev = acos(cosElevation);	//elevation of portal "sun" in sky viewed from surface
+
+	float alpha = acos(uReflectorCos);	//angular size of portal in world
+	float cosGamma = dot(surfPos, portalPos);
+		//NOTE this dot prod already cacluated earlier in shader to discard frags inside portals
+		//TODO dedupe/ pass in dot prod.
+	float gamma = acos(cosGamma);			//angular distance from surface to portal
+		//TODO does vPortalLightPosTangentSpace already contain enough info to get this, removing need to pass in surfPos, portalPos?
+
+		//TODO simplify trig. eg get straight from uReflectorCos to tanAlpha, tanAlpha^2,
+		// straight from cosGamma to sinGamma^2
+	float tanAlpha = tan(alpha);
+	float sinGamma = sin(gamma);
+	float tanTheta = tanAlpha / sqrt(sinGamma*sinGamma - tanAlpha*tanAlpha*cosGamma*cosGamma );
+	float theta = atan(tanTheta);
+
+	float aboveHorizonAngleSize = (sin(min(PIBYTWO, elev+theta)) - sin(min(PIBYTWO, elev-theta)));
+	float contribution = aboveHorizonAngleSize*sin(theta)/2.0;
+	return contribution;
+}
+
 	void main(void) {
 
 #ifdef DEPTH_AWARE
@@ -69,9 +98,11 @@ out vec4 fragColor;
 #endif
 #endif
 
-		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
-		float posCosDiff2 = dot(normalize(transformedCoord),uReflectorPos2) - uReflectorCos2;
-		float posCosDiff3 = dot(normalize(transformedCoord),uReflectorPos3) - uReflectorCos3;
+		vec4 normalisedSurfCoord = normalize(transformedCoord);
+
+		float posCosDiff = dot(normalisedSurfCoord,uReflectorPos) - uReflectorCos;
+		float posCosDiff2 = dot(normalisedSurfCoord,uReflectorPos2) - uReflectorCos2;
+		float posCosDiff3 = dot(normalisedSurfCoord,uReflectorPos3) - uReflectorCos3;
 
 		if (posCosDiff>0.0){
 			discard;
@@ -133,20 +164,14 @@ out vec4 fragColor;
 		vec4 vecToLight = normalizedLightPos - vec4(vec3(0.0),1.0);	//result fully consistent with "inefficient" version, but maybe not worth extra calcs
 		light/=0.1 + 5.0*dot(vecToLight,vecToLight);
 
-		//light from portal. TODO pass in a colour for this, more complex lighting (at surface of portal, should be hemispherical light etc)
-		//this is just bodged/guessed to achieve correct behaviour at/across portal. TODO check/correct!
+		//light from portal.
 		vec3 vPortalLightPosTangentSpaceAdj =normalize(vPortalLightPosTangentSpace.xyz);
-		float portalLight = dot( vPortalLightPosTangentSpaceAdj, nmapNormal);
-		portalLight = max(0.5*portalLight +0.5+ posCosDiff,0.0);	//unnecessary if camera pos = light pos
-
 		vec3 vPortalLightPosTangentSpaceAdj2 =normalize(vPortalLightPosTangentSpace2.xyz);
-		float portalLight2 = dot( vPortalLightPosTangentSpaceAdj2, nmapNormal);
-		portalLight2 = max(0.5*portalLight2 +0.5+ posCosDiff2,0.0);	//unnecessary if camera pos = light pos
-
 		vec3 vPortalLightPosTangentSpaceAdj3 =normalize(vPortalLightPosTangentSpace3.xyz);
-		float portalLight3 = dot( vPortalLightPosTangentSpaceAdj3, nmapNormal);
-		portalLight3 = max(0.5*portalLight3 +0.5+ posCosDiff3,0.0);	//unnecessary if camera pos = light pos
-
+		
+		float portalLight = calculatePortalLightContribution(vPortalLightPosTangentSpaceAdj, nmapNormal, uReflectorCos, normalisedSurfCoord, uReflectorPos);
+		float portalLight2 = calculatePortalLightContribution(vPortalLightPosTangentSpaceAdj2, nmapNormal, uReflectorCos2, normalisedSurfCoord, uReflectorPos2);
+		float portalLight3 = calculatePortalLightContribution(vPortalLightPosTangentSpaceAdj3, nmapNormal, uReflectorCos3, normalisedSurfCoord, uReflectorPos3);
 
 #ifdef SPECULAR_ACTIVE
 
@@ -168,9 +193,9 @@ out vec4 fragColor;
 #endif
 
 		//falloff
-		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
-		portalLight2/=1.0 + 3.0*dot(posCosDiff2,posCosDiff2);
-		portalLight3/=1.0 + 3.0*dot(posCosDiff3,posCosDiff3);
+		// portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
+		// portalLight2/=1.0 + 3.0*dot(posCosDiff2,posCosDiff2);
+		// portalLight3/=1.0 + 3.0*dot(posCosDiff3,posCosDiff3);
 #ifdef VCOLOR
 		//vec4 adjustedColor = uColor*vColor;	//TODO this logid in vert shader
 		vec4 adjustedColor = uColor;	//temporarily disable this feature -seems input color data broken - some are black. reenable when fix data.

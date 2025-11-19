@@ -1,6 +1,7 @@
 #version 300 es
 	#define CONST_TAU 6.2831853
 	#define CONST_REPS 16.0
+	#define PIBYTWO 1.5707963
 
 	precision mediump float;
 	uniform sampler2D uSampler;
@@ -54,6 +55,34 @@
 
 out vec4 fragColor;
 
+
+//TODO move some or all of this calculation to vertex shader.
+// calculation of alpha, gamma factors can easily be per vertex
+// nmapNormal is per pixel so wants more thought.
+float calculatePortalLightContribution(vec4 vPortalLightPosTangentSpace, vec4 nmapNormal, float uReflectorCos, vec4 surfPos, vec4 portalPos){
+	float cosElevation = dot(vPortalLightPosTangentSpace, nmapNormal); //elevation = phi in notes
+	float elev = acos(cosElevation);	//elevation of portal "sun" in sky viewed from surface
+
+	float alpha = acos(uReflectorCos);	//angular size of portal in world
+	float cosGamma = dot(surfPos, portalPos);
+		//NOTE this dot prod already cacluated earlier in shader to discard frags inside portals
+		//TODO dedupe/ pass in dot prod.
+	float gamma = acos(cosGamma);			//angular distance from surface to portal
+		//TODO does vPortalLightPosTangentSpace already contain enough info to get this, removing need to pass in surfPos, portalPos?
+
+		//TODO simplify trig. eg get straight from uReflectorCos to tanAlpha, tanAlpha^2,
+		// straight from cosGamma to sinGamma^2
+	float tanAlpha = tan(alpha);
+	float sinGamma = sin(gamma);
+	float tanTheta = tanAlpha / sqrt(sinGamma*sinGamma - tanAlpha*tanAlpha*cosGamma*cosGamma );
+	float theta = atan(tanTheta);
+
+	float aboveHorizonAngleSize = (sin(min(PIBYTWO, elev+theta)) - sin(min(PIBYTWO, elev-theta)));
+	float contribution = aboveHorizonAngleSize*sin(theta)/2.0;
+	return contribution;
+}
+
+
 	void main(void) {
 
 #ifdef DEPTH_AWARE
@@ -75,9 +104,11 @@ out vec4 fragColor;
 #endif
 #endif
 
-		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;	//TODO is transformedcoord still needed if have vPortalLightPosTangentSpace ? 
-		float posCosDiff2 = dot(normalize(transformedCoord),uReflectorPos2) - uReflectorCos2;	//TODO is transformedcoord still needed if have vPortalLightPosTangentSpace ? 
-		float posCosDiff3 = dot(normalize(transformedCoord),uReflectorPos3) - uReflectorCos3;	//TODO is transformedcoord still needed if have vPortalLightPosTangentSpace ? 
+		vec4 normalisedSurfCoord = normalize(transformedCoord);
+
+		float posCosDiff = dot(normalisedSurfCoord,uReflectorPos) - uReflectorCos;	//TODO is transformedcoord still needed if have vPortalLightPosTangentSpace ? 
+		float posCosDiff2 = dot(normalisedSurfCoord,uReflectorPos2) - uReflectorCos2;	//TODO is transformedcoord still needed if have vPortalLightPosTangentSpace ? 
+		float posCosDiff3 = dot(normalisedSurfCoord,uReflectorPos3) - uReflectorCos3;	//TODO is transformedcoord still needed if have vPortalLightPosTangentSpace ? 
 
 		if (posCosDiff>0.0){
 			discard;
@@ -176,16 +207,12 @@ out vec4 fragColor;
 		vec4 vecToLight = normalizedLightPos - vec4(vec3(0.0),1.0);	//result fully consistent with "inefficient" version, but maybe not worth extra calcs
 		light/=0.1 + 5.0*dot(vecToLight,vecToLight);
 	
-		//light from portal. TODO pass in a colour for this, more complex lighting (at surface of portal, should be hemispherical light etc)
-		//this is just bodged/guessed to achieve correct behaviour at/across portal. TODO check/correct!
-		float portalLight = dot( vPortalLightPosTangentSpace, nmapNormal);						
-		portalLight = max(0.5*portalLight +0.5+ posCosDiff,0.0);	//unnecessary if camera pos = light pos
 
-		float portalLight2 = dot( vPortalLightPosTangentSpace2, nmapNormal);
-		portalLight2 = max(0.5*portalLight2 +0.5+ posCosDiff2,0.0);	//unnecessary if camera pos = light pos
+		//light from portal
+		float portalLight = calculatePortalLightContribution(vPortalLightPosTangentSpace, nmapNormal, uReflectorCos, normalisedSurfCoord, uReflectorPos);
+		float portalLight2 = calculatePortalLightContribution(vPortalLightPosTangentSpace2, nmapNormal, uReflectorCos2, normalisedSurfCoord, uReflectorPos2);
+		float portalLight3 = calculatePortalLightContribution(vPortalLightPosTangentSpace3, nmapNormal, uReflectorCos3, normalisedSurfCoord, uReflectorPos3);
 
-		float portalLight3 = dot( vPortalLightPosTangentSpace3, nmapNormal);
-		portalLight3 = max(0.5*portalLight3 +0.5+ posCosDiff3,0.0);	//unnecessary if camera pos = light pos
 
 #ifdef SPECULAR_ACTIVE
 		vec4 vPortalLightPosTangentSpaceAdj = normalize(vec4( vPortalLightPosTangentSpace.xyz , 0.0));
@@ -210,9 +237,9 @@ out vec4 fragColor;
 #endif
 
 		//falloff
-		portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
-		portalLight2/=1.0 + 3.0*dot(posCosDiff2,posCosDiff2);	//just something that's 1 at edge of portal
-		portalLight3/=1.0 + 3.0*dot(posCosDiff3,posCosDiff3);	//just something that's 1 at edge of portal
+		// portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
+		// portalLight2/=1.0 + 3.0*dot(posCosDiff2,posCosDiff2);	//just something that's 1 at edge of portal
+		// portalLight3/=1.0 + 3.0*dot(posCosDiff3,posCosDiff3);	//just something that's 1 at edge of portal
 				
 		//guess maybe similar to some gaussian light source
 		//vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*adjustedColor + (1.0-fog)*uFogColor;

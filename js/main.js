@@ -2753,7 +2753,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 				activeShaderProgram = desiredProgram;
 				shaderSetup(activeShaderProgram);
 			}
-			uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", info.color?? colorArrs.white);
+			uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", info.color?? colorArrs.darkGray);
 
 			if (info.tex){
 				bind2dTextureIfRequired(info.tex);
