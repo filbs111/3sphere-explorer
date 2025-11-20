@@ -351,6 +351,7 @@ function initBuffers(){
 		bufferObj.vertexIndexBuffer.itemSize = 3;
 		//bufferObj.vertexIndexBuffer.numItems = sourceData.indices.length/3;	//todo why isn't /3 used in loadDuocylinderBufferData ?
 		bufferObj.vertexIndexBuffer.numItems = sourceData.indices.length;
+		bufferObj.isLoaded=true;
 	}
 	
 	//load blender object
