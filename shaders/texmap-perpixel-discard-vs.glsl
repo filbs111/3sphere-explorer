@@ -28,17 +28,21 @@
 #endif
 	void main(void) {
 #ifdef VERTVEL_ACTIVE
-		vec3 shiftedPosition = uModelScale*aVertexPosition + aVertexVelocity*uVertexMove;
-		vec4 aVertexPositionNormalized = normalize(vec4(shiftedPosition, 1.0));
+		vec3 scaledPosition = uModelScale*aVertexPosition + aVertexVelocity*uVertexMove;
 #else
-		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
+		vec3 scaledPosition = uModelScale*aVertexPosition;
 #endif
+		vec4 aVertexPositionNormalized = normalize(vec4(scaledPosition, 1.0));
 		transformedCoord = uMVMatrix * aVertexPositionNormalized;
 #ifdef CUSTOM_DEPTH
 		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
 		vP = transformedCoord;
 #endif
-		transformedNormal = uMVMatrix * vec4(aVertexNormal,0.0);
+		float distFromOrigin = dot(aVertexNormal, scaledPosition);
+		vec4 norm4Vec = normalize(vec4(aVertexNormal,-distFromOrigin));
+
+		transformedNormal = uMVMatrix * norm4Vec;
+
 		adjustedPos = transformedCoord - uDropLightPos;
 		gl_Position = uPMatrix * transformedCoord;
 

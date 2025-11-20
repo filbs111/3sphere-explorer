@@ -75,14 +75,6 @@ float calculatePortalLightContribution(vec4 normal, float uReflectorCos, vec4 su
 	return contribution;
 }
 
-vec4 vecPerpendicularToVec(vec4 sourceVec, vec4 perpVec){
-	//remove component of sourceVec parallel to perpVec and renormalise.
-
-	float dotProd = dot(sourceVec, perpVec);
-	vec4 newVec = sourceVec - perpVec*dotProd;
-	return newVec;
-}
-
 
 	void main(void) {
 
@@ -103,8 +95,8 @@ vec4 vecPerpendicularToVec(vec4 sourceVec, vec4 perpVec){
 			discard;	//unnecessary if, when viewing thru portal, ensure is other one.
 		}
 	
-
-		float posDotNormal = dot( normalize(adjustedPos), transformedNormal);
+		vec4 norm = normalize(transformedNormal);
+		float posDotNormal = dot( normalize(adjustedPos), norm);	//NOTE not correct, can see goes wrong for large faces in large models
 
 		float light = -posDotNormal;
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
@@ -112,14 +104,6 @@ vec4 vecPerpendicularToVec(vec4 sourceVec, vec4 perpVec){
 		light/=0.1 + 5.0*dot(adjustedPos,adjustedPos);	//1st num some const to ensure light doesn't go inf at short dist
 		
 		//light from portals
-		vec4 norm = vecPerpendicularToVec(transformedNormal, normalisedSurfCoord);
-			//NOTE doing this because seems that surfPos and normal might not be perpendicular!
-			//if don't do this, see low lighting (with clear onset band) for normal towards light direction, seems because 
-			// pos^2 + norm^2 > 1, so xy component = sqrt(1 - pos^2 - norm^2) is doing sqrt(-ve). seen problem with teapot. 
-			// suspect vshader norm calc approx fails for large objects. Suspect norms here still wrong for large objs.
-			// TODO fix vert shader. 
-			// NOTE unknown if problem exists in vert shaders that translate into tangent space for normal map.
-		
 		float portalLight = calculatePortalLightContribution(norm, uReflectorCos, normalisedSurfCoord, uReflectorPos);
 		float portalLight2 = calculatePortalLightContribution(norm, uReflectorCos2, normalisedSurfCoord, uReflectorPos2);
 		float portalLight3 = calculatePortalLightContribution(norm, uReflectorCos3, normalisedSurfCoord, uReflectorPos3);

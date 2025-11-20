@@ -77,13 +77,6 @@ float calculatePortalLightContribution(vec4 normal, float uReflectorCos, vec4 su
 }
 
 
-vec4 vecPerpendicularToVec(vec4 sourceVec, vec4 perpVec){
-	//remove component of sourceVec parallel to perpVec and renormalise.
-
-	float dotProd = dot(sourceVec, perpVec);
-	vec4 newVec = sourceVec - perpVec*dotProd;
-	return newVec;
-}
 
 	void main(void) {
 #ifdef DEPTH_AWARE
@@ -125,6 +118,8 @@ vec4 vecPerpendicularToVec(vec4 sourceVec, vec4 perpVec){
 			discard;	//unnecessary if ensure that when viewing through a portal, that portal is 1st.
 		}
 
+		vec4 norm = normalize(transformedNormal);
+
 		vec4 adjustedPosNormalised = normalize(adjustedPos);
 		float light = -dot( adjustedPosNormalised, transformedNormal);
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
@@ -141,19 +136,14 @@ vec4 vecPerpendicularToVec(vec4 sourceVec, vec4 perpVec){
 	vec4 directionToLight = normalize( normalize(transformedCoord-SMALL_AMOUNT*adjustedPosNormalised ) -  normalize(transformedCoord));
 	vec4 halfVec = normalize( directionToEye + directionToLight);
 
-	float phongAmount = uSpecularStrength*pow( max(dot(halfVec, normalize(transformedNormal)), 0.),uSpecularPower);
+	float phongAmount = uSpecularStrength*pow( max(dot(halfVec, norm), 0.),uSpecularPower);
 	light*=(1.-uSpecularStrength);
 	light+=phongAmount;
 #endif
-
 		//falloff
 		light/=0.1 + 5.0*dot(adjustedPos,adjustedPos);
 
 		//light from portal
-		vec4 norm = vecPerpendicularToVec(transformedNormal, normalisedSurfCoord);
-			//for some reason, input norms, surface positions are not orthogonal! 
-			//see notes in perpixel-discard-fs.glgl
-
 		float portalLight = calculatePortalLightContribution(norm, uReflectorCos, normalisedSurfCoord, uReflectorPos);
 		float portalLight2 = calculatePortalLightContribution(norm, uReflectorCos2, normalisedSurfCoord, uReflectorPos2);
 		float portalLight3 = calculatePortalLightContribution(norm, uReflectorCos3, normalisedSurfCoord, uReflectorPos3);

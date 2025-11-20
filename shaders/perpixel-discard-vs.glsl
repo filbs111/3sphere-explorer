@@ -112,7 +112,8 @@
 	transformedNormal = blendWeights.x*transformedNormalA + blendWeights.y*transformedNormalB;	//approx. TODO use equivalent logic as vertex position
 
 #else
-		vec4 aVertexPositionNormalized = normalize(vec4(uModelScale*aVertexPosition, 1.0));
+		vec3 scaledPosition = uModelScale*aVertexPosition;
+		vec4 aVertexPositionNormalized = normalize(vec4(scaledPosition, 1.0));
 	#ifdef INSTANCED
 		//bodge together a matrix from input vectors because suspect chrome bug
 			mat4 uMMatrix = mat4( aMMatrixA, aMMatrixB, aMMatrixC, aMMatrixD );
@@ -125,7 +126,11 @@
 	#endif
 
 		transformedCoord = MVMatrix * aVertexPositionNormalized;
-		transformedNormal = MVMatrix * vec4(aVertexNormal,0.0);
+
+		float distFromOrigin = dot(aVertexNormal, scaledPosition);
+		vec4 norm4Vec = normalize(vec4(aVertexNormal,-distFromOrigin));
+		
+		transformedNormal = MVMatrix * norm4Vec;
 #endif
 
 #ifdef CUSTOM_DEPTH
