@@ -4437,6 +4437,8 @@ function initTexture(){
 
 	duocylinderObjects.grid.tex = makeTextureCompressed("img/grid-omni.webp");
 	duocylinderObjects.terrain.tex = makeTexture("data/terrain/turbulent-seamless.webp",gl.RGB,gl.UNSIGNED_SHORT_5_6_5);
+	duocylinderObjects.greebleTerrain.tex = bricktex;
+
 	//duocylinderObjects.procTerrain.tex = texture;
 	//duocylinderObjects.procTerrain.tex = makeTexture("img/14131-diffuse.jpg");  //sand
 	duocylinderObjects.procTerrain.tex = nmapTexture;
