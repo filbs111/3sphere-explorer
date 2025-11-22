@@ -58,15 +58,14 @@ function expSectionsIntegral(startAngle, endAngle, numSteps){
         //sines are calculated twice - below and in the calls made to calculate atmos density. TODO reuse?
         // consecutive sections also could reuse
         //differences in sines might be expressed as cosine? 
-        var contribution = (endDensity-startDensity)/(atmosContrast*(Math.sin(sectionEndAngle) - Math.sin(angle)));
+        var contribution = (endDensity-startDensity)/(Math.sin(sectionEndAngle) - Math.sin(angle));
 
         sum+=contribution;
     }
 
-    return sum*angleStep;
+    return sum*angleStep/atmosContrast;
         //TODO reuse calculations to make faster
         //TODO scale polygonal circle so half within/without circle?
-        //TODO put division by atmosContrast out of loop
         //TODO multiply together transmission at each increment, because eventually want to do exp(-totalatmos) for
         //transmission anyway, and avoids sums going out of number range.
         //TODO compare ratio of total absorption for approximations
