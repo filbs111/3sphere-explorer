@@ -16,14 +16,17 @@ Consider a light of angular radius alpha, centred at angle theta from straight a
 
 Similarly, for portal with centre at angle phi from directly above the surface, 
 
-
 However, when the disc of light viewed from the surface is not entirely above the horizon, this calculation is incorect, because it counts a negative contribution of light from below the horizon. However, this contibution should be ignored.
 
-Full calculation appears to be quite complicated. Consider 2D case instead. Suspect that results same for $\phi < \pi/2 - \theta$ (disc completely above horizon), $\phi > \pi/2 + \theta$ (disc completely below horizon), and for case on surface of lit object where $\theta = \pi/2$. Results for partly above, below horizon - don't know whether will match, but should be continuous, expect results plausible.
+Full calculation appears to be quite complicated. Consider 2D case instead, of an arc or line of light. The side view of Diagram 1 is relevant. Suspect that results for 2D, 3D are same for $\phi < \pi/2 - \theta$ (disc completely above horizon), $\phi > \pi/2 + \theta$ (disc completely below horizon), and for case on surface of lit object where $\theta = \pi/2$. Results for partly above, below horizon - expect incorrect, but should be continuous and plausible.
 
-Contribution of lighting (fraction of total hemispere projected area) 
+### Contribution of lighting (fraction of total hemispere projected area) 
 
-Extent of simple 2D case (TODO explain by diagram)
+Diagram 1 represents finding the lighting contribution from the local sky, viewed from a surface point at the centre of the hemisphere (0,0,0). The fact that the game is on a 3-sphere surface is irrelevant here.
+
+In Diagram 1, the lighting contribution to the surface from the round light in the sky in the sky is proportional to the shaded elliptical area in the top view. The remaining area of the circle (area of circle minus shaded area) contributes the sky colour. This is equivalent to the whole circle times the sky colour, plus the shaded area time the difference between the round light colour and the sky colour.
+
+![Diagram 1](./diagram_1.png)
 
 $\sin(\min (\pi/2, \phi+\theta)) - \sin( \min (\pi/2, \phi-\theta))$  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(1)
 
@@ -60,7 +63,6 @@ $( \sin(\min (\pi/2, \phi+\theta) - \sin( \min (\pi/2, \phi-\theta)) ) ) * sin(t
 ie total lighting = background colour * difference colour* equation 2
 
 
-
 # How to code this  - what are current shader inputs, how is colour scaled etc.
 
 code from current shader:
@@ -71,9 +73,17 @@ vPortalLightPosTangentSpace, posCosDiff
  
 Can calculate the size of portal (reflector) circle when seen from surface from surface space (using vPortalLightPosTangentSpace) or transformed space (in frame of camera). Expect get same result. Perhaps one is more efficient given other calcs required. Seems that transformed surface point and portal position (in frame of camera), is normalise(transformedCoord) and uReflectorPos. The size of portal can get by projecting the portal onto the 3d plane that touches the 3-sphere at normalise(transformedCoord). 
 
-TODO transcribe paper notes, diagrams.
+Note that Diagram 2 is coincidentally the same construction as Diagram 1, but the situations should not be confused!
 
-For a portal/reflector of angular size in world $\alpha$, at angular distance from the surface/viewer gamma, apparent angular size $\theta$ related by equation 3:
+In Diagram 2, the surface of the sphere (2-sphere) is represents the 3-sphere surface. Instead of $x,y,z,w$, axes, it uses $r,y,z$, where $r^2=x^2+y^2$. The viewpoint is at (0,0,1). I believe this representation doesn't lose anything and the results found using it are correct. The disc on this surface represents the spherical portal light. 
+
+![Diagram 2](./diagram_2.png)
+
+i) is view from the side (w vertical, z horizontal). ii) is view from above (z horizontal, r vertical). iii) the horizontal scale is divided by $\cos\gamma$ to make the ellipse a circle, and quantities divided by $\cos\alpha$ to simplify. From here, project the angled line to the vertical line through the circle using similar triangles to get a height of $\frac{\tan\alpha\tan\gamma}{\sqrt{\tan^2\gamma - \tan^2\alpha}}$. Scale horizontally by $\cos\gamma$ to revert to original proportions. Now have a triangle with
+
+$\tan\theta = opp/adj = \frac{\frac{\tan\alpha\tan\gamma}{\sqrt{\tan^2\gamma - \tan^2\alpha}}}{\tan\gamma\cos\gamma} = \frac{\tan\alpha}{\cos\gamma\sqrt{\tan^2\gamma - \tan^2\alpha}} = \frac{\tan\alpha}{\sqrt{\sin^2\gamma - \tan^2\alpha\cos^2\gamma}}$
+
+Summary: for a portal/reflector of angular size in world $\alpha$, at angular distance from the surface/viewer gamma, apparent angular size $\theta$ related by equation 3:
 
 $\tan(\theta) = \tan(\alpha)/\sqrt{ \sin^2\gamma -\tan^2\alpha\cos^2\gamma }$ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(3)
 
