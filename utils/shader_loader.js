@@ -118,8 +118,8 @@ function getLocationsForShadersUsingPromises(cb){
 
 
 
-var atmosVariants = ['CONSTANT','ONE','ONE_OLD','TWO'];
-//var atmosVariants = ['ONE'];	//disable variants to speed up loading
+//var atmosVariants = ['CONSTANT','ONE','ONE_OLD','TWO'];
+var atmosVariants = ['ONE'];	//disable variants to speed up loading
 function genShaderVariants(name, vs_id, fs_id, vs_defines=[], fs_defines=[], usesVecAtmosThickness){
 	var shaders = {};
 	if (usesVecAtmosThickness){

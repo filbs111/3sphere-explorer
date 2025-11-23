@@ -252,7 +252,7 @@ function setupGui(){
 	displayFolder.add(guiParams.display, "texBias",-4.0,4.0,0.25);
 	displayFolder.add(guiParams.display, "zPrepass");
 	displayFolder.add(guiParams.display, "perPixelLighting");
-	displayFolder.add(guiParams.display, "atmosShader", ['constant','atmos','atmos_v1o','atmos_v2']);	//basic is constant (contrast=0) 
+	//displayFolder.add(guiParams.display, "atmosShader", ['constant','atmos','atmos_v1o','atmos_v2']);	//basic is constant (contrast=0) 
 	displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(setAtmosThicknessMultiplier);
 	displayFolder.add(guiParams.display, "culling");
 	displayFolder.add(guiParams.display, "useSpecular");
