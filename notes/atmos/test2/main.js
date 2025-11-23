@@ -64,15 +64,61 @@ function expSectionsIntegral(startAngle, endAngle, numSteps){
     }
 
     return sum*angleStep/atmosContrast;
-        //TODO reuse calculations to make faster
+}
+
+
+//expSectionsIntegral2 dedupes sin, exp calls to make ~2x faster than expSectionsIntegral
+function expSectionsIntegral2(startAngle, endAngle, numSteps){
+    var angleDifference = endAngle-startAngle;
+    var angleStep = angleDifference/numSteps;
+
+    //each linear section is exp(x)
+    //FWIW we eventually want to do exp(sum)
+    
+    var sum = 0;
+
+    var sectionStartAngle = startAngle;
+    var sinSectionStartAngle = Math.sin(startAngle);
+    var startDensity = atmosDensityNewCircle(sectionStartAngle);
+
+    for (var ii=0, sectionEndAngle = startAngle+angleStep;ii<numSteps;ii++, sectionEndAngle+=angleStep){
+
+        var sinSectionEndAngle = Math.sin(sectionEndAngle);
+       
+
+        //total atmos in section from angle A to B is.
+        // exp(c*sin(a)) * integral 0 to 1 ( exp(ckt) dt)
+        // where k = sin(b)-sin(a)
+        // = 1/(c(sin(b)-sin(a))) *  (exp(c sin(a)) ( exp(c sin(b)- c sin(a)) - exp(0) ) ???
+        // = 1/(c(sin(b)-sin(a))) *  ( exp(c sin(b)) - exp(c sin(a)) ) ???
+        // therefore to sum up, sample point not on ends contributes 
+
+        //var endDensity = atmosDensityNewCircle(sectionEndAngle);
+        var endDensity = Math.exp(atmosContrast*sinSectionEndAngle);
+
+        var contribution = (endDensity-startDensity)/(sinSectionEndAngle - sinSectionStartAngle);
+
+        sum+=contribution;
+
+        sectionStartAngle = sinSectionEndAngle;
+        sinSectionStartAngle = sinSectionEndAngle;
+        startDensity = endDensity;
+    }
+
+    return sum*angleStep/atmosContrast;
         //TODO scale polygonal circle so half within/without circle?
         //TODO multiply together transmission at each increment, because eventually want to do exp(-totalatmos) for
         //transmission anyway, and avoids sums going out of number range.
         //TODO compare ratio of total absorption for approximations
+        //TODO importance sampling - put more samples at densest point. 
+        // NOTE importance sampling with just simpleNumericalIntegral might work OK
 
         //this is more accurate than simpleNumericalIntegral for same numSteps, but steps are more expensive.
         // seems maybe doubling simple method steps gets similar accuracy at atmosContrast=20
         //with higher atmos contrast, seems more worthwhile to use the complex method.
+
+        //edit - was more accurate for eg from 0.1 to 1, but less accurate for from 0.2 to 3 ! 
+        //maybe the big issue is with passing PI/2 (max sin(x), atmos density)
 }
 
 
@@ -80,13 +126,18 @@ function expSectionsIntegral(startAngle, endAngle, numSteps){
 function runTest(fromAngle, toAngle){
     if (isNaN(fromAngle) || isNaN(toAngle)){return "should specify angles!";}
 
-    var result1 = simpleNumericalIntegral(fromAngle, toAngle, 18);
+    var result1 = simpleNumericalIntegral(fromAngle, toAngle, 16);
     var result2 = simpleNumericalIntegral(fromAngle, toAngle, 100);
     var result3 = simpleNumericalIntegral(fromAngle, toAngle, 100_000);
 
-    var result1_a = expSectionsIntegral(fromAngle, toAngle, 5);
+    var result1_a = expSectionsIntegral(fromAngle, toAngle, 16);
     var result2_a = expSectionsIntegral(fromAngle, toAngle, 100);
     var result3_a = expSectionsIntegral(fromAngle, toAngle, 100_000);
+
+    var result1_a2 = expSectionsIntegral2(fromAngle, toAngle, 16);
+    var result2_a2 = expSectionsIntegral2(fromAngle, toAngle, 100);
+    var result3_a2 = expSectionsIntegral2(fromAngle, toAngle, 100_000);
+
 
     return {
         result1,
@@ -96,7 +147,11 @@ function runTest(fromAngle, toAngle){
         result1_a,
         result2_a,
         result3_a,
-        ratio_a:result1_a/result3_a
+        ratio_a:result1_a/result3_a,
+        result1_a2,
+        result2_a2,
+        result3_a2,
+        ratio_a2:result1_a2/result3_a2
     }
 }
 
@@ -108,7 +163,8 @@ function runSpeedTest(fromAngle, toAngle, numIts){
     startTime=performance.now();
 
     for(var ii=0;ii<numIts;ii++){
-        simpleNumericalIntegral(fromAngle, toAngle, 100);
+        //fromAngle=Math.random()*0.1+0.1;
+        simpleNumericalIntegral(fromAngle, toAngle, 20);
     }
     
     finishTime = performance.now();
@@ -118,15 +174,30 @@ function runSpeedTest(fromAngle, toAngle, numIts){
     startTime = finishTime;
 
     for(var ii=0;ii<numIts;ii++){
-        expSectionsIntegral(fromAngle, toAngle, 100);
+        //fromAngle=Math.random()*0.1+0.1;
+        expSectionsIntegral(fromAngle, toAngle, 20);
     }
 
     finishTime = performance.now();
 
     var expSectionsTime = finishTime-startTime;
 
+
+    startTime = finishTime;
+
+    for(var ii=0;ii<numIts;ii++){
+        //fromAngle=Math.random()*0.1+0.1;
+        expSectionsIntegral2(fromAngle, toAngle, 20);
+    }
+
+    finishTime = performance.now();
+
+    var expSectionsTime2 = finishTime-startTime;
+
+
     console.log({
         simpleTime,
-        expSectionsTime
+        expSectionsTime,
+        expSectionsTime2
     })
 }
