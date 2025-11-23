@@ -4,8 +4,8 @@
 
 var atmosContrast = 50;
 
-function atmosDensityNewCircle(angle){
-    return Math.exp(logAtmosDensityNewCircle(angle));
+function atmosDensityNewCircle(angle, bodgeScale=1){
+    return Math.exp(bodgeScale*logAtmosDensityNewCircle(angle));
 }
 
 function logAtmosDensityNewCircle(angle){
@@ -41,6 +41,11 @@ function expSectionsIntegral(startAngle, endAngle, numSteps){
     
     var sum = 0;
 
+    //var bodgeScale = 1/Math.sqrt(Math.cos(angleStep/2));
+    //var bodgeScale = 2/(1+Math.cos(angleStep/2));   //about same but no sqrt
+    var bodgeScale = 1+Math.pow(angleStep/4,2);   //~same, small angle approx
+        //try scaling polygon up so ~half in, out of circle
+
     for (var ii=0, angle = startAngle;ii<numSteps;ii++, angle+=angleStep){
 
         var sectionEndAngle = angle+angleStep;
@@ -52,8 +57,8 @@ function expSectionsIntegral(startAngle, endAngle, numSteps){
         // = 1/(c(sin(b)-sin(a))) *  ( exp(c sin(b)) - exp(c sin(a)) ) ???
         // therefore to sum up, sample point not on ends contributes 
 
-        var startDensity = atmosDensityNewCircle(angle);
-        var endDensity = atmosDensityNewCircle(sectionEndAngle);
+        var startDensity = atmosDensityNewCircle(angle, bodgeScale);
+        var endDensity = atmosDensityNewCircle(sectionEndAngle, bodgeScale);
 
         //sines are calculated twice - below and in the calls made to calculate atmos density. TODO reuse?
         // consecutive sections also could reuse
@@ -126,15 +131,15 @@ function expSectionsIntegral2(startAngle, endAngle, numSteps){
 function runTest(fromAngle, toAngle){
     if (isNaN(fromAngle) || isNaN(toAngle)){return "should specify angles!";}
 
-    var result1 = simpleNumericalIntegral(fromAngle, toAngle, 16);
+    var result1 = simpleNumericalIntegral(fromAngle, toAngle, 4);
     var result2 = simpleNumericalIntegral(fromAngle, toAngle, 100);
     var result3 = simpleNumericalIntegral(fromAngle, toAngle, 100_000);
 
-    var result1_a = expSectionsIntegral(fromAngle, toAngle, 16);
+    var result1_a = expSectionsIntegral(fromAngle, toAngle, 4);
     var result2_a = expSectionsIntegral(fromAngle, toAngle, 100);
     var result3_a = expSectionsIntegral(fromAngle, toAngle, 100_000);
 
-    var result1_a2 = expSectionsIntegral2(fromAngle, toAngle, 16);
+    var result1_a2 = expSectionsIntegral2(fromAngle, toAngle, 4);
     var result2_a2 = expSectionsIntegral2(fromAngle, toAngle, 100);
     var result3_a2 = expSectionsIntegral2(fromAngle, toAngle, 100_000);
 
