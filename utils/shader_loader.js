@@ -118,8 +118,8 @@ function getLocationsForShadersUsingPromises(cb){
 
 
 
-//var atmosVariants = ['CONSTANT','ONE','TWO'];
-var atmosVariants = ['ONE'];	//disable variants to speed up loading
+var atmosVariants = ['CONSTANT','ONE','ONE_OLD','TWO'];
+//var atmosVariants = ['ONE'];	//disable variants to speed up loading
 function genShaderVariants(name, vs_id, fs_id, vs_defines=[], fs_defines=[], usesVecAtmosThickness){
 	var shaders = {};
 	if (usesVecAtmosThickness){
@@ -147,9 +147,10 @@ function genShaderVariants(name, vs_id, fs_id, vs_defines=[], fs_defines=[], use
 		shaders[variant].usesVecAtmosThickness = usesVecAtmosThickness;
 	}
 	//temp:
-	//shaders.constant = shaders.CONSTANT;
+	shaders.constant = shaders.CONSTANT;
 	shaders.atmos = shaders.ONE;
-	//shaders.atmos_v2 = shaders.TWO;
+	shaders.atmos_v1o = shaders.ONE_OLD;
+	shaders.atmos_v2 = shaders.TWO;
 	
 	return shaders;
 };

@@ -120,6 +120,32 @@
 		float maxDoubleAng = 2.0*acos(dotProd);
 #endif
 #ifdef ATMOS_ONE
+		//TODO deduplicate sine and density calcs for consecutive sections, reduce its
+
+		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
+		float bodgeScale = 1.0 + maxDoubleAngOverIters*maxDoubleAngOverIters/16.0;
+
+		float sum=0.0;
+		for (float aa=0.;aa<CONST_ITERS;aa++){
+			float sectionStartAngle = aa*maxDoubleAngOverIters+shiftAngle;
+			float sectionEndAngle = sectionStartAngle+maxDoubleAngOverIters;
+
+			float modifiedSinStart = magTerm*sin(sectionStartAngle);
+			float modifiedSinEnd = magTerm*sin(sectionEndAngle);
+
+			float startDensity = exp(bodgeScale*uAtmosContrast*modifiedSinStart);
+			float endDensity = exp(bodgeScale*uAtmosContrast*modifiedSinEnd);
+
+	        float contribution = (endDensity-startDensity)/(modifiedSinEnd - modifiedSinStart);
+
+			sum+= contribution;
+		}
+		sum/=uAtmosContrast;
+
+		sum*= bodgeScale*maxDoubleAngOverIters*exp(uAtmosContrast*(constTerm));	
+		fog = exp(-uAtmosThickness*sum/2.0);
+#endif
+#ifdef ATMOS_ONE_OLD
 		float maxDoubleAngOverIters = maxDoubleAng/CONST_ITERS;
 		float total=0.0;
 		for (float aa=0.5;aa<CONST_ITERS;aa++){
