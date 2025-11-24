@@ -32,6 +32,11 @@ This is hacky, not strictly correct for curved space, and a bit complex, but exp
 
 Problem - how to make dependent on atmos thickness? should it be? constantly fade out current cube and replace with another, make latest cube be scaled appropriate for atmos density? ...
 
+### Variable density
+
+Idea: array of per instance position data is larger than range drawn for sparse atmos.
+For sparse atmos, cycle through this range. when drawing, be aware of current time, so can fade in/out partices entering/exiting the window. Means can have sparse atmos eg few particles visible at any one time, but without obvious repetition.
+
 ### Streaks, Billboards etc
 
 TODO describe
