@@ -390,7 +390,7 @@ function makeTransposedMat(mat){
 //not really a matrix function, but uses matrix (for now)
 //NOTE hideous kludge! - much more efficient formulation available to just rotate a vector by another, but this works for now!
 function rotateVecByAxisAngleVec(inVec, axisAngleVec){
-	var dummy4mat = mat4.identity();
+	var dummy4mat = newIdMatWithQuats();	//with quats is quick fix for xyzrotate4mat regular mat by small amount
 	xyzrotate4mat(dummy4mat, axisAngleVec);
 	//rotate input vec using this matrix
 	var outputVec = [0,0,0];
