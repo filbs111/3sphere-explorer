@@ -6002,7 +6002,7 @@ function moveMatHandlingPortal(matContainer, offsetVec){
 		var thresh = otherTriangleSideSq*differenceSq;
 
 		if ((scimdDotMd*scimdDotMd) < thresh ){
-			alert("(scimdDotMd*scimdDotMd)/differenceSq < otherTriangleSideSq  ! unexpected - seems already within portal!");
+			console.warn("(scimdDotMd*scimdDotMd)/differenceSq < otherTriangleSideSq  ! unexpected - seems already within portal!");
 				//TODO does this break anything? make obvious when happens without alert (freezes game)
 				//TODO ability to slow mo/step physics
 			continue;
