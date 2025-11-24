@@ -130,6 +130,10 @@ var playerMechanics = (() => {
             rotatePlayer(lastPlayerAngMove);	//TODO add rotational momentum - not direct rotate
         }
         
+        if (currentThrustInput[2]>0){
+            currentThrustInput[2]*=2;   //quick hack to make forwards thrust stronger without impacting other directions
+        }
+
         for (var cc=0;cc<3;cc++){
             playerAngVelVec[cc]+= timeStepMultiplier*currentRotateInput[cc];
             playerAngVelVec[cc]*=angVelDampMultiplier;
