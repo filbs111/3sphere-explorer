@@ -3818,7 +3818,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 		
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", new Float32Array([0.2,1,1.5,1]));
 		modelScale =  0.0005;
-		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
+		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, -modelScale,modelScale,modelScale);
 				
 		//elsewhere using drawSsshipRotatedMat, but to avoid possible side effects, just make another mat.
 		var rotatedMatrix2 = mat4.create();
