@@ -14,6 +14,7 @@ var playerMechanics = (() => {
 
     var gunAutofire = createAutofire(fireGun, 50);
     var bombAutofire = createAutofire(dropBomb, 500);
+    var mortarAutofire = createAutofire(fireMortar, 500);
 
     return {
         update,
@@ -282,7 +283,12 @@ var playerMechanics = (() => {
         );
 
         bombAutofire(
-            keyThing.keystate(66) || mouseInfo.buttons&2,
+            keyThing.keystate(66),  //B
+            timeStep
+        );
+
+        mortarAutofire(
+            keyThing.keystate(77) || mouseInfo.buttons&2, //M
             timeStep
         )
 

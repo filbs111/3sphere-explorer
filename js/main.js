@@ -1394,7 +1394,7 @@ function drawRegularScene(frameTime){
 
 		if (guiParams.hud.bombMarkers){
 			bullets.forEach(bb=> {
-				if (bb.active && bb.isBomb && bb.world == playerContainer.world){
+				if (bb.active && bb.isBig && bb.world == playerContainer.world){
 				var pos = screenPosForMatrix(bb.matrix);
 				if (pos[2]<0){	//note unintuitive sign
 					drawTargetDecal(halfDecalScale, colorArrs.magenta, pos, bombHudSpin);
@@ -1424,10 +1424,10 @@ function drawRegularScene(frameTime){
 
 		if (guiParams.hud.bombText){
 			bullets.forEach(bb=> {
-				if (bb.active && bb.isBomb && bb.world == playerContainer.world){
+				if (bb.active && bb.markerText && bb.world == playerContainer.world){
 				var pos = screenPosForMatrix(bb.matrix);
 				if (pos[2]<0){	//note unintuitive sign
-					drawText("BOMB", pos[0], pos[1], pos[2], 0.4);
+					drawText(bb.markerText, pos[0], pos[1], pos[2], 0.4);
 				}
 			}});
 		}
@@ -1474,7 +1474,8 @@ function drawRegularScene(frameTime){
 			drawText("SPACE BAR: THRUST",         4, -0.25, zPos, textSize);
 			drawText("W,A,S,D: SIDE THRUST",      4, -0.1, zPos, textSize);
 			drawText("LEFT CLICK: FIRE",          4, 0.05, zPos, textSize);
-			drawText("RIGHT CLICK,B: DROP BOMB",  4, 0.2, zPos, textSize);
+			drawText("RIGHT CLICK,M: FIRE MORTAR",4, 0.2, zPos, textSize);
+			drawText("B: DROP BOMB",  			  4, 0.35, zPos, textSize);
 		}
 
 		gl.disable(gl.BLEND);
@@ -3075,7 +3076,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	
 	//draw bombs
 	for (var b of bullets){
-		if (b.active && b.isBomb && b.world == worldA){
+		if (b.active && b.isBig && b.world == worldA){
 			drawBall(b.matrix, 0.02);	//TODO draw array
 		}
 	}
@@ -3687,7 +3688,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 	
 	
 	for (var b of bullets){
-		if (b.active && !b.isBomb && b.world == worldA){
+		if (b.active && !b.isBig && b.world == worldA){
 			var bulletMatrix=b.matrix;
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix,bulletMatrix);
@@ -5049,7 +5050,7 @@ var iterateMechanics = (function iterateMechanics(){
 
 			var explosionParticles = explosionParticleArrs[bullet.world];
 
-			var explosionSize = bullet.isBomb? 0.0001:0.00002;
+			var explosionSize = bullet.isBig? 0.0001:0.00002;
 
 			if (!moveWithDuocylinder){
 				new Explosion(bullet, explosionSize, [1,0.5,0.25], false, true);
