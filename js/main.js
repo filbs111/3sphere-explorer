@@ -4867,7 +4867,7 @@ var iterateMechanics = (function iterateMechanics(){
 		var numSteps = Math.floor(timeTracker/timeStep);
 		timeTracker-=numSteps*timeStep;
 		for (var ii=0;ii<numSteps;ii++){
-			stepSpeed();
+			stepSpeed(frameTime);
 			gunHeat*=gunHeatMultiplier;
 		}
 		offsetCam.addIts(numSteps);
@@ -4939,7 +4939,8 @@ var iterateMechanics = (function iterateMechanics(){
 			rotatePlayer(scalarvectorprod(duocylinderRotate,axisDirPlayerCoords), false);
 		}
 		
-		function stepSpeed(){	//TODO make all movement stuff fixed timestep (eg changing position by speed)
+		function stepSpeed(frameTime){	//NTOE frameTime only passed here for use by fireworks func
+			//TODO make all movement stuff fixed timestep (eg changing position by speed)
 
 			guiSettingsForWorld.forEach(setting => {
 				setting.spinOld = setting.spin;
@@ -4955,6 +4956,21 @@ var iterateMechanics = (function iterateMechanics(){
 				if (b.active){	//TODO just delete/unlink removed objects
 					checkBulletCollision(b, timeStep*moveSpeed);
 					portalTestMultiPortal(b, 0);
+				}
+			}
+
+			//particle stream
+			if (guiParams.debug.emitFire){
+				if (Math.random()<0.5){
+					//making a new matrix is inefficient - expect better if reused a temp matrix, copied it into buffer
+					var newm4 = mat4.create(sshipMatrix);
+					xyzmove4mat(newm4, [1,1,1].map(elem => sshipModelScale*60*elem*(Math.random()-0.5)));	//square uniform distibution
+					new Explosion({matrix:newm4,world:sshipWorld}, sshipModelScale*0.5, [0.2,0.06,0.06]);
+				}
+			}
+			if (guiParams.debug.fireworks){
+				if (Math.random()<0.05){
+					explosionParticleArrs[0].makeExplosion(random_quaternion(), frameTime, [Math.random(),Math.random(),Math.random(),1],1);	//TODO guarantee bright colour
 				}
 			}
 		}
