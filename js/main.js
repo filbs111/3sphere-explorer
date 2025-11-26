@@ -1439,46 +1439,35 @@ function drawRegularScene(frameTime){
 			drawText(chullCollisionScreenInfo2, 0.6, 0.4, 1, 0.6);
 		}
 
-		function drawText(textToDraw, xpos, ypos, zpos, size, color=colorArrs.white){
+		function drawText(text, x, y, z, size, color=colorArrs.white){
 			if (!text_util.isLoaded){return;}
 
-			xpos/=size*zpos;
-			ypos/=size*zpos;
-			zpos=1/size;
+			x/=size*z;
+			y/=size*z;
+			z=1/size;
 
-			textToDraw.toUpperCase().split('').forEach(ch => {
+			text.toUpperCase().split('').forEach(ch => {
 				var cInfo = text_util.charInfo[ch.charCodeAt(0)];
 				
 				drawTargetDecalCharacter(
 					[0.01*size*cInfo.width/512, 0.01*size*cInfo.height/512, 0], color,
-					[xpos - 2*cInfo.xoffset/512 - (cInfo.width/512),
-					ypos + 2*cInfo.yoffset/512 + (cInfo.height/512), //note awkward passing in size since currently quads are drawn -1 to +1
-					zpos],
+					[x - 2*cInfo.xoffset/512 - (cInfo.width/512),
+					y + 2*cInfo.yoffset/512 + (cInfo.height/512), //note awkward passing in size since currently quads are drawn -1 to +1
+					z],
 					cInfo);
-				xpos-=2* cInfo.xadvance/512;
+				x-=2* cInfo.xadvance/512;
 			});
 		}
+
+		function drawTextObj(textObj){
+			var {text, x, y, z, size}=textObj;
+			drawText(text, x, y, z, size);
+		}
 		
-
 		if (shouldShowControls){
-			var zPos=1.5;
-			var textSize = 0.4;
-			drawText("DISPLAY:",                  4.2, -1.5, zPos, textSize);	//left from centre, down from centre, depth, scale
-			drawText("C: TOGGLE CONTROL DISPLAY", 4, -1.35, zPos, textSize);
-			drawText("F: FULL SCREEN", 	          4, -1.2, zPos, textSize);
-			drawText("ESC: EXIT FULL SCREEN", 	  4, -1.05, zPos, textSize);
-			drawText("H: TOGGLE DEBUG MENU",      4, -0.9, zPos, textSize);
-
-			drawText("ROCKET CONTROLS:",          4.2, -0.7, zPos, textSize);
-			drawText("ARROWS, MOUSE MOVE WHEN FULLSCREENED: PITCH/YAW", 
-				                                  4, -0.55, zPos, textSize);
-			drawText("Q,E: ROLL",                 4, -0.4, zPos, textSize);
-			drawText("SPACE BAR: THRUST",         4, -0.25, zPos, textSize);
-			drawText("W,A,S,D: SIDE THRUST",      4, -0.1, zPos, textSize);
-			drawText("LEFT CLICK: FIRE GUN",          4, 0.05, zPos, textSize);
-			drawText("RIGHT CLICK, M: FIRE SPECIAL WEAPON",4, 0.2, zPos, textSize);
-			drawText("NUM KEYS: SELECT SPECIAL WEAPON",  4, 0.35, zPos, textSize);
-			drawText("MOUSE WHEEL: CYCLE SPECIAL WEAPON",  4, 0.5, zPos, textSize);
+			controlsTexts.forEach(ct=>{
+				drawTextObj(ct);
+			});
 		}
 
 		gl.disable(gl.BLEND);
