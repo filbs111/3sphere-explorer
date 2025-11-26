@@ -13,8 +13,7 @@ var playerMechanics = (() => {
     var foundClosestPointTriangleObj2=false;
 
     var gunAutofire = createAutofire(fireGun, 50);
-    var bombAutofire = createAutofire(dropBomb, 500);
-    var mortarAutofire = createAutofire(fireMortar, 500);
+    var specialAutofire = createAutofire(fireSpecial, 500);
 
     return {
         update,
@@ -282,15 +281,10 @@ var playerMechanics = (() => {
             timeStep
         );
 
-        bombAutofire(
-            keyThing.keystate(66),  //B
-            timeStep
-        );
-
-        mortarAutofire(
+        specialAutofire(
             keyThing.keystate(77) || mouseInfo.buttons&2, //M
             timeStep
-        )
+        );
 
         var heatEmit = gunHeat/(gunHeat+1.5);	//reuse logic from drawSpaceship
         if (10*Math.random()<heatEmit){

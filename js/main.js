@@ -1413,9 +1413,11 @@ function drawRegularScene(frameTime){
 		gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
 		bind2dTextureIfRequired(fontTexture);
 
+		drawText("SPECIAL WEAPON: " + specialWeapsData[selectedSpecialWeapId].name, -0.5, 1.5, 1, 0.4, colorArrs.red);
+
 		if (guiParams.hud.textWorldNum){
 			//drawText("World " + playerContainer.world, 0.6, 0.15, 1); //(below) centre of screen, suitable if flash up on cross portal
-			drawText("World " + playerContainer.world, 2.5, 1.5, 1, 0.8); //bottom left. note scales with FOV!
+			drawText("CURRENT WORLD: " + playerContainer.world, 2.5, 1.5, 1, 0.4); //bottom left. note scales with FOV!
 
 			portalTexts.forEach(pp=>{
 				drawText(pp.text, pp.pos[0], pp.pos[1], pp.pos[2], 0.4);
@@ -1437,7 +1439,7 @@ function drawRegularScene(frameTime){
 			drawText(chullCollisionScreenInfo2, 0.6, 0.4, 1, 0.6);
 		}
 
-		function drawText(textToDraw, xpos, ypos, zpos, size){
+		function drawText(textToDraw, xpos, ypos, zpos, size, color=colorArrs.white){
 			if (!text_util.isLoaded){return;}
 
 			xpos/=size*zpos;
@@ -1448,7 +1450,7 @@ function drawRegularScene(frameTime){
 				var cInfo = text_util.charInfo[ch.charCodeAt(0)];
 				
 				drawTargetDecalCharacter(
-					[0.01*size*cInfo.width/512, 0.01*size*cInfo.height/512, 0], colorArrs.teapot,
+					[0.01*size*cInfo.width/512, 0.01*size*cInfo.height/512, 0], color,
 					[xpos - 2*cInfo.xoffset/512 - (cInfo.width/512),
 					ypos + 2*cInfo.yoffset/512 + (cInfo.height/512), //note awkward passing in size since currently quads are drawn -1 to +1
 					zpos],
@@ -1473,9 +1475,10 @@ function drawRegularScene(frameTime){
 			drawText("Q,E: ROLL",                 4, -0.4, zPos, textSize);
 			drawText("SPACE BAR: THRUST",         4, -0.25, zPos, textSize);
 			drawText("W,A,S,D: SIDE THRUST",      4, -0.1, zPos, textSize);
-			drawText("LEFT CLICK: FIRE",          4, 0.05, zPos, textSize);
-			drawText("RIGHT CLICK,M: FIRE MORTAR",4, 0.2, zPos, textSize);
-			drawText("B: DROP BOMB",  			  4, 0.35, zPos, textSize);
+			drawText("LEFT CLICK: FIRE GUN",          4, 0.05, zPos, textSize);
+			drawText("RIGHT CLICK, M: FIRE SPECIAL WEAPON",4, 0.2, zPos, textSize);
+			drawText("NUM KEYS: SELECT SPECIAL WEAPON",  4, 0.35, zPos, textSize);
+			drawText("MOUSE WHEEL: CYCLE SPECIAL WEAPON",  4, 0.5, zPos, textSize);
 		}
 
 		gl.disable(gl.BLEND);
@@ -4624,21 +4627,31 @@ function init(){
 	});
 	
 	window.addEventListener("keydown",function(evt){
-		//console.log("key pressed : " + evt.keyCode);
+		//console.log("key pressed : " + evt);
 		var willPreventDefault=true;
-		switch (evt.keyCode){	
-			case 84:	//T
-				//xyzmove4mat(playerCamera,[0.01,0.0,0.01]);	//diagonally forwards/left
-				break;
-			case 70:	//F
-				goFullscreen(canvas);
-				break;
-			case 67:	//C
-				shouldShowControls=!shouldShowControls;
-				break;
-			default:
-				willPreventDefault=false;
-				break;
+
+		//number key to select special weapon
+		var n = parseInt(evt.key);
+		if (!isNaN(n)){
+			if (n>0 && n<=numSpecialWeaps){	//1,2,3... 
+				var weapNum = n-1;
+				selectedSpecialWeapId = weapNum;
+			}
+		}else{
+			switch (evt.keyCode){	
+				case 84:	//T
+					//xyzmove4mat(playerCamera,[0.01,0.0,0.01]);	//diagonally forwards/left
+					break;
+				case 70:	//F
+					goFullscreen(canvas);
+					break;
+				case 67:	//C
+					shouldShowControls=!shouldShowControls;
+					break;
+				default:
+					willPreventDefault=false;
+					break;
+			}
 		}
 		if (willPreventDefault){evt.preventDefault()};
 	});

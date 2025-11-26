@@ -24,14 +24,48 @@ function fireGun(){
 //	rotatePlayer([(Math.random()-0.5)*gunJerkAmount, (Math.random()-0.5)*gunJerkAmount,0]);
 }
 
-function dropBomb(){
-	var bombMat = mat4.create(sshipMatrix);
-	xyzmove4mat(bombMat,[0,0,-0.0008]);
-	launchProjectile(bombMat, [0,0,-0.01], true);
+function fireSpecial(){
+	launchLargeProjectile(specialWeapsData[selectedSpecialWeapId]);
+}
+
+var selectedSpecialWeapId=0;
+var numSpecialWeaps=3;
+window.addEventListener("wheel", event => {
+    const delta = Math.sign(event.deltaY);
+    selectedSpecialWeapId = (numSpecialWeaps+selectedSpecialWeapId+Math.sign(delta))%numSpecialWeaps;
+});
+
+//TODO include regular gun in this listing
+//add properties - number of projectiles. reference separate table of munitions?
+//TOD include autofire countdown as weapon property
+var specialWeapsData = [
+	{	//0
+		name:"BOMB",
+		forwardOffset:-0.0008,
+		forwardSpeed:-0.01,
+		markerText:"BOMB"
+	},
+	{	//1
+		name:"MORTAR",
+		forwardOffset:0.002,
+		forwardSpeed:2,
+	},
+	{	//2
+		name:"MISSILE",
+		forwardOffset:0.002,
+		forwardSpeed:4,
+	}
+];
+
+function launchLargeProjectile(weaponDef){
+	var {forwardOffset, forwardSpeed, markerText} = weaponDef;
+	var projectileMat = mat4.create(sshipMatrix);
+	xyzmove4mat(projectileMat,[0,0,forwardOffset]);
+	launchProjectile(projectileMat, [0,0,forwardSpeed], true, markerText);
 }
 
 //now using bullets array to contain both bullets and bombs.
-function launchProjectile(projectileMatrix, muzzleVelVec, isBomb){
+function launchProjectile(projectileMatrix, muzzleVelVec, isBig, markerText){
 
 	var newBulletMatrix = matPool.create(); 
 	mat4.set(projectileMatrix,newBulletMatrix);
@@ -59,7 +93,8 @@ function launchProjectile(projectileMatrix, muzzleVelVec, isBomb){
 		matrix:newBulletMatrix,
 		vel:newFireDirectionVec,
 		world:sshipWorld,
-		isBomb,
+		isBig,
+		markerText,
 		active:true}
 	);
 
