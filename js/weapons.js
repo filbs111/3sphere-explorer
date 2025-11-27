@@ -28,40 +28,64 @@ function fireSpecial(){
 	launchLargeProjectile(specialWeapsData[selectedSpecialWeapId]);
 }
 
-var selectedSpecialWeapId=0;
-var numSpecialWeaps=3;
-window.addEventListener("wheel", event => {
-    const delta = Math.sign(event.deltaY);
-    selectedSpecialWeapId = (numSpecialWeaps+selectedSpecialWeapId+Math.sign(delta))%numSpecialWeaps;
-});
-
 //TODO include regular gun in this listing
-//add properties - number of projectiles. reference separate table of munitions?
-//TOD include autofire countdown as weapon property
+//reference separate table of munitions?
+//TODO include autofire countdown as weapon property
 var specialWeapsData = [
 	{	//0
 		name:"BOMB",
 		forwardOffset:-0.0008,
-		forwardSpeed:-0.01,
+		getLaunchVel:()=>[0,0,-0.01],
 		markerText:"BOMB"
 	},
 	{	//1
 		name:"MORTAR",
 		forwardOffset:0.002,
-		forwardSpeed:2,
+		getLaunchVel:()=>[0,0,2],
 	},
 	{	//2
 		name:"MISSILE",
 		forwardOffset:0.002,
-		forwardSpeed:4,
+		getLaunchVel:()=>[0,0,4],
+	},
+	{	//3
+		name:"SHOTGUN",
+		forwardOffset:0.002,
+		getLaunchVel:()=>[spreadRand(0.2),spreadRand(0.2),4],
+		numProjectiles:10,
+		bigProjectiles:false,
+	},
+	{	//4
+		name:"CANISTER",
+		forwardOffset:0.002,
+		getLaunchVel:()=>[spreadRand(2),spreadRand(2),6],
+		numProjectiles:100,
+		bigProjectiles:false,
 	}
 ];
 
+var numSpecialWeaps=specialWeapsData.length;
+var selectedSpecialWeapId=0;
+window.addEventListener("wheel", event => {
+    const delta = Math.sign(event.deltaY);
+    selectedSpecialWeapId = (numSpecialWeaps+selectedSpecialWeapId+Math.sign(delta))%numSpecialWeaps;
+});
+
+
+function spreadRand(amount){
+	return (Math.random()-0.5)*amount;	//TODO precalc, gaussia etc
+}
+
 function launchLargeProjectile(weaponDef){
-	var {forwardOffset, forwardSpeed, markerText} = weaponDef;
+	var {forwardOffset, getLaunchVel, numProjectiles, bigProjectiles, markerText} = weaponDef;
 	var projectileMat = mat4.create(sshipMatrix);
 	xyzmove4mat(projectileMat,[0,0,forwardOffset]);
-	launchProjectile(projectileMat, [0,0,forwardSpeed], true, markerText);
+
+	numProjectiles??=1;
+	bigProjectiles??=true;
+	for (var ii=0;ii<numProjectiles;ii++){
+		launchProjectile(projectileMat, getLaunchVel(), bigProjectiles, markerText);
+	}
 }
 
 //now using bullets array to contain both bullets and bombs.
