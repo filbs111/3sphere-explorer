@@ -58,7 +58,10 @@ var specialWeapsData = [
 	{	//4
 		name:"CANISTER",
 		forwardOffset:0.002,
-		getLaunchVel:()=>[spreadRand(2),spreadRand(2),6],
+		getLaunchVel:()=>{
+			var octXy = spreadOctagon(1);
+			return [octXy[0],octXy[1],6];
+		},
 		numProjectiles:100,
 		bigProjectiles:false,
 	}
@@ -74,6 +77,17 @@ window.addEventListener("wheel", event => {
 
 function spreadRand(amount){
 	return (Math.random()-0.5)*amount;	//TODO precalc, gaussia etc
+}
+function spreadOctagon(amount){
+	var x=spreadRand(amount)*1.414;
+	var y=spreadRand(amount)*1.414
+	var a=spreadRand(amount);
+	var b=spreadRand(amount);
+	x+=a;
+	x+=b;
+	y+=a;
+	y-=b;
+	return [x,y];
 }
 
 function launchLargeProjectile(weaponDef){
