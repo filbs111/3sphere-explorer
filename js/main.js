@@ -5623,10 +5623,16 @@ function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo
 		//							----------------------------------------
 		//							(distance from camera to portal surface)
 
-	var isFarEnoughAwayInZ = invSizeInScreen > 4;	//inverted so if behind camera counts as close (TODO proper calculation of pix density on portal surface)
+	//NOTE invsizeInScreen works poorly for fisheye. Also, approximation popping in and out when rotate is unpleasant.
+	//use total distance to decide whether to use prerendered cubemap approximation.
+	//NOTE could just determine a threshold for portalInCamera[15], get isOnOtherSideOfWorld for free
+	var totalXYZSq = 1- portalInCamera[15]*portalInCamera[15];
+	var isFarEnoughAway = totalXYZSq > otherPortalSide.shared.radius*otherPortalSide.shared.radius * 36;
+
+	//var isFarEnoughAwayInZ = invSizeInScreen > 4;	//inverted so if behind camera counts as close (TODO proper calculation of pix density on portal surface)
 	var isOnOtherSideOfWorld = portalInCamera[15] <0;
 		//IIRC portalInCamera[15] = w = 1 when close to it, portalInCamera[14] = z is -ve in front, +ve behind camera.
-	var isFarEnoughAwayForApproximation = isFarEnoughAwayInZ || isOnOtherSideOfWorld;
+	var isFarEnoughAwayForApproximation = isFarEnoughAway || isOnOtherSideOfWorld;
 
 	if (isFarEnoughAwayForApproximation || guiParams.reflector.forceApproximation){	
 		drawCentredCubemap(otherPortalSide);
