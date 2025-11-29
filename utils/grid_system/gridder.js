@@ -70,7 +70,7 @@ var gridSystem4d = (() => {
     }
 
     function getGridIdx4dSingleAxis(coord){
-        return Math.min(Math.floor(GRID_DIVS_4D*(coord + 1)/2), GRID_DIVS_4D-1);
+        return Math.max(0,Math.min(Math.floor(GRID_DIVS_4D*(coord + 1)/2), GRID_DIVS_4D-1));
         //TODO expand grid a bit to avoid max ?
     }
 
