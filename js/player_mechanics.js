@@ -12,8 +12,9 @@ var playerMechanics = (() => {
     var currentTriangleObjectPlayerPen2=0;
     var foundClosestPointTriangleObj2=false;
 
-    var gunAutofire = createAutofire(fireGun, 50);
-    var specialAutofire = createAutofire(fireSpecial, 500);
+    var gunAutofire = createAutofire(fireGun, ()=>50);
+    var specialAutofire = createAutofire(fireSpecial, ()=>specialWeapsData[selectedSpecialWeapId].periodMillis);
+        //NOTE waits for previous weapon selection reload after switching. OK for testing. TODO better?
 
     return {
         update,

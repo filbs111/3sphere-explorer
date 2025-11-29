@@ -34,22 +34,26 @@ function fireSpecial(){
 var specialWeapsData = [
 	{	//0
 		name:"BOMB",
+		periodMillis:500,
 		forwardOffset:-0.0008,
 		getLaunchVel:()=>[0,0,-0.01],
 		markerText:"BOMB"
 	},
 	{	//1
 		name:"MORTAR",
+		periodMillis:500,
 		forwardOffset:0.002,
 		getLaunchVel:()=>[0,0,2],
 	},
 	{	//2
 		name:"MISSILE",
+		periodMillis:500,
 		forwardOffset:0.002,
 		getLaunchVel:()=>[0,0,4],
 	},
 	{	//3
 		name:"SHOTGUN",
+		periodMillis:150,
 		forwardOffset:0.002,
 		getLaunchVel:()=>[spreadRand(0.2),spreadRand(0.2),4],
 		numProjectiles:10,
@@ -57,6 +61,7 @@ var specialWeapsData = [
 	},
 	{	//4
 		name:"CANISTER",
+		periodMillis:600,
 		forwardOffset:0.002,
 		getLaunchVel:()=>{
 			var octXy = spreadOctagon(1);
@@ -160,16 +165,15 @@ function smokeGuns(){
 	}
 }
 
-
-function createAutofire(callback, periodMillis){
-    var timeRemaining = periodMillis;
+function createAutofire(callback, periodMilliFunction){
+    var timeRemaining = periodMilliFunction();
     return function(condition, timepassed){
         timeRemaining-=timepassed;
         if (timeRemaining<0){
             timeRemaining=0;
             if (condition){
                 callback();
-                timeRemaining+=periodMillis;
+                timeRemaining+=periodMilliFunction();
             }else{
                 timeRemaining=0;
             }
