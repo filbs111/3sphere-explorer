@@ -25,7 +25,9 @@ function fireGun(){
 }
 
 function fireSpecial(){
-	launchLargeProjectile(specialWeapsData[selectedSpecialWeapId]);
+	var sweap = specialWeapsData[selectedSpecialWeapId];
+	if (sweap.fireSoundFunc){sweap.fireSoundFunc();}
+	launchLargeProjectile(sweap);
 }
 
 //TODO include regular gun in this listing
@@ -53,6 +55,7 @@ var specialWeapsData = [
 	},
 	{	//3
 		name:"SHOTGUN",
+		fireSoundFunc:()=>myAudioPlayer.playGunSound(),
 		periodMillis:150,
 		forwardOffset:0.002,
 		getLaunchVel:()=>[spreadRand(0.2),spreadRand(0.2),4],
