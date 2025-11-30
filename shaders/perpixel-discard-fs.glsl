@@ -76,6 +76,30 @@ float calculatePortalLightContribution(vec4 normal, float uReflectorCos, vec4 su
 }
 
 
+float calculateSimpleLightContribution(vec4 normal, float lightRad, vec4 surfPos, vec4 lightPos){
+	float wComponent = dot(surfPos, lightPos);
+	float gamma = acos(wComponent);
+
+	//perceived size is like 1/sin(gamma)
+	float perceivedInvSizeSq = 1.0+pow(sin(gamma)/lightRad,2.0);	//1.0+ is to limit size (so doesn't become inf when very close.)
+
+	float zComponent = dot(normal, lightPos);
+
+	float xyzComponent = sqrt(1. - wComponent*wComponent);
+	float cosElev = zComponent/xyzComponent;	//Angle from azimuth? = cos(elevation from horizon)
+
+	//bodge to also light regardless of distance when very close.
+	//NOTE has some stripey black artifacts when very near very long polys. numerical error? wrong assumptions about normal perpendicular to surfPos?
+	//TODO try something more like portal light? 
+	float veryCloseFactor = pow(2.71, -perceivedInvSizeSq);
+	float modifiedCosElev = veryCloseFactor + cosElev*(1.0-veryCloseFactor);
+
+	modifiedCosElev = max(cosElev,0.0);	//prevent negative lighting. 
+	
+	return modifiedCosElev/perceivedInvSizeSq;
+}
+
+
 	void main(void) {
 
 		vec4 normalisedSurfCoord = normalize(transformedCoord);
@@ -96,13 +120,17 @@ float calculatePortalLightContribution(vec4 normal, float uReflectorCos, vec4 su
 		}
 	
 		vec4 norm = normalize(transformedNormal);
-		float posDotNormal = dot( normalize(adjustedPos), norm);	//NOTE not correct, can see goes wrong for large faces in large models
-
-		float light = -posDotNormal;
-		light = max(light,0.0);	//unnecessary if camera pos = light pos
-		//falloff
-		light/=0.1 + 5.0*dot(adjustedPos,adjustedPos);	//1st num some const to ensure light doesn't go inf at short dist
 		
+	//improved player light. 
+	// from vert shader 		adjustedPos = transformedCoord - uDropLightPos;
+	// so can get back to uDropLightPos ! TODO if this works just use directly here.
+		vec4 recalculatedPlayerLightPos = normalize(normalisedSurfCoord - adjustedPos);
+			//TODO does this work for all vert shaders? 
+
+		//TODO treat as more like a gaussian blob light - otherwise will have wierd lighting inside radius.
+		//float light = calculatePortalLightContribution(norm, 0.9999, normalisedSurfCoord, recalculatedPlayerLightPos);
+		float light = calculateSimpleLightContribution(norm, 0.04, normalisedSurfCoord, recalculatedPlayerLightPos);
+
 		//light from portals
 		float portalLight = calculatePortalLightContribution(norm, uReflectorCos, normalisedSurfCoord, uReflectorPos);
 		float portalLight2 = calculatePortalLightContribution(norm, uReflectorCos2, normalisedSurfCoord, uReflectorPos2);
