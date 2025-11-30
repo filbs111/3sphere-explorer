@@ -79,6 +79,12 @@ float calculatePortalLightContribution(vec4 vPortalLightPosTangentSpace, vec4 nm
 
 	float aboveHorizonAngleSize = (sin(min(PIBYTWO, elev+theta)) - sin(min(PIBYTWO, elev-theta)));
 	float contribution = aboveHorizonAngleSize*sin(theta)/2.0;
+
+	contribution*= (cos(elev)+1.0/2.0);	//make go to 0 on opposite side of world. 
+		//NOTE might be wrong - if there is a clear view of it, portal really does appear very large from opposite side of world.
+		//however, this does fix issue of lighting becoming wierd (negative?) when lit object is within volume opposite the portal volume.
+		//TODO shadow map/atmos calc etc
+
 	return contribution;
 }
 
