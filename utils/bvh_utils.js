@@ -1670,7 +1670,7 @@ function rayBvhCollision(cameraRayStartPos, cameraRayEndPos, cameraRayStartPosSp
 
     //processObjs(cameraRayStartPos, cameraRayEndPos, bvhObjsForWorld[world]);    //non-spinning objects
     processObjs(cameraRayStartPosSpun, cameraRayEndPosSpun, bvhObjsForWorld[world]);    //spinning objects
-    processTerrain(cameraRayStartPosSpun, cameraRayEndPosSpun);
+    processTerrain(cameraRayStartPosSpun, cameraRayEndPosSpun, world);
 
     function processObjs(rayStart, rayEnd, worldBvh){
 
@@ -1751,8 +1751,8 @@ function rayBvhCollision(cameraRayStartPos, cameraRayEndPos, cameraRayStartPosSp
         });
     }
 
-    function processTerrain(rayStart, rayEnd){
-        var dcInfo = duocylinderObjects[guiSettingsForWorld[playerContainer.world].duocylinderModel];
+    function processTerrain(rayStart, rayEnd, world){
+        var dcInfo = duocylinderObjects[guiSettingsForWorld[world].duocylinderModel];
 
         if (!(dcInfo?.data)){
             return;
