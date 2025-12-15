@@ -36,6 +36,10 @@
 	uniform float uSpecularPower;
 	uniform float uTexBias;
 
+#ifdef RECEIVE_SHADOW
+	in vec3 posInShadowCasterSpace;	//since shadow caster (for now, player object) is in projected flat space, scaled by some factor. TODO prevent casting shadow on opposite side of world?
+#endif
+
 	in vec4 vPlayerLightPosTangentSpace;
 	
 	in vec4 vPortalLightPosTangentSpace;
@@ -253,9 +257,14 @@ float calculatePortalLightContribution(vec4 vPortalLightPosTangentSpace, vec4 nm
 
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);		
-		
+
+#ifdef RECEIVE_SHADOW
+		//something simple - draw a 3d grid to confirm moves with player vehicle model
+		vec4 gridColour = vec4(mod(100.0*posInShadowCasterSpace,1.0), 1.0);
+		fragColor = gridColour*pow(preGammaFragColor, vec4(0.455));
+#else
 		fragColor = pow(preGammaFragColor, vec4(0.455));
-	
+#endif	
 
 		float depthVal = .5*(vZW.x/vZW.y) + .5;
 		fragColor.a = depthVal;

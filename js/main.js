@@ -4154,6 +4154,7 @@ var bind2dTextureIfRequired = (function createBind2dTextureIfRequiredFunction(){
 //need all of these???
 var mMatrix = mat4.create();
 var mvMatrix = mat4.create();
+var relativeShadowMatrix = mat4.create();
 
 var mMatrixA = mat4.create();
 var mvMatrixA = mat4.create();
@@ -4213,6 +4214,16 @@ function setMatrixUniforms(shaderProgram) {
     gl.uniformMatrix4fv(shaderProgram.uniforms.uPMatrix, false, pMatrix);
     gl.uniformMatrix4fv(shaderProgram.uniforms.uMVMatrix, false, mvMatrix);
 	if (shaderProgram.uniforms.uMMatrix){gl.uniformMatrix4fv(shaderProgram.uniforms.uMMatrix, false, mMatrix);}
+
+	if (shaderProgram.uniforms.uShadowMat){
+		// NOTE eventually shadows like this should do with deferred, this is just a quick hack to check whether worth persuing
+		//NOTE this code assumes want shadow cast from player object at sshipMatrix, but could be player not in relevant world, might want to use "portaled"
+		// player position here.
+		mat4.set(sshipMatrix, relativeShadowMatrix);
+		mat4.transpose(relativeShadowMatrix);
+		mat4.multiply(relativeShadowMatrix, mMatrix);
+		gl.uniformMatrix4fv(shaderProgram.uniforms.uShadowMat, false, relativeShadowMatrix);
+	}
 }
 
 var cubemapViews;

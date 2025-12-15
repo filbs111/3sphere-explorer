@@ -23,6 +23,11 @@
 	uniform vec4 uReflectorPosVShaderCopy2;
 	uniform vec4 uReflectorPosVShaderCopy3;
 
+#ifdef RECEIVE_SHADOW
+	uniform mat4 uShadowMat;
+	out vec3 posInShadowCasterSpace;	//since shadow caster (for now, player object) is in projected flat space, scaled by some factor. TODO prevent casting shadow on opposite side of world?
+#endif
+
 	out vec4 vPlayerLightPosTangentSpace;
 	out vec4 vPortalLightPosTangentSpace;
 	out vec4 vPortalLightPosTangentSpace2;
@@ -44,6 +49,16 @@
 	void main(void) {
 		mat4 vertexMatrix = uMVMatrix*mat4( aVertexTangent, aVertexBinormal, aVertexNormal, aVertexPosition);
 		transformedCoord = vertexMatrix[3];
+
+#ifdef RECEIVE_SHADOW
+	vec4 posInShadowCasterSpace4d = uShadowMat * aVertexPosition;
+		// here shadowmat is shadow caster relative to catcher, but could rejig, pass in shadow caster and catcher mats, avoid relative calc in js.
+		//	(reasonable if pass in model mat anyway, but currently passing in modeview) 
+		
+	posInShadowCasterSpace = posInShadowCasterSpace4d.xyz / posInShadowCasterSpace4d.w;
+		//get vertex position in frame of shadow caster object.
+#endif
+
 #ifdef CUSTOM_DEPTH
 		//vZW = vec2(transformedCoord.z, transformedCoord.w);	
 		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);	//w/z from -1 to 1. 	//note that w, z switched from intuitive expectation. see projection matrix. stuff nearest the camera has, at this point, w~1, stuff far away has w~-1, stuff in the middle (looks smallest) w=0. z at this point is like later w, and with sign change. 0 near/far, -1 in middle.
