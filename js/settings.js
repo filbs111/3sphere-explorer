@@ -56,7 +56,7 @@ var guiParams={
 		scale:0.03
 	},
 	"targeting":"off",
-	playerLight:'#808080',
+	playerLight:'#000000',
 	control:{
 		onRails:false,
 		handbrake:false,

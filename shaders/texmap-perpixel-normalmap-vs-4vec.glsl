@@ -56,6 +56,7 @@
 		//	(reasonable if pass in model mat anyway, but currently passing in modeview) 
 		
 	posInShadowCasterSpace = posInShadowCasterSpace4d.xyz / posInShadowCasterSpace4d.w;
+	posInShadowCasterSpace*=3000.0;	//TODO use whatever scale factor for model
 		//get vertex position in frame of shadow caster object.
 #endif
 
