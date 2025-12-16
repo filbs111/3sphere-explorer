@@ -2716,7 +2716,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	[
 		{buffersToDraw:lucyBuffers, bvh:lucyBvh, shader:shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ]}, 
 		{buffersToDraw:mushroomBuffers, bvh:mushroomBvh, shader:shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ]},
-		{buffersToDraw:buildingBuffers, bvh:buildingBvh, shader:shaderPrograms.coloredPerPixelDiscardVertexColoredTexmap[ guiParams.display.atmosShader ], tex:bricktex},
+		{buffersToDraw:buildingBuffers, bvh:buildingBvh, shader:shaderPrograms.coloredPerPixelDiscardVertexColoredTexmap[ guiParams.display.atmosShader ], tex:texture},
 		{buffersToDraw:octoFractalBuffers, bvh:octoFractalBvh, shader:shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ]},
 		{buffersToDraw:gunBuffers, bvh:gunBvh, shader:shaderProgramColored},
 		{buffersToDraw:teapotBuffers, bvh:teapotBvh, shader:shaderProgramColored},
@@ -4126,6 +4126,24 @@ function drawObjectFromPreppedBuffers(bufferObj, shaderProg, skipM){
 		gl.drawElements(gl.TRIANGLE_STRIP, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 		return;
 	}
+
+	if (shaderProg.uniforms.uShadowMat){
+		// NOTE eventually shadows like this should do with deferred, this is just a quick hack to check whether worth persuing
+		//NOTE this code assumes want shadow cast from player object at sshipMatrix, but could be player not in relevant world, might want to use "portaled"
+		// player position here.
+		mat4.set(sshipMatrix, relativeShadowMatrix);
+		mat4.transpose(relativeShadowMatrix);
+		mat4.multiply(relativeShadowMatrix, mMatrix);
+
+		// mat4.set(mMatrix, relativeShadowMatrix);
+		// mat4.transpose(relativeShadowMatrix);
+		// mat4.multiply(relativeShadowMatrix, sshipMatrix);
+		// mat4.transpose(relativeShadowMatrix);
+
+		gl.uniformMatrix4fv(shaderProg.uniforms.uShadowMat, false, relativeShadowMatrix);
+	}
+
+
 	gl.drawElements(gl.TRIANGLES, bufferObj.vertexIndexBuffer.numItems, bufferObj.use32BitIndices? gl.UNSIGNED_INT: gl.UNSIGNED_SHORT, 0);
 	//gl.drawElements(gl.LINES, bufferObj.vertexIndexBuffer.numItems, gl.UNSIGNED_SHORT, 0);
 }

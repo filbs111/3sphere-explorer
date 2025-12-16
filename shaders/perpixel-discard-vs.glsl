@@ -53,6 +53,11 @@
 	#endif
 #endif
 
+#ifdef RECEIVE_SHADOW
+	uniform mat4 uShadowMat;
+	out vec4 posInShadowCasterSpace;	//since shadow caster (for now, player object) is in projected flat space, scaled by some factor. TODO prevent casting shadow on opposite side of world?
+#endif
+
 	uniform mat4 uPMatrix;
 	uniform vec4 uCameraWorldPos;
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
@@ -132,6 +137,14 @@
 		
 		transformedNormal = MVMatrix * norm4Vec;
 #endif
+
+
+
+#ifdef RECEIVE_SHADOW
+	//posInShadowCasterSpace = uShadowMat * vec4(scaledPosition, 1.0);	//suspect this is right, and other bits are wrong!
+	posInShadowCasterSpace = uShadowMat * aVertexPositionNormalized;
+#endif
+
 
 #ifdef CUSTOM_DEPTH
 		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);

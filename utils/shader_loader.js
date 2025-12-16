@@ -199,18 +199,21 @@ function initShaders(shaderProgs){
 		wrappedDustMotes:["wrapped-dust-mote-vs", "very-simple-fs",['CUSTOM_DEPTH'],['CUSTOM_DEPTH']],
 	};
 	var shaderProgWithVariationsList = {
-		coloredPerPixelDiscard:["perpixel-discard-vs", "perpixel-discard-fs", [],[],true],
-		coloredPerPixelDiscardVertexColored:["perpixel-discard-vs", "perpixel-discard-fs", ['VERTCOLOR'],['VERTCOLOR'],true],
-		coloredPerPixelDiscardVertexColoredEmit:["perpixel-discard-vs", "perpixel-discard-emit-fs", ['VERTCOLOR'],['VERTCOLOR'],true],
+		coloredPerPixelDiscard:["perpixel-discard-vs", "perpixel-discard-fs", ['RECEIVE_SHADOW'],['RECEIVE_SHADOW'],true],
+		coloredPerPixelDiscardVertexColored:["perpixel-discard-vs", "perpixel-discard-fs", ['VERTCOLOR','RECEIVE_SHADOW'],['VERTCOLOR','RECEIVE_SHADOW'],true],
+		coloredPerPixelDiscardVertexColoredEmit:["perpixel-discard-vs", "perpixel-discard-emit-fs", ['VERTCOLOR','RECEIVE_SHADOW'],['VERTCOLOR','RECEIVE_SHADOW'],true],
 			//^^ note perpixel lighting is irrelevant because no effect of lights
-		coloredPerPixelDiscardVertexColoredTexmap:["perpixel-discard-vs", "perpixel-discard-fs", ['VERTCOLOR','TEXMAP'],['VERTCOLOR','TEXMAP'],true],
+
+		coloredPerPixelDiscardVertexColoredTexmap:["perpixel-discard-vs", "perpixel-discard-fs", ['VERTCOLOR','TEXMAP','RECEIVE_SHADOW'],['VERTCOLOR','TEXMAP','RECEIVE_SHADOW'],true],
+
 		coloredPerPixelDiscardVertexColoredTexmapBendy:["perpixel-discard-vs", "perpixel-discard-fs", ['VS_MATMULT','VERTCOLOR','TEXMAP','BENDY_'],['VERTCOLOR','TEXMAP'],true],
 		coloredPerPixelDiscardVertexColoredTexmapBendyInstanced:["perpixel-discard-vs", "perpixel-discard-fs", ['INSTANCED','VS_MATMULT','VERTCOLOR','TEXMAP','BENDY_'],['VERTCOLOR','TEXMAP'],true],
 		coloredPerPixelDiscardVertexColoredInstanced:["perpixel-discard-vs", "perpixel-discard-fs", ['INSTANCED','VS_MATMULT','VERTCOLOR'],['VERTCOLOR'],true],
 		coloredPerPixelDiscardBendy:["perpixel-discard-vs", "perpixel-discard-fs", ['BENDY_'],[],true],
 		texmapPerPixelDiscard:["texmap-perpixel-discard-vs", "texmap-perpixel-discard-fs", [],[],true],
 		texmapPerPixelDiscardForText:["texmap-perpixel-discard-vs", "texmap-perpixel-discard-text-fs", [],[],true],
-		texmapPerPixelDiscardPhong:["texmap-perpixel-discard-vs", "texmap-perpixel-discard-fs", [],['SPECULAR_ACTIVE'],true],
+		texmapPerPixelDiscardPhong:["texmap-perpixel-discard-vs", "texmap-perpixel-discard-fs", ['RECEIVE_SHADOW'],['SPECULAR_ACTIVE','RECEIVE_SHADOW'],true],
+
 		texmapPerPixelDiscardNormalmapV1:["texmap-perpixel-discard-normalmap-vs", "texmap-perpixel-discard-normalmap-fs", [],[],true],
 		texmapPerPixelDiscardNormalmap:["texmap-perpixel-discard-normalmap-efficient-vs", "texmap-perpixel-discard-normalmap-efficient-fs", [],[],true],	
 		texmapPerPixelDiscardNormalmapPhong:["texmap-perpixel-discard-normalmap-efficient-vs", "texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE'], ['SPECULAR_ACTIVE'],true],
@@ -232,18 +235,13 @@ function initShaders(shaderProgs){
 		texmap4VecPerPixelDiscardNormalmapPhongAndDiffuse:["texmap-perpixel-normalmap-vs-4vec", "texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE'], ['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE'],true],
 		texmap4VecPerPixelDiscardNormalmapVcolorAndDiffuse:["texmap-perpixel-normalmap-vs-4vec", "texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR'], ['DIFFUSE_TEX_ACTIVE','VCOLOR'],true],
 		texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse:["texmap-perpixel-normalmap-vs-4vec", "texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE'],true],
-		//texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse2Tex:["texmap-perpixel-normalmap-vs-4vec", "texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','DOUBLE_TEXTURES',"CUSTOM_TEXBIAS"],true],
-		//texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse2TexDepthAware:["texmap-perpixel-normalmap-vs-4vec", "texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','DEPTH_AWARE'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','DOUBLE_TEXTURES',"CUSTOM_TEXBIAS",'DEPTH_AWARE'],true],
-
-
+		
 		//with shadow receiving...
 		texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse2Tex:["texmap-perpixel-normalmap-vs-4vec", "texmap-perpixel-discard-normalmap-efficient-fs", 
 			['VCOLOR','SPECULAR_ACTIVE','RECEIVE_SHADOW'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','DOUBLE_TEXTURES',"CUSTOM_TEXBIAS",'RECEIVE_SHADOW'],true],
 				//^^ appears to be used for procTerrain
 		texmap4VecPerPixelDiscardNormalmapPhongVcolorAndDiffuse2TexDepthAware:["texmap-perpixel-normalmap-vs-4vec", "texmap-perpixel-discard-normalmap-efficient-fs", 
 			['VCOLOR','SPECULAR_ACTIVE','DEPTH_AWARE','RECEIVE_SHADOW'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','DOUBLE_TEXTURES',"CUSTOM_TEXBIAS",'DEPTH_AWARE','RECEIVE_SHADOW'],true],
-
-
 
 		//noTexmap4VecPerPixelDiscardVcolorOnly:["perpixel-discard-vs-4vec", "perpixel-discard-fs", ['VERTCOLOR'], ['VERTCOLOR','SPECULAR_ACTIVE'],true],	//no specular?
 
