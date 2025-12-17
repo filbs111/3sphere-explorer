@@ -23,6 +23,11 @@
 	uniform vec4 uReflectorPosVShaderCopy2;
 	uniform vec4 uReflectorPosVShaderCopy3;
 
+#ifdef RECEIVE_SHADOW
+	uniform mat4 uShadowMat;
+	out vec3 posInShadowCasterSpace;	//since shadow caster (for now, player object) is in projected flat space, scaled by some factor. TODO prevent casting shadow on opposite side of world?
+#endif
+
 	out vec4 vPlayerLightPosTangentSpace;
 	out vec4 vPortalLightPosTangentSpace;
 	out vec4 vPortalLightPosTangentSpace2;
@@ -56,6 +61,21 @@
 	
 		transformedCoord = vertexMatrix[3];		
 		gl_Position = uPMatrix * transformedCoord;
+
+
+
+#ifdef RECEIVE_SHADOW
+	vec4 posInShadowCasterSpace4d = uShadowMat * aVertexPosition;
+		// here shadowmat is shadow caster relative to catcher, but could rejig, pass in shadow caster and catcher mats, avoid relative calc in js.
+		//	(reasonable if pass in model mat anyway, but currently passing in modeview) 
+		
+	posInShadowCasterSpace = posInShadowCasterSpace4d.xyz / posInShadowCasterSpace4d.w;
+	posInShadowCasterSpace*=3000.0;	//TODO use whatever scale factor for model
+		//get vertex position in frame of shadow caster object.
+#endif
+
+
+
 #ifdef CUSTOM_DEPTH
 		vZW = vec2(.5*transformedCoord.w, transformedCoord.z-1.);
 		vP = transformedCoord;

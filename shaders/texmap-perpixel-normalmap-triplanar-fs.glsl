@@ -51,6 +51,43 @@
 out vec4 fragColor;
 
 
+
+#ifdef RECEIVE_SHADOW
+	in vec3 posInShadowCasterSpace;	//since shadow caster (for now, player object) is in projected flat space, scaled by some factor. TODO prevent casting shadow on opposite side of world?
+
+	//rough vals from trial and error, works in conjunction with posInShadowCasterSpace*= in vert shader. TODO correct values
+	const vec3 shadowObjVerts[5]=vec3[5](
+		vec3(1.,1.,-2.5),
+		vec3(1.,-1.,-2.5),
+		vec3(-1.,-1.,-2.5),
+		vec3(-1.,1.,-2.5),
+		vec3(0.,0.,4.5)
+	);
+
+	float isoShadowFactor(vec3 catcherPos, vec3 vecA, vec3 vecB, vec3 vecC){
+		// var aCrossB = crossProduct(a,b);
+		// var aCrossBDotC = dotProduct(aCrossB, c);
+		// var denominator = 1 + dotProduct(a,b) + dotProduct(b,c) + dotProduct(c,a);
+		// var tanEOver2 = aCrossBDotC/denominator;
+		// return 2*Math.atan(tanEOver2);  //this has a sign.
+
+		vec3 vertexA = normalize(vecA + catcherPos);
+		vec3 vertexB = normalize(vecB + catcherPos);
+		vec3 vertexC = normalize(vecC + catcherPos);
+
+		vec3 aCrossB = cross(vertexA, vertexB);
+		float aCrossBDotC = dot(aCrossB, vertexC);
+		float denominator = 1. + dot(vertexA, vertexB) + dot(vertexA, vertexC) + dot(vertexB, vertexC) ;
+		float tanEOver2 = aCrossBDotC/denominator;
+		//return 2.0*atan(tanEOver2);
+		//return 0.159*atan(tanEOver2);	//above over 4PI, since want fraction of sphere not stearads
+			//TODO try abs?
+		return 0.159*abs(atan(tanEOver2));
+	}
+
+#endif
+
+
 //TODO move some or all of this calculation to vertex shader.
 // calculation of alpha, gamma factors can easily be per vertex
 // nmapNormal is per pixel so wants more thought.
@@ -216,7 +253,23 @@ float calculatePortalLightContribution(vec3 vPortalLightPosTangentSpace, vec3 nm
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
 		
+
+#ifdef RECEIVE_SHADOW
+		//something simple - draw a 3d grid to confirm moves with player vehicle model
+		// vec4 shadowMultiplier = vec4(mod(1.0*posInShadowCasterSpace,1.0), 1.0);
+
+		float shadowFactor = isoShadowFactor(posInShadowCasterSpace, shadowObjVerts[0],shadowObjVerts[1],shadowObjVerts[2]) + 
+			isoShadowFactor(posInShadowCasterSpace, shadowObjVerts[3], shadowObjVerts[0], shadowObjVerts[2]) + 
+			isoShadowFactor(posInShadowCasterSpace, shadowObjVerts[1], shadowObjVerts[0], shadowObjVerts[4]) +
+			isoShadowFactor(posInShadowCasterSpace, shadowObjVerts[2], shadowObjVerts[1], shadowObjVerts[4]) +
+			isoShadowFactor(posInShadowCasterSpace, shadowObjVerts[3], shadowObjVerts[2], shadowObjVerts[4]) +
+			isoShadowFactor(posInShadowCasterSpace, shadowObjVerts[0], shadowObjVerts[3], shadowObjVerts[4]);
+		vec4 shadowMultiplier = vec4(vec3(1.0-shadowFactor),1.0);
+
+		fragColor = pow(shadowMultiplier*preGammaFragColor, vec4(0.455));
+#else
 		fragColor = pow(preGammaFragColor, vec4(0.455));
+#endif	
 		
 		float depthVal = .5*(vZW.x/vZW.y) + .5;
 		fragColor.a = depthVal;
