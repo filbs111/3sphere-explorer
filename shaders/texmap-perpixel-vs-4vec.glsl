@@ -20,6 +20,12 @@
 	//uniform vec3 uReflectorDiffColor;
 	//uniform vec4 uReflectorPos;
 	//uniform float uReflectorCos;
+
+#ifdef RECEIVE_SHADOW
+	uniform mat4 uShadowMat;
+	out vec4 posInShadowCasterSpace;
+#endif
+
 	//out vec3 veclight;
 	//out vec4 vVertexPos;
 	out vec4 transformedCoord;
@@ -34,6 +40,7 @@
 #ifdef DEPTH_AWARE
 	out vec3 vScreenSpaceCoord;
 #endif
+
 	void main(void) {
 		transformedCoord = uMVMatrix * aVertexPosition;
 #ifdef CUSTOM_DEPTH
@@ -131,6 +138,10 @@
 		
 #ifdef VCOLOR
 		vColor = aVertexColor;	//TODO multiply by uColor in vert shader
+#endif
+
+#ifdef RECEIVE_SHADOW
+	posInShadowCasterSpace = uShadowMat * aVertexPosition;
 #endif
 		
 		adjustedPos = transformedCoord - uDropLightPos;

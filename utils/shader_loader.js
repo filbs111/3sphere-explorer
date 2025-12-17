@@ -233,7 +233,7 @@ function initShaders(shaderProgs){
 		texmap4VecPerPixelDiscardPhong:["texmap-perpixel-vs-4vec", "texmap-perpixel-discard-fs", [], ['SPECULAR_ACTIVE'],true],
 		texmap4VecPerPixelDiscardPhongDepthAware:["texmap-perpixel-vs-4vec", "texmap-perpixel-discard-fs", ['DEPTH_AWARE'], ['SPECULAR_ACTIVE','DEPTH_AWARE'],true],
 		
-		texmap4VecPerPixelDiscardPhongVcolor:["texmap-perpixel-vs-4vec", "texmap-perpixel-discard-fs", ['VCOLOR'], ['VCOLOR','SPECULAR_ACTIVE'],true],
+		texmap4VecPerPixelDiscardPhongVcolor:["texmap-perpixel-vs-4vec", "texmap-perpixel-discard-fs", ['VCOLOR',receiveShadowsString], ['VCOLOR','SPECULAR_ACTIVE',receiveShadowsString],true],
 		texmap4VecPerPixelDiscardNormalmapAndDiffuse:["texmap-perpixel-normalmap-vs-4vec", "texmap-perpixel-discard-normalmap-efficient-fs", [],['DIFFUSE_TEX_ACTIVE'],true],
 		texmap4VecPerPixelDiscardNormalmapPhongAndDiffuse:["texmap-perpixel-normalmap-vs-4vec", "texmap-perpixel-discard-normalmap-efficient-fs", ['SPECULAR_ACTIVE'], ['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE'],true],
 		texmap4VecPerPixelDiscardNormalmapVcolorAndDiffuse:["texmap-perpixel-normalmap-vs-4vec", "texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR'], ['DIFFUSE_TEX_ACTIVE','VCOLOR'],true],
