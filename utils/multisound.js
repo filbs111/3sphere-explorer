@@ -15,15 +15,25 @@ var MySound = (function(){
 	
 	audiocontext.resume();	//??
 	var globalGainNode = audiocontext.createGain();
+
+	var compressor = audiocontext.createDynamicsCompressor();	//?? try putting this somewhere in hope of avoiding 
+																// silence/bad sounds when many simultaneous explosions
+	var nodeToAttachSoundsTo = globalGainNode;
+
+	/*
 	var globalDistortionNode = audiocontext.createWaveShaper();
 	globalDistortionNode.curve = makeDistortionCurve(80);
 	globalDistortionNode.oversample = '4x';
-	globalDistortionNode.connect(globalGainNode).connect(audiocontext.destination);	//maybe inefficient - TODO bin globalGainNode?
+	globalDistortionNode.connect(globalGainNode);
+	*/
+	//if want to use distortion node, nodeToAttachSoundsTo = globalDistortionNode;
+
+	globalGainNode.connect(compressor).connect(audiocontext.destination);	//maybe inefficient - TODO bin globalGainNode?
 
 	//return a constructor instead, so can use this to make multiple sounds
 	var mySound = function(soundAddress, cb){
 		this.gainNode = audiocontext.createGain();
-		this.gainNode.connect(globalDistortionNode);
+		this.gainNode.connect(nodeToAttachSoundsTo);
 		
 		this.soundAddress = soundAddress;
 		
