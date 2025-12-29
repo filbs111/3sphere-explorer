@@ -3696,6 +3696,9 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 	
 	for (var ee in explosions){
 		var singleExplosion = explosions[ee];
+
+		if (singleExplosion.life<1){continue;}
+
 		if (singleExplosion.world == worldA){
 			if (singleExplosion.rotateWithDuocylinder){
 				mat4.set(invertedWorldCameraDuocylinderFrame, mvMatrix);
@@ -3830,14 +3833,13 @@ var Explosion=function(){
 		this.size = size;
 		this.color = color;
 		this.life=100;
+		this.soundSphereRad = 0;
 		this.speed = Math.sqrt(0.00002/size);	//larger size = slower. sqrt is arbitrary, effect seems about right 
 		explosions[nextExplId]=this;
 		nextExplId+=1;
 		this.rotateWithDuocylinder=rotateWithDuocylinder;
 		
-		if (hasSound){
-			this.sound = myAudioPlayer.playBombSound(0,0);
-		}
+		this.hasSound = hasSound;
 	}
 }();
 
@@ -4914,16 +4916,19 @@ var iterateMechanics = (function iterateMechanics(){
 		mat4.set(invertedWorldCamera, invertedWorldCameraDuocylinderFrame);
 		rotate4mat(invertedWorldCameraDuocylinderFrame, 0, 1, guiSettingsForWorld[playerContainer.world].spin);
 		
-		var soundspd = 0.5;	//TODO change delaynode creation param (faster sound means less possible delay)
 		
 		for (var ee in explosions){
 			var singleExplosion = explosions[ee];
+
+			singleExplosion.soundSphereRad += soundspd*timeStep/1000;	//TODO check this is right! suspect /1000 is ms to s conversion
 			singleExplosion.life-=numSteps*singleExplosion.speed;
-			if (singleExplosion.life<1){
+			
+			if (singleExplosion.soundSphereRad>1 && singleExplosion.life<1){	//TODO allow sounds to travel further? 
 				matPool.destroy(singleExplosion.matrix);
 				delete explosions[ee];
 			}
-			if (singleExplosion.sound){
+
+			if (singleExplosion.hasSound){
 				mat4.set(singleExplosion.rotateWithDuocylinder ? invertedWorldCameraDuocylinderFrame:invertedWorldCamera,tmpRelativeMat);
 				mat4.multiply(tmpRelativeMat, singleExplosion.matrix);
 				
@@ -4934,7 +4939,21 @@ var iterateMechanics = (function iterateMechanics(){
 				var vol = soundSize/Math.hypot(distance, soundSize);
 				var pan = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));	//tanh(left/hypot(size,down,forwards)). tanh smoothly limits to +/- 1
 				
-				singleExplosion.sound.setAll({delay:distance/soundspd, gain:vol, pan:pan});
+				if (!singleExplosion.soundStarted){
+					//TODO start sound when sphere travelling at speed of sound hits observer. 
+					//basically check distance vs elapsed time * soundspd
+
+					//var soundSphereSize = 10000*singleExplosion.size;	//TODO get right scaling factor here. NOTE using size here makes inaudible
+									//if soundwave hits after rendered explosion disappeared! TODO add doun sphere size var on explosion object?
+					var soundSphereSize = singleExplosion.soundSphereRad;
+					if (soundSphereSize>distance){
+						singleExplosion.sound = myAudioPlayer.playBombSound(0,0);
+						singleExplosion.soundStarted=true;
+					}
+				}
+				if (singleExplosion.soundStarted){
+					singleExplosion.sound.setAll({gain:vol, pan:pan, distance:distance});
+				}
 			}
 		}
 		

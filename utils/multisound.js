@@ -1,5 +1,6 @@
 var usingAudioAPI=false;
 var audiocontext;
+var soundspd = 1;		//TODO check this is used for whoosh sounds not just explosions! suspect other places defaulting to 1.
 
 try {
 		// Fix up for prefixing
@@ -56,7 +57,7 @@ var MySound = (function(){
 		
 	};
 	
-	mySound.prototype.play = function(delay, vol, loop){
+	mySound.prototype.play = function(delay, vol, loop, useDelayNode){
 		//console.log("will play sound, using web audio API, from: " + this.soundAddress + ", delay: " + delay);
 		if (typeof vol == 'undefined'){ vol = 1;};
 		delay = delay || 0;
@@ -76,19 +77,26 @@ var MySound = (function(){
 		
 		
 		var indivGainNode = audiocontext.createGain();	
-		indivGainNode.gain.setValueAtTime(vol, audiocontext.currentTime);
-		
-		var indivDelayNode = audiocontext.createDelay(2.0);	//param is max delay. for fudge distance, opposite side of 3sph is distance 2 away
-		indivDelayNode.delayTime.setValueAtTime(delay, audiocontext.currentTime);
-		
+		indivGainNode.gain.value = vol;
+
+		var toConnectToGainNode = source;
+		var indivDelayNode = null;
+
+		if (useDelayNode){
+			var indivDelayNode = audiocontext.createDelay(5.0);	//param is max delay. for fudge distance, opposite side of 3sph is distance 2 away
+			indivDelayNode.delayTime.setValueAtTime(delay, audiocontext.currentTime);
+			source.connect(indivDelayNode);
+			toConnectToGainNode=indivDelayNode;
+		}
+
 		var indivPannerNode = audiocontext.createStereoPanner();
 		
-		source.connect(indivDelayNode).connect(indivGainNode).connect(indivPannerNode).connect(this.gainNode);
-		
+		toConnectToGainNode.connect(indivGainNode).connect(indivPannerNode).connect(this.gainNode);
+		 
 		//audiocontext.resume();	//??
 		source.start(audiocontext.currentTime);
 		
-		return new IndivSound(indivGainNode, indivDelayNode, indivPannerNode);
+		return new IndivSound(source, indivGainNode, indivDelayNode, indivPannerNode);
 	};
 	mySound.prototype.setVolume = function(volume){
 		this.gainNode.gain.value = volume;
@@ -101,18 +109,42 @@ var MySound = (function(){
 	return mySound;
 })();
 
-function IndivSound(gainNode, delayNode, pannerNode){
+function IndivSound(sourceNode, gainNode, delayNode, pannerNode){
+	this.sourceNode = sourceNode;
 	this.gainNode = gainNode;
 	this.delayNode = delayNode;
 	this.pannerNode = pannerNode;
 	this.lastSet = 0;		//set less frequently for smoother playback (may notice with smoother sounds)
 }
 IndivSound.prototype.setAll = function(settings){
+
+	//seems delaynode doesn't work well when have lots of sounds!
+	//for sounds that have a lot of, use a less convenient method, which removes ability to time precisely - track
+	// change in time and change in distance (or measure ), use this to calculate doppler shift, and 
+
 	try{
 		var thisScheduledAudioRampTime = audiocontext.currentTime + 0.1;
 		if (thisScheduledAudioRampTime > this.lastSet + 0.05){  //workaround for inability to cancel cancelScheduledValues due to buggy firefox
-			this.lastSet =  thisScheduledAudioRampTime;
-			this.delayNode.delayTime.linearRampToValueAtTime(settings.delay, thisScheduledAudioRampTime);
+
+			if (this.delayNode){
+				this.delayNode.delayTime.linearRampToValueAtTime(settings.delay, thisScheduledAudioRampTime);
+			}else{
+				//on some sounds like explosions, don't use a delaynode
+				if (this.lastDistance){
+					//TODO use timing from physics engine instead - otherwise doppler will be affected by phys engine slowdown
+					var timeChange = thisScheduledAudioRampTime - this.lastSet;
+					var distanceChange = settings.distance - this.lastDistance;
+					var frequencyMultiplier = 1-(distanceChange/timeChange)/soundspd;
+
+					//var desiredFrequency = 44100;	//*frequencyMultiplier;	//AFAIK 44100Hz is default
+					//this.sourceNode.frequency.setValueAtTime(desiredFrequency,thisScheduledAudioRampTime);
+					this.sourceNode.playbackRate.setValueAtTime(frequencyMultiplier,thisScheduledAudioRampTime);
+				}
+			}
+
+			this.lastDistance = settings.distance;
+			this.lastSet = thisScheduledAudioRampTime;
+
 			this.gainNode.gain.linearRampToValueAtTime(settings.gain, thisScheduledAudioRampTime);
 			this.pannerNode.pan.linearRampToValueAtTime(settings.pan, thisScheduledAudioRampTime);
 		}
@@ -223,7 +255,6 @@ var setSoundHelper= ( function(){
 
 		var adjustedDist = Math.hypot(noiseDist,terrainNoiseRad);
 		var vol = terrainNoiseRad/adjustedDist;
-		adjustedDist = Math.min(adjustedDist,2);	//clamp. (TODO set value to max delay). prevents log spam
 
 		cb({delay:adjustedDist, gain:vol*spdFactor, pan:panAmount})
 	};
