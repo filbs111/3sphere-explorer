@@ -33,6 +33,19 @@ Maybe could still cap out if sound onset quick. Could try implementing lookahead
 
 Since know what sounds will be playing, perhaps can precalculate envelopes and "compress" by manually scaling by only considering these envelope functions. 
 
+#### initial solution
+
+seems that using delay nodes was an issue, not sure why. Test project demos this. Clicking button to play many sounds offset by delay nodes leads to buggy/silent audio when many sounds. Could be that memory used by, time to create delay nodes is an issue. Can see performance issue if increase maximum delay time, which generally want to avoid problem described in "Delay" section here. 
+
+Improved situation by using compression node and avoiding using delay node for explosions (but keeping it for other sounds). 
+
+#### alternative solution/ideas
+
+Pool delay nodes. Might make creation quick, but how much memory required for eg 1000x 10s delaynodes? 
+
+Heirarchy of delay nodes - eg create a larger sphere surrounding sound that is not yet heard, and create 2 delaynodes - one for observer to sphere, another from sphere surface to the sound. Then if another sound is created within the larger sphere (and when it is small?), attach the new sound to the observer to sphere delaynode with another delaynode for new sound to sphere. This way if a large number of sounds are made at a similar position and time will not require large delayNodes for the distance from observer to sound for all sounds.
+
+
 ## missing features
 
 ### audio from moving source
