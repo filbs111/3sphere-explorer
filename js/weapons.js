@@ -82,7 +82,6 @@ window.addEventListener("wheel", event => {
     selectedSpecialWeapId = (numSpecialWeaps+selectedSpecialWeapId+Math.sign(delta))%numSpecialWeaps;
 });
 
-
 function spreadRand(amount){
 	return (Math.random()-0.5)*amount;	//TODO precalc, gaussia etc
 }
@@ -147,7 +146,7 @@ function launchProjectile(projectileMatrix, muzzleVelVec, isBig, markerText){
 	matPool.destroy(relativeMatrix);
 			
 	//limit number of bullets
-	if (bullets.size>200){
+	if (bullets.size>2000){
 		var bulletToDestroy = bullets.keys().next().value;
 		//console.log("removing bullet because too many. ",bulletToDestroy.matrix,"pool:",matPool.getMats());
 		if (bulletToDestroy.active){
