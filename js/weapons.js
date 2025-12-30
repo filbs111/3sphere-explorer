@@ -48,11 +48,12 @@ var specialWeapsData = [
 		getLaunchVel:()=>[0,0,2],
 	},
 	{	//2
-		name:"MISSILE",
+		name:"MISSILES",
 		periodMillis:500,
 		forwardOffset:0.002,
 		hasTrail:true,
-		getLaunchVel:()=>[0,0,4],
+		numProjectiles:4,
+		getLaunchVel: ii =>{ var ang = Math.PI*ii/2; return [0.2*Math.sin(ang), 0.2*Math.cos(ang),4];},
 	},
 	{	//3
 		name:"SHOTGUN",
@@ -106,7 +107,7 @@ function launchLargeProjectile(weaponDef){
 	numProjectiles??=1;
 	bigProjectiles??=true;
 	for (var ii=0;ii<numProjectiles;ii++){
-		launchProjectile(projectileMat, getLaunchVel(), bigProjectiles, markerText, hasTrail);
+		launchProjectile(projectileMat, getLaunchVel(ii), bigProjectiles, markerText, hasTrail);
 	}
 }
 
