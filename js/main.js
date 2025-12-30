@@ -1274,11 +1274,11 @@ function drawRegularScene(frameTime){
 			//TODO correct this for fisheye
 			// (size of outer ring actually means something. draw centre and outer ring separately?)
 			drawTargetDecal([scalescalar,scalescalar,0], colorArrs.hudYellow, adjustedDirectionForFisheye(
-				[shiftAmount*playerVelVec[0],shiftAmount*playerVelVec[1],1+shiftAmount*playerVelVec[2]]));	//TODO vector add!
+				[shiftAmount*playerVelVec[0],shiftAmount*playerVelVec[1],1+shiftAmount*playerVelVec[2]].map(x=>-x), cameraTilt));	//TODO vector add!
 			
 			if (guiParams.target.type!="none" && targetWorldFrame[2]<0){	//if in front of player){
 				bind2dTextureIfRequired(hudTextureBox);				
-				drawTargetDecal(standardDecalScale, colorArrs.hudBox, adjustedDirectionForFisheye(targetWorldFrame));	//direction to target (shows where target is on screen)
+				drawTargetDecal(standardDecalScale, colorArrs.hudBox, adjustedDirectionForFisheye(targetWorldFrame, cameraTilt));	//direction to target (shows where target is on screen)
 									//TODO put where is on screen, not direction from spaceship (obvious difference in 3rd person)
 				//bind2dTextureIfRequired(hudTextureSmallCircles);	
 				//drawTargetDecal(0.0008, [1, 0.1, 1, 0.5], selectedTargeting);	//where should shoot in order to hit target (accounting for player velocity)
