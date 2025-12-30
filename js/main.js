@@ -5007,7 +5007,18 @@ var iterateMechanics = (function iterateMechanics(){
 				if (b.active){	//TODO just delete/unlink removed objects
 
 					if (b.hasTrail){
-						produceSmoke(b);
+						if (Math.random()<0.3){
+							produceSmoke(b);
+						}
+					}
+					if (b.forwardAcceleration){
+						b.vel[2]+=b.forwardAcceleration;
+
+						//hack to prevent speed building up too much. TODO take atmos thickness into account, air speed (eg for rotating duocylinder)
+						//and/or limit fuel! 
+						for (var ii=0;ii<3;ii++){
+							b.vel[ii]*=0.998;
+						}
 					}
 
 					checkBulletCollision(b, timeStep*moveSpeed);
