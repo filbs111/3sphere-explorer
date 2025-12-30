@@ -5121,9 +5121,9 @@ var iterateMechanics = (function iterateMechanics(){
 
 			if (!moveWithDuocylinder){
 				new Explosion(bullet, explosionSize, [1,0.5,0.25], false, true);
-				explosionParticles.makeExplosion(matrix.slice(12), frameTime, color,0);
+			//	explosionParticles.makeExplosion(matrix.slice(12), frameTime, color,0);
 			}else{
-				explosionParticles.makeExplosion(matrix.slice(12), frameTime, color,0);
+			//	explosionParticles.makeExplosion(matrix.slice(12), frameTime, color,0);
 					//TODO include velocity for explosion particles due to duocylinder rotation.
 					//should see slower particles fall to ground, but won't look good yet because particles disappear quickly, abruptly.
 
