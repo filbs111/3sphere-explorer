@@ -182,3 +182,17 @@ function createAutofire(callback, periodMilliFunction){
         }
     }
 }
+
+
+function processGamepadWeaponSwitching(activeGp){
+	//TODO do this will callbacks, and only on keydown.
+
+	if (!activeGp){return;}
+
+	var selectSpecialButtonValues = gpSettings.selectSpecialButtons.map(buttonIdx => activeGp.buttons[buttonIdx].value);
+	for (var ii=0;ii<selectSpecialButtonValues.length;ii++){
+		if (selectSpecialButtonValues[ii]){
+			selectedSpecialWeapId = ii;
+		}
+	}
+}

@@ -4817,6 +4817,7 @@ var iterateMechanics = (function iterateMechanics(){
 		if (activeGp && activeGp.buttons[10].pressed){	//L3
 			reverseCamera=true;
 		}
+		processGamepadWeaponSwitching(activeGp);
 
 		var nowTime = Date.now();
 		var timeElapsed = Math.min(nowTime - lastTime, 50);	//ms. 50ms -> slowdown if drop below 20fps 

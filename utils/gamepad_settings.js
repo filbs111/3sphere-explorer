@@ -10,6 +10,8 @@ var gamepadSettingsX360Joypad = (()=>{
 		roll:(gp) => gp.buttons[15].value-gp.buttons[14].value,	//dpad left/right
 		moveEnabled:true,
 		fireButton:5,	//R1
+		fireSpecialButton:4, //L1
+		selectSpecialButtons:[0,1,2,3],	//A,B,X,Y . NOTE only 4 weapons - TODO either switch to cycling, or reduce special weapon count!
 		deadZone	//used in moveEnabled mode. TODO put move funcs here, just return 0 for move disabled
 	}
 })();

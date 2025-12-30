@@ -283,7 +283,8 @@ var playerMechanics = (() => {
         );
 
         specialAutofire(
-            keyThing.keystate(77) || mouseInfo.buttons&2, //M
+            keyThing.keystate(77) || //M
+                mouseInfo.buttons&2 || ( activeGp && activeGp.buttons[gpSettings.fireSpecialButton].value), 
             timeStep
         );
 
