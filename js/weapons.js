@@ -51,6 +51,7 @@ var specialWeapsData = [
 		name:"MISSILE",
 		periodMillis:500,
 		forwardOffset:0.002,
+		hasTrail:true,
 		getLaunchVel:()=>[0,0,4],
 	},
 	{	//3
@@ -98,19 +99,19 @@ function spreadOctagon(amount){
 }
 
 function launchLargeProjectile(weaponDef){
-	var {forwardOffset, getLaunchVel, numProjectiles, bigProjectiles, markerText} = weaponDef;
+	var {forwardOffset, getLaunchVel, numProjectiles, bigProjectiles, markerText, hasTrail} = weaponDef;
 	var projectileMat = mat4.create(sshipMatrix);
 	xyzmove4mat(projectileMat,[0,0,forwardOffset]);
 
 	numProjectiles??=1;
 	bigProjectiles??=true;
 	for (var ii=0;ii<numProjectiles;ii++){
-		launchProjectile(projectileMat, getLaunchVel(), bigProjectiles, markerText);
+		launchProjectile(projectileMat, getLaunchVel(), bigProjectiles, markerText, hasTrail);
 	}
 }
 
 //now using bullets array to contain both bullets and bombs.
-function launchProjectile(projectileMatrix, muzzleVelVec, isBig, markerText){
+function launchProjectile(projectileMatrix, muzzleVelVec, isBig, markerText, hasTrail){
 
 	var newBulletMatrix = matPool.create(); 
 	mat4.set(projectileMatrix,newBulletMatrix);
@@ -140,6 +141,7 @@ function launchProjectile(projectileMatrix, muzzleVelVec, isBig, markerText){
 		world:sshipWorld,
 		isBig,
 		markerText,
+		hasTrail,
 		active:true}
 	);
 
@@ -160,12 +162,18 @@ function smokeGuns(){
 	for (var g in gunMatrices){
 		if (g%2 == gunEven){
 			var gunMatrix = gunMatrices[g];
-			new Explosion({matrix:gunMatrix,world:sshipWorld}, sshipModelScale*0.5, [0.06,0.06,0.06]);	//smoke/steam fx.
-															//TODO emit from hot gun (continue after firing), lighting for smoke (don't see in dark) ...
-															//TODO get correct world (which side of portal end of gun is in)
+			produceSmoke({matrix:gunMatrix,world:sshipWorld});
+			
 		}
 	}
 }
+
+function produceSmoke(matAndWorld){
+	new Explosion(matAndWorld, sshipModelScale*0.5, [0.06,0.06,0.06]);	//smoke/steam fx.
+															//TODO emit from hot gun (continue after firing), lighting for smoke (don't see in dark) ...
+															//TODO get correct world (which side of portal end of gun is in)
+}
+
 
 function createAutofire(callback, periodMilliFunction){
     var timeRemaining = periodMilliFunction();

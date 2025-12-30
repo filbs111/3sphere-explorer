@@ -5005,6 +5005,11 @@ var iterateMechanics = (function iterateMechanics(){
 			// bullet movement and non-grouped collision
 			for (var b of bullets){
 				if (b.active){	//TODO just delete/unlink removed objects
+
+					if (b.hasTrail){
+						produceSmoke(b);
+					}
+
 					checkBulletCollision(b, timeStep*moveSpeed);
 					portalTestMultiPortal(b, 0);
 				}
