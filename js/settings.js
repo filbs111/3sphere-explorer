@@ -52,10 +52,10 @@ var guiParams={
 	},
 	"player model":"convexHullTest",
 	target:{
-		type:"none",
-		scale:0.03
+		type:"sphere",
+		scale:0.02
 	},
-	"targeting":"off",
+	"targeting":"on",
 	playerLight:'#000000',
 	control:{
 		onRails:false,

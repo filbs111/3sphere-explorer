@@ -1394,7 +1394,7 @@ function drawRegularScene(frameTime){
 
 		if (guiParams.hud.bombMarkers){
 			bullets.forEach(bb=> {
-				if (bb.active && bb.isBig && bb.world == playerContainer.world){
+				if (bb.active && bb.isBig && bb.marker && bb.world == playerContainer.world){
 				var pos = screenPosForMatrix(bb.matrix);
 				if (pos[2]<0){	//note unintuitive sign
 					drawTargetDecal(halfDecalScale, colorArrs.magenta, pos, bombHudSpin);
@@ -5018,6 +5018,21 @@ var iterateMechanics = (function iterateMechanics(){
 						//and/or limit fuel! 
 						for (var ii=0;ii<3;ii++){
 							b.vel[ii]*=0.998;
+						}
+					}
+					if (b.towardsTargetAcceleration && b.target){	// && b.target.world == b.world){	//TODO handle homing through portals
+						//NOTE separate from forwardAcceleration. TODO combine? 
+						//TODO take current velocity into account (otherwise tends to spiral around target unless high drag)
+						//get direction of target in frame of missile. TODO this without multiplying matrices! (efficiency)
+						var relativeMat = mat4.create(b.matrix);
+						mat4.transpose(relativeMat);
+						mat4.multiply(relativeMat, b.target.matrix);
+						var direction3 = relativeMat.slice(12,15);
+						var normalisedDirection = normalise3(direction3);
+						console.log(normalisedDirection);
+						for (var ii=0;ii<3;ii++){
+							b.vel[ii]-=normalisedDirection[ii]*b.towardsTargetAcceleration;
+							b.vel[ii]*=0.994;
 						}
 					}
 
