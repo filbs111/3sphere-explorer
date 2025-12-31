@@ -147,7 +147,21 @@ function launchProjectile(projectileMatrix, muzzleVelVec, isBig, noMarker, marke
 		newFireDirectionVec[cc]+=muzzleVelVec[cc];
 	}
 
-	var target = towardsTargetAcceleration ? {matrix:targetMatrix, world: 2} : null;
+	var target = null;
+	
+	if (towardsTargetAcceleration){
+		//select closest target matrix. 
+		// TODO better selection criteria! favour stuff in pointing direction, perhaps also screen centre (so favour flight direction), divvy up 
+		// missiles between multiple targets etc.
+		var winningScore = 2;
+		for (var targetMatrix of targetMatrices){
+			var thisScore = distBetween4mats(newBulletMatrix, targetMatrix);
+			if (thisScore < winningScore){
+				winningScore = thisScore;
+				target = {matrix:targetMatrix, world:-1}
+			}
+		}
+	}
 
 	bullets.add({
 		matrix:newBulletMatrix,
@@ -221,4 +235,131 @@ function processGamepadWeaponSwitching(activeGp){
 			selectedSpecialWeapId = ii;
 		}
 	}
+}
+
+
+
+function getTargetingSolution(matrixForTargeting, targetMatrix, logStuff){
+
+	//TODO not use globals for these. need to hook up with rendering code
+	var targetWorldFrame=[];
+	var targetingResultOne=[];
+	var targetingResultTwo=[];
+	var selectedTargeting="none";
+
+	var rotvec=[0,0,0];
+
+	//solve accounting for launch velocity
+	//get position of target in frame of player. can then plot this on screen.
+	//unit vector of this is "targetWorldFrame"
+	//then the gun velocity (in frame of player) should be (see paper calculations, 2018-07-25)
+	// t = targetWorldFrame
+	// v= playervel
+	// m= muzzle speed
+	// g= muzzle velocity
+	
+	// g = t (t.v (+/-) sqrt(v.v - (t.v)^2 + m*m )) - v
+	//should confirm that |g| = m
+	//depending if part in sqrt is +ve or -ve, have 2 or 0 solutions (for the +/- bit in the sqrt).
+		//+ve has greater velocity, so gets there quicker
+	//should pick 1st if guns can rotate to that direction, else 2nd if guns can get there, else no solution.
+	
+	//first get target direction in frame of screen.
+	var targetPos = targetMatrix.slice(12);
+	for (var ii=0;ii<4;ii++){
+		var total=0;
+		for (var jj=0;jj<4;jj++){
+			total+=matrixForTargeting[ii*4+jj]*targetPos[jj];
+		}
+		targetWorldFrame[ii]=total;
+	}
+	//normalise x,y,z parts of to target vector.
+	var length = Math.sqrt(1-targetWorldFrame[3]*targetWorldFrame[3]);	//TODO ensure not 0. can combo with range check.
+	
+	targetWorldFrame = targetWorldFrame.map(val => val/length);	//FWIW last value unneeded
+	
+	//confirm tWF length 1? 
+	var lensqtwf=0;
+	for (var ii=0;ii<3;ii++){
+		lensqtwf += targetWorldFrame[ii]*targetWorldFrame[ii];
+	}
+	
+	var playerVelVecMagsq = playerVelVec.reduce((total, val) => total+ val*val, 0);	//v.v
+				//todo reuse code or result (copied from elsewhere)
+	var tDotV = playerVelVec.reduce((total, val, ii) => total+ val*targetWorldFrame[ii], 0);
+	var inSqrtBracket =  tDotV*tDotV + muzzleVel*muzzleVel -playerVelVecMagsq;
+	
+	//console.log(inSqrtBracket);
+	
+	var sqrtResult = inSqrtBracket>0 ? Math.sqrt(inSqrtBracket): 0;	//TODO something else for 0 (no solution)
+	//console.log(sqrtResult);
+	
+	for (var ii=0;ii<3;ii++){
+		targetingResultOne[ii] = targetWorldFrame[ii]*(tDotV + sqrtResult) - playerVelVec[ii];
+		targetingResultTwo[ii] = targetWorldFrame[ii]*(tDotV - sqrtResult) - playerVelVec[ii];
+	}
+	//check lengths of these = muzzle vel sq
+	var targetingResultOneLengthSq = targetingResultOne.reduce((total, val) => total+ val*val, 0);
+	var targetingResultTwoLengthSq = targetingResultTwo.reduce((total, val) => total+ val*val, 0);
+
+	//select a result.
+	//appears to in practice pick solution 2, which seems to be correct result
+	//todo find if can just dump solution 1. 
+	var selectedTargetingString;
+	if (targetingResultOne[2]>0){
+		selectedTargeting = targetingResultOne;
+		selectedTargetingString = "ONE";
+	}else if(targetingResultTwo[2]>0){
+		selectedTargeting = targetingResultTwo;
+		selectedTargetingString = "TWO";
+	}else{
+		selectedTargeting = "none";
+		selectedTargetingString = "NONE";
+	}
+	//TODO check that angle isn't too extreme.
+	
+	//if (targetWorldFrame[2] > 0){	//behind player
+	if (targetWorldFrame[2] > -0.85 ||	//appears to check that within a cone in front of player. works because this vector is was normalised 
+										//is direction towards target)
+		targetWorldFrame[3] < -0.5){	//exclude beyond some distance (w=1 close, w=-1 opposite side of 3-sphere)								
+			selectedTargeting = "none";
+			selectedTargetingString = "NONE";
+	}
+	
+	if (logStuff){
+		//console.log(targetingResultOneLengthSq);
+		document.getElementById("info2").innerHTML = "lensqtwf: " + lensqtwf + "<br/>" +
+										"targetWorldFrame[3]: " + targetWorldFrame[3] + "<br/>" +
+										"sqrtResult: " + sqrtResult + "<br/>" +
+										"targetingResultOneLengthSq: " + targetingResultOneLengthSq + "<br/>" +
+										"targetingResultTwoLengthSq: " + targetingResultTwoLengthSq + "<br/>" +
+										"selectedTargeting: " + selectedTargetingString;
+	}
+	
+	//override original gun rotation code (todo delete previous/ option to disable/enable this correction)
+	if (selectedTargeting!="none"){
+		if (guiParams.target.type!="none" && guiParams["targeting"]!="off"){
+			//rotvec = getRotBetweenMats(matrixForTargeting, targetMatrix);	//target in frame of spaceship.
+			var pointingDir={x:selectedTargeting[0],y:selectedTargeting[1],z:selectedTargeting[2]};
+			pointingDir = capGunPointing(pointingDir);					
+			rotvec=getRotFromPointing(pointingDir);
+			
+			//override fireDirectionVec for hud purposes
+			fireDirectionVec = [-pointingDir.x,-pointingDir.y,pointingDir.z].map(val=> val*muzzleVel); 
+				//todo pointingdir simple vector!( not .x, .y, ,z)
+			
+				//redo adding player velocity (todo maybe combine with where do this elsewhere..)
+				//ie guntargetingvec
+				//todo solve targeting in mechanics loop - currently doing when drawing !!!!!!!!!!!!!!!!!!! stupid!
+			fireDirectionVec = fireDirectionVec.map((val,ii) => val+playerVelVec[ii]);
+				
+		}
+	}
+	
+	return {
+		results:[targetingResultOne, targetingResultTwo],
+		selected: selectedTargeting,
+		rotvec:rotvec,
+		targetWorldFrame:targetWorldFrame
+	};
 }

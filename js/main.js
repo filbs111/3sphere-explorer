@@ -1686,23 +1686,25 @@ function updateGunTargeting(matrix){
 	
 	//default (no targeting) - guns unrotated, point straight ahead.
 	rotvec = [0,0,0];
-			
+	
 	if (guiParams.target.type!="none" && guiParams["targeting"]!="off"){
-		//rotvec = getRotBetweenMats(matrixForTargeting, targetMatrix);	//target in frame of spaceship.
-		var targetingSolution = getTargetingSolution(matrixForTargeting, targetMatrix);
+		//rotvec = getRotBetweenMats(matrixForTargeting, targetMatrices[0]);	//target in frame of spaceship.
+		var targetingSolution = getTargetingSolution(matrixForTargeting, targetMatrices[0]);
 		rotvec = targetingSolution.rotvec;
 		targetingResultOne = targetingSolution.results[0];
 		targetingResultTwo = targetingSolution.results[1];
 		selectedTargeting = targetingSolution.selected;
 		targetWorldFrame = targetingSolution.targetWorldFrame;
 	}
-		
-	setGunMatrixRelativeToSpacehip(0, [gunHoriz,gunVert,gunFront]); //left, down, forwards
-	setGunMatrixRelativeToSpacehip(1, [-gunHoriz,gunVert,gunFront]);
-	setGunMatrixRelativeToSpacehip(2, [-gunHoriz,-gunVert,gunFront]);
-	setGunMatrixRelativeToSpacehip(3, [gunHoriz,-gunVert,gunFront]);
 	
-	function setGunMatrixRelativeToSpacehip(gunnum, vec){	//todo reuse matrices for gunMatrixCosmetic (fixed array) - not simple to use pool since pushing onto gunMatrices //todo precalc gunmatrices relative to spaceship?
+	var targetMatrix = targetMatrices[0];	//TODO pick highest scoring from targetingSolution above.
+
+	setGunMatrixRelativeToSpacehip(0, [gunHoriz,gunVert,gunFront], targetMatrix); //left, down, forwards
+	setGunMatrixRelativeToSpacehip(1, [-gunHoriz,gunVert,gunFront], targetMatrix);
+	setGunMatrixRelativeToSpacehip(2, [-gunHoriz,-gunVert,gunFront], targetMatrix);
+	setGunMatrixRelativeToSpacehip(3, [gunHoriz,-gunVert,gunFront], targetMatrix);
+	
+	function setGunMatrixRelativeToSpacehip(gunnum, vec, targetMatrix){	//todo reuse matrices for gunMatrixCosmetic (fixed array) - not simple to use pool since pushing onto gunMatrices //todo precalc gunmatrices relative to spaceship?
 		var gunMatrixCosmetic = gunMatrices[gunnum];
 		mat4.set(matrix, gunMatrixCosmetic);
 		xyzmove4mat(gunMatrixCosmetic,vec);
@@ -1781,133 +1783,6 @@ function updateGunTargeting(matrix){
 		}
 		return rotvec;
 	}
-	
-	
-	function getTargetingSolution(matrixForTargeting, targetMatrix, logStuff){
-
-		//TODO not use globals for these. need to hook up with rendering code
-		var targetWorldFrame=[];
-		var targetingResultOne=[];
-		var targetingResultTwo=[];
-		var selectedTargeting="none";
-
-		var rotvec=[0,0,0];
-
-		//solve accounting for launch velocity
-		//get position of target in frame of player. can then plot this on screen.
-		//unit vector of this is "targetWorldFrame"
-		//then the gun velocity (in frame of player) should be (see paper calculations, 2018-07-25)
-		// t = targetWorldFrame
-		// v= playervel
-		// m= muzzle speed
-		// g= muzzle velocity
-		
-		// g = t (t.v (+/-) sqrt(v.v - (t.v)^2 + m*m )) - v
-		//should confirm that |g| = m
-		//depending if part in sqrt is +ve or -ve, have 2 or 0 solutions (for the +/- bit in the sqrt).
-			//+ve has greater velocity, so gets there quicker
-		//should pick 1st if guns can rotate to that direction, else 2nd if guns can get there, else no solution.
-		
-		//first get target direction in frame of screen.
-		var targetPos = targetMatrix.slice(12);
-		for (var ii=0;ii<4;ii++){
-			var total=0;
-			for (var jj=0;jj<4;jj++){
-				total+=matrixForTargeting[ii*4+jj]*targetPos[jj];
-			}
-			targetWorldFrame[ii]=total;
-		}
-		//normalise x,y,z parts of to target vector.
-		var length = Math.sqrt(1-targetWorldFrame[3]*targetWorldFrame[3]);	//TODO ensure not 0. can combo with range check.
-		
-		targetWorldFrame = targetWorldFrame.map(val => val/length);	//FWIW last value unneeded
-		
-		//confirm tWF length 1? 
-		var lensqtwf=0;
-		for (var ii=0;ii<3;ii++){
-			lensqtwf += targetWorldFrame[ii]*targetWorldFrame[ii];
-		}
-		
-		var playerVelVecMagsq = playerVelVec.reduce((total, val) => total+ val*val, 0);	//v.v
-					//todo reuse code or result (copied from elsewhere)
-		var tDotV = playerVelVec.reduce((total, val, ii) => total+ val*targetWorldFrame[ii], 0);
-		var inSqrtBracket =  tDotV*tDotV + muzzleVel*muzzleVel -playerVelVecMagsq;
-		
-		//console.log(inSqrtBracket);
-		
-		var sqrtResult = inSqrtBracket>0 ? Math.sqrt(inSqrtBracket): 0;	//TODO something else for 0 (no solution)
-		//console.log(sqrtResult);
-		
-		for (var ii=0;ii<3;ii++){
-			targetingResultOne[ii] = targetWorldFrame[ii]*(tDotV + sqrtResult) - playerVelVec[ii];
-			targetingResultTwo[ii] = targetWorldFrame[ii]*(tDotV - sqrtResult) - playerVelVec[ii];
-		}
-		//check lengths of these = muzzle vel sq
-		var targetingResultOneLengthSq = targetingResultOne.reduce((total, val) => total+ val*val, 0);
-		var targetingResultTwoLengthSq = targetingResultTwo.reduce((total, val) => total+ val*val, 0);
-
-		//select a result.
-		//appears to in practice pick solution 2, which seems to be correct result
-		//todo find if can just dump solution 1. 
-		var selectedTargetingString;
-		if (targetingResultOne[2]>0){
-			selectedTargeting = targetingResultOne;
-			selectedTargetingString = "ONE";
-		}else if(targetingResultTwo[2]>0){
-			selectedTargeting = targetingResultTwo;
-			selectedTargetingString = "TWO";
-		}else{
-			selectedTargeting = "none";
-			selectedTargetingString = "NONE";
-		}
-		//TODO check that angle isn't too extreme.
-		
-		//if (targetWorldFrame[2] > 0){	//behind player
-		if (targetWorldFrame[2] > -0.85 ||	//appears to check that within a cone in front of player. works because this vector is was normalised 
-											//is direction towards target)
-			targetWorldFrame[3] < -0.5){	//exclude beyond some distance (w=1 close, w=-1 opposite side of 3-sphere)								
-				selectedTargeting = "none";
-				selectedTargetingString = "NONE";
-		}
-		
-		if (logStuff){
-			//console.log(targetingResultOneLengthSq);
-			document.getElementById("info2").innerHTML = "lensqtwf: " + lensqtwf + "<br/>" +
-											"targetWorldFrame[3]: " + targetWorldFrame[3] + "<br/>" +
-											"sqrtResult: " + sqrtResult + "<br/>" +
-											"targetingResultOneLengthSq: " + targetingResultOneLengthSq + "<br/>" +
-											"targetingResultTwoLengthSq: " + targetingResultTwoLengthSq + "<br/>" +
-											"selectedTargeting: " + selectedTargetingString;
-		}
-		
-		//override original gun rotation code (todo delete previous/ option to disable/enable this correction)
-		if (selectedTargeting!="none"){
-			if (guiParams.target.type!="none" && guiParams["targeting"]!="off"){
-				//rotvec = getRotBetweenMats(matrixForTargeting, targetMatrix);	//target in frame of spaceship.
-				var pointingDir={x:selectedTargeting[0],y:selectedTargeting[1],z:selectedTargeting[2]};
-				pointingDir = capGunPointing(pointingDir);					
-				rotvec=getRotFromPointing(pointingDir);
-				
-				//override fireDirectionVec for hud purposes
-				fireDirectionVec = [-pointingDir.x,-pointingDir.y,pointingDir.z].map(val=> val*muzzleVel); 
-					//todo pointingdir simple vector!( not .x, .y, ,z)
-				
-					//redo adding player velocity (todo maybe combine with where do this elsewhere..)
-					//ie guntargetingvec
-					//todo solve targeting in mechanics loop - currently doing when drawing !!!!!!!!!!!!!!!!!!! stupid!
-				fireDirectionVec = fireDirectionVec.map((val,ii) => val+playerVelVec[ii]);
-					
-			}
-		}
-		
-		return {
-			results:[targetingResultOne, targetingResultTwo],
-			selected: selectedTargeting,
-			rotvec:rotvec,
-			targetWorldFrame:targetWorldFrame
-		};
-	}
-	
 }
 
 var lgMat = mat4.create();
@@ -3012,34 +2887,36 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	
 	//draw object to be targeted by guns
 	if (guiParams.target.type!="none"){
-		mat4.set(invertedWorldCamera, mvMatrix);
-		mat4.multiply(mvMatrix,targetMatrix);
-		switch (guiParams.target.type){
-			case "sphere":
-				if (frustumCull(mvMatrix,targetRad)){	//normally use +ve radius
-											//-ve to make disappear when not entirely inside view frustum (for testing)
-					gl.uniform3f(activeShaderProgram.uniforms.uModelScale, targetRad,targetRad,targetRad);
-					uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.target);
-					var emitColor = Math.sin(frameTime*0.01);
-					//emitColor*=emitColor
-					gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, emitColor, emitColor, emitColor/2);	//YELLOW
-					drawObjectFromBuffers2(sphereBuffers, activeShaderProgram);
-				}
-				break;
-			case "box":
-				var boxRad = targetRad*Math.sqrt(3);
-				if (frustumCull(mvMatrix,boxRad)){
-					var savedActiveProg = activeShaderProgram;	//todo push things onto a to draw list, 
-																//minimise shader switching
-					activeShaderProgram = shaderProgramTexmap;
-					gl.useProgram(activeShaderProgram);
-					gl.uniform3f(activeShaderProgram.uniforms.uModelScale, targetRad,targetRad,targetRad);
-					uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
-					drawObjectFromBuffers2(cubeBuffers, activeShaderProgram);
-					activeShaderProgram = savedActiveProg;
-					gl.useProgram(activeShaderProgram);
-				}
-				break;
+		for (var targetMatrix of targetMatrices){
+			mat4.set(invertedWorldCamera, mvMatrix);
+			mat4.multiply(mvMatrix,targetMatrix);
+			switch (guiParams.target.type){
+				case "sphere":
+					if (frustumCull(mvMatrix,targetRad)){	//normally use +ve radius
+												//-ve to make disappear when not entirely inside view frustum (for testing)
+						gl.uniform3f(activeShaderProgram.uniforms.uModelScale, targetRad,targetRad,targetRad);
+						uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.target);
+						var emitColor = Math.sin(frameTime*0.01);
+						//emitColor*=emitColor
+						gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, emitColor, emitColor, emitColor/2);	//YELLOW
+						drawObjectFromBuffers2(sphereBuffers, activeShaderProgram);
+					}
+					break;
+				case "box":
+					var boxRad = targetRad*Math.sqrt(3);
+					if (frustumCull(mvMatrix,boxRad)){
+						var savedActiveProg = activeShaderProgram;	//todo push things onto a to draw list, 
+																	//minimise shader switching
+						activeShaderProgram = shaderProgramTexmap;
+						gl.useProgram(activeShaderProgram);
+						gl.uniform3f(activeShaderProgram.uniforms.uModelScale, targetRad,targetRad,targetRad);
+						uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
+						drawObjectFromBuffers2(cubeBuffers, activeShaderProgram);
+						activeShaderProgram = savedActiveProg;
+						gl.useProgram(activeShaderProgram);
+					}
+					break;
+			}
 		}
 	}
 
@@ -4402,7 +4279,9 @@ function setupScene() {
 	//start player off outside of boxes
 	xyzmove4mat(playerCamera,[0,0.4,-0.3]);	//left, down, fwd
 	
-	targetMatrix = cellMatData.d16[0];
+	targetMatrices.push(cellMatData.d16[0]);
+	targetMatrices.push(cellMatData.d16[1]);
+	targetMatrices.push(cellMatData.d16[2]);
 }
 
 var texture,bricktex,diffuseTexture,
@@ -4601,7 +4480,7 @@ for (var ii=0,ang=0,angstep=2*Math.PI/25;ii<25;ii++,ang+=angstep){	//number of r
 
 var sshipMatrix=mat4.create();mat4.identity(sshipMatrix);
 var sshipMatrixNoInterp=mat4.create();mat4.identity(sshipMatrixNoInterp);
-var targetMatrix=mat4.create();mat4.identity(targetMatrix);
+var targetMatrices = [];
 var targetWorldFrame=[];
 var targetingResultOne=[];
 var targetingResultTwo=[];
@@ -4866,9 +4745,7 @@ var iterateMechanics = (function iterateMechanics(){
 		//collision func. TODO recalc critvalue only when changes
 		//var critValue = 1-guiParams.target.scale*guiParams.target.scale;	//small ang approx
 		var critValue = 1/Math.sqrt(1+guiParams.target.scale*guiParams.target.scale);	//some small ang approx here
-		var invTargetMat = mat4.create();
-		mat4.set(targetMatrix, invTargetMat);
-		mat4.transpose(invTargetMat);
+		
 		var relativeMat = mat4.create();
 		var numRandomBoxes = guiParams['random boxes'].number;
 		numRandomBoxes = Math.min(randomMats.length, numRandomBoxes);	//TODO check this doesn't happen/ make obvious error!
@@ -5096,15 +4973,16 @@ var iterateMechanics = (function iterateMechanics(){
 				bulletPosNewDCF4V[cc] = bulletMatrixTransposedDCRefFrame[3+4*cc];
 			}
 
-			
-			
-			mat4.set(invTargetMat,relativeMat);
-			mat4.multiply(relativeMat, bulletMatrix);
-			
-			if (targetCollisionFunc(relativeMat)){
-				detonateBullet(bullet);
+			for (var targetMatrix of targetMatrices){
+				mat4.set(targetMatrix, relativeMat);
+				mat4.transpose(relativeMat);
+				mat4.multiply(relativeMat, bulletMatrix);
+				
+				if (targetCollisionFunc(relativeMat)){
+					detonateBullet(bullet);
+				}
 			}
-			
+
 			if (worldInfo.duocylinderModel == "l3dt-brute" || worldInfo.duocylinderModel == "l3dt-blockstrips"){
 				var l3dtCollisionResult = terrainBulletCollision(getHeightAboveTerrain2For4VecPos, bulletPos, newBulletPos, dcSpin);
 				if (l3dtCollisionResult.collided){
