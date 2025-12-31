@@ -1276,9 +1276,9 @@ function drawRegularScene(frameTime){
 			drawTargetDecal([scalescalar,scalescalar,0], colorArrs.hudYellow, adjustedDirectionForFisheye(
 				[shiftAmount*playerVelVec[0],shiftAmount*playerVelVec[1],1+shiftAmount*playerVelVec[2]].map(x=>-x), cameraTilt));	//TODO vector add!
 			
-			if (guiParams.target.type!="none" && targetWorldFrame[2]<0){	//if in front of player){
+			if (guiParams.target.type!="none" && gunTargetWorldFrame && gunTargetWorldFrame[2]<0){	//if in front of player){
 				bind2dTextureIfRequired(hudTextureBox);				
-				drawTargetDecal(standardDecalScale, colorArrs.hudBox, adjustedDirectionForFisheye(targetWorldFrame, cameraTilt));	//direction to target (shows where target is on screen)
+				drawTargetDecal(standardDecalScale, colorArrs.magenta, adjustedDirectionForFisheye(gunTargetWorldFrame, cameraTilt));	//direction to target (shows where target is on screen)
 									//TODO put where is on screen, not direction from spaceship (obvious difference in 3rd person)
 				//bind2dTextureIfRequired(hudTextureSmallCircles);	
 				//drawTargetDecal(0.0008, [1, 0.1, 1, 0.5], selectedTargeting);	//where should shoot in order to hit target (accounting for player velocity)
@@ -1292,8 +1292,8 @@ function drawRegularScene(frameTime){
 		//show where guns will shoot
 		bind2dTextureIfRequired(hudTextureX);
 		if (guiParams.hud.fireDirection){
-			if (fireDirectionVec[2] > 0.1){	//??
-				var fireDirectionVecAdjusted = fireDirectionVec.map((val, idx) => val-savedSpinVelPlayerCoordsForHud[idx]);
+			if (gunFireDirectionVec[2] > 0.1){	//??
+				var fireDirectionVecAdjusted = gunFireDirectionVec.map((val, idx) => val-savedSpinVelPlayerCoordsForHud[idx]);
 				var reversed = fireDirectionVecAdjusted.map(x=>-x);	//needs to do this for fisheye correction to work consistent with other hud icons
 				drawTargetDecal(standardDecalScale, colorArrs.hudYellow, adjustedDirectionForFisheye(reversed, cameraTilt), 0.1);	//todo check whether this colour already set
 				drawTargetDecal(standardDecalScale, colorArrs.hudYellow, adjustedDirectionForFisheye(reversed, cameraTilt), -0.1);
@@ -1414,6 +1414,14 @@ function drawRegularScene(frameTime){
 		bind2dTextureIfRequired(fontTexture);
 
 		drawText("SPECIAL WEAPON: " + specialWeapsData[selectedSpecialWeapId].name, -0.5, 1.5, 1, 0.4, colorArrs.red);
+
+		//number targets
+		for (var tt=0;tt<targetMatrices.length;tt++){
+			var pos = screenPosForMatrix(targetMatrices[tt]);
+			if (pos[2]<0){
+				drawText("T"+tt, pos[0], pos[1], pos[2], 0.25);
+			}
+		}
 
 		if (guiParams.hud.textWorldNum){
 			//drawText("World " + playerContainer.world, 0.6, 0.15, 1); //(below) centre of screen, suitable if flash up on cross portal
@@ -1682,23 +1690,39 @@ function updateGunTargeting(matrix){
 	var gunVert = 8*sshipModelScale;
 	var gunFront = 5*sshipModelScale;
 	
-	var gunAngRangeRad = 0.35;
-	
 	//default (no targeting) - guns unrotated, point straight ahead.
 	rotvec = [0,0,0];
 	
+	var selectedTargetResult = {matrix:null, solution:{score:Number.POSITIVE_INFINITY, fireDirectionVec:[0,0,1], rotvec:[0,0,0]}};
+	gunTargetWorldFrame = null;
+
 	if (guiParams.target.type!="none" && guiParams["targeting"]!="off"){
-		//rotvec = getRotBetweenMats(matrixForTargeting, targetMatrices[0]);	//target in frame of spaceship.
-		var targetingSolution = getTargetingSolution(matrixForTargeting, targetMatrices[0]);
-		rotvec = targetingSolution.rotvec;
-		targetingResultOne = targetingSolution.results[0];
-		targetingResultTwo = targetingSolution.results[1];
-		selectedTargeting = targetingSolution.selected;
-		targetWorldFrame = targetingSolution.targetWorldFrame;
+		//var scores = [];
+
+		var targetMatIdx =0;
+		for (var targetMatrix of targetMatrices){
+			var targetingSolution = getTargetingSolution(matrixForTargeting, targetMatrix);
+
+			//scores.push(targetingSolution.score);
+
+			if (targetingSolution.score < selectedTargetResult.solution.score){
+				console.log("selected mat " + targetMatIdx + " score: " + targetingSolution.score);
+				selectedTargetResult = {matrix:targetMatrix, solution:targetingSolution};
+			}
+
+			targetMatIdx++;
+		}
+
+		//console.log(scores);
+		if (selectedTargetResult.matrix){
+			rotvec = selectedTargetResult.solution.rotvec;
+			selectedTargeting = selectedTargetResult.solution.selected;
+			gunTargetWorldFrame = selectedTargetResult.solution.targetWorldFrame;
+			gunFireDirectionVec = selectedTargetResult.solution.fireDirectionVec;
+		}
 	}
 	
-	var targetMatrix = targetMatrices[0];	//TODO pick highest scoring from targetingSolution above.
-
+	var targetMatrix = selectedTargetResult.matrix;
 	setGunMatrixRelativeToSpacehip(0, [gunHoriz,gunVert,gunFront], targetMatrix); //left, down, forwards
 	setGunMatrixRelativeToSpacehip(1, [-gunHoriz,gunVert,gunFront], targetMatrix);
 	setGunMatrixRelativeToSpacehip(2, [-gunHoriz,-gunVert,gunFront], targetMatrix);
@@ -1713,7 +1737,7 @@ function updateGunTargeting(matrix){
 		mat4.set(matrixForTargeting, gunMatrix);
 		xyzmove4mat(gunMatrix,vec);
 		
-		if (guiParams.target.type!="none" && guiParams["targeting"]=="individual"){
+		if (guiParams.target.type!="none" && guiParams["targeting"]=="individual" && targetMatrix){
 			rotvec = getTargetingSolution(gunMatrix, targetMatrix).rotvec;
 		}
 		matPool.destroy(gunMatrix);
@@ -1722,66 +1746,6 @@ function updateGunTargeting(matrix){
 		xyzrotate4mat(gunMatrixCosmetic, rotvec);		
 			
 		xyzmove4mat(gunMatrixCosmetic,[0,0,25*modelScale]);	//move forwards
-	}
-	
-	
-	function capGunPointing(pointingDir){
-		//scale such that z=1 - then can cap angle, ensures guns point forward. (TODO handle case that z=0)
-		pointingDir={x:-pointingDir.x/pointingDir.z, 
-				y:-pointingDir.y/pointingDir.z, z:1
-			}
-		
-		var sqDist = pointingDir.x*pointingDir.x + pointingDir.y*pointingDir.y;
-		if (sqDist>gunAngRangeRad*gunAngRangeRad){
-			pointingDir.z = Math.sqrt(sqDist)/gunAngRangeRad;
-		}
-		
-		//shouldn't need, but seems like z value unused / assumed to be 1
-		//TODO neater
-		pointingDir={x:pointingDir.x/pointingDir.z, 
-				y:pointingDir.y/pointingDir.z, z:1
-			};
-		return pointingDir;
-	}
-	
-	function getRotBetweenMats(sourceMat, destMat){	//this func not used now. use of matrix pool untested
-		//actually gets rotation to point sourceMat at destMat
-		var tmpMat = matPool.create();
-		mat4.set(sourceMat, tmpMat);
-		mat4.transpose(tmpMat);			
-			
-		mat4.multiply(tmpMat, destMat);	//object described by destMat in frame of object described by sourceMat.
-			
-		//[mat[12],mat[13],mat[14],mat[15] is 4vec co-ords
-		pointingDir={x:tmpMat[12], y:tmpMat[13], z:tmpMat[14]};
-		
-		pointingDir = capGunPointing(pointingDir);
-		
-		matPool.destroy(tmpMat);
-		
-		return getRotFromPointing(pointingDir);
-	}
-	
-	function getRotFromPointing(pointingDir){
-		//get rotation to go from pointing straight ahead, to pointingDir
-		
-		pointingDir.w=Math.sqrt(pointingDir.x*pointingDir.x+		//assumes that input pointingdir z=1
-								pointingDir.y*pointingDir.y +1);
-		
-		var crossProd = crossProductHomgenous({x:0,y:0,z:1,w:1}, pointingDir);
-			//note the 4vec passed in here has w*w = x*x+y*y+z*z ie different to point on 4vec.	
-		
-		var rotvec = [-crossProd.x / crossProd.w, -crossProd.y / crossProd.w, -crossProd.z / crossProd.w];	
-			
-		//note that rotation code likely generates sin(ang) anyway, so this likely inefficient!
-		var rotMag = Math.sqrt(rotvec[0]*rotvec[0] + rotvec[1]*rotvec[1] + rotvec[2]*rotvec[2]);
-		if (rotMag>0){
-			var rotHack = Math.asin(rotMag)/rotMag;
-			rotvec[0]*=rotHack;
-			rotvec[1]*=rotHack;
-			rotvec[2]*=rotHack;
-		}
-		return rotvec;
 	}
 }
 
@@ -4481,7 +4445,7 @@ for (var ii=0,ang=0,angstep=2*Math.PI/25;ii<25;ii++,ang+=angstep){	//number of r
 var sshipMatrix=mat4.create();mat4.identity(sshipMatrix);
 var sshipMatrixNoInterp=mat4.create();mat4.identity(sshipMatrixNoInterp);
 var targetMatrices = [];
-var targetWorldFrame=[];
+var gunTargetWorldFrame=[];
 var targetingResultOne=[];
 var targetingResultTwo=[];
 var selectedTargeting="none";
@@ -4618,7 +4582,7 @@ function init(){
 
 var playerVelVec = [0,0,0];	//TODO use matrix/quaternion for this
 							//todo not a global! how to set listeners eg mousemove witin iteratemechanics???
-var fireDirectionVec = [0,0,1];	//TODO check if requried to define something here
+var gunFireDirectionVec = [0,0,1];	//TODO check if requried to define something here
 var muzzleVel = 10;
 							
 var testInfo="";
@@ -5047,9 +5011,9 @@ var iterateMechanics = (function iterateMechanics(){
 		}
 		
 		for(var cc=0;cc<3;cc++){
-			fireDirectionVec[cc]=playerVelVec[cc];
+			gunFireDirectionVec[cc]=playerVelVec[cc];
 		}
-		fireDirectionVec[2]+=muzzleVel;
+		gunFireDirectionVec[2]+=muzzleVel;
 			//TODO velocity in frame of bullet? (different if gun aimed off-centre)
 		
 		var flashAmount = 0.1;	//default "player light" when not firing

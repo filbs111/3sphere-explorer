@@ -336,9 +336,13 @@ function getTargetingSolution(matrixForTargeting, targetMatrix, logStuff){
 										"selectedTargeting: " + selectedTargetingString;
 	}
 	
+
+	var score = Number.POSITIVE_INFINITY;
+	var fireDirectionVec = [0,0,1];
+
 	//override original gun rotation code (todo delete previous/ option to disable/enable this correction)
 	if (selectedTargeting!="none"){
-		if (guiParams.target.type!="none" && guiParams["targeting"]!="off"){
+		if (guiParams.target.type!="none" && guiParams["targeting"]!="off"){		//TODO remove this?
 			//rotvec = getRotBetweenMats(matrixForTargeting, targetMatrix);	//target in frame of spaceship.
 			var pointingDir={x:selectedTargeting[0],y:selectedTargeting[1],z:selectedTargeting[2]};
 			pointingDir = capGunPointing(pointingDir);					
@@ -352,14 +356,83 @@ function getTargetingSolution(matrixForTargeting, targetMatrix, logStuff){
 				//ie guntargetingvec
 				//todo solve targeting in mechanics loop - currently doing when drawing !!!!!!!!!!!!!!!!!!! stupid!
 			fireDirectionVec = fireDirectionVec.map((val,ii) => val+playerVelVec[ii]);
-				
+			
+			//score for comparing results.
+			//TODO take into account distance, closeness to cursor, whether matches previous solution, whether capped
+			score = pointingDir.x*pointingDir.x + pointingDir.y*pointingDir.y;	//if normalised this is like angle.
+			if (pointingDir.z<0){
+				score = 100;	//don't accept backwards
+			}
 		}
 	}
-	
+
 	return {
 		results:[targetingResultOne, targetingResultTwo],
 		selected: selectedTargeting,
-		rotvec:rotvec,
-		targetWorldFrame:targetWorldFrame
+		rotvec,
+		targetWorldFrame,
+		fireDirectionVec,
+		score
 	};
+}
+
+function capGunPointing(pointingDir){
+	var gunAngRangeRad = 0.35;
+
+	//scale such that z=1 - then can cap angle, ensures guns point forward. (TODO handle case that z=0)
+	pointingDir={x:-pointingDir.x/pointingDir.z, 
+			y:-pointingDir.y/pointingDir.z, z:1
+		}
+	
+	var sqDist = pointingDir.x*pointingDir.x + pointingDir.y*pointingDir.y;
+	if (sqDist>gunAngRangeRad*gunAngRangeRad){
+		pointingDir.z = Math.sqrt(sqDist)/gunAngRangeRad;
+	}
+	
+	//shouldn't need, but seems like z value unused / assumed to be 1
+	//TODO neater
+	pointingDir={x:pointingDir.x/pointingDir.z, 
+			y:pointingDir.y/pointingDir.z, z:1
+		};
+	return pointingDir;
+}
+
+function getRotBetweenMats(sourceMat, destMat){	//this func not used now. use of matrix pool untested
+	//actually gets rotation to point sourceMat at destMat
+	var tmpMat = matPool.create();
+	mat4.set(sourceMat, tmpMat);
+	mat4.transpose(tmpMat);			
+		
+	mat4.multiply(tmpMat, destMat);	//object described by destMat in frame of object described by sourceMat.
+		
+	//[mat[12],mat[13],mat[14],mat[15] is 4vec co-ords
+	pointingDir={x:tmpMat[12], y:tmpMat[13], z:tmpMat[14]};
+	
+	pointingDir = capGunPointing(pointingDir);
+	
+	matPool.destroy(tmpMat);
+	
+	return getRotFromPointing(pointingDir);
+}
+
+function getRotFromPointing(pointingDir){
+	//get rotation to go from pointing straight ahead, to pointingDir
+	
+	pointingDir.w=Math.sqrt(pointingDir.x*pointingDir.x+		//assumes that input pointingdir z=1
+							pointingDir.y*pointingDir.y +1);
+	
+	var crossProd = crossProductHomgenous({x:0,y:0,z:1,w:1}, pointingDir);
+		//note the 4vec passed in here has w*w = x*x+y*y+z*z ie different to point on 4vec.	
+	
+	var rotvec = [-crossProd.x / crossProd.w, -crossProd.y / crossProd.w, -crossProd.z / crossProd.w];	
+		
+	//note that rotation code likely generates sin(ang) anyway, so this likely inefficient!
+	var rotMag = Math.sqrt(rotvec[0]*rotvec[0] + rotvec[1]*rotvec[1] + rotvec[2]*rotvec[2]);
+	if (rotMag>0){
+		var rotHack = Math.asin(rotMag)/rotMag;
+		rotvec[0]*=rotHack;
+		rotvec[1]*=rotHack;
+		rotvec[2]*=rotHack;
+	}
+	return rotvec;
 }
