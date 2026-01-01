@@ -1416,10 +1416,11 @@ function drawRegularScene(frameTime){
 		drawText("SPECIAL WEAPON: " + specialWeapsData[selectedSpecialWeapId].name, -0.5, 1.5, 1, 0.4, colorArrs.red);
 
 		//number targets
-		for (var tt=0;tt<targetMatrices.length;tt++){
-			var pos = screenPosForMatrix(targetMatrices[tt]);
+		for (var tt=0;tt<targets.length;tt++){
+			var target = targets[tt];
+			var pos = screenPosForMatrix(target.matrix);
 			if (pos[2]<0){
-				drawText("T"+tt, pos[0], pos[1], pos[2], 0.25);
+				drawText("T"+tt+" ("+target.hitPoints+")", pos[0], pos[1], pos[2], 0.25);
 			}
 		}
 
@@ -1700,14 +1701,14 @@ function updateGunTargeting(matrix){
 		//var scores = [];
 
 		var targetMatIdx =0;
-		for (var targetMatrix of targetMatrices){
-			var targetingSolution = getTargetingSolution(matrixForTargeting, targetMatrix);
+		for (var target of targets){
+			var targetingSolution = getTargetingSolution(matrixForTargeting, target.matrix);
 
 			//scores.push(targetingSolution.score);
 
 			if (targetingSolution.score < selectedTargetResult.solution.score){
 				console.log("selected mat " + targetMatIdx + " score: " + targetingSolution.score);
-				selectedTargetResult = {matrix:targetMatrix, solution:targetingSolution};
+				selectedTargetResult = {matrix:target.matrix, solution:targetingSolution};
 			}
 
 			targetMatIdx++;
@@ -2851,9 +2852,9 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	
 	//draw object to be targeted by guns
 	if (guiParams.target.type!="none"){
-		for (var targetMatrix of targetMatrices){
+		for (var target of targets){
 			mat4.set(invertedWorldCamera, mvMatrix);
-			mat4.multiply(mvMatrix,targetMatrix);
+			mat4.multiply(mvMatrix,target.matrix);
 			switch (guiParams.target.type){
 				case "sphere":
 					if (frustumCull(mvMatrix,targetRad)){	//normally use +ve radius
@@ -4243,9 +4244,7 @@ function setupScene() {
 	//start player off outside of boxes
 	xyzmove4mat(playerCamera,[0,0.4,-0.3]);	//left, down, fwd
 	
-	targetMatrices.push(cellMatData.d16[0]);
-	targetMatrices.push(cellMatData.d16[1]);
-	targetMatrices.push(cellMatData.d16[2]);
+	cellMatData.d16.slice(0,3).forEach(matrix => targets.push({matrix, hitPoints:100}));
 }
 
 var texture,bricktex,diffuseTexture,
@@ -4444,7 +4443,7 @@ for (var ii=0,ang=0,angstep=2*Math.PI/25;ii<25;ii++,ang+=angstep){	//number of r
 
 var sshipMatrix=mat4.create();mat4.identity(sshipMatrix);
 var sshipMatrixNoInterp=mat4.create();mat4.identity(sshipMatrixNoInterp);
-var targetMatrices = [];
+var targets = [];
 var gunTargetWorldFrame=[];
 var targetingResultOne=[];
 var targetingResultTwo=[];
@@ -4937,12 +4936,13 @@ var iterateMechanics = (function iterateMechanics(){
 				bulletPosNewDCF4V[cc] = bulletMatrixTransposedDCRefFrame[3+4*cc];
 			}
 
-			for (var targetMatrix of targetMatrices){
-				mat4.set(targetMatrix, relativeMat);
+			for (var target of targets){
+				mat4.set(target.matrix, relativeMat);
 				mat4.transpose(relativeMat);
 				mat4.multiply(relativeMat, bulletMatrix);
 				
 				if (targetCollisionFunc(relativeMat)){
+					target.hitPoints-=1;
 					detonateBullet(bullet);
 				}
 			}

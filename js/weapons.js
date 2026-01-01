@@ -154,11 +154,11 @@ function launchProjectile(projectileMatrix, muzzleVelVec, isBig, noMarker, marke
 		// TODO better selection criteria! favour stuff in pointing direction, perhaps also screen centre (so favour flight direction), divvy up 
 		// missiles between multiple targets etc.
 		var winningScore = 2;
-		for (var targetMatrix of targetMatrices){
-			var thisScore = distBetween4mats(newBulletMatrix, targetMatrix);
+		for (var tt of targets){
+			var thisScore = distBetween4mats(newBulletMatrix, tt.matrix);
 			if (thisScore < winningScore){
 				winningScore = thisScore;
-				target = {matrix:targetMatrix, world:-1}
+				target = {matrix:tt.matrix, world:-1}
 			}
 		}
 	}
