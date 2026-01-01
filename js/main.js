@@ -1418,6 +1418,7 @@ function drawRegularScene(frameTime){
 		//number targets
 		for (var tt=0;tt<targets.length;tt++){
 			var target = targets[tt];
+			if (target.hitPoints<1){continue;}
 			var pos = screenPosForMatrix(target.matrix);
 			if (pos[2]<0){
 				drawText("T"+tt+" ("+target.hitPoints+")", pos[0], pos[1], pos[2], 0.25);
@@ -1698,23 +1699,16 @@ function updateGunTargeting(matrix){
 	gunTargetWorldFrame = null;
 
 	if (guiParams.target.type!="none" && guiParams["targeting"]!="off"){
-		//var scores = [];
-
-		var targetMatIdx =0;
+		
 		for (var target of targets){
+			if (target.hitPoints<1){continue;}
 			var targetingSolution = getTargetingSolution(matrixForTargeting, target.matrix);
 
-			//scores.push(targetingSolution.score);
-
 			if (targetingSolution.score < selectedTargetResult.solution.score){
-				console.log("selected mat " + targetMatIdx + " score: " + targetingSolution.score);
 				selectedTargetResult = {matrix:target.matrix, solution:targetingSolution};
 			}
-
-			targetMatIdx++;
 		}
 
-		//console.log(scores);
 		if (selectedTargetResult.matrix){
 			rotvec = selectedTargetResult.solution.rotvec;
 			selectedTargeting = selectedTargetResult.solution.selected;
@@ -2853,6 +2847,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	//draw object to be targeted by guns
 	if (guiParams.target.type!="none"){
 		for (var target of targets){
+			if (target.hitPoints<1){continue;}
 			mat4.set(invertedWorldCamera, mvMatrix);
 			mat4.multiply(mvMatrix,target.matrix);
 			switch (guiParams.target.type){
@@ -4937,12 +4932,17 @@ var iterateMechanics = (function iterateMechanics(){
 			}
 
 			for (var target of targets){
+				if (target.hitPoints<1){continue;}
+
 				mat4.set(target.matrix, relativeMat);
 				mat4.transpose(relativeMat);
 				mat4.multiply(relativeMat, bulletMatrix);
 				
 				if (targetCollisionFunc(relativeMat)){
 					target.hitPoints-=1;
+					if (target.hitPoints<1){
+						new Explosion({matrix:target.matrix,world:bullet.world}, 0.0002, [1,0.5,0.25], false, true);
+					}
 					detonateBullet(bullet);
 				}
 			}

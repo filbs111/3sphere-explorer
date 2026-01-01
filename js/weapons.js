@@ -155,6 +155,7 @@ function launchProjectile(projectileMatrix, muzzleVelVec, isBig, noMarker, marke
 		// missiles between multiple targets etc.
 		var winningScore = 2;
 		for (var tt of targets){
+			if (tt.hitPoints<1){continue;}
 			var thisScore = distBetween4mats(newBulletMatrix, tt.matrix);
 			if (thisScore < winningScore){
 				winningScore = thisScore;
