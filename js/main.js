@@ -4939,7 +4939,7 @@ var iterateMechanics = (function iterateMechanics(){
 				mat4.multiply(relativeMat, bulletMatrix);
 				
 				if (targetCollisionFunc(relativeMat)){
-					target.hitPoints-=1;
+					target.hitPoints-=bullet.damage;
 					if (target.hitPoints<1){
 						new Explosion({matrix:target.matrix,world:bullet.world}, 0.0002, [1,0.5,0.25], false, true);
 					}

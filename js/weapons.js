@@ -39,13 +39,15 @@ var specialWeapsData = [
 		periodMillis:500,
 		forwardOffset:-0.0008,
 		getLaunchVel:()=>[0,0,-0.01],
-		markerText:"BOMB"
+		markerText:"BOMB",
+		damage:100
 	},
 	{	//1
 		name:"MORTAR",
 		periodMillis:500,
 		forwardOffset:0.002,
 		getLaunchVel:()=>[0,0,2],
+		damage:50
 	},
 	{	//2
 		name:"ROCKETS",
@@ -55,7 +57,8 @@ var specialWeapsData = [
 		hasTrail:true,
 		numProjectiles:4,
 		forwardAcceleration:0.01,
-		getLaunchVel: ii =>{ var ang = Math.PI*ii/2; return [0.02*Math.sin(ang), 0.02*Math.cos(ang),0.01];}
+		getLaunchVel: ii =>{ var ang = Math.PI*ii/2; return [0.02*Math.sin(ang), 0.02*Math.cos(ang),0.01];},
+		damage:10
 	},
 	{	//3
 		name:"SHOTGUN",
@@ -84,7 +87,8 @@ var specialWeapsData = [
 		hasTrail:true,
 		numProjectiles:1,
 		towardsTargetAcceleration:0.01,
-		getLaunchVel: ()=>[0,0,0.5]
+		getLaunchVel: ()=>[0,0,0.5],
+		damage:10
 	},
 ];
 
@@ -111,19 +115,20 @@ function spreadOctagon(amount){
 }
 
 function launchLargeProjectile(weaponDef){
-	var {forwardOffset, getLaunchVel, numProjectiles, bigProjectiles, noMarker, markerText, hasTrail, forwardAcceleration, towardsTargetAcceleration} = weaponDef;
+	var {forwardOffset, getLaunchVel, numProjectiles, bigProjectiles, damage, noMarker, markerText, hasTrail, forwardAcceleration, towardsTargetAcceleration} = weaponDef;
 	var projectileMat = mat4.create(sshipMatrix);
 	xyzmove4mat(projectileMat,[0,0,forwardOffset]);
 
 	numProjectiles??=1;
 	bigProjectiles??=true;
 	for (var ii=0;ii<numProjectiles;ii++){
-		launchProjectile(projectileMat, getLaunchVel(ii), bigProjectiles, noMarker, markerText, hasTrail, forwardAcceleration, towardsTargetAcceleration);
+		launchProjectile(projectileMat, getLaunchVel(ii), bigProjectiles, damage ?? 1, noMarker, markerText, hasTrail, forwardAcceleration, towardsTargetAcceleration);
 	}
 }
 
 //now using bullets array to contain both bullets and bombs.
-function launchProjectile(projectileMatrix, muzzleVelVec, isBig, noMarker, markerText, hasTrail, forwardAcceleration, towardsTargetAcceleration){
+function launchProjectile(projectileMatrix, muzzleVelVec, isBig, damage, noMarker, markerText, hasTrail, forwardAcceleration, towardsTargetAcceleration){
+	damage??=1;
 
 	var newBulletMatrix = matPool.create(); 
 	mat4.set(projectileMatrix,newBulletMatrix);
@@ -175,6 +180,7 @@ function launchProjectile(projectileMatrix, muzzleVelVec, isBig, noMarker, marke
 		forwardAcceleration,
 		towardsTargetAcceleration,
 		target,
+		damage,
 		active:true}
 	);
 
