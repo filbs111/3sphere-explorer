@@ -5749,6 +5749,10 @@ var uniform4fvSetter = (function(){
 
 		var last = shader.uniformCache[uniformName];
 
+		if (!last){
+			return; //hit this on linux firefox. don't know why. cache not initialised yet?
+		}
+
 		if (isSame(valueToSet, last)){
 			numTimesAvoidedSet++;
 			return;
@@ -5760,9 +5764,10 @@ var uniform4fvSetter = (function(){
 	}
 
 	var isSame = function(vecNow, vecLast){
+		if (!vecLast){return false;}	//avoid problem on linux firefox? don't know why this happens.
 		var componentsMatched = 0;
 		for (var ii=0;ii<4;ii++){
-			if (vecNow[ii]==vecLast[ii]){
+			if (vecNow[ii]==vecLast[ii]){		//This has problem on linux firefox!! 
 				componentsMatched+=1;
 			}
 		}
