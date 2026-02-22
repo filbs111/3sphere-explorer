@@ -1,3 +1,4 @@
+var playerCameraLagToAccumulate = [0,0,0];
 var accumulatedPlayerCameraLag = [0,0,0];
 
 var offsetCam = (function(){
@@ -76,8 +77,6 @@ var offsetCam = (function(){
                     smoothedDesiredCamMoveVec[cc] = smoothedDesiredCamMoveVec[cc]*mult1+desiredCamMoveVec[cc]*mult2;
                     smoothedCurrentVec[cc] = smoothedCurrentVec[cc]*mult1+collidedVec[cc]*mult2;
 
-                    //lag rotation of camera behind player. TODO different smoothing params
-                    accumulatedPlayerCameraLag[cc] = accumulatedPlayerCameraLag[cc]*0.9;
                 }
             }
             camItsToDo=0;

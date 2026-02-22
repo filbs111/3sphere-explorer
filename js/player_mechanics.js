@@ -141,7 +141,7 @@ var playerMechanics = (() => {
             playerVelVec[cc]+=currentThrustInput[cc];	//todo either write vector addition func or use glmatrix vectors
         }
 
-
+        
         //blend velocity with velocity of rotating duosphere. (todo angular vel to use this too)
         //matrix entries 12-15 describe position. (remain same when rotate player and don't move)
         //playerVel is in frame of player though - so apply matrix rotation to this.
@@ -194,7 +194,14 @@ var playerMechanics = (() => {
 
         //add accumulated camera rotation lag
         for (var cc=0;cc<3;cc++){
+            accumulatedPlayerCameraLag[cc]+=playerCameraLagToAccumulate[cc];
+            playerCameraLagToAccumulate[cc]=0;
+            
             cameraTilt[cc]-=accumulatedPlayerCameraLag[cc];
+
+            //move to here in hope of making less framerate dependent (doesn't seem to help much)
+            //lag rotation of camera behind player. TODO different smoothing params
+            accumulatedPlayerCameraLag[cc] = accumulatedPlayerCameraLag[cc]*0.9;
         }
 
         //print speed

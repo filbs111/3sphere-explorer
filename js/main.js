@@ -5193,7 +5193,7 @@ function rotatePlayer(vec, dustMotesRelativeToPlayerToo=true){
 		//TODO something similar to rotateVelVec like this for camera lag - possibly like code below (not sure is right)
 		//accumulatedPlayerCameraLag = rotateVecByAxisAngleVec(accumulatedPlayerCameraLag, vec);
 		for (var cc=0;cc<3;cc++){
-			accumulatedPlayerCameraLag[cc]+=vec[cc];
+			playerCameraLagToAccumulate[cc]+=vec[cc];
 		}
 	};
 	xyzrotate4mat(playerCamera,vec);
