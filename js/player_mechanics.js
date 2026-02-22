@@ -97,7 +97,7 @@ var playerMechanics = (() => {
             if (gpSettings.moveEnabled){
                 var gpMove = [Math.abs(axes[0])>gpSettings.deadZone ? -moveSpeed*axes[0] : 0, //lateral
                             Math.abs(axes[1])>gpSettings.deadZone ? moveSpeed*axes[1] : 0, //vertical
-                            moveSpeed*(buttons[7].value-buttons[6].value)]; //fwd/back	//note Firefox at least fails to support analog triggers https://bugzilla.mozilla.org/show_bug.cgi?id=1434408
+                            moveSpeed*gpSettings.forward(activeGp)]; //fwd/back	//note Firefox at least fails to support analog triggers https://bugzilla.mozilla.org/show_bug.cgi?id=1434408
                 
                 var magsq = gpMove.reduce((total, val) => total+ val*val, 0);
                 
