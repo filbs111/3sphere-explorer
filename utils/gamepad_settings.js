@@ -1,6 +1,27 @@
 //this is minimum required to make a few sensible options.
 //TODO figure out sensible object model, functions vs simple value config...
 
+var gamepadSettingGameSir = (()=>{
+	//id "GameSir-Tegenaria Lite (Vendor: 3537 Product: 1093)"
+
+	//peculiarly, dpads are axes! NOTE if use this controller when using gamepadSettingsX360Joypad settings, will error because doesn't have buttons[15]
+
+	var deadZone = 0.15;
+
+	return {
+		pitch:(gp, fixedRotateAmount) => Math.abs(gp.axes[3])>deadZone ? fixedRotateAmount*gp.axes[3] : 0,
+		turn:(gp, fixedRotateAmount) => Math.abs(gp.axes[2])>deadZone ? fixedRotateAmount*gp.axes[2] : 0,
+		roll:(gp) => gp.axes[6],	//dpad left/right
+		forward:(gp) => 0.5*(gp.axes[4]-gp.axes[5]),		//R2-R1. halved because these are from -1 (unpressed) to 1 (fully depressed)!
+			//or buttons[9]-buttons[8] for digital
+		moveEnabled:true,
+		fireButton:7,	//R1
+		fireSpecialButton:6, //L1
+		selectSpecialButtons:[0,1,3,4],	//(order?) A,B,X,Y . NOTE only 4 weapons - TODO either switch to cycling, or reduce special weapon count!
+		deadZone	//used in moveEnabled mode. TODO put move funcs here, just return 0 for move disabled
+	}
+})();
+
 var gamepadSettingsX360Joypad = (()=>{
 	var deadZone = 0.15;
 
@@ -8,6 +29,7 @@ var gamepadSettingsX360Joypad = (()=>{
 		pitch:(gp, fixedRotateAmount) => Math.abs(gp.axes[3])>deadZone ? fixedRotateAmount*gp.axes[3] : 0,
 		turn:(gp, fixedRotateAmount) => Math.abs(gp.axes[2])>deadZone ? fixedRotateAmount*gp.axes[2] : 0,
 		roll:(gp) => gp.buttons[15].value-gp.buttons[14].value,	//dpad left/right
+		forward:(gp) => gp.buttons[7].value-buttons[6].value,	//TODO use analog input? 
 		moveEnabled:true,
 		fireButton:5,	//R1
 		fireSpecialButton:4, //L1
@@ -23,6 +45,7 @@ var gamepadSettingsPhantomHawkA = (()=>{
 		pitch:(gp, fixedRotateAmount) => Math.abs(gp.axes[1])>deadZone ? -fixedRotateAmount*gp.axes[1] : 0,
 		turn:(gp, fixedRotateAmount) => Math.abs(gp.axes[4])>deadZone ? fixedRotateAmount*gp.axes[4] : 0,
 		roll:(gp) => gp.axes[0],
+		forward:(gp) => gp.buttons[7].value-buttons[6].value,	//TODO use analog input? 
 		moveEnabled:false,
 		fireButton:0
 	}
@@ -36,6 +59,7 @@ var gamepadSettingsPhantomHawkB = (()=>{
 		pitch:(gp, fixedRotateAmount) => Math.abs(gp.axes[1])>deadZone ? fixedRotateAmount*gp.axes[1] : 0,
 		turn:(gp, fixedRotateAmount) => Math.abs(gp.axes[0])>deadZone ? fixedRotateAmount*gp.axes[0] : 0,
 		roll:(gp) => Math.pow(gp.axes[4],3),
+		forward:(gp) => gp.buttons[7].value-buttons[6].value,	//TODO use analog input? 
 		moveEnabled:false,
 		fireButton:0
 	}
@@ -49,6 +73,7 @@ var gamepadSettingsSolR = (()=>{
 		pitch:(gp, fixedRotateAmount) => Math.abs(gp.axes[1])>deadZone ? fixedRotateAmount*gp.axes[1] : 0,
 		turn:(gp, fixedRotateAmount) => Math.abs(gp.axes[0])>deadZone ? fixedRotateAmount*gp.axes[0] : 0,
 		roll:(gp) => Math.pow(gp.axes[4],3),
+		forward:(gp) => gp.buttons[7].value-buttons[6].value,	//TODO use analog input? 
 		moveEnabled:false,
 		fireButton:25
 	}
@@ -75,6 +100,7 @@ var gamepadSettingsSolR2 = (()=>{
 				//roll input go to 0
 			return Math.pow(hacked,3);
 		},
+		forward:(gp) => gp.buttons[7].value-buttons[6].value,	//TODO use analog input? 
 		moveEnabled:false,
 		fireButton:25
 	}
