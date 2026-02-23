@@ -68,9 +68,13 @@
 			float startDensity = exp(bodgeScale*uAtmosContrast*modifiedSinStart);
 			float endDensity = exp(bodgeScale*uAtmosContrast*modifiedSinEnd);
 
-	        float contribution = (endDensity-startDensity)/(modifiedSinEnd - modifiedSinStart);
-
-			sum+= contribution;
+	        if (abs(modifiedSinStart - modifiedSinEnd)<0.001){
+				//TODO check maths. basically average of exp(x) between a,b = (exp(b)-exp(a))/(b-a)
+				//bat as b->a , this becomes just exp(a). TODO check where bodgeScale goes. TODO checl threshold.
+				sum+= startDensity;
+			}else{
+				sum+= (endDensity-startDensity)/(modifiedSinEnd - modifiedSinStart);
+			}
 		}
 		sum/=uAtmosContrast;
 
