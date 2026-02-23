@@ -102,7 +102,7 @@
 			float endDensity = exp(bodgeScale*uAtmosContrast*modifiedSinEnd);
 
 			//THIS IS THE VS THAT AFFECTS PLAYER MODEL (gradlight shader)
-			if (abs(modifiedSinStart - modifiedSinEnd)<0.001){
+			if (abs(modifiedSinStart - modifiedSinEnd)<0.000001){
 				//TODO check maths. basically average of exp(x) between a,b = (exp(b)-exp(a))/(b-a)
 				//bat as b->a , this becomes just exp(a). TODO check where bodgeScale goes. TODO checl threshold.
 				sum+= startDensity;
