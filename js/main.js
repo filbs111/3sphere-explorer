@@ -4546,8 +4546,8 @@ function init(){
 	
 	initGL();
 
-	initTextureFramebuffer(rttFisheyeRectRenderOutput, true, gl.REPEAT);
-	initTextureFramebuffer(rttFisheyeRectRenderOutput2, true, gl.REPEAT);
+	initTextureFramebuffer(rttFisheyeRectRenderOutput, false, gl.REPEAT);
+	initTextureFramebuffer(rttFisheyeRectRenderOutput2, false, gl.REPEAT);
 
 	initTextureFramebuffer(rttView);
 	initTextureFramebuffer(rttStageOneView, true);
