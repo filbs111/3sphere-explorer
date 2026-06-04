@@ -570,7 +570,67 @@ for (var ii=0;ii<4;ii++){	//TODO how to cope with variable portal numbers? just 
 	});
 }
 
-function calcReflectionInfo(toReflect,resultsObj, reflectorRad){
+function calcReflectionInfoOld(toReflect,resultsObj, reflectorRad){
+	// 2026 - forget how this all works, but want to calculate reflection info for variable size worlds.
+	// reflectorRad IIRC is portal radius before projection - ie angle from centre of portal to its surface is 
+	// atan(reflectorRad). For a portal between worlds of different sizes, the reflectorRad value is different for each portal side.
+	// TODO determine how this logic works, how to adapt for portal between different world sizes.
+
+	//things that are output (saved to resultsObj):
+	// polarity - easy - no need to change
+	// centreTanAngleVectorScaled - ??
+	// shaderMatrix - ?? 
+	// cubeViewShiftAdjusted - ??
+	// cubeViewShiftAdjustedMinus - ??
+	// shaderMatrix2 - ??
+
+	//IIRC this is like a flat space (approximate) sphere reflection.
+	// for protal at w=1, project point xyzw onto w=1. (xyz/w , 1)
+	// great circles are straight lines.
+	// can do this for each world and scale for unit projected portal rad.
+	// TODO does this make sense? does this existing calculation for world size 1 make sense? 
+	// could be assumption about flat space projection not good because isn't angle preserving. could calc below just be a bodge
+	// that works about right for small angles only?
+
+	// maybe way to consider this is that angular size of surface of portal relative to point to reflect is equal
+	// to angular size from refected point (in the portal).
+	 // NO! - point wont even stay in the portal! 
+	 // TODO
+	 // 1) what is calculation of "reflected point" in flat space?
+	 // 2) how was this extended to curved space here? 
+	 // 3) does that make sense? 
+	 // 4) if not, apply correction, what is qualatative difference (test it)
+	 // 5) apply to variable size worlds
+
+
+	//below,
+	//toReflect is position of player in frame where portal is centred at [0,0,0,1]
+	// so position of player projected on plane w=1 from origin [0,0,0,0] is [toReflect.xyz/toReflect.z , 1].
+	// angle from [0,0,0,1] to toReflect is acos(toReflect.w).
+	// distance from [0,0,0,1] to projected point is mag(toReflect.xyz/toReflect.z) = tan(angle)
+	// consider this projected space (w=1) like flat space. use
+	// y = x/(2x-1) to reflect point in unit sphere (TODO document elsewhere)
+	// tan(angle) is projected point. divide by portal rad (projected)
+	// = tan(angle) / portalRad)
+	// then plug this into equation as x
+	// y = tan(angle) / portalRad) 
+	//     ------------------------------
+	//    2* (tan(angle) / portalRad) ) - 1
+	//
+	// divide top and bottom by ( tan(angle) / portalRad)
+	//
+	// y = 1/ ( 2 -  portalRad/tan(angle) )
+	// 
+	// this is in projected space with unit portal. scale by portal rad to get projected point y*portalRad = 
+	//
+	// portalRad/ ( 2 -  portalRad/tan(angle) )
+	//
+	// correctionFactor below takes cubeViewShift, divides by its length (to get a unit vector) and multiplies by magnitude of angle, to get a vector
+	// of length angle, in same direction as cubeViewShift. This resulting vector is cubeViewShiftAdjusted.
+	// ....
+	// how to modify all this to work in 
+
+
 	//use player position directly. expect to behave like transparent
 	var cubeViewShift = [toReflect[12],toReflect[13],toReflect[14]];	
 	var magsq = 1- toReflect[15]*toReflect[15];
@@ -588,7 +648,7 @@ function calcReflectionInfo(toReflect,resultsObj, reflectorRad){
 	var correctionFactor = -polarity * Math.atan(reflectionCentreTanAngle)/mag;
 	var cubeViewShiftAdjusted = cubeViewShift.map(function(val){return val*correctionFactor});
 	var cubeViewShiftAdjustedMinus = cubeViewShiftAdjusted.map(val => -polarity*val);
-	//reflectorInfo.polarity=polarity;	
+
 	resultsObj.polarity=polarity;	//??
 	
 	//position within spherical reflector BEFORE projection
@@ -606,7 +666,86 @@ function calcReflectionInfo(toReflect,resultsObj, reflectorRad){
 	//only used for droplightpos2, and only different from shaderMatrix if reflector (rather than portal) (inefficient!)
 	var reflectShaderMatrix2 = mat4.create();
 	mat4.identity(reflectShaderMatrix2);
-	xyzmove4mat(reflectShaderMatrix2, cubeViewShiftAdjusted);	
+	xyzmove4mat(reflectShaderMatrix2, cubeViewShiftAdjusted);
+	resultsObj.shaderMatrix2=reflectShaderMatrix2;
+}
+
+
+function calcReflectionInfo(toReflect,resultsObj, reflectorRad){
+
+	var worldSizeViewFrom = 1;
+	var worldSizeViewTo = 1;
+
+	//if portal angular radius is theta, projected portal radius (reflectorRad) world world size 1 is tan(theta),
+	// "true" portal size is sin(theta). can calc this without trig, but do with for clarity (will later just store true portal rad...
+ 	var trueReflectorRad = Math.sin(Math.atan(reflectorRad));
+
+	calcReflectionInfoNew(toReflect, resultsObj, trueReflectorRad, 1, 1);
+}
+
+
+
+function calcReflectionInfoNew(toReflect,resultsObj, trueReflectorRad, worldSizeViewFrom, worldSizeViewTo){
+
+	//TODO write this up, simplify calculation. precalculate?
+
+
+	//use player position directly. expect to behave like transparent
+	var cubeViewShift = [toReflect[12],toReflect[13],toReflect[14]];	
+	var magsq = 1- toReflect[15]*toReflect[15];
+		//note can just fo 1-w*w, or just use w!
+	
+
+	var angle = Math.acos(toReflect[15]);	//from centre of portal to player
+
+	var tanAngle = Math.tan(angle);	//of point to be reflected.
+
+	var angleOfFromPortalBoundary = Math.asin(trueReflectorRad, worldSizeViewFrom);
+	var cosineForFromPortalBoundary = Math.cos(angleOfFromPortalBoundary);
+
+	var angleOfToPortalBoundary = Math.asin(trueReflectorRad, worldSizeViewTo);
+	var cosineForToPortalBoundary = Math.cos(angleOfToPortalBoundary);
+
+
+	var posOnIntermediatePlane = tanAngle * worldSizeViewFrom * cosineForFromPortalBoundary;
+	var posOnIntermediatePlaneForPortalSizeOne = posOnIntermediatePlane/trueReflectorRad;
+
+	var reflectedPosOnIntermediatePlaneForPortalSizeOne = posOnIntermediatePlaneForPortalSizeOne / (2 * posOnIntermediatePlaneForPortalSizeOne - 1);
+	var reflectedPosOnIntermediatePlane = reflectedPosOnIntermediatePlaneForPortalSizeOne*trueReflectorRad;
+	var reflectedPosTanAngleForToWorld = reflectedPosOnIntermediatePlane/(worldSizeViewTo*cosineForToPortalBoundary);
+	var reflectedPosTanAngleForFromWorld = reflectedPosOnIntermediatePlane/(worldSizeViewFrom*cosineForFromPortalBoundary);
+
+
+	var mag = Math.sqrt(magsq);
+	
+	var polarity = guiParams.reflector.isPortal? -1:1;
+	var correctionFactor = -polarity * Math.atan(reflectedPosTanAngleForToWorld)/mag;
+	var cubeViewShiftAdjusted = cubeViewShift.map(function(val){return val*correctionFactor});
+	var cubeViewShiftAdjustedMinus = cubeViewShiftAdjusted.map(val => -polarity*val);
+
+	resultsObj.polarity=polarity;	//??
+	
+	//position within spherical reflector BEFORE projection
+	//IIRC this relates to "From" portal
+
+	var correctionFactorB = reflectedPosTanAngleForFromWorld/mag;
+
+	var fromReflectorRadProjected = trueReflectorRad / cosineForFromPortalBoundary;
+
+	correctionFactorB/=fromReflectorRadProjected;
+	resultsObj.centreTanAngleVectorScaled = cubeViewShift.map(val => -val*correctionFactorB);
+
+	var reflectShaderMatrix = mat4.identity();
+	xyzmove4mat(reflectShaderMatrix, cubeViewShiftAdjustedMinus);	
+	resultsObj.shaderMatrix=reflectShaderMatrix;
+	
+	resultsObj.cubeViewShiftAdjusted = cubeViewShiftAdjusted;
+	resultsObj.cubeViewShiftAdjustedMinus = cubeViewShiftAdjustedMinus;	//for debugging
+	
+	//only used for droplightpos2, and only different from shaderMatrix if reflector (rather than portal) (inefficient!)
+	var reflectShaderMatrix2 = mat4.create();
+	mat4.identity(reflectShaderMatrix2);
+	xyzmove4mat(reflectShaderMatrix2, cubeViewShiftAdjusted);
 	resultsObj.shaderMatrix2=reflectShaderMatrix2;
 }
 

@@ -1,8 +1,9 @@
 //var maxRandBoxes = 8192;
 var maxRandBoxes = 128;	//tmp smaller to make startup faster?
 
-function singleWorldSettings(fogColor, atmosThickness, duocylinderModel, seaActive, seaLevel){
+function singleWorldSettings(worldSize, fogColor, atmosThickness, duocylinderModel, seaActive, seaLevel){
 	return {
+		worldSize,
 		fogColor,
 		atmosThickness,
 		atmosContrast:20,
@@ -17,16 +18,16 @@ function singleWorldSettings(fogColor, atmosThickness, duocylinderModel, seaActi
 
 var guiParams={
 	worlds:[
-		singleWorldSettings('#2f9a16', 0.2, "procTerrain", false, 0),
-		singleWorldSettings('#7496a0', 0.2, "greebleTerrain", false, 0),
-		singleWorldSettings('#bbbbbb', 0.2, "none", true, -0.0022),
-		singleWorldSettings('#f0cd62', 0.2, "procTerrain", false, 0),
-		singleWorldSettings('#444444', 0.2, "none", false, 0),	//4
-		singleWorldSettings('#888888', 0.2, "none", false, 0),	//5
-		singleWorldSettings('#aaaaaa', 0.2, "none", false, 0),	//6
-		singleWorldSettings('#884444', 0.2, "none", false, 0),	//7
-		singleWorldSettings('#442222', 0.2, "none", false, 0),	//8
-		singleWorldSettings('#664444', 0.2, "none", false, 0),	//9
+		singleWorldSettings(1,'#2f9a16', 0.2, "procTerrain", false, 0),
+		singleWorldSettings(1,'#7496a0', 0.2, "greebleTerrain", false, 0),
+		singleWorldSettings(1,'#bbbbbb', 0.2, "none", true, -0.0022),
+		singleWorldSettings(1,'#f0cd62', 0.2, "procTerrain", false, 0),
+		singleWorldSettings(1,'#444444', 0.2, "none", false, 0),	//4
+		singleWorldSettings(1,'#888888', 0.2, "none", false, 0),	//5
+		singleWorldSettings(1,'#aaaaaa', 0.2, "none", false, 0),	//6
+		singleWorldSettings(1,'#884444', 0.2, "none", false, 0),	//7
+		singleWorldSettings(1,'#442222', 0.2, "none", false, 0),	//8
+		singleWorldSettings(1,'#664444', 0.2, "none", false, 0),	//9
 	],
 	drawShapes:{
 		boxes:{
