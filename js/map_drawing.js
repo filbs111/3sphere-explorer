@@ -1,5 +1,8 @@
 
 var logMapStuff=false;
+
+//TODO check whether need any world size adjustment for map
+
 var drawMapScene = (function(){
 	
 	//create a camera view for viewing map from.
@@ -103,7 +106,7 @@ var drawMapScene = (function(){
 		portalsForWorld[worldToDrawMapFor].forEach(portal => {
 			var pColor = worldColors[portal.otherps.world];
 			//var pPos = portal.matrix.slice(12);
-			var pRad = portal.shared.radius;	//NOTE not necessarily to scale when rendered in map
+			var pRad = portal.radius/portal.worldSize;	//NOTE not necessarily to scale when rendered in map
 			//drawMapPointForFourVec(pPos, pColor, pRad);
 			mapDrawShaderFunc(portal.matrix, pColor, sphereBuffers, pRad, false);
 		});

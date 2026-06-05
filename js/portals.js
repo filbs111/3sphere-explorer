@@ -2,12 +2,31 @@ var portalsForWorld = (()=>{
 
     var portalsForWorld = [[],[],[],[],[],[],[],[],[],[]];
     
-    function addPortalPair(worldOne, worldTwo, radius, color){
+    //TODO store precalculated info here function of portal and world size?
+    //TODO check where portal size is used for drawing, physics...
+    //TODO validate that portals fit inside worlds?
+
+    function addPortalPair(worldOne, worldTwo, trueRadius, color){
+
         var matOne = newIdMatWithQuats();
         var matTwo = newIdMatWithQuats();
-        var shared = {radius, color};
-        var ps1 = {world:worldOne, matrix:matOne, shared};
-        var ps2 = {world:worldTwo, matrix:matTwo, shared, otherps:ps1};
+        var shared = {trueRadius, color};
+
+        var worldSizeOne = guiSettingsForWorld[worldOne].worldSize;
+        var worldSizeTwo = guiSettingsForWorld[worldTwo].worldSize;
+
+        var projectedPortalSizeWorldOne = worldSizeOne * Math.tan(Math.asin( trueRadius / worldSizeOne) );
+        var projectedPortalSizeWorldTwo = worldSizeTwo * Math.tan(Math.asin( trueRadius / worldSizeTwo) );
+
+        //equivalent? TODO check
+//        var projectedPortalSizeWorldOne = worldSizeOne/ Math.sqrt( worldSizeOne/trueRadius - 1 );
+//        var projectedPortalSizeWorldTwo = worldSizeTwo/ Math.sqrt( worldSizeTwo/trueRadius - 1 );
+
+        var ps1 = {world:worldOne, worldSize: worldSizeOne, matrix:matOne, radius:projectedPortalSizeWorldOne, shared};
+        var ps2 = {world:worldTwo, worldSize: worldSizeTwo, matrix:matTwo, radius:projectedPortalSizeWorldTwo, shared, otherps:ps1};
+            //NOTE world sizes are accessible on world object, but convenient to attach here.
+            //TODO store radius/worldSize? are separate vals useful?
+
         ps1.otherps = ps2;
         portalsForWorld[worldOne].push(ps1);
         portalsForWorld[worldTwo].push(ps2);

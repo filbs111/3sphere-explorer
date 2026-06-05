@@ -3,7 +3,7 @@ var maxRandBoxes = 128;	//tmp smaller to make startup faster?
 
 function singleWorldSettings(worldSize, fogColor, atmosThickness, duocylinderModel, seaActive, seaLevel){
 	return {
-		worldSize,
+		worldSize: worldSize*0.9,	//bodge to test
 		fogColor,
 		atmosThickness,
 		atmosContrast:20,

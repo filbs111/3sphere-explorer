@@ -4,6 +4,8 @@ var flickerFlag=true;
 var shouldShowControls=false;
 var cameraTilt=[0,0,0];
 
+// TODO adjust for world size - expect loads of changes here...
+
 var quadplane={	//temp...
 	fx:5,
 	fy:0.9,
@@ -439,6 +441,7 @@ function initBuffers(){
 	loadObjThenAddBvhToLevels(loadBuffersFromObj2Or3File, "./data/miscobjs/fractal-octahedron4.obj3",
 		octoFractalBuffers, octoFractalBvh, 0.2, [{mat:octoFractalMatrix, transposedMat: makeTransposedMat(octoFractalMatrix), world:2}],6);
 
+	//TODO world size dependence
 	function loadObjThenAddBvhToLevels(objLoader, objFile, objBuffers, objBvh, scale, worldAndMatArr, vertAttrs){
 		objLoader(objBuffers, objFile, (bufferObj, sourceData) => {
 			loadBufferData(bufferObj, sourceData);
@@ -562,6 +565,7 @@ function initBuffers(){
 	}
 }
 
+//THIS BIT RELEVANT TO WORLD SCALE. - TODO document calculation, meaning of these variables. guess this just initialises to legit default, calculate real vals later.
 var reflectorInfoArr=[];
 for (var ii=0;ii<4;ii++){	//TODO how to cope with variable portal numbers? just assign max? (fixed number supported by shader)
 	reflectorInfoArr.push({
@@ -680,7 +684,7 @@ function calcReflectionInfo(toReflect,resultsObj, reflectorRad){
 	// "true" portal size is sin(theta). can calc this without trig, but do with for clarity (will later just store true portal rad...
  	var trueReflectorRad = Math.sin(Math.atan(reflectorRad));
 
-	calcReflectionInfoNew(toReflect, resultsObj, trueReflectorRad, 1, 1);
+	calcReflectionInfoNew(toReflect, resultsObj, trueReflectorRad, worldSizeViewFrom, worldSizeViewTo);
 }
 
 
@@ -700,7 +704,7 @@ function calcReflectionInfoNew(toReflect,resultsObj, trueReflectorRad, worldSize
 
 	var tanAngle = Math.tan(angle);	//of point to be reflected.
 
-	var angleOfFromPortalBoundary = Math.asin(trueReflectorRad, worldSizeViewFrom);
+	var angleOfFromPortalBoundary = Math.asin(trueReflectorRad/ worldSizeViewFrom);
 	var cosineForFromPortalBoundary = Math.cos(angleOfFromPortalBoundary);
 
 	var angleOfToPortalBoundary = Math.asin(trueReflectorRad, worldSizeViewTo);
@@ -716,23 +720,34 @@ function calcReflectionInfoNew(toReflect,resultsObj, trueReflectorRad, worldSize
 	var reflectedPosTanAngleForFromWorld = reflectedPosOnIntermediatePlane/(worldSizeViewFrom*cosineForFromPortalBoundary);
 
 
-	var mag = Math.sqrt(magsq);
+	var mag = Math.sqrt(magsq);	//FWIW guess this is sin angle! 
 	
 	var polarity = guiParams.reflector.isPortal? -1:1;
-	var correctionFactor = -polarity * Math.atan(reflectedPosTanAngleForToWorld)/mag;
+	
+	var correctionFactor = -polarity * Math.asin(reflectedPosOnIntermediatePlane/worldSizeViewTo)/mag;
 	var cubeViewShiftAdjusted = cubeViewShift.map(function(val){return val*correctionFactor});
-	var cubeViewShiftAdjustedMinus = cubeViewShiftAdjusted.map(val => -polarity*val);
+
+	//var correctionFactor = -polarity * reflectedPosOnIntermediatePlaneForPortalSizeOne/mag;
+	//var cubeViewShiftAdjusted = cubeViewShift.map(function(val){return val*correctionFactor });
+
+
+	var cubeViewShiftAdjustedMinus = cubeViewShiftAdjusted.map(val => -polarity*val );
+
+
+	//cubeViewShiftAdjusted = 0;
+	//cubeViewShiftAdjustedMinus = 0;	//mess up, see what breaks
 
 	resultsObj.polarity=polarity;	//??
 	
 	//position within spherical reflector BEFORE projection
 	//IIRC this relates to "From" portal
 
-	var correctionFactorB = reflectedPosTanAngleForFromWorld/mag;
+	var correctionFactorB = reflectedPosOnIntermediatePlaneForPortalSizeOne/mag;
 
-	var fromReflectorRadProjected = trueReflectorRad / cosineForFromPortalBoundary;
+	//divide by portal size (projected) ? 
+	//correctionFactorB/= trueReflectorRad / (worldSizeViewFrom*cosineForFromPortalBoundary);
 
-	correctionFactorB/=fromReflectorRadProjected;
+
 	resultsObj.centreTanAngleVectorScaled = cubeViewShift.map(val => -val*correctionFactorB);
 
 	var reflectShaderMatrix = mat4.identity();
@@ -740,7 +755,7 @@ function calcReflectionInfoNew(toReflect,resultsObj, trueReflectorRad, worldSize
 	resultsObj.shaderMatrix=reflectShaderMatrix;
 	
 	resultsObj.cubeViewShiftAdjusted = cubeViewShiftAdjusted;
-	resultsObj.cubeViewShiftAdjustedMinus = cubeViewShiftAdjustedMinus;	//for debugging
+	//resultsObj.cubeViewShiftAdjustedMinus = cubeViewShiftAdjustedMinus;	//for debugging
 	
 	//only used for droplightpos2, and only different from shaderMatrix if reflector (rather than portal) (inefficient!)
 	var reflectShaderMatrix2 = mat4.create();
@@ -748,6 +763,9 @@ function calcReflectionInfoNew(toReflect,resultsObj, trueReflectorRad, worldSize
 	xyzmove4mat(reflectShaderMatrix2, cubeViewShiftAdjusted);
 	resultsObj.shaderMatrix2=reflectShaderMatrix2;
 }
+
+
+
 
 var gunHeat = 0;
 
@@ -831,7 +849,9 @@ function drawRegularScene(frameTime){
 	function recalculateReflectorInfoArray(){
 		var portalsForThisWorldX = portalsForWorld[offsetCameraContainer.world];
 		for (var ii=0;ii<portalsForThisWorldX.length;ii++){
-			reflectorInfoArr[ii].rad = guiParams.reflector.draw!="none" ? portalsForThisWorldX[ii].shared.radius : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
+			var portal = portalsForThisWorldX[ii];
+			var portalRelativeRad = portal.radius/portal.worldSize;
+			reflectorInfoArr[ii].rad = guiParams.reflector.draw!="none" ? portalRelativeRad : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
 		}
 	}
 
@@ -1043,7 +1063,8 @@ function drawRegularScene(frameTime){
 		mat4.multiply(portalInCamera, portal.matrix); //TODO is offsetCameraContainer.world updated yet?
 																				//if not may see 1 frame glitch on crossing
 		mat4.transpose(portalInCamera);	//TODO lose this, use indices 3,7,11 instead of 12,13,14 in calcReflectionInfo?
-		calcReflectionInfo(portalInCamera,reflectorInfoArr[ii], portal.shared.radius);
+
+		calcReflectionInfoNew(portalInCamera,reflectorInfoArr[ii], portal.shared.trueRadius, portal.worldSize, portal.otherps.worldSize);
 	});
 
 	//setup for drawing to screen
@@ -1960,7 +1981,7 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 		returnObj.worldA = worldA;
 
 		var pmats = psides.map(x=>x.matrix);
-		var pmatrads = psides.map(x=>x.shared.radius);
+		var pmatrads = psides.map(x=>x.radius/x.worldSize);
 
 
 		returnObj.worldInfo = guiSettingsForWorld[worldA];
@@ -2022,7 +2043,7 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 			var thisPortalSide = portals[pp];
 			if (thisPortalSide.otherps.world == sshipWorld){
 				var relevantPortalSide = thisPortalSide.otherps;
-				var portalRad = relevantPortalSide.shared.radius;
+				var portalRad = relevantPortalSide.radius / relevantPortalSide.worldSize;
 				if (checkWithinRangeOfGivenPortal(sshipMatrix, Math.tan(portalRad +0.1), relevantPortalSide)){	//TODO correct this
 					mat4.set(sshipMatrix, portaledMatrix);
 					moveMatrixThruPortal(portaledMatrix, portalRad, 1, relevantPortalSide);
@@ -3408,7 +3429,9 @@ function drawPortalsForMultipleCameraViews(isCubemapView, wSettings, portals, po
 		// TODO don't draw the portal that are looking through.
 		for (var ii=0;ii<portals.length;ii++){
 
-			var portalRad = 1.02*portals[ii].shared.radius;
+			var portalRelativeRad = portals[ii].radius / portals[ii].worldSize;
+
+			var portalRad = 1.02*portalRelativeRad;
 
 			//TODO remove this - perhaps just remove calls to it (don't draw portal at all),
 			// and prerender several iterations of each portal (ie portal in portal in portal ... is invisible,
@@ -3430,7 +3453,7 @@ function drawPortalsForMultipleCameraViews(isCubemapView, wSettings, portals, po
 				drawObjectFromBuffers(placeholderPortalMesh, activeShaderProgram);
 			}
 
-			if (frustumCull(portalInCameraArr[ii], portals[ii].shared.radius)){
+			if (frustumCull(portalInCameraArr[ii], portalRelativeRad)){
 				//if don't scale up a bit, invisible because within discard radius!
 				//TODO a shader without discard - should also be emmissive, not lit by world...
 
@@ -3451,11 +3474,15 @@ function drawPortalsForMultipleCameraViews(isCubemapView, wSettings, portals, po
 				var returnObj = {};
 				var transposed = mat4.create(portalInCameraArr[ii]);
 				mat4.transpose(transposed);
-				calcReflectionInfo(transposed, returnObj, portalRad);
+
+
+				//calcReflectionInfo(transposed, returnObj, portalRad);
+				calcReflectionInfoNew(transposed, returnObj, portals[ii].shared.trueRadius, portals[ii].worldSize, portals[ii].otherps.worldSize);
+
 
 				debugPortalInfo = {returnObj, ii, portals, reflectorInfoArr, infoForPortals};
 
-				returnObj.rad = guiParams.reflector.draw!="none" ? portals[ii].shared.radius : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
+				returnObj.rad = guiParams.reflector.draw!="none" ? portalRelativeRad : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
 
 				drawPortal(activeReflectorShader, portalMatArr[ii], meshToDraw, returnObj, portalInCameraArr[ii],false);
 									
@@ -5169,7 +5196,10 @@ var iterateMechanics = (function iterateMechanics(){
 			var portals = portalsForWorld[worldA];
 			for (var pp=0;pp<portals.length;pp++){
 				var thisPortal = portals[pp];
-				var effectiveRange = Math.tan(Math.atan(thisPortal.shared.radius)+Math.atan(0.003));	//TODO reformulate more efficiently
+
+				var portalRelativeRad = thisPortal.radius / thisPortal.worldSize;
+
+				var effectiveRange = Math.tan(Math.atan(portalRelativeRad)+Math.atan(0.003));	//TODO reformulate more efficiently
 				if (checkWithinRangeOfGivenPortal(playerCamera, effectiveRange, thisPortal)){
 					
 					//calculate in frame of portal
@@ -5235,7 +5265,10 @@ function portalTestMultiPortal(obj, amount){
 	for (var ii=0;ii<portalsForThisWorld.length;ii++){
 
 		var portal =  portalsForThisWorld[ii];
-		var adjustedRad = portal.shared.radius + amount;	//avoid issues with rendering very close to surface
+
+		var portalRelativeRad = portal.radius/portal.worldSize;
+
+		var adjustedRad = portalRelativeRad + amount;	//avoid issues with rendering very close to surface
 
 		var crossed = portalTestForGivenPortal(obj, adjustedRad, portal);
 		if (crossed){break;}	//avoid crossing portal twice, when 1st portal smaller radius than 2nd
@@ -5677,7 +5710,12 @@ function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo
 	//uses z distance, which determines size for rectilinear camera view, so can swith approximation on/off
 	// as rotate view (for same distance from camera, z-distance is smaller, so appears larger, away from centre.
 	// fisheye view reduces this effect, but is not accounted for here. TODO if using fisheye, take into account here.
-	var invSizeInScreen = -portalInCamera[14]/otherPortalSide.shared.radius;
+
+
+	var portalRelativeRad = otherPortalSide.radius / otherPortalSide.worldSize;	//TODO which portal side to use?
+
+
+	var invSizeInScreen = -portalInCamera[14]/portalRelativeRad;
 		//approx, works for distant objects. note using inverse since portalInCamera[14] could be 0
 		// TODO work out size of cubemap pixels
 		// something more like (distance of reflected camera (inside portal) to portal surface)
@@ -5688,7 +5726,10 @@ function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo
 	//use total distance to decide whether to use prerendered cubemap approximation.
 	//NOTE could just determine a threshold for portalInCamera[15], get isOnOtherSideOfWorld for free
 	var totalXYZSq = 1- portalInCamera[15]*portalInCamera[15];
-	var isFarEnoughAway = totalXYZSq > otherPortalSide.shared.radius*otherPortalSide.shared.radius * 36;
+
+	var portalRelativeRad = otherPortalSide.radius/otherPortalSide.worldSize;
+
+	var isFarEnoughAway = totalXYZSq > portalRelativeRad*portalRelativeRad * 36;	//TODO use radius relative to world size?
 
 	//var isFarEnoughAwayInZ = invSizeInScreen > 4;	//inverted so if behind camera counts as close (TODO proper calculation of pix density on portal surface)
 	var isOnOtherSideOfWorld = portalInCamera[15] <0;
@@ -6046,7 +6087,9 @@ function moveMatHandlingPortal(matContainer, offsetVec){
 
 			scimdSq += startComponentInMovementDirection[ii]*startComponentInMovementDirection[ii];
 		}
-		var rad = portal.shared.radius;
+
+		var portalRelativeRad = portal.radius/portal.worldSize;
+		var rad = portalRelativeRad;
 
 		var otherTriangleSideSq = rad*rad-closestApproachSq;
 
