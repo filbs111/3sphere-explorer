@@ -5290,6 +5290,9 @@ function checkWithinRangeOfGivenPortal(objMat, rad, portal){
 	return dotProd>1/Math.sqrt(1+rad*rad);
 }
 
+//NOTE this was written before had different size worlds. however, say, if move from small world to big world,
+//remainder of movement from small world, causing step within portal, resulting in movement into big world, will 
+//result in moving more than should. might not be very noticeable.
 function moveMatrixThruPortal(matrix, rad, hackMultiplier, portal, skipStartEndRotations){
 	//TODO just work with qpairs (and save on updating matrix)
 
@@ -5309,7 +5312,10 @@ function moveMatrixThruPortal(matrix, rad, hackMultiplier, portal, skipStartEndR
 	var mag = Math.sqrt(magsq);
 
 	var multiplier = Math.PI/mag;
-	var multiplier2 = -2*hackMultiplier*Math.atan(rad)/mag;
+
+	var totalMoveToOtherSide = Math.atan(portal.radius/portal.worldSize) + Math.atan(portal.otherps.radius/portal.otherps.worldSize);
+
+	var multiplier2 = -hackMultiplier*totalMoveToOtherSide/mag;
 	var rotate = new Array(3);
 	var move = new Array(3);
 
