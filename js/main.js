@@ -5292,7 +5292,8 @@ function checkWithinRangeOfGivenPortal(objMat, rad, portal){
 
 //NOTE this was written before had different size worlds. however, say, if move from small world to big world,
 //remainder of movement from small world, causing step within portal, resulting in movement into big world, will 
-//result in moving more than should. might not be very noticeable.
+//result in moving more than should. 
+//can see when drawing copy of player ship within portal as crossing portal.
 function moveMatrixThruPortal(matrix, rad, hackMultiplier, portal, skipStartEndRotations){
 	//TODO just work with qpairs (and save on updating matrix)
 
@@ -5980,7 +5981,14 @@ var uniform4fvSetter = (function(){
 /*
 * to replace moveCamInSteps without steps. might also use for eg bullets.
 */
-function moveMatHandlingPortal(matContainer, offsetVec){
+function moveMatHandlingPortal(matContainer, moveAmount){
+
+	var currentWorld = matContainer.world;
+
+	var currentWorldSize = guiSettingsForWorld[currentWorld].worldSize;
+
+	var offsetVec = moveAmount.map(x=>x/currentWorldSize);
+
 	//NOTE fails if input vec = 0. TODO make more robust!
 	if (offsetVec[0]==0 && offsetVec[1]==0 && offsetVec[2]==0){return;}
 
@@ -6151,15 +6159,13 @@ function moveMatHandlingPortal(matContainer, offsetVec){
 		//here can't know will pass portal test, so for quick hack, just move a bit more
 		// this might not work for grazing collision, and is noticeable (especially for cockpit camera)
 		//TODO explicitly move through portal?
-		halfAngleToCollisionPoint+=0.0002;
+		halfAngleToCollisionPoint+=0.0003;
 
 		var fractionToCollision =halfAngleToCollisionPoint/halfAngleStartToEnd;
 
 		//console.log({angleToCollisionPoint, angleStartToEnd, fractionToCollision});	//expect 0 to 1
 
 		xyzmove4mat(inputMatrix,offsetVec.map(elem => elem*fractionToCollision));
-
-		var currentWorld = matContainer.world;
 
 		portalTestMultiPortal(matContainer,0);
 
@@ -6168,7 +6174,10 @@ function moveMatHandlingPortal(matContainer, offsetVec){
 		if (newWorld == currentWorld){console.log("worlds same, though expected portal transition!");}
 
 		var remainingFraction = 1- fractionToCollision;
-		xyzmove4mat(inputMatrix,offsetVec.map(elem => elem*remainingFraction));
+		var newWorldSize = guiSettingsForWorld[newWorld].worldSize;
+		var remainingMoveAmount = remainingFraction/newWorldSize;
+
+		xyzmove4mat(inputMatrix,moveAmount.map(elem => elem*remainingMoveAmount));
 
 		return;
 	}
