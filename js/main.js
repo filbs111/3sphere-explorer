@@ -3087,18 +3087,18 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	
 	function drawSpaceship(matrix){
 		if (sshipBuffers.isLoaded){
-			drawPlayerGradlightObject(matrix, sshipBuffers, sshipTexture, sshipTexture2, sshipModelScale, 1,true, true);
+			drawPlayerGradlightObject(matrix, sshipBuffers, sshipTexture, sshipTexture2, sshipModelScale/wSettings.worldInfo.worldSize, 1,true, true);
 			//TODO use object that doesn't require scaling
 		}
 	}
 
 	function drawPlane(matrix){
-		drawPlayerGradlightObject(matrix, su57Buffers, su57texture, su57texture2, 0.002, -1,false, true);
+		drawPlayerGradlightObject(matrix, su57Buffers, su57texture, su57texture2, 0.002/wSettings.worldInfo.worldSize, -1,false, true);
 	}
 
 	function drawConvexHull(matrix){
 		//TODO appropriate shader
-		drawPlayerGradlightObject(matrix, chullBuffers, wedgeShipTexture, wedgeShipTexture2, 0.0005, -1);
+		drawPlayerGradlightObject(matrix, chullBuffers, wedgeShipTexture, wedgeShipTexture2, 0.0005/wSettings.worldInfo.worldSize, -1);
 	}
 
 	function drawPlayerGradlightObject(matrix, buffers, tex, tex2, modelScale, lightBodge, includeGuns, rotateBodge){
@@ -3322,16 +3322,16 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		shaderSetup(activeShaderProgram, texture);
 
 		for (var ii=0;ii<portals.length;ii++){
-			drawPortalFrame(portals[ii].shared, activeShaderProgram, portalMatArr[ii], portalInCameraArr[ii]);
+			drawPortalFrame(portals[ii], activeShaderProgram, portalMatArr[ii], portalInCameraArr[ii]);
 		}
 	}
 
-	function drawPortalFrame(sharedInfo, shaderProg, portalMat, portalInCamera){
+	function drawPortalFrame(portalInfo, shaderProg, portalMat, portalInCamera){
 
-		var frameScale = sharedInfo.radius;
+		var frameScale = portalInfo.radius/portalInfo.worldSize;
 		gl.uniform3f(shaderProg.uniforms.uModelScale, frameScale,frameScale,frameScale);
 
-		uniform4fvSetter.setIfDifferent(shaderProg, "uColor", sharedInfo.color);
+		uniform4fvSetter.setIfDifferent(shaderProg, "uColor", portalInfo.shared.color);
 
 		mat4.set(portalInCamera, mvMatrix);mat4.set(portalMat, mMatrix);
 		drawObjectFromBuffers2(cubeFrameSubdivBuffers, shaderProg);
@@ -3769,7 +3769,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 		shaderSetup(activeShaderProgram);
 		
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", new Float32Array([0.2,1,1.5,1]));
-		modelScale = sshipModelScale;
+		modelScale = sshipModelScale/wSettings.worldInfo.worldSize;
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale*0.8,modelScale,modelScale);
 				
 		//elsewhere using drawSsshipRotatedMat, but to avoid possible side effects, just make another mat.
@@ -3798,7 +3798,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 		shaderSetup(activeShaderProgram);
 		
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", new Float32Array([0.2,1,1.5,1]));
-		modelScale =  0.0005;
+		modelScale =  0.0005/wSettings.worldInfo.worldSize;
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, -modelScale,modelScale,modelScale);
 				
 		//elsewhere using drawSsshipRotatedMat, but to avoid possible side effects, just make another mat.
