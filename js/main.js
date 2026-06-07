@@ -5210,7 +5210,7 @@ var iterateMechanics = (function iterateMechanics(){
 
 				var portalRelativeRad = thisPortal.radius / thisPortal.worldSize;
 
-				var effectiveRange = Math.tan(Math.atan(portalRelativeRad)+Math.atan(0.003));	//TODO reformulate more efficiently
+				var effectiveRange = Math.tan(Math.atan(portalRelativeRad)+Math.atan(0.0015)/thisPortal.worldSize);	//TODO reformulate more efficiently
 				if (checkWithinRangeOfGivenPortal(playerCamera, effectiveRange, thisPortal)){
 					
 					//calculate in frame of portal
