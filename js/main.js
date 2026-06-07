@@ -3831,10 +3831,13 @@ var explosions ={};		//todo how to contain this? eg should constructor be eg exp
 var Explosion=function(){
 	var nextExplId = 0;
 	return function(objcontainer, size, color, rotateWithDuocylinder, hasSound){
+
+		var worldInfo = guiSettingsForWorld[objcontainer.world];
+
 		this.matrix = matPool.create();
 		mat4.set(objcontainer.matrix, this.matrix);
 		this.world= objcontainer.world;
-		this.size = size;
+		this.size = size / worldInfo.worldSize;
 		this.color = color;
 		this.life=100;
 		this.soundSphereRad = 0;
@@ -4897,7 +4900,9 @@ var iterateMechanics = (function iterateMechanics(){
 		var bulletPosDCF4V = vec4.create();
 		var bulletPosNewDCF4V = vec4.create();
 		
-		var duoCylinderAngVelConst = guiSettingsForWorld[playerContainer.world].spinRate;
+		var worldInfo = guiSettingsForWorld[playerContainer.world];
+
+		var duoCylinderAngVelConst = worldInfo.spinRate;
 		
 		timeTracker+=timeElapsed;
 		var numSteps = Math.floor(timeTracker/timeStep);
@@ -5038,7 +5043,11 @@ var iterateMechanics = (function iterateMechanics(){
 						}
 					}
 
-					checkBulletCollision(b, timeStep*moveSpeed);
+					//NOTE if stored bullet vel relative to current world, or current world size on bullet, wouldn't need to look up world size.
+					// or could store bullets per world, iterate all bullets in each world...
+					var worldSize = guiSettingsForWorld[b.world].worldSize
+
+					checkBulletCollision(b, timeStep*moveSpeed/worldSize);
 					portalTestMultiPortal(b, 0);
 				}
 			}
@@ -5158,6 +5167,7 @@ var iterateMechanics = (function iterateMechanics(){
 			var explosionParticles = explosionParticleArrs[bullet.world];
 
 			var explosionSize = bullet.isBig? 0.0001:0.00002;
+
 
 			if (!moveWithDuocylinder){
 				new Explosion(bullet, explosionSize, [1,0.5,0.25], false, true);
