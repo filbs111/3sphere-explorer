@@ -1573,7 +1573,7 @@ function drawRegularScene(frameTime){
 		gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
 		bind2dTextureIfRequired(fontTexture);
 
-		drawText("SPECIAL WEAPON: " + specialWeapsData[selectedSpecialWeapId].name, -0.5, 1.5, 1, 0.4, colorArrs.red);
+		drawText("SPECIAL WEAPON: " + specialWeapsData[selectedSpecialWeapId].name, -1, 2, 1, 0.4, colorArrs.red);
 
 		//number targets
 		for (var tt=0;tt<targets.length;tt++){
@@ -1587,7 +1587,8 @@ function drawRegularScene(frameTime){
 
 		if (guiParams.hud.textWorldNum){
 			//drawText("World " + playerContainer.world, 0.6, 0.15, 1); //(below) centre of screen, suitable if flash up on cross portal
-			drawText("CURRENT WORLD: " + playerContainer.world, 2.5, 1.5, 1, 0.4); //bottom left. note scales with FOV!
+			drawText("CURRENT WORLD: " + playerContainer.world, 3, 2, 1, 0.4); //bottom left. note scales with FOV!
+			drawText("SIZE: " + guiSettingsForWorld[playerContainer.world].worldSize, 3, 2.1, 1, 0.2); //bottom left. note scales with FOV!
 
 			portalTexts.forEach(pp=>{
 				drawText(pp.text, pp.pos[0], pp.pos[1], pp.pos[2], 0.4);

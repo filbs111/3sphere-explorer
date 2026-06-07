@@ -68,7 +68,7 @@ var guiParams={
 	display:{
 		cameraType:"far 3rd person",
 		cameraAttachedTo:"player vehicle",
-		cameraZoom:4,		//cameraZoom: 5.4 , uVarOne: 0.09 good for plane. 160 deg hFOV allegedly
+		cameraZoom:3.5,		//cameraZoom: 5.4 , uVarOne: 0.09 good for plane. 160 deg hFOV allegedly
 		uVarOne:-0.1,
 		cameraMoveSide:0,
 		vFOV:"",
