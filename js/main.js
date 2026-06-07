@@ -4099,7 +4099,8 @@ function setupShaderAtmos(shaderProg, worldDrawingNow){	//TODO generalise more s
 	if (shaderProg.uniforms.uAtmosThickness){	//todo do less often (at least query ui less often)
 		//make atmos thickness constant at "zero" duocylinder height. thickness here is uAtmosContrast*uAtmosThickness,
 		var thicknessValForShader = worldSettings.atmosThickness*Math.pow(2.71,-0.5*worldSettings.atmosContrast);
-	
+		thicknessValForShader*=worldSettings.worldSize;
+
 		if (shaderProg.usesVecAtmosThickness){
 			gl.uniform3fv(shaderProg.uniforms.uAtmosThickness, atmosThicknessMultiplier.map(elem=>elem*thicknessValForShader));
 		}else{
