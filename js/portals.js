@@ -8,6 +8,8 @@ var portalsForWorld = (()=>{
 
     function addPortalPair(worldOne, worldTwo, trueRadius, color){
 
+        trueRadius*=0.3;    //bodge to make all portals smaller
+
         var matOne = newIdMatWithQuats();
         var matTwo = newIdMatWithQuats();
         var shared = {trueRadius, color};
