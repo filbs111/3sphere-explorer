@@ -5735,8 +5735,9 @@ var randomNormalised3vec = (function generate3vecRandomiser(){
 
 function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo, portalNum){
 
-	var otherPortalSide = guiParams.reflector.isPortal ? portalsForWorld[offsetCameraContainer.world][portalNum].otherps : 
-	portalsForWorld[offsetCameraContainer.world][portalNum];
+	var thisPortalSide = portalsForWorld[offsetCameraContainer.world][portalNum];
+
+	var otherPortalSide = guiParams.reflector.isPortal ? thisPortalSide.otherps : thisPortalSide;
 
 	//determine if portal is sufficiently far away.
 	//set criteria to size of portal on screen. seems half sensible.
@@ -5744,9 +5745,7 @@ function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo
 	// as rotate view (for same distance from camera, z-distance is smaller, so appears larger, away from centre.
 	// fisheye view reduces this effect, but is not accounted for here. TODO if using fisheye, take into account here.
 
-
-	var portalRelativeRad = otherPortalSide.radius / otherPortalSide.worldSize;	//TODO which portal side to use?
-
+	var portalRelativeRad = thisPortalSide.radius / thisPortalSide.worldSize;
 
 	var invSizeInScreen = -portalInCamera[14]/portalRelativeRad;
 		//approx, works for distant objects. note using inverse since portalInCamera[14] could be 0
@@ -5759,8 +5758,6 @@ function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo
 	//use total distance to decide whether to use prerendered cubemap approximation.
 	//NOTE could just determine a threshold for portalInCamera[15], get isOnOtherSideOfWorld for free
 	var totalXYZSq = 1- portalInCamera[15]*portalInCamera[15];
-
-	var portalRelativeRad = otherPortalSide.radius/otherPortalSide.worldSize;
 
 	var isFarEnoughAway = totalXYZSq > portalRelativeRad*portalRelativeRad * 36;	//TODO use radius relative to world size?
 
