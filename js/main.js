@@ -730,15 +730,9 @@ function calcReflectionInfoNew(toReflect,resultsObj, trueReflectorRad, worldSize
 	var correctionFactor = -polarity * Math.asin(reflectedPosOnIntermediatePlane/worldSizeViewTo)/mag;
 	var cubeViewShiftAdjusted = cubeViewShift.map(function(val){return val*correctionFactor});
 
-	//var correctionFactor = -polarity * reflectedPosOnIntermediatePlaneForPortalSizeOne/mag;
-	//var cubeViewShiftAdjusted = cubeViewShift.map(function(val){return val*correctionFactor });
-
-
-	var cubeViewShiftAdjustedMinus = cubeViewShiftAdjusted.map(val => -polarity*val );
-
-
-	//cubeViewShiftAdjusted = 0;
-	//cubeViewShiftAdjustedMinus = 0;	//mess up, see what breaks
+	//cubeViewShiftAdjustedMinus used for older portal drawing methods eg vertex projection.
+	var correctionFactor2 = Math.asin(reflectedPosOnIntermediatePlane/worldSizeViewFrom)/mag;
+	var cubeViewShiftAdjustedMinus = cubeViewShift.map(function(val){return val*correctionFactor2});
 
 	resultsObj.polarity=polarity;	//??
 	
