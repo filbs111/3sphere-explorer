@@ -2044,7 +2044,7 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 				var portalRad = relevantPortalSide.radius / relevantPortalSide.worldSize;
 				if (checkWithinRangeOfGivenPortal(sshipMatrix, Math.tan(portalRad +0.1), relevantPortalSide)){	//TODO correct this
 					mat4.set(sshipMatrix, portaledMatrix);
-					moveMatrixThruPortal(portaledMatrix, portalRad, 1, relevantPortalSide);
+					moveMatrixThruPortal(portaledMatrix, 1, relevantPortalSide);
 					returnObj.sshipDrawMatrices.push(portaledMatrix);
 				}
 			}
@@ -3586,7 +3586,7 @@ function drawPortalsForMultipleCameraViews(isCubemapView, wSettings, portals, po
 				//TODO make a general function to copy mats!
 
 				//TODO is this wanted?
-			moveMatrixThruPortal(matrixToPortal, reflInfo.rad, 1, portalsForWorld[worldA][0], true);
+			moveMatrixThruPortal(matrixToPortal, 1, portalsForWorld[worldA][0], true);
 				//skips start/end rotations. appears to fix rendering. TODO check for side effects
 				//^^  bug? doesn't account for 2nd portal
 
@@ -5287,7 +5287,7 @@ function portalTestMultiPortal(obj, amount){
 }
 function portalTestForGivenPortal(obj, adjustedRad, portal){
 	if (checkWithinRangeOfGivenPortal(obj.matrix, adjustedRad, portal)){
-		moveMatrixThruPortal(obj.matrix, adjustedRad, 1.00000001, portal);
+		moveMatrixThruPortal(obj.matrix, 1.00000001, portal);
 		obj.world=portal.otherps.world;
 		return true;
 	}
@@ -5305,7 +5305,7 @@ function checkWithinRangeOfGivenPortal(objMat, rad, portal){
 //remainder of movement from small world, causing step within portal, resulting in movement into big world, will 
 //result in moving more than should. 
 //can see when drawing copy of player ship within portal as crossing portal.
-function moveMatrixThruPortal(matrix, rad, hackMultiplier, portal, skipStartEndRotations){
+function moveMatrixThruPortal(matrix, hackMultiplier, portal, skipStartEndRotations){
 	//TODO just work with qpairs (and save on updating matrix)
 
 	if (!skipStartEndRotations){
