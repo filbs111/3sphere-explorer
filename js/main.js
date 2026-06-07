@@ -693,6 +693,9 @@ function calcReflectionInfoNew(toReflect,resultsObj, trueReflectorRad, worldSize
 
 	//TODO write this up, simplify calculation. precalculate?
 
+	if (!guiParams.reflector.isPortal){
+		worldSizeViewTo = worldSizeViewFrom;
+	}
 
 	//use player position directly. expect to behave like transparent
 	var cubeViewShift = [toReflect[12],toReflect[13],toReflect[14]];	
