@@ -10,47 +10,59 @@ function loadBuffersFromObj5File(bufferObj, location, cb, expectedVertLength=3){
     loadBuffersFromFile(bufferObj, location, cb, true, expectedVertLength, loadBuffersFromObj2Or3Or5FileResponse);
 }
 
-function loadConvexHullDataFromObjFile(chullObj, scale, location, expectedVertLength=3){
-    loadBuffersFromFile(chullObj, location, x=>x , false, expectedVertLength, (chullObj, location, response, cb, expectedVertLength, indexDataIsDiffs) => {
+//TODO world size dependence (or adjust scale )
+// NOTE spaceship might require multiple 4d collision data as is - TODO just use 3d collision data for objects that can cross portal? create for finite set of world sizes?
+function loadConvexHullDataFromObjFile(playerConvexHullObjectsForWorldSizes, scale, location, expectedVertLength=3){
+
+    var dummyChullObj = {};
+
+    loadBuffersFromFile(dummyChullObj, location, x=>x , false, expectedVertLength, (dummyChullObj, location, response, cb, expectedVertLength, indexDataIsDiffs) => {
         //load convex hull data.
         var sd = sourceDataFromObjFileResponse(response, expectedVertLength);
 
-        var in_verts = arrayToGroups(sd.vertices, sd.vertices_len).map(xx=>xx.slice(0,3)); //AFAIK slice is redundant because vertices_len = 3
-        var verts = in_verts.map(xx=>xx.map(cc=>cc*scale)).map(xx=>{
-            xx.push(1);
-            return normalise4(xx)});   //unit 4-vec vertices
+        [0.25,0.5,0.75,1].forEach(worldSize => {
 
-        var in_faces = arrayToGroups(sd.indices, 3);
+            chullObjForThisScale = {};
+            var overallScale=scale/worldSize;
 
-        var faces = [];
-        var edgeGcs = [];
-        var edgeVertIndices = [];   //only used to draw debug points at ends of a selected edge.
-        in_faces.forEach(ff => {
-            var facePoints = ff.map(ii=>verts[ii]);
-            faces.push(normalise4(findOrthoVecByDiags(facePoints)));
-            //edge great circles that are perpendicular to face, edge normal, and a point on edge. used for convex hull edge-edge separating axis tests (SAT)
-		    //stored as 2 points on great circle PI/2 apart (quarter way around world along edge)
-            for (ee=0;ee<3;ee++){
-                var index1 = ee;
-                var index2 = (ee+1)%3;
-                if (ff[index1]>ff[index2]){   // to avoid edge duplicates. assumes closed mesh without edge splits.
-                    var point1 = facePoints[index1];
-                    var point2 = facePoints[index2];
-                    edgeGcs.push([vectorSum4d(point1, point2), vectorDifference4d(point1, point2)].map(xx=>normalise4(xx)));
-                        //NOTE could just point to one of existing verts and only introduce single new point here, but above formulation more readable.
+            var in_verts = arrayToGroups(sd.vertices, sd.vertices_len).map(xx=>xx.slice(0,3)); //AFAIK slice is redundant because vertices_len = 3
+            var verts = in_verts.map(xx=>xx.map(cc=>cc*overallScale)).map(xx=>{
+                xx.push(1);
+                return normalise4(xx)});   //unit 4-vec vertices
 
-                    edgeVertIndices.push([ff[index1], ff[index2]]);
+            var in_faces = arrayToGroups(sd.indices, 3);
+
+            var faces = [];
+            var edgeGcs = [];
+            var edgeVertIndices = [];   //only used to draw debug points at ends of a selected edge.
+            in_faces.forEach(ff => {
+                var facePoints = ff.map(ii=>verts[ii]);
+                faces.push(normalise4(findOrthoVecByDiags(facePoints)));
+                //edge great circles that are perpendicular to face, edge normal, and a point on edge. used for convex hull edge-edge separating axis tests (SAT)
+                //stored as 2 points on great circle PI/2 apart (quarter way around world along edge)
+                for (ee=0;ee<3;ee++){
+                    var index1 = ee;
+                    var index2 = (ee+1)%3;
+                    if (ff[index1]>ff[index2]){   // to avoid edge duplicates. assumes closed mesh without edge splits.
+                        var point1 = facePoints[index1];
+                        var point2 = facePoints[index2];
+                        edgeGcs.push([vectorSum4d(point1, point2), vectorDifference4d(point1, point2)].map(xx=>normalise4(xx)));
+                            //NOTE could just point to one of existing verts and only introduce single new point here, but above formulation more readable.
+
+                        edgeVertIndices.push([ff[index1], ff[index2]]);
+                    }
                 }
-            }
+            });
+
+            chullObjForThisScale.verts=verts;
+            chullObjForThisScale.faces=faces;
+            chullObjForThisScale.edgeGcs=edgeGcs;
+            chullObjForThisScale.edgeVertIndices=edgeVertIndices;
+            chullObjForThisScale.faceIndices=in_faces;  //only used for debug draw corners of selected face.
+            chullObjForThisScale.isLoaded = true;
+
+            playerConvexHullObjectsForWorldSizes[worldSize]=chullObjForThisScale;
         });
-
-        chullObj.verts=verts;
-        chullObj.faces=faces;
-        chullObj.edgeGcs=edgeGcs;
-        chullObj.edgeVertIndices=edgeVertIndices;
-        chullObj.faceIndices=in_faces;  //only used for debug draw corners of selected face.
-
-        chullObj.isLoaded = true;
 
         console.log({mssg:"convex hull data loaded from file " + location + " for scale " + scale, sd, chullObj});
     });

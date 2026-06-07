@@ -967,6 +967,9 @@ var playerMechanics = (() => {
 
             var extraInfo;
 
+            var worldSize = guiSettingsForWorld[playerContainer.world].worldSize;
+            var chullObj = playerConvexHullObjectsForWorldSizes[worldSize];
+
             possibleObjects.forEach(objInfo => {
                 
                 var transposedObjMat = objInfo.transposedMat;
