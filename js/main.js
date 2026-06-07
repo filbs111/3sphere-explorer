@@ -4943,6 +4943,9 @@ var iterateMechanics = (function iterateMechanics(){
 				var distance = distBetween4mats(tmpRelativeMat, identMat);
 				//var distance = Math.hypot(tmpRelativeMat[12],tmpRelativeMat[13],tmpRelativeMat[14],tmpRelativeMat[15]-1);	//equivalent to above TODO check perf
 				
+				var worldSize = guiSettingsForWorld[singleExplosion.world].worldSize;
+				distance*=worldSize;
+
 				var soundSize = 0.03;	//closest distance can get to sound, where volume is 1
 				var vol = soundSize/Math.hypot(distance, soundSize);
 				var pan = Math.tanh(tmpRelativeMat[12]/Math.hypot(soundSize,tmpRelativeMat[13],tmpRelativeMat[14]));	//tanh(left/hypot(size,down,forwards)). tanh smoothly limits to +/- 1
