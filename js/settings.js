@@ -18,8 +18,8 @@ function singleWorldSettings(worldSize, fogColor, atmosThickness, duocylinderMod
 
 var guiParams={
 	worlds:[
-		singleWorldSettings(1,'#2f9a16', 0.2, "procTerrain", false, 0),
-		singleWorldSettings(1,'#7496a0', 0.2, "greebleTerrain", false, 0),
+		singleWorldSettings(0.5,'#2f9a16', 0.2, "procTerrain", false, 0),
+		singleWorldSettings(2,'#7496a0', 0.2, "greebleTerrain", false, 0),
 		singleWorldSettings(1,'#bbbbbb', 0.2, "none", true, -0.0022),
 		singleWorldSettings(1,'#f0cd62', 0.2, "procTerrain", false, 0),
 		singleWorldSettings(1,'#444444', 0.2, "none", false, 0),	//4

@@ -5314,7 +5314,21 @@ function moveMatrixThruPortal(matrix, rad, hackMultiplier, portal, skipStartEndR
 
 	var multiplier = Math.PI/mag;
 
-	var totalMoveToOtherSide = Math.atan(portal.radius/portal.worldSize) + Math.atan(portal.otherps.radius/portal.otherps.worldSize);
+
+	var entrancePortalAngularRad = Math.atan(portal.radius/portal.worldSize);
+	var exitPortalAngularRad = Math.atan(portal.otherps.radius/portal.otherps.worldSize);
+
+	var moveFromPortalEdgeToEdgeToOtherSide = entrancePortalAngularRad + exitPortalAngularRad;
+
+	//corrective additional move that will matter when worlds on each side of portal are different sizes.
+	//if worlds same size, distance inside portal when enter will be distance outside portal on exit.
+	//otherwise wish to make some correction. NOTE this maybe some bodgy correction - really moveMatrixThruPortal even for same size worlds
+	// is approximate, assumes close to portal edge anyway.
+	var distanceInsidePortal = entrancePortalAngularRad - Math.asin(Math.sqrt(magsq));
+	var distanceOutsidePortalAfterMove = distanceInsidePortal* portal.worldSize/portal.otherps.worldSize;
+	var correctiveAdditionalMove = distanceOutsidePortalAfterMove - distanceInsidePortal;
+
+	var totalMoveToOtherSide = moveFromPortalEdgeToEdgeToOtherSide + correctiveAdditionalMove;
 
 	var multiplier2 = -hackMultiplier*totalMoveToOtherSide/mag;
 	var rotate = new Array(3);
