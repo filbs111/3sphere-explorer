@@ -576,7 +576,8 @@ var playerMechanics = (() => {
 
             function getFastPossibles(playerPosInRotatedFrame){
 
-                var paddedRad = settings.playerBallRadPadded;
+                var worldSize = guiSettingsForWorld[playerContainer.world].worldSize;
+                var paddedRad = settings.playerBallRadPadded / worldSize;
                     //add padding so detect distance to object before collide (rate of penetration used for damping)
 
                 var playerAABB = aabb4DForSphere(playerPosInRotatedFrame, paddedRad);
@@ -680,7 +681,10 @@ var playerMechanics = (() => {
             var foundClosestPointTriangleObjPreviously2 = foundClosestPointTriangleObj2;
             foundClosestPointTriangleObj2 = processTrianglePossibles(resultMat, spunObjInfoArr, 0.05, (posInObjFrame, objScale, rad, objInfo, lowestAcceptedMultiplier) => {
                 
-                var queryAABB = [-1,1].map(ss=>ss*settings.playerBallRadPadded).map(offs => posInObjFrame.map(xx => xx+offs));
+                var worldSize = wSettings.worldSize;
+                var paddedRad = settings.playerBallRadPadded / worldSize;
+
+                var queryAABB = [-1,1].map(ss=>ss*paddedRad).map(offs => posInObjFrame.map(xx => xx+offs));
                     // could use aabb4DForSphere() but maybe too slow.
 
                 var nearby = collisionTestBvh4d(queryAABB, objInfo.collisionTriangleData);
@@ -894,8 +898,10 @@ var playerMechanics = (() => {
                 var playerPosVec = vec4.create(playerPos);
                 mat4.multiplyVec4(transposedObjMat, playerPosVec, playerPosVec);
                 
-                //here to work properly for 4d, the closestpoint func should be scale aware.
-                var closestPointResult = closestPointFunc(playerPosVec, objScale, settings.playerBallRadPadded, objInfo, greatestAcceptedDistance);
+                var worldSize = guiSettingsForWorld[playerContainer.world].worldSize;
+                var paddedRad = settings.playerBallRadPadded / worldSize;
+                    //here to work properly for 4d, the closestpoint func should be scale aware.
+                var closestPointResult = closestPointFunc(playerPosVec, objScale, paddedRad, objInfo, greatestAcceptedDistance);
 
                 if (closestPointResult){
                     var closestPointInObjectFrame = closestPointResult.closestPoint;
@@ -988,7 +994,9 @@ var playerMechanics = (() => {
 
                 //copied from terrain check
                 //TODO use rad of chull bounding sphere
-                var queryAABB = [-1,1].map(ss=>ss*settings.playerBallRadPadded).map(offs => posInObjFrame.map(xx => xx+offs));
+
+                var paddedRad = settings.playerBallRadPadded / worldSize;
+                var queryAABB = [-1,1].map(ss=>ss*paddedRad).map(offs => posInObjFrame.map(xx => xx+offs));
                 var nearby = collisionTestBvh4d(queryAABB, objInfo.collisionTriangleData);                
                 if (nearby.length<1){return false;} 
 
