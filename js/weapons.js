@@ -117,7 +117,9 @@ function spreadOctagon(amount){
 function launchLargeProjectile(weaponDef){
 	var {forwardOffset, getLaunchVel, numProjectiles, bigProjectiles, damage, noMarker, markerText, hasTrail, forwardAcceleration, towardsTargetAcceleration} = weaponDef;
 	var projectileMat = mat4.create(sshipMatrix);
-	xyzmove4mat(projectileMat,[0,0,forwardOffset]);
+
+	var worldSize = guiSettingsForWorld[playerContainer.world].worldSize;
+	xyzmove4mat(projectileMat,[0,0,forwardOffset/worldSize]);
 
 	numProjectiles??=1;
 	bigProjectiles??=true;
