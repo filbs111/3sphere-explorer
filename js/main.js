@@ -1428,7 +1428,7 @@ function drawRegularScene(frameTime){
 		//drawTargetDecal(0.004, [1.0, 1.0, 0.0, 0.5], [0,0,0.01]);	//camera near plane. todo render with transparency
 		if (guiParams["targeting"]!="off"){
 			var shiftAmount = 1/muzzleVel;	//shift according to player velocity. 0.1 could be 1, but 
-			var scalescalar = 0.003/(1+shiftAmount*playerVelVec[2]);
+			var scalescalar = 0.0025/(1+shiftAmount*playerVelVec[2]);
 			//TODO correct this for fisheye
 			// (size of outer ring actually means something. draw centre and outer ring separately?)
 			drawTargetDecal([scalescalar,scalescalar,0], colorArrs.hudYellow, adjustedDirectionForFisheye(
@@ -1848,9 +1848,9 @@ function updateGunTargeting(matrix){
 	var modelScale = sshipModelScale / worldSize;
 	var matrixForTargeting = matrix;
 	
-	var gunHoriz = 18*modelScale;
-	var gunVert = 8*modelScale;
-	var gunFront = 5*modelScale;
+	var gunHoriz = 5*modelScale;
+	var gunVert = 5*modelScale;
+	var gunFront = 2*modelScale;
 	
 	//default (no targeting) - guns unrotated, point straight ahead.
 	rotvec = [0,0,0];
@@ -3744,19 +3744,22 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 	
 	//muzzle flash? 
 	gl.uniform3f(transpShadProg.uniforms.uEmitColor, 1, 0.5, 0.25);
+	
+	var wSize = wSettings.worldInfo.worldSize;
+	var muzFlashMove = [0,0,0.0025].map(x=>x/wSize);
+	var muzFlashStartSize = 0.0025/wSize;
 	for (var gg in gunMatrices){
-		//if (gg>0) continue;
-		var mfRad = 0.005;
+		var mfRad = muzFlashStartSize;
 		var flashAmount = muzzleFlashAmounts[gg];
 		gl.uniform1f(transpShadProg.uniforms.uOpacity, flashAmount);
 		mat4.set(invertedWorldCamera, mvMatrix);
 		mat4.multiply(mvMatrix,gunMatrices[gg]);
-		xyzmove4mat(mvMatrix,[0,0,0.005]);
+		xyzmove4mat(mvMatrix, muzFlashMove);
 
 		for (var xx=0;xx<3;xx++){	//nested spheres
 			gl.uniform3f(transpShadProg.uniforms.uModelScale, mfRad/5,mfRad/5,mfRad);
 			drawObjectFromPreppedBuffers(sphereBuffers, transpShadProg);
-			mfRad-=.0005;
+			mfRad*=.9;
 		}
 	}
 
