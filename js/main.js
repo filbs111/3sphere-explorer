@@ -1395,7 +1395,8 @@ function drawRegularScene(frameTime){
 		gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);	
 
 		var standardDecalScale = [0.002,0.002,0];
-		
+		var smallerDecalScale = standardDecalScale.map(x=>x*0.66);
+
 		//direction of flight
 		bind2dTextureIfRequired(hudTexturePlus);		//todo texture atlas for all hud
 		var airSpdVec = playerVelVec.map((val, idx) => val-savedSpinVelPlayerCoordsForHud[idx]);	//speed relative to local air speed due to duocylinder rotation.
@@ -1427,7 +1428,7 @@ function drawRegularScene(frameTime){
 		//drawTargetDecal(0.004, [1.0, 1.0, 0.0, 0.5], [0,0,0.01]);	//camera near plane. todo render with transparency
 		if (guiParams["targeting"]!="off"){
 			var shiftAmount = 1/muzzleVel;	//shift according to player velocity. 0.1 could be 1, but 
-			var scalescalar = 0.0037/(1+shiftAmount*playerVelVec[2]);
+			var scalescalar = 0.003/(1+shiftAmount*playerVelVec[2]);
 			//TODO correct this for fisheye
 			// (size of outer ring actually means something. draw centre and outer ring separately?)
 			drawTargetDecal([scalescalar,scalescalar,0], colorArrs.hudYellow, adjustedDirectionForFisheye(
@@ -1452,8 +1453,8 @@ function drawRegularScene(frameTime){
 			if (gunFireDirectionVec[2] > 0.1){	//??
 				var fireDirectionVecAdjusted = gunFireDirectionVec.map((val, idx) => val-savedSpinVelPlayerCoordsForHud[idx]);
 				var reversed = fireDirectionVecAdjusted.map(x=>-x);	//needs to do this for fisheye correction to work consistent with other hud icons
-				drawTargetDecal(standardDecalScale, colorArrs.hudYellow, adjustedDirectionForFisheye(reversed, cameraTilt), 0.1);	//todo check whether this colour already set
-				drawTargetDecal(standardDecalScale, colorArrs.hudYellow, adjustedDirectionForFisheye(reversed, cameraTilt), -0.1);
+				drawTargetDecal(smallerDecalScale, colorArrs.hudYellow, adjustedDirectionForFisheye(reversed, cameraTilt), 0.1);	//todo check whether this colour already set
+				drawTargetDecal(smallerDecalScale, colorArrs.hudYellow, adjustedDirectionForFisheye(reversed, cameraTilt), -0.1);
 			}
 		}
 

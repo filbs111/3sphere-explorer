@@ -384,7 +384,7 @@ function getTargetingSolution(matrixForTargeting, targetMatrix, logStuff){
 }
 
 function capGunPointing(pointingDir){
-	var gunAngRangeRad = 0.35;
+	var gunAngRangeRad = 0.15;
 
 	//scale such that z=1 - then can cap angle, ensures guns point forward. (TODO handle case that z=0)
 	pointingDir={x:-pointingDir.x/pointingDir.z, 
