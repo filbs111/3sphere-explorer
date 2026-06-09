@@ -1843,12 +1843,13 @@ function setQuadViewProjMatrices(quadViewMatrices, vFov, ratio){
 var sshipWorld=0;	//used for player light
 
 function updateGunTargeting(matrix){
-	var modelScale = sshipModelScale;
+	var worldSize = guiSettingsForWorld[playerContainer.world].worldSize;
+	var modelScale = sshipModelScale / worldSize;
 	var matrixForTargeting = matrix;
 	
-	var gunHoriz = 18*sshipModelScale;
-	var gunVert = 8*sshipModelScale;
-	var gunFront = 5*sshipModelScale;
+	var gunHoriz = 18*modelScale;
+	var gunVert = 8*modelScale;
+	var gunFront = 5*modelScale;
 	
 	//default (no targeting) - guns unrotated, point straight ahead.
 	rotvec = [0,0,0];
