@@ -976,6 +976,11 @@ var playerMechanics = (() => {
             var worldSize = guiSettingsForWorld[playerContainer.world].worldSize;
             var chullObj = playerConvexHullObjectsForWorldSizes[worldSize];
 
+            if (chullObj == null){
+                console.error("failed to look up playerConvexHullObjectsForWorldSizes for world size "+worldSize);
+                return; //NOTE returning nothing will break things, but should avoid this by ensuring have playerConvexHullObjectsForWorldSizes for all used world sizes
+            }
+
             possibleObjects.forEach(objInfo => {
                 
                 var transposedObjMat = objInfo.transposedMat;
