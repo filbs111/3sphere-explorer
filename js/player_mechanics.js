@@ -625,8 +625,9 @@ var playerMechanics = (() => {
                 //if volume checked has some padding so can detect closest point before collide with object this shouldn't 
                 //be necessary. appears to be necessary for lucy collisions! ??
 
+                var worldSize = guiSettingsForWorld[playerContainer.world].worldSize;
                 var penChange = currentTriangleObjectPlayerPen - lastTriangleObjPen;
-                var reactionForce = Math.max(100*currentTriangleObjectPlayerPen + 1000*penChange, 0);
+                var reactionForce = Math.max(100*currentTriangleObjectPlayerPen + 1000*penChange, 0) * worldSize;
                 
                 if (currentTriangleObjectPlayerPen > 0 && reactionForce> 0){
 
@@ -737,8 +738,9 @@ var playerMechanics = (() => {
                 //if volume checked has some padding so can detect closest point before collide with object this shouldn't 
                 //be necessary. appears to be necessary for lucy collisions! ??
 
+                var worldSize = guiSettingsForWorld[playerContainer.world].worldSize;
                 var penChange = currentTriangleObjectPlayerPen2 - lastTriangleObjPen2;
-                var reactionForce = Math.max(100*currentTriangleObjectPlayerPen2 + 1000*penChange, 0);
+                var reactionForce = Math.max(100*currentTriangleObjectPlayerPen2 + 1000*penChange, 0) * worldSize;
                 
                 if (currentTriangleObjectPlayerPen2 > 0 && reactionForce> 0){
 
@@ -1352,7 +1354,11 @@ var playerMechanics = (() => {
 
                 if (greatestPenetrationFound>0 && lastChullPenetration != -Infinity){  //TODO better logic here! 
                     var penChange = greatestPenetrationFound - lastChullPenetration;
-                    var reactionForce = Math.max(200*greatestPenetrationFound + 5000*penChange, 0);
+
+                    //since pentration is relative to world and player vel is relative to scaled player, should adjust force. 
+
+                    var worldSize = guiSettingsForWorld[playerContainer.world].worldSize;
+                    var reactionForce = Math.max(200*greatestPenetrationFound + 5000*penChange, 0) * worldSize;
 
                     //apply force along normal. convert 4vec to 3vec. not sure what is correct here. code copied from elsewhere.
                     var relativePosC = Array.from(normInPlayerFrame);   //TODO is Array from needed?
@@ -1364,7 +1370,6 @@ var playerMechanics = (() => {
                         playerVelVec[cc]+=forcePlayerFrame[cc];
                     }
 
-
                     //apply torque.
                     //have the reaction normal, the player position, some position force is applied*
                     mat4.set(transposedObjMat, relativeMat);
@@ -1374,7 +1379,6 @@ var playerMechanics = (() => {
                     mat4.multiplyVec4(relativeMat, collisionPointInPlayerFrame, collisionPointInPlayerFrame);
                     var torqueGuess = findOrthoVecByDiags([normInPlayerFrame, collisionPointInPlayerFrame, [0,0,0,1]]);
 
-                    var worldSize = guiSettingsForWorld[playerContainer.world].worldSize;
                     reactionForce*=worldSize;    //scale torque by world size - counters effect of player being larger.
 
                     //NOTE in player frame, can just take 3d x-prod of 3d components of collision point and norm. simpler, expect approx same
