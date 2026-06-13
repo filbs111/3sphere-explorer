@@ -422,10 +422,10 @@ var playerMechanics = (() => {
             rotatePlayer(scalarvectorprod(subTimeStep * rotateSpeed,playerAngVelVec));
 
             //scale movement according to current world size.
-            var moveAmount = subTimeStep * moveSpeed/guiSettingsForWorld[playerContainer.world].worldSize;
+            var moveAmount = subTimeStep * moveSpeed;
 
             var toMovePlayer = scalarvectorprod(moveAmount,playerVelVec);
-            movePlayer(toMovePlayer);
+            movePlayer(toMovePlayer, guiSettingsForWorld[playerContainer.world].worldSize);
 
             var toMoveDustMotes = scalarvectorprod(-moveAmount, savedSpinVelPlayerCoordsForHud);
             scrollDustMotes(toMoveDustMotes);   //this accounts for inear motion (at player position) of spinning duocylinder terrain

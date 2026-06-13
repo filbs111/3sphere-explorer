@@ -2427,6 +2427,8 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
 
 		var scale = dustMotesInfo.scale;
+		scale/= guiSettingsForWorld[worldA].worldSize;
+
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, scale,scale,scale);
 		var instanceScale = dustMotesInfo.instanceScale;
 		gl.uniform3f(activeShaderProgram.uniforms.uInstanceScale, instanceScale,instanceScale,instanceScale);
@@ -5383,9 +5385,10 @@ function moveMatrixThruPortal(matrix, hackMultiplier, portal, skipStartEndRotati
 	}
 }
 
-function movePlayer(vec){
-	xyzmove4mat(playerCamera, vec);
-	scrollDustMotes(vec);
+function movePlayer(toMoveRelativeToPlayer, worldSize){
+	var toMovePlayerRelativeToWorld = scalarvectorprod(1/worldSize, toMoveRelativeToPlayer);
+	xyzmove4mat(playerCamera, toMovePlayerRelativeToWorld);
+	scrollDustMotes(toMoveRelativeToPlayer);
 } 
 
 function scrollDustMotes(vec){
