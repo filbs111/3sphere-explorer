@@ -675,6 +675,24 @@ function calcReflectionInfoOld(toReflect,resultsObj, reflectorRad){
 }
 
 
+function recalcAllReflectors(camWorld){
+	portalsForWorld[camWorld].forEach((portal, ii)=>{
+		mat4.set(invertedWorldCamera, portalInCameraCopy);
+		//portalInCamera is calculated in different scope (in drawWorldScene)
+		//TODO reorganise/tidy code, reduce duplication
+		mat4.multiply(portalInCameraCopy, portal.matrix); //TODO is offsetCameraContainer.world updated yet?
+																				//if not may see 1 frame glitch on crossing
+		mat4.transpose(portalInCameraCopy);	//TODO lose this, use indices 3,7,11 instead of 12,13,14 in calcReflectionInfo?
+
+		calcReflectionInfoNew(portalInCameraCopy,reflectorInfoArr[ii], portal.shared.trueRadius, portal.worldSize, portal.otherps.worldSize);
+reflectorInfoArr[ii].portal = portal;
+
+		var portalRelativeRad = portal.radius/portal.worldSize;
+		reflectorInfoArr[ii].rad = guiParams.reflector.draw!="none" ? portalRelativeRad : 0;
+	});
+}
+
+
 function calcReflectionInfo(toReflect,resultsObj, reflectorRad){
 
 	var worldSizeViewFrom = 1;
@@ -946,7 +964,7 @@ function drawRegularScene(frameTime){
 
 	function drawSingleOrQuadViews(viewrect, outputFb){
 
-		recalculateReflectorInfoArray();
+		recalcAllReflectors(offsetCameraContainer.world);
 
 		mat4.set(offsetPlayerCamera, worldCamera);
 
@@ -1049,20 +1067,9 @@ function drawRegularScene(frameTime){
 	mat4.set(worldCamera, invertedWorldCamera);
 	mat4.transpose(invertedWorldCamera);
 	nonCmapCullFunc = generateCullFunc(projMatrix);										//todo only update pmatrix, nonCmapCullFunc if input variables have changed
-		
-
-	var portalInCameraCopies = [portalInCameraCopy, portalInCameraCopy2, portalInCameraCopy3];
-	portalsForWorld[offsetCameraContainer.world].forEach((portal, ii)=>{
-		var portalInCamera = portalInCameraCopies[ii];
-		mat4.set(invertedWorldCamera, portalInCamera);
-		//portalInCamera is calculated in different scope (in drawWorldScene)
-		//TODO reorganise/tidy code, reduce duplication
-		mat4.multiply(portalInCamera, portal.matrix); //TODO is offsetCameraContainer.world updated yet?
-																				//if not may see 1 frame glitch on crossing
-		mat4.transpose(portalInCamera);	//TODO lose this, use indices 3,7,11 instead of 12,13,14 in calcReflectionInfo?
-
-		calcReflectionInfoNew(portalInCamera,reflectorInfoArr[ii], portal.shared.trueRadius, portal.worldSize, portal.otherps.worldSize);
-	});
+	
+	//it's not enough to call this outside...
+	recalcAllReflectors(offsetCameraContainer.world);
 
 	//setup for drawing to screen
 	//gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -1072,8 +1079,6 @@ function drawRegularScene(frameTime){
 	frustumCull = guiParams.display.quadView? 
 		quadviewFrustumCull:
 		nonCmapCullFunc;	//TODO proper culling func for quad view. for now just draw everything
-
-	//mat4.set(cameraForScene, worldCamera);	//set worldCamera to playerCamera
 
 	if (reverseCamera){
 		gl.cullFace(gl.FRONT);	//todo revert for drawing cubemap faces. or : for PIP camera, render to texture, flip when texture to screen (and if fullscreen reversing camera, use same cullface setting when drawing them (if switching cullface is a slow gl call)
@@ -3587,10 +3592,9 @@ function drawPortalsForMultipleCameraViews(isCubemapView, wSettings, portals, po
 			//matrixToPortal.qPair = mvMatrix.qPair.map(x=>x.map(y=>y));
 				//TODO make a general function to copy mats!
 
-				//TODO is this wanted?
-			moveMatrixThruPortal(matrixToPortal, 1, portalsForWorld[worldA][0], true);
+				moveMatrixThruPortal(matrixToPortal, 1, reflInfo.portal ?? portalsForWorld[worldA][0], true);
 				//skips start/end rotations. appears to fix rendering. TODO check for side effects
-				//^^  bug? doesn't account for 2nd portal
+				//NOTE ?? case is just a bodge to have something defined when call this for playerLight through portal - guess broken since moved portal from default position!
 
 		if (guiParams.reflector.test1){	//appears to do ~nothing
 			var matToCopyFrom = reflInfo.shaderMatrix;
@@ -4213,8 +4217,6 @@ var offsetCameraContainer = {matrix:offsetPlayerCamera, world:0}
 
 var worldCamera = mat4.create();
 var portalInCameraCopy = mat4.create();
-var portalInCameraCopy2 = mat4.create();
-var portalInCameraCopy3 = mat4.create();
 
 var cmapPMatrix = mat4.create();
 setProjectionMatrix(cmapPMatrix, -5, 1.0, 0);	//-5 gets reflection to look right. (different for portal?)
