@@ -499,7 +499,8 @@ var playerMechanics = (() => {
                 //see that callback passed into processTrianglePossibles below is quite complex, different to terrain collision code. 
                 // perhaps should pass similar cb to processTrianglePossiblesForConvexHull
 
-                chullCollisionScreenInfo2= ["-","V","E","F","FE"][chullResult.chosenChullCollisionPointType+1] + 
+                chullCollisionScreenInfo2= ["--","V ","E ","F ","FE"][chullResult.chosenChullCollisionPointType+1] + 
+                " Near: " + chullResult.nearbyCount + 
                 " (" + chullResult.possiblyCollidingTrisCount + "/" + chullResult.nearbyCount + ")" + 
                 "(" + chullResult.notCollidingDueToObjTriFaceCheckCount + "," + chullResult.notCollidingDueToObjTriEdgeFaceCheckCount + 
                 "," + chullResult.notCollidingDueToPlayerFaceCheckCount + "," + chullResult.notCollidingDueToEdgeEdgeCount + ")" + 
@@ -669,7 +670,8 @@ var playerMechanics = (() => {
 
             if (guiParams["player model"] == "convexHullTest"){
                 var chullResult = processTrianglePossiblesForConvexHull(spunObjInfoArr);
-                chullCollisionScreenInfo= ["-","V","E","F","FE"][chullResult.chosenChullCollisionPointType+1] + 
+                chullCollisionScreenInfo= ["--","V-","E-","F-","FE"][chullResult.chosenChullCollisionPointType+1] + 
+                " Near: " + chullResult.nearbyCount + 
                 " (" + chullResult.possiblyCollidingTrisCount + "/" + chullResult.nearbyCount + ")" + 
                 "(" + chullResult.notCollidingDueToObjTriFaceCheckCount + "," + chullResult.notCollidingDueToObjTriEdgeFaceCheckCount + 
                 "," + chullResult.notCollidingDueToPlayerFaceCheckCount + "," + chullResult.notCollidingDueToEdgeEdgeCount + ")" + 
