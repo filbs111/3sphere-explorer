@@ -1373,9 +1373,13 @@ var playerMechanics = (() => {
                     var collisionPointInPlayerFrame = vec4.create(collisionPointResult.collisionPointInObjectFrame);
                     mat4.multiplyVec4(relativeMat, collisionPointInPlayerFrame, collisionPointInPlayerFrame);
                     var torqueGuess = findOrthoVecByDiags([normInPlayerFrame, collisionPointInPlayerFrame, [0,0,0,1]]);
+
+                    var worldSize = guiSettingsForWorld[playerContainer.world].worldSize;
+                    reactionForce*=worldSize;    //scale torque by world size - counters effect of player being larger.
+
                     //NOTE in player frame, can just take 3d x-prod of 3d components of collision point and norm. simpler, expect approx same
                     for (var ii=0;ii<3;ii++){
-                        playerAngVelVec[ii]+=100000*reactionForce*torqueGuess[ii];
+                        playerAngVelVec[ii]+=100000*reactionForce*torqueGuess[ii]*worldSize;
                             //NOTE this may be large, but effect of torque reduced by very high angular damping
                             //TODO* make this right for edge-edge collision - suspect current collision point does not work as a contact point.
                     }
