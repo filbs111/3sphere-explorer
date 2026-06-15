@@ -41,7 +41,6 @@ var guiParams={
 		pillars:false,
 		bendyPillars:false,
 		explodingBox:false,
-		turretScale:5,
 		viaduct: 'none'
 	},
 	'random boxes':{
@@ -213,7 +212,6 @@ function setupGui(){
 	drawShapesFolder.add(guiParams.drawShapes,"pillars");
 	drawShapesFolder.add(guiParams.drawShapes,"bendyPillars");
 	drawShapesFolder.add(guiParams.drawShapes,"explodingBox");
-	drawShapesFolder.add(guiParams.drawShapes,"turretScale",0.1,20.0,0.1);
 	drawShapesFolder.add(guiParams.drawShapes,"viaduct", ['none','individual','instanced']);
 
 	gui.add(guiParams,"player model", ["spaceship","plane","convexHullTest","ball"]);

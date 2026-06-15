@@ -23,6 +23,12 @@ var playerMechanics = (() => {
 
     function update(mouseInfo, timeStep, timeStepMultiplier, moveSpeed, rotateSpeed, activeGp){
         
+       	turret.updateTracking(playerCamera, turretBaseMatrix);
+
+        if (guiParams.display.cameraAttachedTo != "none"){
+            dropCamera.updateDropCamera(playerContainer);
+        }
+
         debugDraw.removeExtraMarkers();
 
         var playerPos = playerCamera.slice(12);

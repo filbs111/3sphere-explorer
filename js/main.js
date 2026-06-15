@@ -836,12 +836,21 @@ function drawRegularScene(frameTime){
 		//TODO is camera interpolation combined with matrix movement a problem?
 		var cameraToMoveVec = offsetCam.getSmoothedWithCamCollision(offsetCameraContainer);
 		moveMatHandlingPortal(offsetCameraContainer, cameraToMoveVec);
+
+		//note this may be small angle approximation/incorrect because expect magenta marker to be in middle of screen after tilt, and it isn't.
+		//TODO don't just rotate camera where it is - rotate spring boom camera about starting point (otherwise swinging camera from side to side looks wierd)
+		xyzrotate4mat(offsetCameraContainer.matrix, cameraTilt);
 	}
 	
-	//note this may be small angle approximation/incorrect because expect magenta marker to be in middle of screen after tilt, and it isn't.
-	//TODO don't just rotate camera where it is - rotate spring boom camera about starting point (otherwise swinging camera from side to side looks wierd)
-	xyzrotate4mat(offsetCameraContainer.matrix, cameraTilt);
+	if (guiParams.display.cameraAttachedTo == "turret"){
+		turret.setCameraToTurret(offsetPlayerCamera);
+		offsetCam.setType();
+		moveMatHandlingPortal(offsetCameraContainer, offsetCam.getVec());
+	}
 
+	if (guiParams.display.cameraAttachedTo == "none"){
+		dropCamera.setCameraToDropCamera(offsetCameraContainer);
+	}
 
 	//TODO put this elsewhere - assumes some stuff is in scope though!
 	//TODO defer to later (if large number of worlds/portals to make rendering, storing all impractical)
@@ -2662,57 +2671,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	}
 	
 	
-	//use a cube for turret base plate
-	//TODO generalise this code for rotation to draw etc.
-
-	//just constant rotation rate
-	//var turretSpin = (frameTime/1000 )%(2*Math.PI);
-
-	//rotate to point towards player. TODO check matrix is player, not the camera!
-	// NOTE this just serves to get the player position in the frame of the turret. Full 4x4 matrix rotation is not necessary,
-	// only need the player position to be multiplied by the (inverse of the) turret matrix
-	var playerInTurretBaseFrame = mat4.create(playerCamera);
-	mat4.transpose(playerInTurretBaseFrame);
-	mat4.multiply(playerInTurretBaseFrame, turretBaseMatrix);
-
-	//var turretSpin = Math.atan2(playerInTurretBaseFrame[12],playerInTurretBaseFrame[13]);
-	var turretSpin = Math.atan2(playerInTurretBaseFrame[3],playerInTurretBaseFrame[11]);
-	var sidewaysLength = Math.sqrt(playerInTurretBaseFrame[3]*playerInTurretBaseFrame[3] + playerInTurretBaseFrame[11]*playerInTurretBaseFrame[11]);
-	var turretElev = Math.atan2(playerInTurretBaseFrame[7], sidewaysLength);
-
-	activeShaderProgram = shaderProgramTexmap;
-	shaderSetup(activeShaderProgram, diffuseTexture);	//TODO different texture.
-	modelScale = 0.005*guiParams.drawShapes.turretScale;	//TODO different
-	mat4.set(invertedWorldCamera, mvMatrix);
-	rotate4mat(mvMatrix, 0, 1, duocylinderSpin);
-	mat4.multiply(mvMatrix,turretBaseMatrix);
-
-	mat4.identity(mMatrix);rotate4mat(mMatrix, 0, 1, duocylinderSpin);
-	mat4.multiply(mMatrix, turretBaseMatrix);
-
-	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale/4,modelScale);	//base plate
-	drawObjectFromBuffers2(cubeBuffers, activeShaderProgram);
-
-	rotate4mat(mvMatrix, 2, 0, turretSpin);
-	rotate4mat(mMatrix, 2, 0, turretSpin);
-
-	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale/2,modelScale,modelScale/2);
-	drawObjectFromBuffers2(cubeBuffers, activeShaderProgram);
-
-	rotate4mat(mvMatrix, 1, 2, -turretElev);
-	rotate4mat(mMatrix, 1, 2, -turretElev);
-	
-	gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale/8,modelScale/8,modelScale*2);	//gun
-	drawObjectFromBuffers2(cubeBuffers, activeShaderProgram);
-
-	if (guiParams.display.cameraAttachedTo == "turret"){
-		setMat4FromToWithQuats(turretBaseMatrix, offsetPlayerCamera);		
-		xyzrotate4mat(offsetPlayerCamera, [0,turretSpin + Math.PI,0]);
-		xyzrotate4mat(offsetPlayerCamera, [turretElev,0,0]);
-
-		offsetCam.setType();
-		moveMatHandlingPortal(offsetCameraContainer, offsetCam.getVec());
-	}
+	turret.draw(duocylinderSpin, shaderSetup, drawObjectFromBuffers2);
 
 	[
 		{buffersToDraw:lucyBuffers, bvh:lucyBvh, shader:shaderPrograms.coloredPerPixelDiscardVertexColored[ guiParams.display.atmosShader ]}, 
