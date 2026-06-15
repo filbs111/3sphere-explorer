@@ -869,16 +869,6 @@ function drawRegularScene(frameTime){
 		havePrerenderedCentredCubemaps=true;
 	}
 
-
-	function recalculateReflectorInfoArray(){
-		var portalsForThisWorldX = portalsForWorld[offsetCameraContainer.world];
-		for (var ii=0;ii<portalsForThisWorldX.length;ii++){
-			var portal = portalsForThisWorldX[ii];
-			var portalRelativeRad = portal.radius/portal.worldSize;
-			reflectorInfoArr[ii].rad = guiParams.reflector.draw!="none" ? portalRelativeRad : 0;	//when "draw" off, portal is inactivate- can't pass through, doesn't discard pix
-		}
-	}
-
 	switch(guiParams.display.stereo3d ) {
 		case 'anaglyph':
 		case 'anaglyph-green/magenta':
