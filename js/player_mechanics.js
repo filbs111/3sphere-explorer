@@ -191,23 +191,33 @@ var playerMechanics = (() => {
 		tiltCameraDirection[2]+=1;	//z coord?		
 
 		//TODO check this - is it correct for larger angles? - perhaps doesn't matter - direction wanted is only approximate.
-		cameraTilt = [ Math.atan(-tiltCameraDirection[1]), Math.atan(tiltCameraDirection[0]), 0]; //pitch, yaw, roll
+		var cameraTiltTarget = [ Math.atan(-tiltCameraDirection[1]), Math.atan(tiltCameraDirection[0]), 0]; //pitch, yaw, roll
 		//cameraTilt = [ Math.atan2(-tiltCameraDirection[1],tiltCameraDirection[2]), Math.atan2(tiltCameraDirection[0],tiltCameraDirection[2]), 0]; //pitch, yaw, roll
 				//expected atan2 to work better, but prefer just atan (afaik atan(x) = atan2(x,1))
 
         //ensure cameraTilt values are not NaN. TODO this more sensibly ( suspect because spd = 0 )
-        cameraTilt.forEach((xx,ii)=> {if(isNaN(xx)){cameraTilt[ii]=0}});
+        cameraTiltTarget.forEach((xx,ii)=> {if(isNaN(xx)){cameraTiltTarget[ii]=0}});
 
         //add accumulated camera rotation lag
         for (var cc=0;cc<3;cc++){
+
+            cameraTilt[cc]+=accumulatedPlayerCameraLag[cc]; //NOTE could just keep cameraTilt, accumulatedCameraLag separately...
+                        //NOTE still janky - can tell if increase roll speed...
+
+            accumulatedPlayerCameraLag[cc]*=0.9;
             accumulatedPlayerCameraLag[cc]+=playerCameraLagToAccumulate[cc];
+
             playerCameraLagToAccumulate[cc]=0;
             
-            cameraTilt[cc]-=accumulatedPlayerCameraLag[cc];
+
+            cameraTilt[cc]*=0.9;
 
             //move to here in hope of making less framerate dependent (doesn't seem to help much)
             //lag rotation of camera behind player. TODO different smoothing params
-            accumulatedPlayerCameraLag[cc] = accumulatedPlayerCameraLag[cc]*0.9;
+            cameraTilt[cc]+= 0.1*cameraTiltTarget[cc];
+
+
+            cameraTilt[cc]-=accumulatedPlayerCameraLag[cc];
         }
 
         //print speed
