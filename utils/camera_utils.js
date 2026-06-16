@@ -4,24 +4,43 @@ var accumulatedPlayerCameraLag = [0,0,0];
 var offsetCam = (function(){
 	var offsetVec;
 	var offsetVecReverse;
-	var targetForType = {
-		"near 3rd person":[0,-37.5,-25],	//TODO reduce code duplication. do scalar vector product targetForType time?
-		"far 3rd person":[0,-65,-72],
-		"really far 3rd person":[0,-75,-125],
-		"cockpit":[0,0,25],
-		"side":[30,0,12.5],
-		"none":[0,0,0]
-	}
-	var targetForTypeReverse = {
-		"near 3rd person":[0,-37.5,25],
-		"far 3rd person":[0,-65,82],
-		"really far 3rd person":[0,-75,125],
-		"cockpit":[0,0,-50],
-		"side":[30,0,12.5],
-		"none":[0,0,0]
-	}
-	var offsetVecTarget = targetForType["far 3rd person"].map(x=>sshipModelScale*x);
-	var offsetVecTargetReverse = targetForTypeReverse["far 3rd person"].map(x=>sshipModelScale*x);
+
+    var camSettings = {
+        "near 3rd person":{
+            forward: [0,-37.5,-25],
+            reverse: [0,-37.5,25],
+            tiltMultiplier:1
+        },
+        "far 3rd person":{
+            forward:[0,-65,-72],
+            reverse:[0,-65,82],
+            tiltMultiplier:1
+        },
+        "really far 3rd person":{
+            forward:[0,-75,-125],
+            reverse:[0,-75,125],
+            tiltMultiplier:1
+        },
+        "cockpit":{
+            forward:[0,0,35],
+            reverse:[0,0,-50],
+            tiltMultiplier:0
+        },
+        "side":{
+            forward:[30,0,12.5],
+            reverse:[30,0,12.5],
+            tiltMultiplier:0
+        },
+        "none":{
+            forward:[0,0,0],
+            reverse:[0,0,0],
+            tiltMultiplier:0
+        }
+    }
+
+    var currentSettings = camSettings["far 3rd person"];
+	var offsetVecTarget = currentSettings.forward.map(x=>sshipModelScale*x);
+	var offsetVecTargetReverse = currentSettings.reverse.map(x=>sshipModelScale*x);
 	offsetVec = offsetVecTarget;
 	offsetVecReverse = offsetVecTargetReverse;
 
@@ -47,17 +66,18 @@ var offsetCam = (function(){
         if (currentReverse != lastReverse){haveSwitchedCam=true;}
         lastType = currentType;
         lastReverse = currentReverse;
-        desiredCamMoveVec = (currentReverse? targetForTypeReverse:targetForType)[currentType].map(x=>sshipModelScale*x);
+
+        currentSettings = camSettings[currentType];
+        desiredCamMoveVec = (currentReverse? currentSettings.reverse : currentSettings.forward).map(x=>sshipModelScale*x);
     }
 
 	return {
-		getVec: function (){
-			return desiredCamMoveVec;
-		},
+		getVec: () => desiredCamMoveVec,
 		setType,
 		addIts: function(numIts){
             camItsToDo+=numIts;
 		},
+        getTiltMultiplier: () => currentSettings.tiltMultiplier,
         getSmoothedWithCamCollision(offsetCameraContainer){
             setType();
             
@@ -93,11 +113,15 @@ var offsetCam = (function(){
             toReturn[0] -= guiParams.display.cameraMoveSide;    //bodge on side shift to aid debugging. [1]= up,down
 
 
+
+            var shiftMultiplier = currentSettings.tiltMultiplier;
+
+
             //tilt camera movement vector so when camera tilted at its final rotation, result is that spaceship doesn't change screen position - 
             // if don't do this, can look like a windscreen wiper!
             //note this is a bodge, and might avoid rotating twice - here rotate the movement vector AND rotate after movement.
             // could alternatively rotate camera before movement and just move along unrotated vector in camera frame.
-            toReturn = rotateVecByAxisAngleVec(toReturn, cameraTilt.map(x=>-x));
+            toReturn = rotateVecByAxisAngleVec(toReturn, cameraTilt.map(x=>-shiftMultiplier*x));
 
 
             //bodge - shift by smoothed thrust.
@@ -106,7 +130,8 @@ var offsetCam = (function(){
             var unsmoothedOffset = playerMechanics.currentThrustInput; 
             smoothedHackPositionOffset = smoothedHackPositionOffset.map((xx,ii)=>xx*mult1 + mult2*unsmoothedOffset[ii]);
 
-            toReturn = toReturn.map((xx,ii) => xx - 0.1*smoothedHackPositionOffset[ii]);
+
+            toReturn = toReturn.map((xx,ii) => xx - 0.1*shiftMultiplier*smoothedHackPositionOffset[ii]);
 
             return toReturn;
         }

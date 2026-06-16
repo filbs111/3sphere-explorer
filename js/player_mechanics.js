@@ -210,14 +210,16 @@ var playerMechanics = (() => {
             playerCameraLagToAccumulate[cc]=0;
             
 
-            cameraTilt[cc]*=0.9;
+            fullCameraTilt[cc]*=0.9;
 
             //move to here in hope of making less framerate dependent (doesn't seem to help much)
             //lag rotation of camera behind player. TODO different smoothing params
-            cameraTilt[cc]+= 0.1*cameraTiltTarget[cc];
+            fullCameraTilt[cc]+= 0.1*cameraTiltTarget[cc];
 
+            fullCameraTilt[cc]-=accumulatedPlayerCameraLag[cc];
 
-            cameraTilt[cc]-=accumulatedPlayerCameraLag[cc];
+            var tiltMultiplier = offsetCam.getTiltMultiplier();
+            cameraTilt = fullCameraTilt.map(x=>x*tiltMultiplier);
         }
 
         //print speed

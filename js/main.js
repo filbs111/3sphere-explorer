@@ -3,6 +3,7 @@ var shouldDumpDebug2 = false;
 var flickerFlag=true;
 var shouldShowControls=false;
 var cameraTilt=[0,0,0];
+var fullCameraTilt=[0,0,0];
 
 // TODO adjust for world size - expect loads of changes here...
 
