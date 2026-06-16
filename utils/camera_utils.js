@@ -85,7 +85,15 @@ var offsetCam = (function(){
                 smoothedDesiredCamMoveVec = desiredCamMoveVec;
             }
 
-            var collidedVec = getCameraToMoveVecWithCameraCollision(offsetCameraContainer, smoothedDesiredCamMoveVec);
+            var worldSize = guiSettingsForWorld[offsetCameraContainer.world].worldSize;
+
+            //var worldSize = 1;
+
+            var scaledSmoothedDesiredCamMoveVec = smoothedDesiredCamMoveVec.map(x => x/worldSize);
+
+            var scaledCollidedVec = getCameraToMoveVecWithCameraCollision(offsetCameraContainer, scaledSmoothedDesiredCamMoveVec);
+
+            var collidedVec = scaledCollidedVec.map(x=>x*worldSize);
 
             if (haveSwitchedCam){
                 smoothedCurrentVec = collidedVec;
