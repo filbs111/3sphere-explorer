@@ -5,6 +5,8 @@ var shouldShowControls=false;
 var cameraTilt=[0,0,0];
 var fullCameraTilt=[0,0,0];
 
+var unitWorldRadiusMetres = 10_000;
+
 // TODO adjust for world size - expect loads of changes here...
 
 var quadplane={	//temp...
@@ -1384,6 +1386,9 @@ function drawRegularScene(frameTime){
 
 	function drawHud(){
 		if (!guiParams.display.showHud){return;}
+		
+		var playerWorldSizeMetres = unitWorldRadiusMetres*guiSettingsForWorld[playerContainer.world].worldSize;
+		
 		//draw target box ?
 		//var activeShaderProgram = shaderPrograms.colored;
 		var activeShaderProgram = shaderPrograms.decal;
@@ -1509,10 +1514,17 @@ function drawRegularScene(frameTime){
 		}
 
 		function screenPosForMatrix(mat){
+			return screenPosAndDistanceForMatrix(mat).screenPos;	//wasteful but unimportant.
+		}
+
+		function screenPosAndDistanceForMatrix(mat){
 			var relativeMat = mat4.create(invertedWorldCamera);
 			mat4.multiply(relativeMat, mat);
 			var pos = relativeMat.slice(12,15);	//12,13,14
-			return adjustedDirectionForFisheye(pos);
+			return {
+				angularDistance: Math.atan2(Math.hypot.apply(null,pos), relativeMat[15]),
+				screenPos: adjustedDirectionForFisheye(pos)
+			}
 		}
 
 		//draw something to show each portal.
@@ -1582,11 +1594,19 @@ function drawRegularScene(frameTime){
 		for (var tt=0;tt<targets.length;tt++){
 			var target = targets[tt];
 			if (target.hitPoints<1){continue;}
-			var pos = screenPosForMatrix(target.matrix);
+			var posAndDistance = screenPosAndDistanceForMatrix(target.matrix);
+			var pos = posAndDistance.screenPos;
+			var distanceMetres = posAndDistance.angularDistance * playerWorldSizeMetres;
 			if (pos[2]<0){
 				drawText("T"+tt+" ("+target.hitPoints+")", pos[0], pos[1], pos[2], 0.25);
+				drawText(""+distanceMetres.toFixed()+"M", pos[0], pos[1]-0.05, pos[2], 0.15);	//why subtract for lower on screen? is pos[2] -ve???
+					//NOTE this is distance from camera, not player model.
 			}
 		}
+
+		drawText("SPEED: " + trueSpeedKmh.toFixed(0) + " KPH", 3, 1.6, 1, 0.3);
+		drawText("ACCN: " + (Math.abs(measuredAccelerationMetresPerSecSquared/9.81)).toFixed(1).padStart(5) + " G", 3, 1.8, 1, 0.3);
+
 
 		if (guiParams.hud.textWorldNum){
 			//drawText("World " + playerContainer.world, 0.6, 0.15, 1); //(below) centre of screen, suitable if flash up on cross portal
@@ -4745,6 +4765,14 @@ for (var ii=0;ii<4;ii++){
 
 var debugRoll=0
 
+var trueSpeedMetresPerSec = 0;
+var previousTrueSpeedMetresPerSec = 0;
+var previousPlayerWorldVelocityMetresPerSec = [0,0,0,0];
+
+var trueSpeedKmh = 0;
+var measuredAccelerationMetresPerSecSquared = 0;
+
+
 var reverseCamera=false;
 var iterateMechanics = (function iterateMechanics(){
 	var lastTime=Date.now();
@@ -4871,7 +4899,58 @@ var iterateMechanics = (function iterateMechanics(){
 			gunHeat*=gunHeatMultiplier;
 		}
 		offsetCam.addIts(numSteps);
-		
+
+
+
+		//speed/time tracking. TODO recalc in stepspeed?
+		if (numSteps>0){
+			previousTrueSpeedMetresPerSec = trueSpeedMetresPerSec;
+
+			//1000 is per ms to per second
+			var speed = Math.hypot.apply(null, playerVelVec);
+			var speedMultiplier = unitWorldRadiusMetres * moveSpeed * 1000;
+			trueSpeedMetresPerSec = speedMultiplier * speed;
+			trueSpeedKmh = trueSpeedMetresPerSec*3.6;
+
+			//NOTE acceleration measured here is unreasonable because  difference in speeds measured not velocities (so acceleration perpendicular to velocity not measured)
+			// furthermore, each speed is in player frame, so will not detect acceleration when landed on a spinning terrain, even did vector difference.
+			// therefore current measurement only valid for acceleration due to thrust, drag when travelling in straight line. 
+			//measuredAccelerationMetresPerSecSquared = (trueSpeedMetresPerSec - previousTrueSpeedMetresPerSec)* (1000/(numSteps*timeStep));
+
+
+
+			//NOTE units wrong for below and also not right because has some nonzero value due to movement along great circle
+			//perhaps true acceleration is found by taking this difference in 4d velocities, and removing radial component (which is proportional to speed)
+
+			//get velocity in world frame by matrix multiplying velocity in player frame by player matrix.
+			// note that diffing this velocity will fail for portal transition, but for now just using for debug measurement
+			var currentPlayerWorldVelocityMetresPerSec = [0,0,0,0];
+
+			for (var ii=0;ii<4;ii++){
+				for (var jj=0;jj<3;jj++){
+					currentPlayerWorldVelocityMetresPerSec[ii] += playerCamera[ii + 4*jj]*playerVelVec[jj];
+				}
+			}
+
+			var playerAccWorldFrame4d = currentPlayerWorldVelocityMetresPerSec.map((xx,ii)=> xx - previousPlayerWorldVelocityMetresPerSec[ii] );
+			var playerAccRadial = dotProduct4(playerAccWorldFrame4d, playerCamera.slice(12));
+			var playerAccRadialSq = playerAccRadial*playerAccRadial;
+			var playerAccTotalMag = dotProduct4(playerAccWorldFrame4d,playerAccWorldFrame4d);
+			var playerAccNonRadialSq = playerAccTotalMag - playerAccRadialSq;
+			var playerAccNonRadial = Math.sqrt(playerAccNonRadialSq);
+
+			var measuredCurrentAccelerationMetresPerSecSquared = speedMultiplier* playerAccNonRadial * (1000/(numSteps*timeStep));
+
+			//smooth acceleration displayed (NOTE does not take time into account - doesn't really matter, just want a smooth number to read when resting on surfaces...
+			if (measuredCurrentAccelerationMetresPerSecSquared >= 0){
+				measuredAccelerationMetresPerSecSquared = 0.01* measuredCurrentAccelerationMetresPerSecSquared + 0.99*measuredAccelerationMetresPerSecSquared;
+			}
+
+			previousPlayerWorldVelocityMetresPerSec = currentPlayerWorldVelocityMetresPerSec;
+		}
+		//===
+
+
 		//TODO check whether this calculation is redundant (done elsewhere)
 		mat4.set(playerCamera, worldCamera);	//TODO check whether playerCamera is main camera or spaceship, decide where microphone should be
 		mat4.set(worldCamera, invertedWorldCamera);
