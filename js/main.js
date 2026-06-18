@@ -2581,10 +2581,12 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		var matRelativeToPlayer = mat4.create(dustMotesInfo.transposedMatRelativeToPlayer)
 		mat4.transpose(matRelativeToPlayer);
 		
+		var scale = 0.0005 / guiSettingsForWorld[worldA].worldSize;
+
 		var dustMotesFramesToDraw = sshipDrawMatrices.map(mm =>{
 			var mat = mat4.create(mm);
 			mat4.multiply(mat, matRelativeToPlayer);
-			return {mat, scale:0.0005};
+			return {mat, scale};
 		});
 		drawArrayOfModels2(dustMotesFramesToDraw, cubeFrameBuffers, activeShaderProgram, false);
 	}
