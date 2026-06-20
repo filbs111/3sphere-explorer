@@ -1,13 +1,13 @@
 //var maxRandBoxes = 8192;
 var maxRandBoxes = 128;	//tmp smaller to make startup faster?
 
-function singleWorldSettings(worldSize, fogColor, atmosThickness, duocylinderModel, seaActive, seaLevel){
+function singleWorldSettings(worldSize, fogColor, atmosThickness, duocylinderModel, seaActive, seaLevel, spinRate=0){
 	return {
 		worldSize,
 		fogColor,
 		atmosThickness,
 		atmosContrast:20,
-		spinRate:0,
+		spinRate,
 		spin:0,
 		duocylinderModel,
 		seaActive,
@@ -18,10 +18,10 @@ function singleWorldSettings(worldSize, fogColor, atmosThickness, duocylinderMod
 
 var guiParams={
 	worlds:[
-		singleWorldSettings(0.25,'#2f9a16', 0.2, "procTerrain", false, 0),
-		singleWorldSettings(0.5,'#7496a0', 0.2, "greebleTerrain", false, 0),
-		singleWorldSettings(0.75,'#bbbbbb', 0.2, "none", true, -0.0022),
-		singleWorldSettings(1,'#f0cd62', 0.2, "procTerrain", false, 0),
+		singleWorldSettings(0.5,'#2f9a16', 0.2, "procTerrain", false, 0, 0.5),	//~mars gravity
+		singleWorldSettings(1,'#7496a0', 0.2, "greebleTerrain", false, 0, 0.6), //~earth gravity
+		singleWorldSettings(0.75,'#bbbbbb', 0.2, "none", true, -0.0022, 0.7), //~earth gravity
+		singleWorldSettings(0.25,'#f0cd62', 0.2, "procTerrain", false, 0, 0.5), //~moon gravity
 		singleWorldSettings(0.5,'#444444', 0.2, "none", false, 0),	//4
 		singleWorldSettings(0.25,'#888888', 0.2, "none", false, 0),	//5
 		singleWorldSettings(1,'#aaaaaa', 0.2, "none", false, 0),	//6
@@ -185,7 +185,7 @@ function setupGui(){
 		worldFolder.add(world, "atmosContrast", -20,20,0.5);
 		worldFolder.add(world, "duocylinderModel", [
 			"grid","terrain","greebleTerrain","procTerrain",'voxTerrain','voxTerrain2','voxTerrain3','l3dt-brute','l3dt-blockstrips','none'] );
-		worldFolder.add(world, "spinRate", -2.5,2.5,0.25);
+		worldFolder.add(world, "spinRate", -2,2,0.05);
 		worldFolder.add(world, "seaActive" );
 		worldFolder.add(world, "seaLevel", -0.02,0.02,0.0002);
 		worldFolder.add(world, "seaPeakiness", 0.0,0.5,0.01);

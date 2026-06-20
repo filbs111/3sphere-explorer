@@ -1387,7 +1387,9 @@ function drawRegularScene(frameTime){
 	function drawHud(){
 		if (!guiParams.display.showHud){return;}
 		
-		var playerWorldSizeMetres = unitWorldRadiusMetres*guiSettingsForWorld[playerContainer.world].worldSize;
+		var playerWorldSettings = guiSettingsForWorld[playerContainer.world];
+		var playerWorldSize = playerWorldSettings.worldSize
+		var playerWorldSizeMetres = unitWorldRadiusMetres*playerWorldSize;
 		
 		//draw target box ?
 		//var activeShaderProgram = shaderPrograms.colored;
@@ -1609,9 +1611,19 @@ function drawRegularScene(frameTime){
 
 
 		if (guiParams.hud.textWorldNum){
+
 			//drawText("World " + playerContainer.world, 0.6, 0.15, 1); //(below) centre of screen, suitable if flash up on cross portal
 			drawText("CURRENT WORLD: " + playerContainer.world, 3, 2, 1, 0.4); //bottom left. note scales with FOV!
-			drawText("SIZE: " + guiSettingsForWorld[playerContainer.world].worldSize, 3, 2.1, 1, 0.2); //bottom left. note scales with FOV!
+			drawText("RADIUS: " + playerWorldSizeMetres + " M", 3, 2.1, 1, 0.2); //bottom left. note scales with FOV!
+
+			//calculate expected spin gravity gees. world radius * (angular velocity) squared /2
+			var spinRateRadsPerSec =  playerWorldSettings.spinRate * 1000* mechanicsMoveSpeed;
+			var spinGravPeriodSeconds = Math.PI * 2 / spinRateRadsPerSec;
+			var spinGravityMetresPerSecPerSec = playerWorldSizeMetres* spinRateRadsPerSec*spinRateRadsPerSec / 2;	//TODO write up/justify factor 2 division in notes
+			var spinGravityGees = spinGravityMetresPerSecPerSec/9.81;
+
+			drawText("PERIOD: " + spinGravPeriodSeconds.toFixed(0).padStart(5) + " S", 3, 2.15, 1, 0.2);
+			drawText("SPIN GRAVITY: " + spinGravityGees.toFixed(2).padStart(5) + " G", 3, 2.2, 1, 0.2);
 
 			portalTexts.forEach(pp=>{
 				drawText(pp.text, pp.pos[0], pp.pos[1], pp.pos[2], 0.4);
@@ -4774,9 +4786,13 @@ var measuredAccelerationMetresPerSecSquared = 0;
 
 
 var reverseCamera=false;
+
+var mechanicsMoveSpeed = 0.000075;
+
 var iterateMechanics = (function iterateMechanics(){
+
 	var lastTime=Date.now();
-	var moveSpeed=0.000075;
+	var moveSpeed=mechanicsMoveSpeed;
 	var rotateSpeed=-0.0005;
 		
 	
