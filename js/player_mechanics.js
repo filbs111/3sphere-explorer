@@ -1,7 +1,6 @@
 var mostRecentInfo={};
 var chullCollisionScreenInfo = "";
 var chullCollisionScreenInfo2 = "";
-var scaledSpinVelPlayerCoords = [0,0,0];
 
 var playerMechanics = (() => {
 

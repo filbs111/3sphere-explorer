@@ -1411,10 +1411,8 @@ function drawRegularScene(frameTime){
 
 		//direction of flight
 		bind2dTextureIfRequired(hudTexturePlus);		//todo texture atlas for all hud
-		var airSpdVec = playerVelVec.map((val, idx) => val-scaledSpinVelPlayerCoords[idx]);	//speed relative to local air speed due to duocylinder rotation.
-		var airSpdSq = airSpdVec.reduce((accum, current)=>accum+current*current,0);
 		
-		playerVelVecRelativeToAir = airSpdVec;
+		var {airSpdVec, airSpdSq, airSpeedKmh, trueSpeedKmh, measuredAccelerationGees} = playerInfoForDisplay.getInfo();
 
 		//show a mark intermediate between flight dir and forward pointing dir. TODO tilt camera in this direction.
 		//want to avoid snapping from side to side when switch from backwards-left to backwards0right travel etc.
@@ -1609,8 +1607,7 @@ function drawRegularScene(frameTime){
 
 		drawText("TRUE SPEED: " + trueSpeedKmh.toFixed(0) + " KPH", 3, 1.6, 1, 0.3);
 		drawText("AIRSPEED: " + airSpeedKmh.toFixed(0) + " KPH", 3, 1.7, 1, 0.3);
-		drawText("ACCN: " + (Math.abs(measuredAccelerationMetresPerSecSquared/9.81)).toFixed(1).padStart(5) + " G", 3, 1.8, 1, 0.3);
-
+		drawText("ACCN: " + measuredAccelerationGees.toFixed(1).padStart(5) + " G", 3, 1.8, 1, 0.3);
 
 		if (guiParams.hud.textWorldNum){
 
@@ -4742,7 +4739,6 @@ function init(){
 
 var playerVelVec = [0,0,0];	//TODO use matrix/quaternion for this
 							//todo not a global! how to set listeners eg mousemove witin iteratemechanics???
-var playerVelVecRelativeToAir = [0,0,0];	//used for speed display
 var gunFireDirectionVec = [0,0,1];	//TODO check if requried to define something here
 var muzzleVel = 10;
 							
@@ -4782,15 +4778,6 @@ for (var ii=0;ii<4;ii++){
 
 
 var debugRoll=0
-
-var trueSpeedMetresPerSec = 0;
-var previousTrueSpeedMetresPerSec = 0;
-var previousPlayerWorldVelocityMetresPerSec = [0,0,0,0];
-
-var trueSpeedKmh = 0;
-var airSpeedKmh = 0;
-var measuredAccelerationMetresPerSecSquared = 0;
-
 
 var reverseCamera=false;
 
@@ -4924,57 +4911,11 @@ var iterateMechanics = (function iterateMechanics(){
 		offsetCam.addIts(numSteps);
 
 
-
-		//speed/time tracking. TODO recalc in stepspeed?
+		//speed/time tracking. TODO call in stepspeed instead?
 		if (numSteps>0){
-			previousTrueSpeedMetresPerSec = trueSpeedMetresPerSec;
-
-			//1000 is per ms to per second
-			var speed = Math.hypot.apply(null, playerVelVec);
 			var speedMultiplier = unitWorldRadiusMetres * moveSpeed * 1000;
-			trueSpeedMetresPerSec = speedMultiplier * speed;
-			trueSpeedKmh = trueSpeedMetresPerSec*3.6;
-
-			var airSpeed = Math.hypot.apply(null, playerVelVecRelativeToAir);
-			var airSpeedMetresPerSec = speedMultiplier * airSpeed;
-			airSpeedKmh = airSpeedMetresPerSec*3.6;
-
-
-			//NOTE acceleration measured here is unreasonable because  difference in speeds measured not velocities (so acceleration perpendicular to velocity not measured)
-			// furthermore, each speed is in player frame, so will not detect acceleration when landed on a spinning terrain, even did vector difference.
-			// therefore current measurement only valid for acceleration due to thrust, drag when travelling in straight line. 
-			//measuredAccelerationMetresPerSecSquared = (trueSpeedMetresPerSec - previousTrueSpeedMetresPerSec)* (1000/(numSteps*timeStep));
-
-			//find acceleration by taking this difference in 4d velocities, and removing radial component (which is proportional to speed)
-
-			//get velocity in world frame by matrix multiplying velocity in player frame by player matrix.
-			// note that diffing this velocity will fail for portal transition, but for now just using for debug measurement
-			var currentPlayerWorldVelocityMetresPerSec = [0,0,0,0];
-
-			for (var ii=0;ii<4;ii++){
-				for (var jj=0;jj<3;jj++){
-					currentPlayerWorldVelocityMetresPerSec[ii] += playerCamera[ii + 4*jj]*playerVelVec[jj];
-				}
-			}
-
-			var playerAccWorldFrame4d = currentPlayerWorldVelocityMetresPerSec.map((xx,ii)=> xx - previousPlayerWorldVelocityMetresPerSec[ii] );
-			var playerAccRadial = dotProduct4(playerAccWorldFrame4d, playerCamera.slice(12));
-			var playerAccRadialSq = playerAccRadial*playerAccRadial;
-			var playerAccTotalMag = dotProduct4(playerAccWorldFrame4d,playerAccWorldFrame4d);
-			var playerAccNonRadialSq = playerAccTotalMag - playerAccRadialSq;
-			var playerAccNonRadial = Math.sqrt(playerAccNonRadialSq);
-
-			var measuredCurrentAccelerationMetresPerSecSquared = speedMultiplier* playerAccNonRadial * (1000/(numSteps*timeStep));
-
-			//smooth acceleration displayed (NOTE does not take time into account - doesn't really matter, just want a smooth number to read when resting on surfaces...
-			if (measuredCurrentAccelerationMetresPerSecSquared >= 0){
-				measuredAccelerationMetresPerSecSquared = 0.01* measuredCurrentAccelerationMetresPerSecSquared + 0.99*measuredAccelerationMetresPerSecSquared;
-			}
-
-			previousPlayerWorldVelocityMetresPerSec = currentPlayerWorldVelocityMetresPerSec;
+			playerInfoForDisplay.setInfo(speedMultiplier, numSteps*timeStep, playerCamera, playerVelVec, scaledSpinVelPlayerCoords);	
 		}
-		//===
-
 
 		//TODO check whether this calculation is redundant (done elsewhere)
 		mat4.set(playerCamera, worldCamera);	//TODO check whether playerCamera is main camera or spaceship, decide where microphone should be
