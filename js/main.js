@@ -1621,9 +1621,12 @@ function drawRegularScene(frameTime){
 			var spinGravPeriodSeconds = Math.PI * 2 / spinRateRadsPerSec;
 			var spinGravityMetresPerSecPerSec = playerWorldSizeMetres* spinRateRadsPerSec*spinRateRadsPerSec / 2;	//TODO write up/justify factor 2 division in notes
 			var spinGravityGees = spinGravityMetresPerSecPerSec/9.81;
+			var edgeSpeedMetresPerSecond = playerWorldSizeMetres * spinRateRadsPerSec / Math.sqrt(2);	//speed of rotating duocylinder surface (at height where divides world in two)
+			var edgeSpeedKmh = edgeSpeedMetresPerSecond * 3.6;
 
 			drawText("PERIOD: " + spinGravPeriodSeconds.toFixed(0).padStart(5) + " S", 3, 2.15, 1, 0.2);
 			drawText("SPIN GRAVITY: " + spinGravityGees.toFixed(2).padStart(5) + " G", 3, 2.2, 1, 0.2);
+			drawText("EDGE SPEED: " + edgeSpeedKmh.toFixed(0).padStart(5) + " KPH", 3, 2.25, 1, 0.2);
 
 			portalTexts.forEach(pp=>{
 				drawText(pp.text, pp.pos[0], pp.pos[1], pp.pos[2], 0.4);
