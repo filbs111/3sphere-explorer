@@ -1,7 +1,7 @@
 var mostRecentInfo={};
 var chullCollisionScreenInfo = "";
 var chullCollisionScreenInfo2 = "";
-var savedSpinVelPlayerCoordsForHud = [0,0,0];
+var scaledSpinVelPlayerCoords = [0,0,0];
 
 var playerMechanics = (() => {
 
@@ -147,6 +147,8 @@ var playerMechanics = (() => {
             playerVelVec[cc]+=currentThrustInput[cc];	//todo either write vector addition func or use glmatrix vectors
         }
 
+        var playerWorldSize = guiSettingsForWorld[playerContainer.world].worldSize;
+
         
         //blend velocity with velocity of rotating duosphere. (todo angular vel to use this too)
         //matrix entries 12-15 describe position. (remain same when rotate player and don't move)
@@ -172,9 +174,10 @@ var playerMechanics = (() => {
         
         //square drag //want something like spd = spd - const*spd*spd = spd (1 - const*|spd|)
 
-        var airSpdVec = playerVelVec.map((val, idx) => val-spinVelPlayerCoords[idx]);
+        scaledSpinVelPlayerCoords = spinVelPlayerCoords.map(x=>x*playerWorldSize);
 
-        savedSpinVelPlayerCoordsForHud = spinVelPlayerCoords; //bodge global so can use when drawing HUD
+        var airSpdVec = playerVelVec.map((val, idx) => val- scaledSpinVelPlayerCoords[idx]);
+
 
         //spd = Math.sqrt(airSpdVec.map(val => val*val).reduce((val, sum) => val+sum));
         var spd = Math.hypot.apply(null, airSpdVec);
@@ -299,7 +302,7 @@ var playerMechanics = (() => {
         var scaledAirSpdVec = airSpdVec.map((elem,ii)=>elem/airSpdScale[ii]);
         var spdScaled = Math.hypot.apply(null, scaledAirSpdVec);
         
-        playerVelVec=scalarvectorprod(1.0-atmosThick*spdScaled,scaledAirSpdVec).map((val,idx) => val*airSpdScale[idx]+spinVelPlayerCoords[idx]);
+        playerVelVec=scalarvectorprod(1.0-atmosThick*spdScaled,scaledAirSpdVec).map((val,idx) => val*airSpdScale[idx]+ scaledSpinVelPlayerCoords[idx]);
         
 
         gunAutofire(
@@ -441,12 +444,11 @@ var playerMechanics = (() => {
 
             //scale movement according to current world size.
             var moveAmount = subTimeStep * moveSpeed;
-            var playerWorldSize = guiSettingsForWorld[playerContainer.world].worldSize;
 
             var toMovePlayer = scalarvectorprod(moveAmount,playerVelVec);
             movePlayer(toMovePlayer, playerWorldSize);
 
-            var toMoveDustMotes = scalarvectorprod(-moveAmount*playerWorldSize, savedSpinVelPlayerCoordsForHud);
+            var toMoveDustMotes = scalarvectorprod(-moveAmount, scaledSpinVelPlayerCoords);
             scrollDustMotes(toMoveDustMotes);   //this accounts for inear motion (at player position) of spinning duocylinder terrain
                 
 

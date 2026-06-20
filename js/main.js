@@ -1409,7 +1409,7 @@ function drawRegularScene(frameTime){
 
 		//direction of flight
 		bind2dTextureIfRequired(hudTexturePlus);		//todo texture atlas for all hud
-		var airSpdVec = playerVelVec.map((val, idx) => val-savedSpinVelPlayerCoordsForHud[idx]);	//speed relative to local air speed due to duocylinder rotation.
+		var airSpdVec = playerVelVec.map((val, idx) => val-scaledSpinVelPlayerCoords[idx]);	//speed relative to local air speed due to duocylinder rotation.
 		var airSpdSq = airSpdVec.reduce((accum, current)=>accum+current*current,0);
 		
 
@@ -1461,7 +1461,7 @@ function drawRegularScene(frameTime){
 		bind2dTextureIfRequired(hudTextureX);
 		if (guiParams.hud.fireDirection){
 			if (gunFireDirectionVec[2] > 0.1){	//??
-				var fireDirectionVecAdjusted = gunFireDirectionVec.map((val, idx) => val-savedSpinVelPlayerCoordsForHud[idx]);
+				var fireDirectionVecAdjusted = gunFireDirectionVec.map((val, idx) => val-scaledSpinVelPlayerCoords[idx]);
 				var reversed = fireDirectionVecAdjusted.map(x=>-x);	//needs to do this for fisheye correction to work consistent with other hud icons
 				drawTargetDecal(smallerDecalScale, colorArrs.hudYellow, adjustedDirectionForFisheye(reversed, cameraTilt), 0.1);	//todo check whether this colour already set
 				drawTargetDecal(smallerDecalScale, colorArrs.hudYellow, adjustedDirectionForFisheye(reversed, cameraTilt), -0.1);
