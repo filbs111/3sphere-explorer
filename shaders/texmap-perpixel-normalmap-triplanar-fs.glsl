@@ -246,9 +246,16 @@ float calculatePortalLightContribution(vec3 vPortalLightPosTangentSpace, vec3 nm
 		vec4 adjustedColor = uColor;
 #endif
 		
-		//guess maybe similar to some gaussian light source
-		//vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*adjustedColor*vec4(texColor,1.) + (1.0-fog)*uFogColor;
-		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uReflectorDiffColor2*portalLight2 + uReflectorDiffColor3*portalLight3 + uFogColor.xyz )*adjustedColor.xyz*texColor + (1.0-fog)*uFogColor.xyz , 1.);
+
+		//blend portal colours together with fog. not great but maybe avoids possibility of negative lighting when multiple dark portals
+		float totalSpecularWeight = 1.+portalLight+portalLight2+portalLight3;
+		
+		vec3 portalColor = uReflectorDiffColor + uFogColor.xyz;			//here might be better to pass in portal colour directly, not diff colour!
+		vec3 portalColor2 = uReflectorDiffColor2 + uFogColor.xyz;
+		vec3 portalColor3 = uReflectorDiffColor3 + uFogColor.xyz;
+		vec3 totalPortalAndSkySpecular = (portalColor*portalLight + portalColor2*portalLight2 +  portalColor3*portalLight3 + uFogColor.xyz) / totalSpecularWeight;
+
+		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + totalPortalAndSkySpecular )*adjustedColor.xyz*texColor + (1.0-fog)*uFogColor.xyz , 1.);
 				
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
