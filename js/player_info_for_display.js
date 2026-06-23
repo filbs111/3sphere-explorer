@@ -63,10 +63,12 @@ var playerInfoForDisplay = (()=>{
         var playerAccNonRadial = Math.sqrt(playerAccNonRadialSq);
 
         var measuredCurrentAccelerationMetresPerSecSquared = speedMultiplier* playerAccNonRadial * (1000/timeChange);
+        
+        var smoothingFactor = 0;       // smoothing necessary for stable g reading when landed on surface because noisy physics.
+            // no smoothing works fine for thrust, drag. can see g at duocylinder land surface matches expectation at terminal velocity using handbrake
 
-        //smooth acceleration displayed (NOTE does not take time into account - doesn't really matter, just want a smooth number to read when resting on surfaces...
         if (measuredCurrentAccelerationMetresPerSecSquared >= 0){
-            measuredAccelerationMetresPerSecSquared = 0.01* measuredCurrentAccelerationMetresPerSecSquared + 0.99*measuredAccelerationMetresPerSecSquared;
+            measuredAccelerationMetresPerSecSquared = (1-smoothingFactor)* measuredCurrentAccelerationMetresPerSecSquared + smoothingFactor*measuredAccelerationMetresPerSecSquared;
         }
 
         previousPlayerWorldVelocityMetresPerSec = currentPlayerWorldVelocityMetresPerSec;
