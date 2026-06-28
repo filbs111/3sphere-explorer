@@ -179,8 +179,8 @@ float calculatePortalLightContribution(vec4 normal, float uReflectorCos, vec4 su
 
 	//directions are what matter. approximate by using small_amount. TODO more efficient formulation
 	//TODO what is adjustedpos, what is transformedPos? 
-	vec4 directionToEye = normalize( normalize(transformedCoord+SMALL_AMOUNT*eyePos) -  normalize(transformedCoord));
-	vec4 directionToLight = normalize( normalize(transformedCoord-SMALL_AMOUNT*adjustedPosNormalised ) -  normalize(transformedCoord));
+	vec4 directionToEye = normalize( normalize(transformedCoord+SMALL_AMOUNT*eyePos) -  normalisedSurfCoord);
+	vec4 directionToLight = normalize( normalize(transformedCoord-SMALL_AMOUNT*adjustedPosNormalised ) -  normalisedSurfCoord);
 	vec4 halfVec = normalize( directionToEye + directionToLight);
 
 	float phongAmount = uSpecularStrength*pow( max(dot(halfVec, norm), 0.),uSpecularPower);
@@ -197,7 +197,7 @@ float calculatePortalLightContribution(vec4 normal, float uReflectorCos, vec4 su
 
 #ifdef SPECULAR_ACTIVE		
 		//note maybe faster if calculate half vector in vert shader. (expect interpolates ok).  		
-		vec4 directionToPortalLight = normalize( normalize(transformedCoord+SMALL_AMOUNT*uReflectorPos ) -  normalize(transformedCoord));
+		vec4 directionToPortalLight = normalize( normalize(transformedCoord+SMALL_AMOUNT*uReflectorPos ) - normalisedSurfCoord);
 		halfVec = normalize( directionToEye + directionToPortalLight);
 		
 		phongAmount = uSpecularStrength*pow( max(dot(halfVec, normalize(transformedNormal)), 0.),uSpecularPower);
@@ -205,7 +205,7 @@ float calculatePortalLightContribution(vec4 normal, float uReflectorCos, vec4 su
 		portalLight+=phongAmount;
 
 		//second portal light
-		directionToPortalLight = normalize( normalize(transformedCoord+SMALL_AMOUNT*uReflectorPos2 ) -  normalize(transformedCoord));
+		directionToPortalLight = normalize( normalize(transformedCoord+SMALL_AMOUNT*uReflectorPos2 ) - normalisedSurfCoord);
 		halfVec = normalize( directionToEye + directionToPortalLight);
 		
 		phongAmount = uSpecularStrength*pow( max(dot(halfVec, normalize(transformedNormal)), 0.),uSpecularPower);
@@ -213,7 +213,7 @@ float calculatePortalLightContribution(vec4 normal, float uReflectorCos, vec4 su
 		portalLight2+=phongAmount;
 
 		//third portal light
-		directionToPortalLight = normalize( normalize(transformedCoord+SMALL_AMOUNT*uReflectorPos3 ) -  normalize(transformedCoord));
+		directionToPortalLight = normalize( normalize(transformedCoord+SMALL_AMOUNT*uReflectorPos3 ) - normalisedSurfCoord);
 		halfVec = normalize( directionToEye + directionToPortalLight);
 		
 		phongAmount = uSpecularStrength*pow( max(dot(halfVec, normalize(transformedNormal)), 0.),uSpecularPower);
