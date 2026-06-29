@@ -123,14 +123,32 @@ float calculatePortalLightContribution(vec4 normal, float uReflectorCos, vec4 su
 	return contribution;
 }
 
-//TODO move within calculatePortalLightContribution ? 
-float calculatePortalSpecularContribution(vec4 portalPos, vec4 directionToEye, vec4 surfNormal, vec4 surfPos, vec4 normalisedSurfCoord){	//normalisedSurfCoord = normalize(surfPos)
+float calculatePortalSpecularContribution(vec4 portalPos, float portalCos, vec4 directionToEye, vec4 surfNormal, vec4 surfPos, vec4 normalisedSurfCoord){	//normalisedSurfCoord = normalize(surfPos)
 
-	//note maybe faster if calculate half vector in vert shader. (expect interpolates ok).  		
+	//reflect eye vec in surface. TODO share between all portals. 
+	vec4 reflectedEyeVec = 2.*surfNormal*dot(directionToEye, surfNormal) - directionToEye;
+
 	vec4 directionToPortalLight = normalize( normalize(surfPos+SMALL_AMOUNT*portalPos ) - normalisedSurfCoord);
-	vec4 halfVec = normalize( directionToEye + directionToPortalLight);
-		
-	return uSpecularStrength*pow( max(dot(halfVec, surfNormal), 0.),uSpecularPower);	//phong
+
+	float dotProd = max(dot(reflectedEyeVec, directionToPortalLight), 0.);
+ 
+
+ // copy code from diffuse portal light relating to apparent angular portal size (seen from surface) theta. TODO simplify trig? combo with 
+ 	float alpha = acos(portalCos);	//angular size of portal in world
+	float cosGamma = dot(surfPos, portalPos);
+	float gamma = acos(cosGamma);			//angular distance from surface to portal
+	float tanAlpha = tan(alpha);
+	float sinGamma = sin(gamma);
+	float tanTheta = tanAlpha / capSqrt(sinGamma*sinGamma - tanAlpha*tanAlpha*cosGamma*cosGamma );
+	float theta = atan(tanTheta);
+
+
+	float angleDifference = acos(dotProd) - theta;
+
+	//return (angleDifference < 0.) ? 1.: 0.;		//NOTE sign change unexpected! are cosine vals -ve here?
+
+	float specularSharpness = uSpecularPower;	//how sharp reflected image is. resuse existing variable "specular power
+	return .5*(tanh(-angleDifference*specularSharpness) + 1.);		//NOTE function of angle so a bit bodgy - expect a point in middle or reflection of disc, but not obvious to viewer.
 }
 
 
@@ -208,19 +226,15 @@ float calculatePortalSpecularContribution(vec4 portalPos, vec4 directionToEye, v
 		vec4 surfNormal = normalize(transformedNormal);
 
 		portalLight*=(1.-uSpecularStrength);
-		portalLight+=calculatePortalSpecularContribution(uReflectorPos, directionToEye, surfNormal, transformedCoord, normalisedSurfCoord);
+		portalLight+=uSpecularStrength*calculatePortalSpecularContribution(uReflectorPos, uReflectorCos, directionToEye, surfNormal, transformedCoord, normalisedSurfCoord);
 
 		portalLight2*=(1.-uSpecularStrength);
-		portalLight2+=calculatePortalSpecularContribution(uReflectorPos2, directionToEye, surfNormal, transformedCoord, normalisedSurfCoord);
+		portalLight2+=uSpecularStrength*calculatePortalSpecularContribution(uReflectorPos2, uReflectorCos2, directionToEye, surfNormal, transformedCoord, normalisedSurfCoord);
 
 		portalLight3*=(1.-uSpecularStrength);
-		portalLight3+=calculatePortalSpecularContribution(uReflectorPos3, directionToEye, surfNormal, transformedCoord, normalisedSurfCoord);
+		portalLight3+=uSpecularStrength*calculatePortalSpecularContribution(uReflectorPos3, uReflectorCos3, directionToEye, surfNormal, transformedCoord, normalisedSurfCoord);
 #endif
 
-		//falloff
-		// portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
-		// portalLight2/=1.0 + 3.0*dot(posCosDiff2,posCosDiff2);
-		// portalLight3/=1.0 + 3.0*dot(posCosDiff3,posCosDiff3);
 
 #ifdef VCOLOR
 		vec4 adjustedColor = uColor*vColor;	//TODO this logid in vert shader
