@@ -87,7 +87,7 @@ float capSqrt(float x){
 
 //TODO move some or all of this calculation to vertex shader.
 // calculation of alpha, gamma factors can easily be per vertex
-float calculatePortalLightContribution(vec4 surfNormal, float uReflectorCos, vec4 surfPos, vec4 portalPos, vec4 reflectedEyeVec){
+float calculatePortalLightContribution(vec4 surfNormal, float uReflectorCos, vec4 surfPos, vec4 portalPos, vec4 reflectedEyeVec, float specAmount){
 	//elevation (phi in notes) of portal "sun" in sky viewed from surface
 	//in notes actually might be 0=straight above!
 
@@ -131,8 +131,8 @@ float calculatePortalLightContribution(vec4 surfNormal, float uReflectorCos, vec
 	float specularSharpness = uSpecularPower;	//how sharp reflected image is. resuse existing variable "specular power
 	float specularContrib = .5*(tanh(-angleDifference*specularSharpness) + 1.);		//NOTE function of angle so a bit bodgy - expect a point in middle or reflection of disc, but not obvious to viewer.
 
-	contribution*=(1.-uSpecularStrength);
-	contribution += uSpecularStrength*specularContrib;
+	contribution*=(1.-specAmount);
+	contribution += specAmount*specularContrib;
 #endif
 
 	return contribution;
@@ -201,12 +201,18 @@ float calculatePortalLightContribution(vec4 surfNormal, float uReflectorCos, vec
 	light*=(1.-uSpecularStrength);
 	light+=phongAmount;
 
-
-	//reflect eye vec in surface. TODO share between all portals. 
+	//reflect eye vec in surface.
 	vec4 reflectedEyeVec = 2.*norm*dot(directionToEye, norm) - directionToEye;
 
+	//schlick R0 + (1-R0)(1+cost)^5 , where t = view angle (where 0 = looking directly at surface) 
+	float cost = dot(directionToEye, norm);	//whatever this is is 0 for glancing suppose this is sint
+	//float ctsq = 1. - something*something;
+	float r0 = uSpecularStrength;
+	float schlick = r0 + (1.-r0)*pow(1.-cost,5.);
 #else
 	vec4 reflectedEyeVec = vec4(0.);	//unused 
+	float schlick=0.;
+
 #endif
 		//falloff
 		light/=0.1 + 5.0*dot(adjustedPos,adjustedPos);
@@ -215,9 +221,9 @@ float calculatePortalLightContribution(vec4 surfNormal, float uReflectorCos, vec
 
 
 		//light from portal
-	float portalLight = calculatePortalLightContribution(norm, uReflectorCos, normalisedSurfCoord, uReflectorPos, reflectedEyeVec);
-	float portalLight2 = calculatePortalLightContribution(norm, uReflectorCos2, normalisedSurfCoord, uReflectorPos2, reflectedEyeVec);
-	float portalLight3 = calculatePortalLightContribution(norm, uReflectorCos3, normalisedSurfCoord, uReflectorPos3, reflectedEyeVec);
+	float portalLight = calculatePortalLightContribution(norm, uReflectorCos, normalisedSurfCoord, uReflectorPos, reflectedEyeVec, schlick);
+	float portalLight2 = calculatePortalLightContribution(norm, uReflectorCos2, normalisedSurfCoord, uReflectorPos2, reflectedEyeVec, schlick);
+	float portalLight3 = calculatePortalLightContribution(norm, uReflectorCos3, normalisedSurfCoord, uReflectorPos3, reflectedEyeVec, schlick);
 
 
 #ifdef VCOLOR
