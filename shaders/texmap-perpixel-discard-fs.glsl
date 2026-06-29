@@ -87,12 +87,12 @@ float capSqrt(float x){
 
 //TODO move some or all of this calculation to vertex shader.
 // calculation of alpha, gamma factors can easily be per vertex
-float calculatePortalLightContribution(vec4 normal, float uReflectorCos, vec4 surfPos, vec4 portalPos){
+float calculatePortalLightContribution(vec4 surfNormal, float uReflectorCos, vec4 surfPos, vec4 portalPos, vec4 reflectedEyeVec){
 	//elevation (phi in notes) of portal "sun" in sky viewed from surface
 	//in notes actually might be 0=straight above!
 
 	float wComponent = dot(surfPos, portalPos);
-	float zComponent = dot(normal, portalPos);
+	float zComponent = dot(surfNormal, portalPos);
 	float xyComponent = capSqrt(1. - wComponent*wComponent - zComponent*zComponent);
 	float elev = atan(xyComponent, zComponent);
 	//elev is dependent on portal position in surface frame height component vs horizontal component. 
@@ -120,35 +120,22 @@ float calculatePortalLightContribution(vec4 normal, float uReflectorCos, vec4 su
 		//however, this does fix issue of lighting becoming wierd (negative?) when lit object is within volume opposite the portal volume.
 		//TODO shadow map/atmos calc etc
 
-	return contribution;
-}
+#ifdef SPECULAR_ACTIVE
 
-float calculatePortalSpecularContribution(vec4 portalPos, float portalCos, vec4 directionToEye, vec4 surfNormal, vec4 surfPos, vec4 normalisedSurfCoord){	//normalisedSurfCoord = normalize(surfPos)
-
-	//reflect eye vec in surface. TODO share between all portals. 
-	vec4 reflectedEyeVec = 2.*surfNormal*dot(directionToEye, surfNormal) - directionToEye;
-
-	vec4 directionToPortalLight = normalize( normalize(surfPos+SMALL_AMOUNT*portalPos ) - normalisedSurfCoord);
-
+	vec4 directionToPortalLight = normalize( normalize(surfPos+SMALL_AMOUNT*portalPos ) - surfPos);
 	float dotProd = max(dot(reflectedEyeVec, directionToPortalLight), 0.);
- 
-
- // copy code from diffuse portal light relating to apparent angular portal size (seen from surface) theta. TODO simplify trig? combo with 
- 	float alpha = acos(portalCos);	//angular size of portal in world
-	float cosGamma = dot(surfPos, portalPos);
-	float gamma = acos(cosGamma);			//angular distance from surface to portal
-	float tanAlpha = tan(alpha);
-	float sinGamma = sin(gamma);
-	float tanTheta = tanAlpha / capSqrt(sinGamma*sinGamma - tanAlpha*tanAlpha*cosGamma*cosGamma );
-	float theta = atan(tanTheta);
-
-
 	float angleDifference = acos(dotProd) - theta;
 
 	//return (angleDifference < 0.) ? 1.: 0.;		//NOTE sign change unexpected! are cosine vals -ve here?
 
 	float specularSharpness = uSpecularPower;	//how sharp reflected image is. resuse existing variable "specular power
-	return .5*(tanh(-angleDifference*specularSharpness) + 1.);		//NOTE function of angle so a bit bodgy - expect a point in middle or reflection of disc, but not obvious to viewer.
+	float specularContrib = .5*(tanh(-angleDifference*specularSharpness) + 1.);		//NOTE function of angle so a bit bodgy - expect a point in middle or reflection of disc, but not obvious to viewer.
+
+	contribution*=(1.-uSpecularStrength);
+	contribution += uSpecularStrength*specularContrib;
+#endif
+
+	return contribution;
 }
 
 
@@ -213,27 +200,24 @@ float calculatePortalSpecularContribution(vec4 portalPos, float portalCos, vec4 
 	float phongAmount = uSpecularStrength*pow( max(dot(halfVec, norm), 0.),uSpecularPower);
 	light*=(1.-uSpecularStrength);
 	light+=phongAmount;
+
+
+	//reflect eye vec in surface. TODO share between all portals. 
+	vec4 reflectedEyeVec = 2.*norm*dot(directionToEye, norm) - directionToEye;
+
+#else
+	vec4 reflectedEyeVec = vec4(0.);	//unused 
 #endif
 		//falloff
 		light/=0.1 + 5.0*dot(adjustedPos,adjustedPos);
 
+	//NOTE still using old lighting calc for player light above. TODO use calculatePortalLightContribution or similar. maybe should behave more like gauss light, or area light for thruster?...
+
+
 		//light from portal
-		float portalLight = calculatePortalLightContribution(norm, uReflectorCos, normalisedSurfCoord, uReflectorPos);
-		float portalLight2 = calculatePortalLightContribution(norm, uReflectorCos2, normalisedSurfCoord, uReflectorPos2);
-		float portalLight3 = calculatePortalLightContribution(norm, uReflectorCos3, normalisedSurfCoord, uReflectorPos3);
-
-#ifdef SPECULAR_ACTIVE
-		vec4 surfNormal = normalize(transformedNormal);
-
-		portalLight*=(1.-uSpecularStrength);
-		portalLight+=uSpecularStrength*calculatePortalSpecularContribution(uReflectorPos, uReflectorCos, directionToEye, surfNormal, transformedCoord, normalisedSurfCoord);
-
-		portalLight2*=(1.-uSpecularStrength);
-		portalLight2+=uSpecularStrength*calculatePortalSpecularContribution(uReflectorPos2, uReflectorCos2, directionToEye, surfNormal, transformedCoord, normalisedSurfCoord);
-
-		portalLight3*=(1.-uSpecularStrength);
-		portalLight3+=uSpecularStrength*calculatePortalSpecularContribution(uReflectorPos3, uReflectorCos3, directionToEye, surfNormal, transformedCoord, normalisedSurfCoord);
-#endif
+	float portalLight = calculatePortalLightContribution(norm, uReflectorCos, normalisedSurfCoord, uReflectorPos, reflectedEyeVec);
+	float portalLight2 = calculatePortalLightContribution(norm, uReflectorCos2, normalisedSurfCoord, uReflectorPos2, reflectedEyeVec);
+	float portalLight3 = calculatePortalLightContribution(norm, uReflectorCos3, normalisedSurfCoord, uReflectorPos3, reflectedEyeVec);
 
 
 #ifdef VCOLOR
