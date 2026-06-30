@@ -1,4 +1,5 @@
 #version 300 es
+#define SMALL_AMOUNT 0.01
 	#define PIBYTWO 1.5707963
 
 	precision mediump float;
@@ -18,6 +19,9 @@
 	uniform float uReflectorCos;
 	uniform float uReflectorCos2;
 	uniform float uReflectorCos3;
+
+	uniform float uSpecularStrength;
+	uniform float uSpecularPower;
 
 #ifdef VEC_ATMOS_THICK
 	in vec3 fog;
@@ -87,7 +91,7 @@ float capSqrt(float x){
 
 //TODO move some or all of this calculation to vertex shader.
 // calculation of alpha, gamma factors can easily be per vertex
-float calculatePortalLightContribution(vec4 normal, float uReflectorCos, vec4 surfPos, vec4 portalPos){
+float calculatePortalLightContribution(vec4 normal, float uReflectorCos, vec4 surfPos, vec4 portalPos, vec4 reflectedEyeVec, float specAmount){
 	//elevation (phi in notes) of portal "sun" in sky viewed from surface
 	//in notes actually might be 0=straight above!
 
@@ -120,6 +124,24 @@ float calculatePortalLightContribution(vec4 normal, float uReflectorCos, vec4 su
 		//NOTE might be wrong - if there is a clear view of it, portal really does appear very large from opposite side of world.
 		//however, this does fix issue of lighting becoming wierd (negative?) when lit object is within volume opposite the portal volume.
 		//TODO shadow map/atmos calc etc
+
+
+
+#ifdef SPECULAR_ACTIVE
+
+	vec4 directionToPortalLight = normalize( normalize(surfPos+SMALL_AMOUNT*portalPos ) - surfPos);
+	float dotProd = max(dot(reflectedEyeVec, directionToPortalLight), 0.);
+	float angleDifference = acos(dotProd) - theta;
+
+	//return (angleDifference < 0.) ? 1.: 0.;		//NOTE sign change unexpected! are cosine vals -ve here?
+
+	float specularSharpness = uSpecularPower;	//how sharp reflected image is. resuse existing variable "specular power
+	float specularContrib = .5*(tanh(-angleDifference*specularSharpness) + 1.);		//NOTE function of angle so a bit bodgy - expect a point in middle or reflection of disc, but not obvious to viewer.
+
+	contribution*=(1.-specAmount);
+	contribution += specAmount*specularContrib;
+#endif
+
 
 	return contribution;
 }
@@ -180,10 +202,34 @@ float calculateSimpleLightContribution(vec4 normal, float lightRad, vec4 surfPos
 		//float light = calculatePortalLightContribution(norm, 0.9999, normalisedSurfCoord, recalculatedPlayerLightPos);
 		float light = calculateSimpleLightContribution(norm, 0.04, normalisedSurfCoord, recalculatedPlayerLightPos);
 
+
+#ifdef SPECULAR_ACTIVE
+	//other specular implementation is in tangent space.
+	//this uses 4vecs. guessed but appears to work fine.
+	vec4 eyePos = vec4(0.,0.,0.,1.);
+
+	//directions are what matter. approximate by using small_amount. TODO more efficient formulation
+	//TODO what is adjustedpos, what is transformedPos? 
+	vec4 directionToEye = normalize( normalize(transformedCoord+SMALL_AMOUNT*eyePos) -  normalisedSurfCoord);
+	
+	//reflect eye vec in surface.
+	vec4 reflectedEyeVec = 2.*norm*dot(directionToEye, norm) - directionToEye;
+
+	//schlick R0 + (1-R0)(1+cost)^5 , where t = view angle (where 0 = looking directly at surface) 
+	float cost = dot(directionToEye, norm);	//whatever this is is 0 for glancing suppose this is sint
+	//float ctsq = 1. - something*something;
+	float r0 = uSpecularStrength;
+	float schlick = r0 + (1.-r0)*pow(1.-cost,5.);
+#else
+	vec4 reflectedEyeVec = vec4(0.);	//unused 
+	float schlick=0.;
+
+#endif
+
 		//light from portals
-		float portalLight = calculatePortalLightContribution(norm, uReflectorCos, normalisedSurfCoord, uReflectorPos);
-		float portalLight2 = calculatePortalLightContribution(norm, uReflectorCos2, normalisedSurfCoord, uReflectorPos2);
-		float portalLight3 = calculatePortalLightContribution(norm, uReflectorCos3, normalisedSurfCoord, uReflectorPos3);
+		float portalLight = calculatePortalLightContribution(norm, uReflectorCos, normalisedSurfCoord, uReflectorPos, reflectedEyeVec, schlick);
+		float portalLight2 = calculatePortalLightContribution(norm, uReflectorCos2, normalisedSurfCoord, uReflectorPos2, reflectedEyeVec, schlick);
+		float portalLight3 = calculatePortalLightContribution(norm, uReflectorCos3, normalisedSurfCoord, uReflectorPos3, reflectedEyeVec, schlick);
 				
 		//guess maybe similar to some gaussian light source
 		

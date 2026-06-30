@@ -202,12 +202,12 @@ function initShaders(shaderProgs){
 	var receiveShadowsString = "RECEIVE_SHADOW";	//set to "NOTHING" here to turn off
 
 	var shaderProgWithVariationsList = {
-		coloredPerPixelDiscard:["perpixel-discard-vs", "perpixel-discard-fs", [receiveShadowsString],[receiveShadowsString],true],
-		coloredPerPixelDiscardVertexColored:["perpixel-discard-vs", "perpixel-discard-fs", ['VERTCOLOR',receiveShadowsString],['VERTCOLOR',receiveShadowsString],true],
+		coloredPerPixelDiscard:["perpixel-discard-vs", "perpixel-discard-fs", [receiveShadowsString],['SPECULAR_ACTIVE', receiveShadowsString],true],	//used for teapots
+		coloredPerPixelDiscardVertexColored:["perpixel-discard-vs", "perpixel-discard-fs", ['VERTCOLOR',receiveShadowsString],['VERTCOLOR','SPECULAR_ACTIVE',receiveShadowsString],true],	//used for mushrooms, lucy,
 		coloredPerPixelDiscardVertexColoredEmit:["perpixel-discard-vs", "perpixel-discard-emit-fs", ['VERTCOLOR',receiveShadowsString],['VERTCOLOR',receiveShadowsString],true],
 			//^^ note perpixel lighting is irrelevant because no effect of lights
 
-		coloredPerPixelDiscardVertexColoredTexmap:["perpixel-discard-vs", "perpixel-discard-fs", ['VERTCOLOR','TEXMAP',receiveShadowsString],['VERTCOLOR','TEXMAP',receiveShadowsString],true],
+		coloredPerPixelDiscardVertexColoredTexmap:["perpixel-discard-vs", "perpixel-discard-fs", ['VERTCOLOR','TEXMAP',receiveShadowsString],['VERTCOLOR','TEXMAP','SPECULAR_ACTIVE',receiveShadowsString],true],	//used for menger cube
 
 		coloredPerPixelDiscardVertexColoredTexmapBendy:["perpixel-discard-vs", "perpixel-discard-fs", ['VS_MATMULT','VERTCOLOR','TEXMAP','BENDY_'],['VERTCOLOR','TEXMAP'],true],
 		coloredPerPixelDiscardVertexColoredTexmapBendyInstanced:["perpixel-discard-vs", "perpixel-discard-fs", ['INSTANCED','VS_MATMULT','VERTCOLOR','TEXMAP','BENDY_'],['VERTCOLOR','TEXMAP'],true],

@@ -87,12 +87,12 @@ float capSqrt(float x){
 
 //TODO move some or all of this calculation to vertex shader.
 // calculation of alpha, gamma factors can easily be per vertex
-float calculatePortalLightContribution(vec4 surfNormal, float uReflectorCos, vec4 surfPos, vec4 portalPos, vec4 reflectedEyeVec, float specAmount){
+float calculatePortalLightContribution(vec4 normal, float uReflectorCos, vec4 surfPos, vec4 portalPos, vec4 reflectedEyeVec, float specAmount){
 	//elevation (phi in notes) of portal "sun" in sky viewed from surface
 	//in notes actually might be 0=straight above!
 
 	float wComponent = dot(surfPos, portalPos);
-	float zComponent = dot(surfNormal, portalPos);
+	float zComponent = dot(normal, portalPos);
 	float xyComponent = capSqrt(1. - wComponent*wComponent - zComponent*zComponent);
 	float elev = atan(xyComponent, zComponent);
 	//elev is dependent on portal position in surface frame height component vs horizontal component. 
