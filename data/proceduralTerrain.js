@@ -342,7 +342,7 @@ var terrainHeightData = (function generateTerrainHeightData(){
 	
 	
 	function terrainPrecalcHeightPerlin(ii,jj){			//todo perlin generator for correct scale?
-		var hi = 2.8*sumPerlinWrap(ii/64,jj/64,0,2);
+		var hi = .5*sumPerlinWrap(ii/64,jj/64,0,2);
 		//noise.perlin3 is quite odd. noise.perlin3(0,0,n) returns 0 always, suggesting doesn't treat all coords the same. TODO own perlin!!
 															
 		//noise.perlin3 seems to be 0 for any integer coords, eg (0,0,0), (1,2,3) etc, but (0.5,0,0) does not match (1.5,0,0) etc
