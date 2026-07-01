@@ -404,7 +404,9 @@ var proceduralTerrainData = (function generateGridData(gridSize){
 			//var h2 = (4*height+1)/2;	//similar to tanh version
 			var h2 = (Math.tanh(10*height)+1)/2;	//tanh ensures within 0-1
 			//var colorArr = [h2, 1-h2,0,1];	//green-red
-			var colorArr = [h2, (h2+1)/2,h2/2,1];	//green-beige
+			//var colorArr = [h2, (h2+1)/2,h2/2,1];	//green-beige
+			var colorArr = [(h2+1)/2, h2,h2,1];	//red
+
 			colorArr.forEach(elem=>colors.push(elem));
 		}
 	}

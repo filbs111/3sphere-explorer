@@ -97,7 +97,7 @@ out vec4 fragColor;
 //TODO move some or all of this calculation to vertex shader.
 // calculation of alpha, gamma factors can easily be per vertex
 // nmapNormal is per pixel so wants more thought.
-float calculatePortalLightContribution(vec4 vPortalLightPosTangentSpace, vec4 nmapNormal, float uReflectorCos, vec4 surfPos, vec4 portalPos){
+float calculatePortalLightContribution(vec4 vPortalLightPosTangentSpace, vec4 nmapNormal, float uReflectorCos, vec4 surfPos, vec4 portalPos, vec3 reflectedEyeVec, float specAmount){
 	float cosElevation = dot(vPortalLightPosTangentSpace, nmapNormal); //elevation = phi in notes
 	float elev = acos(cosElevation);	//elevation of portal "sun" in sky viewed from surface
 
@@ -122,6 +122,34 @@ float calculatePortalLightContribution(vec4 vPortalLightPosTangentSpace, vec4 nm
 		//NOTE might be wrong - if there is a clear view of it, portal really does appear very large from opposite side of world.
 		//however, this does fix issue of lighting becoming wierd (negative?) when lit object is within volume opposite the portal volume.
 		//TODO shadow map/atmos calc etc
+
+
+
+#ifdef SPECULAR_ACTIVE
+
+	//specAmount = max(specAmount,0.);	//avoid problem due to normal not matching physical normal
+	specAmount = min(specAmount,1.);	//TODO why does input specAmount go above 1? 
+
+	vec3 vPortalLightPosTangentSpace3 = normalize(vPortalLightPosTangentSpace.xyz);
+	float dotProd = max(dot(reflectedEyeVec, vPortalLightPosTangentSpace3), 0.);
+
+
+
+	float angleDifference = acos(dotProd) - theta;
+
+	//return (angleDifference < 0.) ? 1.: 0.;		//NOTE sign change unexpected! are cosine vals -ve here?
+
+	float specularSharpness = uSpecularPower;	//how sharp reflected image is. resuse existing variable "specular power
+	float specularContrib = .5*(tanh(-angleDifference*specularSharpness) + 1.);		//NOTE function of angle so a bit bodgy - expect a point in middle or reflection of disc, but not obvious to viewer.
+
+	//specularContrib = max(specularContrib, 0.);	//doesn't fix problem of wierd very drak parts at glancing incidence.
+		// (FWIW can avoid by having low specular power eg 1.5, though then no point having disc portal reflection code, in fact run into bad pointy highlight!
+
+
+	contribution*=(1.-specAmount);
+	contribution += specAmount*specularContrib;
+#endif
+
 
 	return contribution;
 }
@@ -193,7 +221,7 @@ float calculatePortalLightContribution(vec4 vPortalLightPosTangentSpace, vec4 nm
 #endif
 				
 		vec3 texSampleAdjusted = texSample*vec3(2.)-vec3(1.);
-		texSampleAdjusted.xy*=0.4;	//make surface flatter.
+		texSampleAdjusted.xy*=0.1;	//make surface flatter.
 				
 		texSampleAdjusted = normalize(texSampleAdjusted);
 		
@@ -245,6 +273,23 @@ float calculatePortalLightContribution(vec4 vPortalLightPosTangentSpace, vec4 nm
 		float phongAmount = uSpecularStrength*pow( max(dot(halfVec, nmapNormal), 0.),uSpecularPower);
 		
 		light+=phongAmount;
+
+
+	//reflect eye vec in surface. 
+	vec4 reflectedEyeVec4 = 2.*nmapNormal*dot(normalizedEyePosAdj, nmapNormal) - normalizedEyePosAdj;
+	//vec4 reflectedEyeVec4 = 2.*vNormal*dot(normalizedEyePosAdj, vNormal) - normalizedEyePosAdj;	//works (ignores normal map)
+
+	vec3 reflectedEyeVec = normalize(reflectedEyeVec4.xyz);
+
+	//schlick R0 + (1-R0)(1+cost)^5 , where t = view angle (where 0 = looking directly at surface) 
+	float cost = dot(normalizedLightPosAdj, nmapNormal);	//whatever this is is 0 for glancing suppose this is sint
+	//float ctsq = 1. - something*something;
+	float r0 = uSpecularStrength;
+	float schlick = r0 + (1.-r0)*pow(1.-cost,5.);
+#else
+	vec3 reflectedEyeVec = vec3(0.);	//unused 
+	float schlick=0.;
+
 #endif		
 		//falloff
 	//	light/=0.1 + 5.0*(1.0-normalizedLightPos.w);				//results consistent with "inefficient" version for small distances
@@ -253,32 +298,10 @@ float calculatePortalLightContribution(vec4 vPortalLightPosTangentSpace, vec4 nm
 	
 
 		//light from portal
-		float portalLight = calculatePortalLightContribution(vPortalLightPosTangentSpace, nmapNormal, uReflectorCos, normalisedSurfCoord, uReflectorPos);
-		float portalLight2 = calculatePortalLightContribution(vPortalLightPosTangentSpace2, nmapNormal, uReflectorCos2, normalisedSurfCoord, uReflectorPos2);
-		float portalLight3 = calculatePortalLightContribution(vPortalLightPosTangentSpace3, nmapNormal, uReflectorCos3, normalisedSurfCoord, uReflectorPos3);
+		float portalLight = calculatePortalLightContribution(vPortalLightPosTangentSpace, nmapNormal, uReflectorCos, normalisedSurfCoord, uReflectorPos, reflectedEyeVec, schlick);
+		float portalLight2 = calculatePortalLightContribution(vPortalLightPosTangentSpace2, nmapNormal, uReflectorCos2, normalisedSurfCoord, uReflectorPos2, reflectedEyeVec, schlick);
+		float portalLight3 = calculatePortalLightContribution(vPortalLightPosTangentSpace3, nmapNormal, uReflectorCos3, normalisedSurfCoord, uReflectorPos3, reflectedEyeVec, schlick);
 
-
-#ifdef SPECULAR_ACTIVE
-		vec4 vPortalLightPosTangentSpaceAdj = normalize(vec4( vPortalLightPosTangentSpace.xyz , 0.0));
-		vec4 vPortalLightPosTangentSpaceAdj2 = normalize(vec4( vPortalLightPosTangentSpace2.xyz , 0.0));
-		vec4 vPortalLightPosTangentSpaceAdj3 = normalize(vec4( vPortalLightPosTangentSpace3.xyz , 0.0));
-
-		//TODO take into account "size" of portal light
-		halfVec = normalize( normalizedEyePosAdj + vPortalLightPosTangentSpaceAdj );
-		phongAmount = uSpecularStrength*pow( max(dot(halfVec, nmapNormal), 0.),uSpecularPower);
-		portalLight*=(1.-uSpecularStrength);
-		portalLight+=phongAmount;
-
-		halfVec = normalize( normalizedEyePosAdj + vPortalLightPosTangentSpaceAdj2 );
-		phongAmount = uSpecularStrength*pow( max(dot(halfVec, nmapNormal), 0.),uSpecularPower);
-		portalLight2*=(1.-uSpecularStrength);
-		portalLight2+=phongAmount;
-
-		halfVec = normalize( normalizedEyePosAdj + vPortalLightPosTangentSpaceAdj3 );
-		phongAmount = uSpecularStrength*pow( max(dot(halfVec, nmapNormal), 0.),uSpecularPower);
-		portalLight3*=(1.-uSpecularStrength);
-		portalLight3+=phongAmount;
-#endif
 
 		//falloff
 		// portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal

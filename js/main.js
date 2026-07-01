@@ -4454,8 +4454,10 @@ function initTexture(){
 
 	//load 2 more textures. already set textures still reference what was loaded already
 	//loadTmpFFTexture(4999,'img/no-git/');	//chequerboard
-	loadTmpFFTexture(5876);
-	//loadTmpFFTexture(4431);	//concrete blocks
+	//loadTmpFFTexture(5876);
+	loadTmpFFTexture(4431);	//concrete blocks
+	//loadTmpFFTexture(6481);
+
 	duocylinderObjects.procTerrain.tex2 = nmapTexture;
 	duocylinderObjects.procTerrain.tex2B = diffuseTexture;
 	
