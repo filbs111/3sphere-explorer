@@ -128,6 +128,7 @@ float calculatePortalLightContribution(vec4 normal, float uReflectorCos, vec4 su
 
 
 #ifdef SPECULAR_ACTIVE
+	specAmount = min(specAmount,1.);	//TODO why does input specAmount go above 1? 
 
 	vec4 directionToPortalLight = normalize( normalize(surfPos+SMALL_AMOUNT*portalPos ) - surfPos);
 	float dotProd = max(dot(reflectedEyeVec, directionToPortalLight), 0.);
