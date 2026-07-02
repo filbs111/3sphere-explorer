@@ -1,4 +1,5 @@
-#version 300 es 
+#version 300 es
+#define SMALL_AMOUNT 0.01
 	#define PIBYTWO 1.5707963
 
 	precision mediump float;
@@ -91,7 +92,7 @@ out vec4 fragColor;
 //TODO move some or all of this calculation to vertex shader.
 // calculation of alpha, gamma factors can easily be per vertex
 // nmapNormal is per pixel so wants more thought.
-float calculatePortalLightContribution(vec3 vPortalLightPosTangentSpace, vec3 nmapNormal, float uReflectorCos, vec4 surfPos, vec4 portalPos){
+float calculatePortalLightContribution(vec3 vPortalLightPosTangentSpace, vec3 nmapNormal, float uReflectorCos, vec4 surfPos, vec4 portalPos, vec3 reflectedEyeVec, float specAmount){
 	float cosElevation = dot(vPortalLightPosTangentSpace, nmapNormal); //elevation = phi in notes
 	float elev = acos(cosElevation);	//elevation of portal "sun" in sky viewed from surface
 
@@ -112,10 +113,37 @@ float calculatePortalLightContribution(vec3 vPortalLightPosTangentSpace, vec3 nm
 	float aboveHorizonAngleSize = (sin(min(PIBYTWO, elev+theta)) - sin(min(PIBYTWO, elev-theta)));
 	float contribution = aboveHorizonAngleSize*sin(theta)/2.0;
 
-	contribution*= (cos(elev)+1.0/2.0);	//make go to 0 on opposite side of world. 
+
+
+	contribution*= cos(elev)+1.0/2.0;	//make go to 0 on opposite side of world. 
 		//NOTE might be wrong - if there is a clear view of it, portal really does appear very large from opposite side of world.
 		//however, this does fix issue of lighting becoming wierd (negative?) when lit object is within volume opposite the portal volume.
 		//TODO shadow map/atmos calc etc
+
+
+
+
+#ifdef SPECULAR_ACTIVE
+
+	//specAmount = max(specAmount,0.);	//avoid problem due to normal not matching physical normal
+	specAmount = min(specAmount,1.);	//TODO why does input specAmount go above 1? 
+
+	float dotProd = max(dot(reflectedEyeVec, vPortalLightPosTangentSpace), 0.);
+	float angleDifference = acos(dotProd) - theta;
+
+	//return (angleDifference < 0.) ? 1.: 0.;		//NOTE sign change unexpected! are cosine vals -ve here?
+
+	float specularSharpness = uSpecularPower;	//how sharp reflected image is. resuse existing variable "specular power
+	float specularContrib = .5*(tanh(-angleDifference*specularSharpness) + 1.);		//NOTE function of angle so a bit bodgy - expect a point in middle or reflection of disc, but not obvious to viewer.
+
+	//specularContrib = max(specularContrib, 0.);	//doesn't fix problem of wierd very drak parts at glancing incidence.
+		// (FWIW can avoid by having low specular power eg 1.5, though then no point having disc portal reflection code, in fact run into bad pointy highlight!
+
+
+	contribution*=(1.-specAmount);
+	contribution += specAmount*specularContrib;
+#endif
+
 
 	return contribution;
 }
@@ -163,14 +191,28 @@ float calculatePortalLightContribution(vec3 vPortalLightPosTangentSpace, vec3 nm
 		if (vPosModDot<0.2){discard;}
 */
 		float texOffset = 0.5;
-		
+		float texScale = 20.;
+
 #ifdef DIFFUSE_TEX_ACTIVE
-		vec3 texColor = mat3(texture(uSamplerB, vec2(vPos.y, vPos.z)).xyz, texture(uSamplerB, vec2(vPos.x, vPos.z + texOffset )).xyz, texture(uSamplerB, vec2(vPos.x + texOffset, vPos.y + texOffset )).xyz) * vTexAmounts;
+
+//vec3 texColor = texture(uSamplerB, vec2(vPos.y, vPos.z)).xyz;	//???
+//vec3 texColor = vec3(.5+vPos.x);	//seems to be uphill direction 
+//vec3 texColor = vec3(.5+vPos.y);	//seems to be downhill direction 
+//vec3 texColor = vec3(.5+vPos.z);	//seems to be vertical direction 
+	
+//vec3 texColor = texture(uSamplerB, texScale*vec2(vPos.y, vPos.x) ).xyz * vTexAmounts.y; //top-down texture
+//vec3 texColor = texture(uSamplerB, texScale*vec2(vPos.x, vPos.z) ).xyz * vTexAmounts.x;
+//vec3 texColor = texture(uSamplerB, texScale*vec2(vPos.z, vPos.y) ).xyz * vTexAmounts.z;
+
+vec3 texColor = mat3(texture(uSamplerB, texScale*vec2(vPos.x, vPos.z)).xyz, texture(uSamplerB, texScale*vec2(vPos.y, vPos.x + texOffset )).xyz, texture(uSamplerB, texScale*vec2(vPos.z + texOffset, vPos.y + texOffset )).xyz) * vTexAmounts;
+
+//vec3 texColor = vTexAmounts;
+
 #else	
 		vec3 texColor = vec3(1.);		//todo use above to combine diffuse with normal map effect
 #endif
 
-		float nmapStrength = -0.7;
+		float nmapStrength = -0.5;
 			//TODO check whether normal maps use linear or sRGB space
 			//TODO include ambient occlusion/colour map to match normal map (don't need z component of normal map anyway)
 
@@ -178,12 +220,14 @@ float calculatePortalLightContribution(vec3 vPortalLightPosTangentSpace, vec3 nm
 		//vec3 normsq = sqrt(vNormal*vNormal);	//maybe not exactly right - something to stop texture stretching
 		vec3 normsq = abs(vNormal);	//maybe not exactly right - something to stop texture stretching
 
-		vec3 nmapA = vec3 ( texture(uSampler, vec2(vPos.y, vPos.z)).xy - vec2(0.5) , 0.0);	//TODO matrix formulation?
-		vec3 nmapB = vec3 ( texture(uSampler, vec2(vPos.x, vPos.z + texOffset )).xy - vec2(0.5) ,0.0);
-		vec3 nmapC = vec3 ( texture(uSampler, vec2(vPos.x + texOffset, vPos.y + texOffset )).xy - vec2(0.5) ,0.0);
+		vec3 nmapA = vec3 ( texture(uSampler, texScale*vec2(vPos.x, vPos.z)).xy - vec2(0.5) , 0.0);	//TODO matrix formulation?
+		vec3 nmapB = vec3 ( texture(uSampler, texScale*vec2(vPos.y, vPos.x + texOffset )).xy - vec2(0.5) ,0.0);
+		vec3 nmapC = vec3 ( texture(uSampler, texScale*vec2(vPos.z + texOffset, vPos.y + texOffset )).xy - vec2(0.5) ,0.0);
 		
 		vec3 nmapNormal = normalize( vNormal + nmapStrength * (normsq.x*nmapA.zxy + normsq.y*nmapB.xzy + normsq.z*nmapC.xyz ) );
 		
+		//texColor = nmapNormal;	//test. TODO check normal map looks right - might depend on texture - gl vs directx
+
 		
 		vec4 normalizedLightPos = normalize(vPlayerLightPosTangentSpace);
 		vec3 normalizedLightPosAdj = normalize(vPlayerLightPosTangentSpace.xyz);
@@ -195,13 +239,23 @@ float calculatePortalLightContribution(vec3 vPortalLightPosTangentSpace, vec3 nm
 #ifdef SPECULAR_ACTIVE
 		vec3 normalizedEyePosAdj = normalize(vEyePosTangentSpace.xyz);	
 		
-		//float phongAmount = pow(max(dot(normalizedEyePosAdj, nmapNormal),0.),10.);	//simple glossy camera light
-		vec3 halfVec = normalize(normalizedEyePosAdj + normalizedLightPosAdj);
-		float phongAmount = uSpecularStrength*pow( max(dot(halfVec, nmapNormal), 0.),uSpecularPower);
-		light*=(1.-uSpecularStrength);	//ensure total light doesn't go -ve
-		light+=phongAmount;
-#endif
 		
+	//reflect eye vec in surface. 
+	vec3 reflectedEyeVec = 2.*nmapNormal*dot(normalizedEyePosAdj, nmapNormal) - normalizedEyePosAdj;
+	//vec3 reflectedEyeVec = 2.*vNormal*dot(normalizedEyePosAdj, vNormal) - normalizedEyePosAdj;	//works (ignores normal map)
+
+	//schlick R0 + (1-R0)(1+cost)^5 , where t = view angle (where 0 = looking directly at surface) 
+	float cost = dot(normalizedLightPosAdj, nmapNormal);	//whatever this is is 0 for glancing suppose this is sint
+	//float ctsq = 1. - something*something;
+	float r0 = uSpecularStrength;
+	float schlick = r0 + (1.-r0)*pow(1.-cost,5.);
+#else
+	vec3 reflectedEyeVec = vec3(0.);	//unused 
+	float schlick=0.;
+
+#endif
+
+
 		//falloff
 		//	light/=0.1 + 5.0*(1.0-normalizedLightPos.w);				//results consistent with "inefficient" version for small distances
 		vec4 vecToLight = normalizedLightPos - vec4(vec3(0.0),1.0);	//result fully consistent with "inefficient" version, but maybe not worth extra calcs
@@ -212,28 +266,10 @@ float calculatePortalLightContribution(vec3 vPortalLightPosTangentSpace, vec3 nm
 		vec3 vPortalLightPosTangentSpaceAdj2 =normalize(vPortalLightPosTangentSpace2.xyz);
 		vec3 vPortalLightPosTangentSpaceAdj3 =normalize(vPortalLightPosTangentSpace3.xyz);
 		
-		float portalLight = calculatePortalLightContribution(vPortalLightPosTangentSpaceAdj, nmapNormal, uReflectorCos, normalisedSurfCoord, uReflectorPos);
-		float portalLight2 = calculatePortalLightContribution(vPortalLightPosTangentSpaceAdj2, nmapNormal, uReflectorCos2, normalisedSurfCoord, uReflectorPos2);
-		float portalLight3 = calculatePortalLightContribution(vPortalLightPosTangentSpaceAdj3, nmapNormal, uReflectorCos3, normalisedSurfCoord, uReflectorPos3);
+		float portalLight = calculatePortalLightContribution(vPortalLightPosTangentSpaceAdj, nmapNormal, uReflectorCos, normalisedSurfCoord, uReflectorPos, reflectedEyeVec, schlick);
+		float portalLight2 = calculatePortalLightContribution(vPortalLightPosTangentSpaceAdj2, nmapNormal, uReflectorCos2, normalisedSurfCoord, uReflectorPos2, reflectedEyeVec, schlick);
+		float portalLight3 = calculatePortalLightContribution(vPortalLightPosTangentSpaceAdj3, nmapNormal, uReflectorCos3, normalisedSurfCoord, uReflectorPos3, reflectedEyeVec, schlick);
 
-#ifdef SPECULAR_ACTIVE
-
-		//TODO take into account "size" of portal light
-		halfVec = normalize( normalizedEyePosAdj + vPortalLightPosTangentSpaceAdj );
-		phongAmount = uSpecularStrength*pow( max(dot(halfVec, nmapNormal), 0.),uSpecularPower);
-		portalLight*=(1.-uSpecularStrength);	//ensure total light doesn't go -ve
-		portalLight+=phongAmount;
-
-		halfVec = normalize( normalizedEyePosAdj + vPortalLightPosTangentSpaceAdj2 );
-		phongAmount = uSpecularStrength*pow( max(dot(halfVec, nmapNormal), 0.),uSpecularPower);
-		portalLight2*=(1.-uSpecularStrength);	//ensure total light doesn't go -ve
-		portalLight2+=phongAmount;
-
-		halfVec = normalize( normalizedEyePosAdj + vPortalLightPosTangentSpaceAdj3 );
-		phongAmount = uSpecularStrength*pow( max(dot(halfVec, nmapNormal), 0.),uSpecularPower);
-		portalLight3*=(1.-uSpecularStrength);	//ensure total light doesn't go -ve
-		portalLight3+=phongAmount;
-#endif
 
 		//falloff
 		// portalLight/=1.0 + 3.0*dot(posCosDiff,posCosDiff);	//just something that's 1 at edge of portal
@@ -280,4 +316,7 @@ float calculatePortalLightContribution(vec3 vPortalLightPosTangentSpace, vec3 nm
 		
 		float depthVal = .5*(vZW.x/vZW.y) + .5;
 		fragColor.a = depthVal;
+
+
+		//fragColor.rgb = vec3(schlick);
 	}
