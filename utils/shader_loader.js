@@ -72,6 +72,49 @@ function loadShader(vs_id,fs_id, vs_defines, fs_defines) {
 	return shaderProgram;
 }
 
+// Create Uniform Buffer to store our data
+var uboBuffer;
+
+function initialiseUbo(){	//to be called once gl initialised
+    uboBuffer = gl.createBuffer();
+
+	//block size etc in example is read from shader, but for now, just try assuming given shader code.
+	var blockSize = 32;		//2x 4vec floats = 32 bytes
+
+	// Bind it to tell WebGL we are working on this buffer
+    gl.bindBuffer(gl.UNIFORM_BUFFER, uboBuffer);
+
+    // Allocate memory for our buffer equal to the size of our Uniform Block
+    // We use dynamic draw because we expect to respecify the contents of the buffer frequently
+    gl.bufferData(gl.UNIFORM_BUFFER, blockSize, gl.DYNAMIC_DRAW);
+
+    // Unbind buffer when we're done using it for now
+    // Good practice to avoid unintentionally working on it
+    gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+
+	// Bind the buffer to a binding point
+	// Think of it as storing the buffer into a special UBO ArrayList
+	// The second argument is the index you want to store your Uniform Buffer in
+	// Let's say you have 2 unique UBO, you'll store the first one in index 0 and the second one in index 1
+	gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, uboBuffer);
+}
+
+function setUboVals(vec1, vec2){
+	gl.bindBuffer(gl.UNIFORM_BUFFER, uboBuffer);
+
+    // Push some data to our Uniform Buffer
+	gl.bufferSubData(
+		gl.UNIFORM_BUFFER,
+		0,
+		new Float32Array(vec1)
+	);
+	gl.bufferSubData(
+		gl.UNIFORM_BUFFER,
+		16,
+		new Float32Array(vec2)
+	);
+}
+
 function getLocationsForShadersUsingPromises(cb){
 	//to be called some time after loadShader, when hope (!!) that attach, link etc have completed, because if they haven't this will block for whatever amount of time.
 	//TODO is there some property to query for shader to say whether compilation, linking complete?
@@ -112,6 +155,14 @@ function getLocationsForShadersUsingPromises(cb){
 					}
 				}
 			}
+
+			//do uniform buffer object stuff? 
+			var uboIndex = gl.getUniformBlockIndex(shaderProgram, "Settings");
+			if (uboIndex!=4294967295){
+				console.log("found one! " + uboIndex);
+			 	gl.uniformBlockBinding(shaderProgram, uboIndex, 0);
+			}
+
 		});
 	})).then(()=>{cb()});
 }
@@ -280,6 +331,8 @@ function initShaders(shaderProgs){
 		specialCubemap2:["cubemap-vs", "cubemap-fs2", ['SPECIAL'],[],true],
 		vertprojMix:["cubemap-vs", "cubemap-fs", ['VERTPROJ','SPECIAL'],['VPROJ_MIX'],true],		
 	};
+
+	initialiseUbo();
 
 	Object.entries(shaderProgNoVariationsList).forEach(([key,value])=>{
 		shaderProgs[key] = loadShader.apply(null, value);

@@ -3,6 +3,15 @@
 	#define PIBYTWO 1.5707963
 
 	precision mediump float;
+
+
+// THIS IS CALLED A UNIFORM BLOCK
+uniform Settings {
+	vec4 u_SomeVec4;
+    vec4 u_AnotherVec4;
+};
+
+
 	uniform vec4 uColor;
 	uniform vec3 uEmitColor;
 	uniform vec3 uPlayerLightColor;
@@ -286,6 +295,9 @@ float calculateSimpleLightContribution(vec4 normal, float lightRad, vec4 surfPos
 
 		gl_FragDepth = depthVal;
 		fragColor.a = depthVal;
+
+fragColor*=u_SomeVec4;
+
 #endif
 	}
 

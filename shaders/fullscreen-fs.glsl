@@ -1,6 +1,12 @@
 #version 300 es
 precision mediump float;
-	
+
+// THIS IS CALLED A UNIFORM BLOCK
+uniform Settings {
+    vec4 u_SomeVec4;
+    vec4 u_AnotherVec4;
+};
+
 in vec2 vTextureCoord;
 uniform sampler2D uSampler;
 uniform vec2 uInvSize;
@@ -30,5 +36,8 @@ void main(void) {
     vec4 avg = 0.333*(texture(uSampler, vTextureCoord + uInvSize*dir.xy) + texture(uSampler, vTextureCoord - uInvSize*dir.xy) + MIDv4);
     avg.a=1.0;
     fragColor = avg;
+
+fragColor*=u_SomeVec4;
+
     //fragColor = vec4(vec3(avg.y),1.0);	//grayscale by just take green channel
 }

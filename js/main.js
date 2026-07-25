@@ -804,6 +804,12 @@ function drawScene(frameTime){
 	iterateMechanics(frameTime);	//TODO make movement speed independent of framerate
 	
 	requestAnimationFrame(drawScene);
+
+
+	//TODO move gloal ubo setting to drawing a camera view or set of camera views (quad)
+	setUboVals([1,0,0,1], [0,1,1,1]);
+
+
 	uniform4fvSetter.storeAndResetStats();
 	stats.end();
 	stats.begin();
