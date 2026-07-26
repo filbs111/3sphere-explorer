@@ -75,11 +75,24 @@ function loadShader(vs_id,fs_id, vs_defines, fs_defines) {
 // Create Uniform Buffer to store our data
 var uboBuffer;
 
+/*
+uniform Settings {
+	vec4 uPlayerLightColor;
+	vec4 uFogColor;
+	vec4 uReflectorDiffColorAndCos;
+	vec4 uReflectorDiffColorAndCos2;
+	vec4 uReflectorDiffColorAndCos3;
+	vec4 uReflectorPos;
+	vec4 uReflectorPos2;
+	vec4 uReflectorPos3;
+};
+*/
+
 function initialiseUbo(){	//to be called once gl initialised
     uboBuffer = gl.createBuffer();
 
 	//block size etc in example is read from shader, but for now, just try assuming given shader code.
-	var blockSize = 32;		//2x 4vec floats = 32 bytes
+	var blockSize = 8*16;		//8x 4vec floats (16 bytes is 4 bytes per float)
 
 	// Bind it to tell WebGL we are working on this buffer
     gl.bindBuffer(gl.UNIFORM_BUFFER, uboBuffer);
@@ -99,20 +112,81 @@ function initialiseUbo(){	//to be called once gl initialised
 	gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, uboBuffer);
 }
 
-function setUboVals(vec1, vec2){
+function setUboValsFromWorldSettings(wSettings){
+
+	/*
+		uniform Settings {
+			vec4 uPlayerLightColor;
+			vec4 uFogColor;
+			vec4 uReflectorDiffColorAndCos;
+			vec4 uReflectorDiffColorAndCos2;
+			vec4 uReflectorDiffColorAndCos3;
+			vec4 uReflectorPos;
+			vec4 uReflectorPos2;
+			vec4 uReflectorPos3;
+		};
+	*/
+
+	/*
+uses code from 
+
+	function generalGetWorldSceneSettings(worldA, psides, otherWorlds)
+ and
+
+	function setPortalInfoForShader(shader, infoForPortals){
+	conditionalSetUniform(gl.uniform3fv, shader.uniforms.uReflectorDiffColor, infoForPortals[0].localVecReflectorDiffColor);
+	// ..
+	conditionalSetUniform(gl.uniform3fv, shader.uniforms.uReflectorDiffColor2, 
+		infoForPortals.length > 1 ? infoForPortals[1].localVecReflectorDiffColor: [0,0,0]);	
+	conditionalSetUniform(gl.uniform3fv, shader.uniforms.uReflectorDiffColor3, 
+		infoForPortals.length > 2 ? infoForPortals[2].localVecReflectorDiffColor: [0,0,0]);
+	conditionalSetUniform4fv(shader, "uReflectorPos", infoForPortals[0].reflectorPosTransformed);
+	conditionalSetUniform4fv(shader, "uReflectorPos2", 
+		infoForPortals.length > 1? infoForPortals[1].reflectorPosTransformed: [0,0,0,1]);
+	conditionalSetUniform4fv(shader, "uReflectorPos3",
+		infoForPortals.length > 2? infoForPortals[2].reflectorPosTransformed: [0,0,0,1]);
+	conditionalSetUniform(gl.uniform1f, shader.uniforms.uReflectorCos, infoForPortals[0].cosReflector)
+	conditionalSetUniform(gl.uniform1f, shader.uniforms.uReflectorCos2, 
+		infoForPortals.length > 1? infoForPortals[1].cosReflector: 1); //guess can be whatever, but 1 consistent with zero size portal
+	conditionalSetUniform(gl.uniform1f, shader.uniforms.uReflectorCos3, 
+		infoForPortals.length > 2? infoForPortals[2].cosReflector: 1);
+	conditionalSetUniform4fv(shader, "uReflectorPosVShaderCopy", infoForPortals[0].reflectorPosTransformed);
+	conditionalSetUniform4fv(shader, "uReflectorPosVShaderCopy2", 
+		infoForPortals.length > 1? infoForPortals[1].reflectorPosTransformed: [0,0,0,1]);
+	conditionalSetUniform4fv(shader, "uReflectorPosVShaderCopy3", 
+		infoForPortals.length > 2? infoForPortals[2].reflectorPosTransformed: [0,0,0,1]);
+}
+	*/
+
+	var blank4VecForNoPortal = [0,0,0,1];
+	var valuesToSet = [
+		[...playerLight,0], 
+		wSettings.localVecFogColor,
+		//[...wSettings.localVecFogColor],
+		blank4VecForNoPortal, blank4VecForNoPortal, blank4VecForNoPortal,
+		1,1,1
+	];
+
+	var infoForPortals = wSettings.infoForPortals;
+	for (var ii=0;ii<infoForPortals.length;ii++){
+		valuesToSet[2+ii] = [...infoForPortals[ii].localVecReflectorDiffColor, infoForPortals[ii].cosReflector];	//TODO don't create intermediate regular array - create float32array straight from world settings..
+		valuesToSet[5+ii] = infoForPortals[ii].reflectorPosTransformed;
+	}
+
+	setUboVals(valuesToSet);
+}
+
+function setUboVals(vec4arr){
 	gl.bindBuffer(gl.UNIFORM_BUFFER, uboBuffer);
 
-    // Push some data to our Uniform Buffer
-	gl.bufferSubData(
-		gl.UNIFORM_BUFFER,
-		0,
-		new Float32Array(vec1)
-	);
-	gl.bufferSubData(
-		gl.UNIFORM_BUFFER,
-		16,
-		new Float32Array(vec2)
-	);
+	for (var ii=0;ii<vec4arr.length;ii++){
+		// Push some data to our Uniform Buffer
+		gl.bufferSubData(
+			gl.UNIFORM_BUFFER,
+			16*ii,
+			new Float32Array(vec4arr[ii])
+		);
+	}
 }
 
 function getLocationsForShadersUsingPromises(cb){

@@ -1,29 +1,28 @@
 #version 300 es
 	precision mediump float;
+
+// THIS IS CALLED A UNIFORM BLOCK
+uniform Settings {
+	vec4 uPlayerLightColor;
+	vec4 uFogColor;
+	vec4 uReflectorDiffColorAndCos;
+	vec4 uReflectorDiffColorAndCos2;
+	vec4 uReflectorDiffColorAndCos3;
+	vec4 uReflectorPos;
+	vec4 uReflectorPos2;
+	vec4 uReflectorPos3;
+};
+
 	in vec3 vTextureCoord;
 	uniform sampler2D uSampler;
 	uniform sampler2D uSampler2;
 	uniform vec4 uColor;
-	uniform vec3 uPlayerLightColor;
 	uniform vec4 uOtherLightAmounts;
 #ifdef VEC_ATMOS_THICK
 	in vec3 fog;
 #else	
 	in float fog;
 #endif
-	uniform vec4 uFogColor;
-	uniform vec3 uReflectorDiffColor;
-	uniform vec3 uReflectorDiffColor2;
-	uniform vec3 uReflectorDiffColor3;
-
-	uniform vec4 uReflectorPos;
-	uniform vec4 uReflectorPos2;
-	uniform vec4 uReflectorPos3;
-
-	uniform float uReflectorCos;
-	uniform float uReflectorCos2;
-	uniform float uReflectorCos3;
-
 	uniform float uMaxAlbedo;
 
 	in vec4 adjustedPos;
@@ -42,6 +41,15 @@
 out vec4 fragColor;
 
 	void main(void) {
+
+		//extract old uniforms from 4vecs
+		vec3 uReflectorDiffColor = uReflectorDiffColorAndCos.xyz;
+		float uReflectorCos = uReflectorDiffColorAndCos.w;
+		vec3 uReflectorDiffColor2 = uReflectorDiffColorAndCos2.xyz;
+		float uReflectorCos2 = uReflectorDiffColorAndCos2.w;
+		vec3 uReflectorDiffColor3 = uReflectorDiffColorAndCos3.xyz;
+		float uReflectorCos3 = uReflectorDiffColorAndCos3.w;
+
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
 	
 		if (posCosDiff>0.0){
@@ -127,7 +135,7 @@ out vec4 fragColor;
 		litColor += gunLightColor*sampleColor2.g;	//gun bake
 
 		//guess maybe similar to some gaussian light source
-		//vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*uColor*textureProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
+		//vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor.xyz*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*uColor*textureProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		vec4 preGammaFragColor = vec4( fog*litColor + (1.0-fog)*uFogColor.xyz, 1.);
 
 		//tone mapping

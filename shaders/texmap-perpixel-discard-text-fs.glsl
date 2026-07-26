@@ -1,6 +1,19 @@
 #version 300 es
 #define SMALL_AMOUNT 0.01
 	precision mediump float;
+
+// THIS IS CALLED A UNIFORM BLOCK
+uniform Settings {
+	vec4 uPlayerLightColor;
+	vec4 uFogColor;
+	vec4 uReflectorDiffColorAndCos;
+	vec4 uReflectorDiffColorAndCos2;
+	vec4 uReflectorDiffColorAndCos3;
+	vec4 uReflectorPos;
+	vec4 uReflectorPos2;
+	vec4 uReflectorPos3;
+};
+
 	in vec3 vTextureCoord;
 	uniform sampler2D uSampler;
 	uniform float uSharpScale;
@@ -9,25 +22,11 @@
 	in vec3 vScreenSpaceCoord;
 #endif
 	uniform vec4 uColor;
-	uniform vec3 uPlayerLightColor;
 #ifdef VEC_ATMOS_THICK
 	in vec3 fog;
 #else	
 	in float fog;
 #endif
-	uniform vec4 uFogColor;
-	uniform vec3 uReflectorDiffColor;
-	uniform vec3 uReflectorDiffColor2;
-	uniform vec3 uReflectorDiffColor3;
-
-	uniform vec4 uReflectorPos;
-	uniform vec4 uReflectorPos2;
-	uniform vec4 uReflectorPos3;
-
-	uniform float uReflectorCos;
-	uniform float uReflectorCos2;
-	uniform float uReflectorCos3;
-
 	uniform float uSpecularStrength;
 	uniform float uSpecularPower;
 	in vec4 adjustedPos;
@@ -42,6 +41,15 @@
 out vec4 fragColor;
 
 	void main(void) {
+
+		//extract old uniforms from 4vecs
+		vec3 uReflectorDiffColor = uReflectorDiffColorAndCos.xyz;
+		float uReflectorCos = uReflectorDiffColorAndCos.w;
+		vec3 uReflectorDiffColor2 = uReflectorDiffColorAndCos2.xyz;
+		float uReflectorCos2 = uReflectorDiffColorAndCos2.w;
+		vec3 uReflectorDiffColor3 = uReflectorDiffColorAndCos3.xyz;
+		float uReflectorCos3 = uReflectorDiffColorAndCos3.w;
+
 #ifdef DEPTH_AWARE
 		float currentDepth =  textureProj(uSamplerDepthmap, vec3(.5,.5,1.)*vScreenSpaceCoord.xyz + vec3(.5,.5,0.)*vScreenSpaceCoord.z).r;
 		//float newDepth = .3183*atan((vZW.x*2.)/(vZW.y+1.)) + .5;	//this is duplicate of custom depth calculation
@@ -154,7 +162,7 @@ out vec4 fragColor;
 #endif		
 		
 		//guess maybe similar to some gaussian light source
-		//vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*adjustedColor*textureProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
+		//vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor.xyz*light + uReflectorDiffColor*portalLight + uFogColor.xyz ), 1.0)*adjustedColor*textureProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 
 
 		float colorFromTexture = textureProj(uSampler, vTextureCoord).y;
@@ -174,7 +182,7 @@ out vec4 fragColor;
 
 		vec3 colorFromTexture3 = vec3(smoothstep(0.5-sharpScale,0.5+sharpScale,colorFromTexture));
 
-		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uReflectorDiffColor2*portalLight2 + uReflectorDiffColor3*portalLight3 + uFogColor.xyz )*adjustedColor.xyz*colorFromTexture3 + (1.0-fog)*uFogColor.xyz , 1.);
+		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor.xyz*light + uReflectorDiffColor*portalLight + uReflectorDiffColor2*portalLight2 + uReflectorDiffColor3*portalLight3 + uFogColor.xyz )*adjustedColor.xyz*colorFromTexture3 + (1.0-fog)*uFogColor.xyz , 1.);
 		
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	

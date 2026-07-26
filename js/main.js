@@ -805,11 +805,6 @@ function drawScene(frameTime){
 	
 	requestAnimationFrame(drawScene);
 
-
-	//TODO move gloal ubo setting to drawing a camera view or set of camera views (quad)
-	setUboVals([1,0,0,1], [0,1,1,1]);
-
-
 	uniform4fvSetter.storeAndResetStats();
 	stats.end();
 	stats.begin();
@@ -2114,6 +2109,8 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 	({worldA,worldInfo, localVecFogColor, infoForPortals, sshipDrawMatrices} = wSettings);
+	
+	setUboValsFromWorldSettings(wSettings);	//TODO pull out and set less frequently? (eg for all 4 panels in quadview)
 	
 	function setupAtmosAndPrepBuffersForDrawing(objBuffer, shaderProg){
 		setupShaderAtmos(shaderProg, worldA);
@@ -3642,6 +3639,8 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 	
 	({worldInfo, sshipDrawMatrices, worldA} = wSettings);
 	
+	setUboValsFromWorldSettings(wSettings);	//TODO pull out and set less frequently? (eg for all 4 panels in quadview)
+
 	var duocylinderSpin = worldInfo.spin;
 
 	mat4.set(worldCamera, invertedWorldCamera);

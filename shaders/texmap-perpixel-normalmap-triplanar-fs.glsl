@@ -3,6 +3,19 @@
 	#define PIBYTWO 1.5707963
 
 	precision mediump float;
+
+// THIS IS CALLED A UNIFORM BLOCK
+uniform Settings {
+	vec4 uPlayerLightColor;
+	vec4 uFogColor;
+	vec4 uReflectorDiffColorAndCos;
+	vec4 uReflectorDiffColorAndCos2;
+	vec4 uReflectorDiffColorAndCos3;
+	vec4 uReflectorPos;
+	vec4 uReflectorPos2;
+	vec4 uReflectorPos3;
+};
+
 	uniform sampler2D uSampler;
 	uniform sampler2D uSamplerB;
 #ifdef DEPTH_AWARE
@@ -10,20 +23,6 @@
 	in vec3 vScreenSpaceCoord;
 #endif
 	uniform vec4 uColor;
-	uniform vec3 uPlayerLightColor;
-	uniform vec4 uFogColor;
-	uniform vec3 uReflectorDiffColor;
-	uniform vec3 uReflectorDiffColor2;
-	uniform vec3 uReflectorDiffColor3;
-
-	uniform vec4 uReflectorPos;
-	uniform vec4 uReflectorPos2;
-	uniform vec4 uReflectorPos3;
-	
-	uniform float uReflectorCos;
-	uniform float uReflectorCos2;
-	uniform float uReflectorCos3;
-
 	uniform float uSpecularStrength;
 	uniform float uSpecularPower;
 
@@ -149,6 +148,14 @@ float calculatePortalLightContribution(vec3 vPortalLightPosTangentSpace, vec3 nm
 }
 
 	void main(void) {
+
+		//extract old uniforms from 4vecs
+		vec3 uReflectorDiffColor = uReflectorDiffColorAndCos.xyz;
+		float uReflectorCos = uReflectorDiffColorAndCos.w;
+		vec3 uReflectorDiffColor2 = uReflectorDiffColorAndCos2.xyz;
+		float uReflectorCos2 = uReflectorDiffColorAndCos2.w;
+		vec3 uReflectorDiffColor3 = uReflectorDiffColorAndCos3.xyz;
+		float uReflectorCos3 = uReflectorDiffColorAndCos3.w;
 
 #ifdef DEPTH_AWARE
 		float currentDepth =  textureProj(uSamplerDepthmap, vec3(.5,.5,1.)*vScreenSpaceCoord.xyz + vec3(.5,.5,0.)*vScreenSpaceCoord.z).r;
@@ -291,7 +298,7 @@ vec3 texColor = mat3(texture(uSamplerB, texScale*vec2(vPos.x, vPos.z)).xyz, text
 		vec3 portalColor3 = uReflectorDiffColor3 + uFogColor.xyz;
 		vec3 totalPortalAndSkySpecular = (portalColor*portalLight + portalColor2*portalLight2 +  portalColor3*portalLight3 + uFogColor.xyz) / totalSpecularWeight;
 
-		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + totalPortalAndSkySpecular )*adjustedColor.xyz*texColor + (1.0-fog)*uFogColor.xyz , 1.);
+		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor.xyz*light + totalPortalAndSkySpecular )*adjustedColor.xyz*texColor + (1.0-fog)*uFogColor.xyz , 1.);
 				
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	

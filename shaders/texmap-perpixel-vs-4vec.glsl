@@ -16,10 +16,6 @@
 	uniform mat4 uPMatrix;
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 	uniform vec4 uCameraWorldPos;
-	//uniform vec3 uPlayerLightColor;
-	//uniform vec3 uReflectorDiffColor;
-	//uniform vec4 uReflectorPos;
-	//uniform float uReflectorCos;
 
 #ifdef RECEIVE_SHADOW
 	uniform mat4 uShadowMat;

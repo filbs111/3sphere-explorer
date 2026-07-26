@@ -4,30 +4,20 @@
 
 	precision mediump float;
 
-
 // THIS IS CALLED A UNIFORM BLOCK
 uniform Settings {
-	vec4 u_SomeVec4;
-    vec4 u_AnotherVec4;
+	vec4 uPlayerLightColor;
+	vec4 uFogColor;
+	vec4 uReflectorDiffColorAndCos;
+	vec4 uReflectorDiffColorAndCos2;
+	vec4 uReflectorDiffColorAndCos3;
+	vec4 uReflectorPos;
+	vec4 uReflectorPos2;
+	vec4 uReflectorPos3;
 };
-
 
 	uniform vec4 uColor;
 	uniform vec3 uEmitColor;
-	uniform vec3 uPlayerLightColor;
-	uniform vec4 uFogColor;
-
-	uniform vec3 uReflectorDiffColor;
-	uniform vec3 uReflectorDiffColor2;
-	uniform vec3 uReflectorDiffColor3;
-
-	uniform vec4 uReflectorPos;
-	uniform vec4 uReflectorPos2;
-	uniform vec4 uReflectorPos3;
-
-	uniform float uReflectorCos;
-	uniform float uReflectorCos2;
-	uniform float uReflectorCos3;
 
 	uniform float uSpecularStrength;
 	uniform float uSpecularPower;
@@ -183,6 +173,15 @@ float calculateSimpleLightContribution(vec4 normal, float lightRad, vec4 surfPos
 
 	void main(void) {
 
+		//extract old uniforms from 4vecs
+		vec3 uReflectorDiffColor = uReflectorDiffColorAndCos.xyz;
+		float uReflectorCos = uReflectorDiffColorAndCos.w;
+		vec3 uReflectorDiffColor2 = uReflectorDiffColorAndCos2.xyz;
+		float uReflectorCos2 = uReflectorDiffColorAndCos2.w;
+		vec3 uReflectorDiffColor3 = uReflectorDiffColorAndCos3.xyz;
+		float uReflectorCos3 = uReflectorDiffColorAndCos3.w;
+
+
 		vec4 normalisedSurfCoord = normalize(transformedCoord);
 
 		float posCosDiff = dot(normalisedSurfCoord,uReflectorPos) - uReflectorCos;
@@ -243,7 +242,7 @@ float calculateSimpleLightContribution(vec4 normal, float lightRad, vec4 surfPos
 				
 		//guess maybe similar to some gaussian light source
 		
-		//vec4 preGammaFragColor = vec4( fog*(( uPlayerLightColor*light+ uReflectorDiffColor*portalLight + uFogColor.xyz )*uColor.xyz + uEmitColor), 1.0) + (1.0-fog)*uFogColor;
+		//vec4 preGammaFragColor = vec4( fog*(( uPlayerLightColor.xyz*light+ uReflectorDiffColor*portalLight + uFogColor.xyz )*uColor.xyz + uEmitColor), 1.0) + (1.0-fog)*uFogColor;
 
 #ifdef VERTCOLOR
 	vec3 surfaceColor = vVertexColor*uColor.xyz;
@@ -260,7 +259,7 @@ float calculateSimpleLightContribution(vec4 normal, float lightRad, vec4 surfPos
 	surfaceColor = pow(surfaceColor, vec3(2.2));	//guess gamma correction with vert colours included (expect incorrect)
 #endif
 
-		vec4 preGammaFragColor = vec4( fog*(( uPlayerLightColor*light+ uReflectorDiffColor*portalLight + uReflectorDiffColor2*portalLight2 + uReflectorDiffColor3*portalLight3 + uFogColor.xyz )*surfaceColor + uEmitColor) + (1.0-fog)*uFogColor.xyz , 1.0);
+		vec4 preGammaFragColor = vec4( fog*(( uPlayerLightColor.xyz*light+ uReflectorDiffColor*portalLight + uReflectorDiffColor2*portalLight2 + uReflectorDiffColor3*portalLight3 + uFogColor.xyz )*surfaceColor + uEmitColor) + (1.0-fog)*uFogColor.xyz , 1.0);
 		
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
@@ -296,7 +295,6 @@ float calculateSimpleLightContribution(vec4 normal, float lightRad, vec4 surfPos
 		gl_FragDepth = depthVal;
 		fragColor.a = depthVal;
 
-fragColor*=u_SomeVec4;
 
 #endif
 	}
