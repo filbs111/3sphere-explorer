@@ -9,12 +9,12 @@ var offsetCam = (function(){
         "near 3rd person":{
             forward: [0,-37.5,-25],
             reverse: [0,-37.5,25],
-            tiltMultiplier:1
+            tiltMultiplier:0.3
         },
         "far 3rd person":{
             forward:[0,-65,-72],
             reverse:[0,-65,82],
-            tiltMultiplier:1
+            tiltMultiplier:1.3  //what does this do? would like cam tilt ? 45 deg when 90 deg AOA. would like to increase tilt. but does this setting just change tilt ? 
         },
         "really far 3rd person":{
             forward:[0,-75,-125],
