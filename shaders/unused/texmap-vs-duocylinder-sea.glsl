@@ -1,5 +1,19 @@
 #define CONST_TAU 6.2831853
-	
+
+precision mediump float;
+
+// THIS IS CALLED A UNIFORM BLOCK
+uniform Settings {
+	vec4 uPlayerLightColor;
+	vec4 uFogColor;
+	vec4 uReflectorDiffColorAndCos;
+	vec4 uReflectorDiffColorAndCos2;
+	vec4 uReflectorDiffColorAndCos3;
+	vec4 uReflectorPos;
+	vec4 uReflectorPos2;
+	vec4 uReflectorPos3;
+};
+
 	attribute vec2 aVertexPosition;
 	uniform float uAtmosThickness;
 	uniform float uAtmosContrast;
@@ -10,10 +24,6 @@
 	uniform float uZeroLevel;
 	uniform vec4 uCameraWorldPos;
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
-	uniform vec3 uPlayerLightColor;
-	uniform vec3 uReflectorDiffColor;
-	uniform vec4 uReflectorPos;
-	uniform float uReflectorCos;
 	varying float fog;
 	varying vec3 veclight;
 	
@@ -80,6 +90,12 @@
 	}
 	
 	void main(void) {
+
+		//extract old uniforms from 4vecs
+		vec3 uReflectorDiffColor = uReflectorDiffColorAndCos.xyz;
+		float uReflectorCos = uReflectorDiffColorAndCos.w;
+		
+
 		//1 calc height and normal
 		vec3 vDerivativeWRTX = vec3(1./CONST_TAU,0.,0.);
 		vec3 vDerivativeWRTY = vec3(0.,1./CONST_TAU,0.);
@@ -185,7 +201,7 @@
 		light/=1.0 + 4.2*dot(adjustedPos,adjustedPos);		//terms higher than other shaders by sqrt(2) because length
 															//of 1,0,0,0 -> 0,1,0,0 (90 deg around world)
 															//todo recalc
-		veclight=uPlayerLightColor*light;
+		veclight=uPlayerLightColor.xyz*light;
 		
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
 	

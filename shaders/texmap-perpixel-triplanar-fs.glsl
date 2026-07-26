@@ -1,17 +1,22 @@
 #version 300 es
 	precision mediump float;
+
+// THIS IS CALLED A UNIFORM BLOCK
+uniform Settings {
+	vec4 uPlayerLightColor;
+	vec4 uFogColor;
+	vec4 uReflectorDiffColorAndCos;
+	vec4 uReflectorDiffColorAndCos2;
+	vec4 uReflectorDiffColorAndCos3;
+	vec4 uReflectorPos;
+	vec4 uReflectorPos2;
+	vec4 uReflectorPos3;
+};
+
 	in vec3 vTextureCoord;
 	uniform sampler2D uSampler;
 	uniform vec4 uColor;
-	uniform vec3 uPlayerLightColor;
 	in float fog;
-	uniform vec4 uFogColor;
-	uniform vec3 uReflectorDiffColor;
-	uniform vec3 uReflectorDiffColor2;
-	uniform vec4 uReflectorPos;
-	uniform vec4 uReflectorPos2;
-	uniform float uReflectorCos;
-	uniform float uReflectorCos2;
 	uniform float uSpecularStrength;
 	uniform float uSpecularPower;
 	in vec4 adjustedPos;
@@ -28,6 +33,14 @@
 out vec4 fragColor;
 
 	void main(void) {
+
+		//extract old uniforms from 4vecs
+		vec3 uReflectorDiffColor = uReflectorDiffColorAndCos.xyz;
+		float uReflectorCos = uReflectorDiffColorAndCos.w;
+		vec3 uReflectorDiffColor2 = uReflectorDiffColorAndCos2.xyz;
+		float uReflectorCos2 = uReflectorDiffColorAndCos2.w;
+
+
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
 		float posCosDiff2 = dot(normalize(transformedCoord),uReflectorPos2) - uReflectorCos2;
 
@@ -88,7 +101,7 @@ out vec4 fragColor;
 #endif
 		
 		//guess maybe similar to some gaussian light source
-		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor*light + uReflectorDiffColor*portalLight + uReflectorDiffColor2*portalLight2 + uFogColor.xyz ), 1.0)*adjustedColor*vec4(texColor,1.) + (1.0-fog)*uFogColor;
+		vec4 preGammaFragColor = vec4( fog*( uPlayerLightColor.xyz*light + uReflectorDiffColor*portalLight + uReflectorDiffColor2*portalLight2 + uFogColor.xyz ), 1.0)*adjustedColor*vec4(texColor,1.) + (1.0-fog)*uFogColor;
 				
 		//tone mapping
 		preGammaFragColor = preGammaFragColor/(1.+preGammaFragColor);	
