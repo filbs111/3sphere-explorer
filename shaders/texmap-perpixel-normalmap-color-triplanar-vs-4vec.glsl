@@ -94,10 +94,10 @@ uniform Settings {
 #ifdef DEPTH_AWARE
 		vScreenSpaceCoord = gl_Position.xyw;
 #endif		
-		vPlayerLightPosTangentSpace = uDropLightPos* vertexMatrix;
+		vPlayerLightPosTangentSpace = uDropLightPos*vertexMatrix;
 		vPortalLightPosTangentSpace = uReflectorPos*vertexMatrix;
-		vPortalLightPosTangentSpace2 = uReflectorPos*vertexMatrix;
-		vPortalLightPosTangentSpace3 = uReflectorPos*vertexMatrix;
+		vPortalLightPosTangentSpace2 = uReflectorPos2*vertexMatrix;
+		vPortalLightPosTangentSpace3 = uReflectorPos3*vertexMatrix;
 
 #ifdef SPECULAR_ACTIVE
 		vEyePosTangentSpace = vec4(vec3(0.),1.)*vertexMatrix;	//eye pos

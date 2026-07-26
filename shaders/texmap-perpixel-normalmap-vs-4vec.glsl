@@ -78,7 +78,7 @@ uniform Settings {
 		vP = transformedCoord;
 #endif
 		gl_Position = uPMatrix * transformedCoord;
-		vPlayerLightPosTangentSpace = uDropLightPos* vertexMatrix;
+		vPlayerLightPosTangentSpace = uDropLightPos*vertexMatrix;
 		vPortalLightPosTangentSpace = uReflectorPos*vertexMatrix;
 		vPortalLightPosTangentSpace2 = uReflectorPos2*vertexMatrix;
 		vPortalLightPosTangentSpace3 = uReflectorPos3*vertexMatrix;

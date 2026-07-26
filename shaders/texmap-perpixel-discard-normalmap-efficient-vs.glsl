@@ -93,8 +93,8 @@ uniform Settings {
 		
 		vPlayerLightPosTangentSpace = uDropLightPos*vertexMatrix;
 		vPortalLightPosTangentSpace = uReflectorPos*vertexMatrix;
-		vPortalLightPosTangentSpace2 = uReflectorPos*vertexMatrix;
-		vPortalLightPosTangentSpace3 = uReflectorPos*vertexMatrix;
+		vPortalLightPosTangentSpace2 = uReflectorPos2*vertexMatrix;
+		vPortalLightPosTangentSpace3 = uReflectorPos3*vertexMatrix;
 
 #ifdef SPECULAR_ACTIVE		
 		vEyePosTangentSpace = vec4(vec3(0.),1.)*vertexMatrix;
