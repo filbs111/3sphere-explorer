@@ -2678,20 +2678,26 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	function drawArrayOfModels2(objDataArr, buffers, shaderProg, applyDuocylinderSpin=true){
 		shaderProg = shaderProg || shaderProgramTexmap;
 		setupAtmosAndPrepBuffersForDrawing(buffers, shaderProg);
+
+		var lastScale=[null, null,null];
+
 		drawArrayForFunc(function(){
 			drawObjectFromPreppedBuffers(buffers, shaderProg);
 			});
-		
+
 		function drawArrayForFunc(drawFunc2){
 			for (dd in objDataArr){
 				var thisObj = objDataArr[dd];
 
 				var myscale = thisObj.scale;
 
-				if (Array.isArray(myscale)){
+				if (!Array.isArray(myscale)){
+					myscale = [myscale,myscale,myscale];
+				}
+
+				if ( (lastScale[0]!=myscale[0]) || (lastScale[1]!=myscale[1]) || (lastScale[2]!=myscale[2])){
 					gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, myscale);
-				}else{
-					gl.uniform3f(activeShaderProgram.uniforms.uModelScale, myscale,myscale,myscale);
+					lastScale=myscale;
 				}
 
 				mat4.set(invertedWorldCamera, mvMatrix);
