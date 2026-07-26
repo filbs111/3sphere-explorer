@@ -2191,10 +2191,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uFogColor", localVecFogColor);
 
 		setPortalInfoForShader(activeShaderProgram, infoForPortals);
-
-		if (activeShaderProgram.uniforms.uPlayerLightColor){
-			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
-		}
 		
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
@@ -2917,9 +2913,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 	setPortalInfoForShader(activeShaderProgram, infoForPortals);
 
-	if (activeShaderProgram.uniforms.uPlayerLightColor){
-		gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
-	}
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
 
 	
@@ -2974,9 +2967,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 		setPortalInfoForShader(activeShaderProgram, infoForPortals);
 
-		if (activeShaderProgram.uniforms.uPlayerLightColor){
-			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
-		}
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.veryDarkGray);
 		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);	//no emission
@@ -3128,9 +3118,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 		setPortalInfoForShader(activeShaderProgram, infoForPortals);
 
-		if (activeShaderProgram.uniforms.uPlayerLightColor){
-			gl.uniform3fv(activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
-		}
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
 		
@@ -3546,10 +3533,6 @@ function drawPortalsForMultipleCameraViews(isCubemapView, wSettings, portals, po
 		
 		uniform4fvSetter.setIfDifferent(shaderProgram, "uColor", colorArrs.white);
 		uniform4fvSetter.setIfDifferent(shaderProgram, "uFogColor", localVecFogColor);
-
-		if (shaderProgram.uniforms.uPlayerLightColor){
-			gl.uniform3fv(shaderProgram.uniforms.uPlayerLightColor, playerLight);
-		}
 		
 		//TODO check that mvmatrix stacks up with worldCamera OK...
 		if (shaderProgram.uniforms.uPortalCameraPos){
@@ -5626,8 +5609,6 @@ function performShaderSetup(shader, wSettings, tex){	//TODO use this more widely
 
 	setPortalInfoForShader(shader, infoForPortals);
 
-	conditionalSetUniform(gl.uniform3fv, shader.uniforms.uPlayerLightColor, playerLight);
-	
 	performGeneralShaderSetup(shader);
 	
 	if (shader.uniforms.uDropLightPos){
@@ -5647,8 +5628,6 @@ function performCommon4vecShaderSetup(activeShaderProgram, wSettings, logtag){	/
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uFogColor", localVecFogColor);
 
 	setPortalInfoForShader(activeShaderProgram, infoForPortals);
-
-	conditionalSetUniform(gl.uniform3fv, activeShaderProgram.uniforms.uPlayerLightColor, playerLight);
 
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
 
