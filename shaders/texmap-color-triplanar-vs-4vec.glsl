@@ -142,7 +142,7 @@ uniform Settings {
 															//todo recalc
 		//TODO can process multiple lights using matrix?
 		
-		veclight=uPlayerLightColor*light;
+		veclight=uPlayerLightColor.xyz*light;
 		
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
 	
