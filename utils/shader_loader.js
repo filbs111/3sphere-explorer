@@ -419,7 +419,6 @@ function initShaders(shaderProgs){
 		texmap4VecMapprojectDiscardNormalmapPhongVcolorAndDiffuse2TexDepthAware:["texmap-perpixel-normalmap-vs-4vec", "texmap-perpixel-discard-normalmap-efficient-fs", ['VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','DEPTH_AWARE'], ['DIFFUSE_TEX_ACTIVE','VCOLOR','SPECULAR_ACTIVE','MAPPROJECT_ACTIVE','DOUBLE_TEXTURES','DEPTH_AWARE'],true],
 
 		//sea shaders
-		//duocylinderSea:["texmap-vs-duocylinder-sea", "texmap-fs", []],
 		//duocylinderSeaPerPixelDiscard:["texmap-perpixel-vs-duocylinder-sea", "texmap-perpixel-discard-fs", [],[],true],
 		duocylinderSeaPerPixelDiscardPhong:["texmap-perpixel-vs-duocylinder-sea", "texmap-perpixel-discard-fs", [], ['SPECULAR_ACTIVE','IS_SEA'],true],
 		duocylinderSeaPerPixelDiscardPhongDepthAware:["texmap-perpixel-vs-duocylinder-sea", "texmap-perpixel-discard-fs", ['DEPTH_AWARE'], ['SPECULAR_ACTIVE','DEPTH_AWARE'],true],
