@@ -129,37 +129,8 @@ function setUboValsFromWorldSettings(wSettings){
 		};
 	*/
 
-	/*
-uses code from 
-
-	function generalGetWorldSceneSettings(worldA, psides, otherWorlds)
- and
-
-	function setPortalInfoForShader(shader, infoForPortals){
-	conditionalSetUniform(gl.uniform3fv, shader.uniforms.uReflectorDiffColor, infoForPortals[0].localVecReflectorDiffColor);
-	// ..
-	conditionalSetUniform(gl.uniform3fv, shader.uniforms.uReflectorDiffColor2, 
-		infoForPortals.length > 1 ? infoForPortals[1].localVecReflectorDiffColor: [0,0,0]);	
-	conditionalSetUniform(gl.uniform3fv, shader.uniforms.uReflectorDiffColor3, 
-		infoForPortals.length > 2 ? infoForPortals[2].localVecReflectorDiffColor: [0,0,0]);
-	conditionalSetUniform4fv(shader, "uReflectorPos", infoForPortals[0].reflectorPosTransformed);
-	conditionalSetUniform4fv(shader, "uReflectorPos2", 
-		infoForPortals.length > 1? infoForPortals[1].reflectorPosTransformed: [0,0,0,1]);
-	conditionalSetUniform4fv(shader, "uReflectorPos3",
-		infoForPortals.length > 2? infoForPortals[2].reflectorPosTransformed: [0,0,0,1]);
-	conditionalSetUniform(gl.uniform1f, shader.uniforms.uReflectorCos, infoForPortals[0].cosReflector)
-	conditionalSetUniform(gl.uniform1f, shader.uniforms.uReflectorCos2, 
-		infoForPortals.length > 1? infoForPortals[1].cosReflector: 1); //guess can be whatever, but 1 consistent with zero size portal
-	conditionalSetUniform(gl.uniform1f, shader.uniforms.uReflectorCos3, 
-		infoForPortals.length > 2? infoForPortals[2].cosReflector: 1);
-	conditionalSetUniform4fv(shader, "uReflectorPosVShaderCopy", infoForPortals[0].reflectorPosTransformed);
-	conditionalSetUniform4fv(shader, "uReflectorPosVShaderCopy2", 
-		infoForPortals.length > 1? infoForPortals[1].reflectorPosTransformed: [0,0,0,1]);
-	conditionalSetUniform4fv(shader, "uReflectorPosVShaderCopy3", 
-		infoForPortals.length > 2? infoForPortals[2].reflectorPosTransformed: [0,0,0,1]);
-}
-	*/
-
+//uses code from function generalGetWorldSceneSettings(worldA, psides, otherWorlds)
+ 
 	var blank4VecForNoPortal = [0,0,0,1];
 	var valuesToSet = [
 		[...playerLight,0], 

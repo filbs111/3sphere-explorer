@@ -1,4 +1,18 @@
-#version 300 es   
+#version 300 es
+precision mediump float;
+
+// THIS IS CALLED A UNIFORM BLOCK
+uniform Settings {
+	vec4 uPlayerLightColor;
+	vec4 uFogColor;
+	vec4 uReflectorDiffColorAndCos;
+	vec4 uReflectorDiffColorAndCos2;
+	vec4 uReflectorDiffColorAndCos3;
+	vec4 uReflectorPos;
+	vec4 uReflectorPos2;
+	vec4 uReflectorPos3;
+};
+
     in vec3 aVertexPosition;
 	in vec3 aVertexNormal;
 	in vec2 aTextureCoord;
@@ -33,10 +47,6 @@
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 	uniform vec3 uModelScale;
 	
-	uniform vec4 uReflectorPosVShaderCopy;	//TODO not this! shouldn't need in both. unsure why need different name. limitation of webgl, or bad assumption in shader loading func?
-	uniform vec4 uReflectorPosVShaderCopy2;
-	uniform vec4 uReflectorPosVShaderCopy3;
-
 	out vec4 vPlayerLightPosTangentSpace;
 	out vec4 vPortalLightPosTangentSpace;
 	out vec4 vPortalLightPosTangentSpace2;
@@ -82,9 +92,9 @@
 		gl_Position = uPMatrix * transformedCoord;
 		
 		vPlayerLightPosTangentSpace = uDropLightPos*vertexMatrix;
-		vPortalLightPosTangentSpace = uReflectorPosVShaderCopy*vertexMatrix;
-		vPortalLightPosTangentSpace2 = uReflectorPosVShaderCopy2*vertexMatrix;
-		vPortalLightPosTangentSpace3 = uReflectorPosVShaderCopy3*vertexMatrix;
+		vPortalLightPosTangentSpace = uReflectorPos*vertexMatrix;
+		vPortalLightPosTangentSpace2 = uReflectorPos*vertexMatrix;
+		vPortalLightPosTangentSpace3 = uReflectorPos*vertexMatrix;
 
 #ifdef SPECULAR_ACTIVE		
 		vEyePosTangentSpace = vec4(vec3(0.),1.)*vertexMatrix;

@@ -1,4 +1,19 @@
 #version 300 es
+
+precision mediump float;
+
+// THIS IS CALLED A UNIFORM BLOCK
+uniform Settings {
+	vec4 uPlayerLightColor;
+	vec4 uFogColor;
+	vec4 uReflectorDiffColorAndCos;
+	vec4 uReflectorDiffColorAndCos2;
+	vec4 uReflectorDiffColorAndCos3;
+	vec4 uReflectorPos;
+	vec4 uReflectorPos2;
+	vec4 uReflectorPos3;
+};
+
     in vec4 aVertexPosition;
 	in vec4 aVertexNormal;
 	in vec4 aVertexTangent;
@@ -18,10 +33,6 @@
 	uniform mat4 uPMatrix;
 	uniform vec4 uCameraWorldPos;	//used for atmos calcs. TODO can this be combined with/ used for eyepos calculation (used for specular)?
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
-
-	uniform vec4 uReflectorPosVShaderCopy;
-	uniform vec4 uReflectorPosVShaderCopy2;
-	uniform vec4 uReflectorPosVShaderCopy3;
 
 #ifdef RECEIVE_SHADOW
 	uniform mat4 uShadowMat;
@@ -68,9 +79,9 @@
 #endif
 		gl_Position = uPMatrix * transformedCoord;
 		vPlayerLightPosTangentSpace = uDropLightPos* vertexMatrix;
-		vPortalLightPosTangentSpace = uReflectorPosVShaderCopy*vertexMatrix;
-		vPortalLightPosTangentSpace2 = uReflectorPosVShaderCopy2*vertexMatrix;
-		vPortalLightPosTangentSpace3 = uReflectorPosVShaderCopy3*vertexMatrix;
+		vPortalLightPosTangentSpace = uReflectorPos*vertexMatrix;
+		vPortalLightPosTangentSpace2 = uReflectorPos2*vertexMatrix;
+		vPortalLightPosTangentSpace3 = uReflectorPos3*vertexMatrix;
 
 #ifdef SPECULAR_ACTIVE
 		vEyePosTangentSpace = vec4(vec3(0.),1.)*vertexMatrix;	//eye pos

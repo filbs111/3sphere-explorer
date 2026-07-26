@@ -1,4 +1,18 @@
 #version 300 es
+precision mediump float;
+
+// THIS IS CALLED A UNIFORM BLOCK
+uniform Settings {
+	vec4 uPlayerLightColor;
+	vec4 uFogColor;
+	vec4 uReflectorDiffColorAndCos;
+	vec4 uReflectorDiffColorAndCos2;
+	vec4 uReflectorDiffColorAndCos3;
+	vec4 uReflectorPos;
+	vec4 uReflectorPos2;
+	vec4 uReflectorPos3;
+};
+
 //TODO determine whether more efficient to calc aVertexPosition, aVertexNormal from aTriCoord, aTriNormal here in vert shader, or precalc and pass in.
 	in vec4 aVertexPosition;
 	in vec4 aVertexNormal;	//AFAIK shouldn't need this, but removing it causes rendering bug. todo find and fix
@@ -19,9 +33,6 @@
 	uniform mat4 uPMatrix;
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 	uniform vec4 uCameraWorldPos;
-	uniform vec4 uReflectorPosVShaderCopy;
-	uniform vec4 uReflectorPosVShaderCopy2;
-	uniform vec4 uReflectorPosVShaderCopy3;
 
 #ifdef RECEIVE_SHADOW
 	uniform mat4 uShadowMat;
@@ -84,9 +95,9 @@
 		vScreenSpaceCoord = gl_Position.xyw;
 #endif		
 		vPlayerLightPosTangentSpace = uDropLightPos* vertexMatrix;
-		vPortalLightPosTangentSpace = uReflectorPosVShaderCopy*vertexMatrix;
-		vPortalLightPosTangentSpace2 = uReflectorPosVShaderCopy2*vertexMatrix;
-		vPortalLightPosTangentSpace3 = uReflectorPosVShaderCopy3*vertexMatrix;
+		vPortalLightPosTangentSpace = uReflectorPos*vertexMatrix;
+		vPortalLightPosTangentSpace2 = uReflectorPos*vertexMatrix;
+		vPortalLightPosTangentSpace3 = uReflectorPos*vertexMatrix;
 
 #ifdef SPECULAR_ACTIVE
 		vEyePosTangentSpace = vec4(vec3(0.),1.)*vertexMatrix;	//eye pos

@@ -2189,8 +2189,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 			//setup code largely shared with setting regular texmap code. todo generalise setup
 		gl.useProgram(activeShaderProgram);
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uFogColor", localVecFogColor);
-
-		setPortalInfoForShader(activeShaderProgram, infoForPortals);
 		
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
@@ -2910,11 +2908,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	
 	gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);	//no emmision
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uFogColor", localVecFogColor);
-
-	setPortalInfoForShader(activeShaderProgram, infoForPortals);
-
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
-
 	
 	bvhObjsForWorld[worldA].objList
 		.filter(objInfo=> objInfo.bvh == pillarBvh)	//TODO prefilter
@@ -2964,9 +2958,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		gl.useProgram(activeShaderProgram);
 		
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uFogColor", localVecFogColor);
-
-		setPortalInfoForShader(activeShaderProgram, infoForPortals);
-
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.veryDarkGray);
 		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);	//no emission
@@ -3115,9 +3106,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		
 		//set uniforms - todo generalise this code (using for many shaders)
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uFogColor", localVecFogColor);
-
-		setPortalInfoForShader(activeShaderProgram, infoForPortals);
-
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
 		
@@ -5567,13 +5555,6 @@ function conditionalSetUniform4fv(shader, uniformName, val){
 		uniform4fvSetter.setIfDifferent(shader, uniformName, val);
 	}
 }
-function setPortalInfoForShader(shader, infoForPortals){
-	conditionalSetUniform4fv(shader, "uReflectorPosVShaderCopy", infoForPortals[0].reflectorPosTransformed);
-	conditionalSetUniform4fv(shader, "uReflectorPosVShaderCopy2", 
-		infoForPortals.length > 1? infoForPortals[1].reflectorPosTransformed: [0,0,0,1]);
-	conditionalSetUniform4fv(shader, "uReflectorPosVShaderCopy3", 
-		infoForPortals.length > 2? infoForPortals[2].reflectorPosTransformed: [0,0,0,1]);
-}
 function performGeneralShaderSetup(shader){
 	conditionalSetUniform(gl.uniform1f, shader.uniforms.uSpecularStrength, guiParams.display.specularStrength);
 	conditionalSetUniform(gl.uniform1f, shader.uniforms.uSpecularPower, guiParams.display.specularPower);
@@ -5592,8 +5573,6 @@ function performShaderSetup(shader, wSettings, tex){	//TODO use this more widely
 		uniform4fvSetter.setIfDifferent(shader, "uFogColor", localVecFogColor);
 	}
 
-	setPortalInfoForShader(shader, infoForPortals);
-
 	performGeneralShaderSetup(shader);
 	
 	if (shader.uniforms.uDropLightPos){
@@ -5611,9 +5590,6 @@ function performCommon4vecShaderSetup(activeShaderProgram, wSettings, logtag){	/
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uCameraWorldPos", worldCamera.slice(12));
 	}
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uFogColor", localVecFogColor);
-
-	setPortalInfoForShader(activeShaderProgram, infoForPortals);
-
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
 
 	performGeneralShaderSetup(activeShaderProgram);
