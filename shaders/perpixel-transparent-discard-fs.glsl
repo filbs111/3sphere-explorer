@@ -1,9 +1,20 @@
 #version 300 es
 	precision mediump float;
+
+// THIS IS CALLED A UNIFORM BLOCK
+uniform Settings {
+	vec4 uPlayerLightColor;
+	vec4 uFogColor;
+	vec4 uReflectorDiffColorAndCos;
+	vec4 uReflectorDiffColorAndCos2;
+	vec4 uReflectorDiffColorAndCos3;
+	vec4 uReflectorPos;
+	vec4 uReflectorPos2;
+	vec4 uReflectorPos3;
+};
+
 	uniform vec3 uEmitColor;
 
-	uniform vec4 uReflectorPos;
-	uniform float uReflectorCos;
 	in float fog;	//note currently assume fog distance same for all colours
 	in vec4 transformedCoord;
 	in vec4 transformedNormal;
@@ -14,7 +25,12 @@
 
 out vec4 fragColor;
 
+	
 	void main(void) {
+
+		//extract old uniforms from 4vecs
+		float uReflectorCos = uReflectorDiffColorAndCos.w;
+
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
 		if (posCosDiff>0.0){
 			discard;
