@@ -1,4 +1,18 @@
 #version 300 es
+	precision mediump float;
+
+// THIS IS CALLED A UNIFORM BLOCK
+uniform Settings {
+	vec4 uPlayerLightColor;
+	vec4 uFogColor;
+	vec4 uReflectorDiffColorAndCos;
+	vec4 uReflectorDiffColorAndCos2;
+	vec4 uReflectorDiffColorAndCos3;
+	vec4 uReflectorPos;
+	vec4 uReflectorPos2;
+	vec4 uReflectorPos3;
+};
+
     in vec4 aVertexPosition;
 	in vec4 aVertexNormal;
 	in vec2 aTextureCoord;
@@ -9,10 +23,6 @@
 	uniform mat4 uPMatrix;
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 	uniform vec4 uCameraWorldPos;
-	uniform vec3 uPlayerLightColor;
-	uniform vec3 uReflectorDiffColor;
-	uniform vec4 uReflectorPos;
-	uniform float uReflectorCos;
 	out float fog;
 	out vec3 veclight;
 	out vec4 vVertexPos;
@@ -24,6 +34,12 @@
 #endif
 
 	void main(void) {
+
+		//extract old uniforms from 4vecs
+		vec3 uReflectorDiffColor = uReflectorDiffColorAndCos.xyz;
+		float uReflectorCos = uReflectorDiffColorAndCos.w;
+
+
 		vec4 transformedCoord = uMVMatrix * aVertexPosition;
 
 #ifdef CUSTOM_DEPTH
@@ -124,7 +140,7 @@
 															//TODO recalc this since have changed falloff calc in other shaders
 		//TODO can process multiple lights using matrix?
 		
-		veclight=uPlayerLightColor*light;
+		veclight=uPlayerLightColor.xyz*light;
 		
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
 	

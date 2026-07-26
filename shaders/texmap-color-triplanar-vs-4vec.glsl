@@ -1,4 +1,18 @@
 #version 300 es
+	precision mediump float;
+
+// THIS IS CALLED A UNIFORM BLOCK
+uniform Settings {
+	vec4 uPlayerLightColor;
+	vec4 uFogColor;
+	vec4 uReflectorDiffColorAndCos;
+	vec4 uReflectorDiffColorAndCos2;
+	vec4 uReflectorDiffColorAndCos3;
+	vec4 uReflectorPos;
+	vec4 uReflectorPos2;
+	vec4 uReflectorPos3;
+};
+
 //TODO determine whether more efficient to calc aVertexPosition, aVertexNormal from aTriCoord, aTriNormal here in vert shader, or precalc and pass in.
 	in vec4 aVertexPosition;
 	in vec4 aVertexNormal;
@@ -12,10 +26,6 @@
 	uniform mat4 uPMatrix;
 	uniform vec4 uCameraWorldPos;
 	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
-	uniform vec3 uPlayerLightColor;
-	uniform vec3 uReflectorDiffColor;
-	uniform vec4 uReflectorPos;
-	uniform float uReflectorCos;
 	out float fog;
 	out vec3 veclight;
 	out vec3 vPos;		//3vector position (before mapping onto duocyinder)
@@ -25,6 +35,12 @@
 	out vec4 vP;
 #endif	
 	void main(void) {
+
+		//extract old uniforms from 4vecs
+		vec3 uReflectorDiffColor = uReflectorDiffColorAndCos.xyz;
+		float uReflectorCos = uReflectorDiffColorAndCos.w;
+		
+
 		vec4 transformedCoord = uMVMatrix * aVertexPosition;
 		gl_Position = uPMatrix * transformedCoord;
 #ifdef CUSTOM_DEPTH

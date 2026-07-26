@@ -3,6 +3,21 @@
 #define CONST_REPS 16.0
 
 precision mediump float;
+
+
+// THIS IS CALLED A UNIFORM BLOCK
+uniform Settings {
+	vec4 uPlayerLightColor;
+	vec4 uFogColor;
+	vec4 uReflectorDiffColorAndCos;
+	vec4 uReflectorDiffColorAndCos2;
+	vec4 uReflectorDiffColorAndCos3;
+	vec4 uReflectorPos;
+	vec4 uReflectorPos2;
+	vec4 uReflectorPos3;
+};
+
+
 #ifdef CUSTOM_DEPTH
 	in vec2 vZW;
 	in vec4 vP;
@@ -11,7 +26,6 @@ precision mediump float;
 	uniform sampler2D uSampler;
 	uniform vec4 uColor;
 	in float fog;
-	uniform vec4 uFogColor;
 	in vec3 veclight;
 	in vec3 vTextureCoord;
 	in vec4 vVertexPos;
