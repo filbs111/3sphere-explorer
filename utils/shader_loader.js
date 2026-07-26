@@ -164,7 +164,7 @@ uses code from
 		wSettings.localVecFogColor,
 		//[...wSettings.localVecFogColor],
 		blank4VecForNoPortal, blank4VecForNoPortal, blank4VecForNoPortal,
-		1,1,1
+		blank4VecForNoPortal, blank4VecForNoPortal, blank4VecForNoPortal
 	];
 
 	var infoForPortals = wSettings.infoForPortals;
