@@ -2616,12 +2616,15 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	// attributes for instanced object - vert position. normal? (normal maybe irrelevant - want small particles)
 	
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
+
+	var worldSize = guiSettingsForWorld[worldA].worldSize;
+
 	if (guiParams.debug.playerDustMotesFrames){
 		//draw dust motes at player position in frame that moves with player but doesn't rotate
 		var matRelativeToPlayer = mat4.create(dustMotesInfo.transposedMatRelativeToPlayer)
 		mat4.transpose(matRelativeToPlayer);
 		
-		var scale = 0.0005 / guiSettingsForWorld[worldA].worldSize;
+		var scale = 0.0005 / worldSize;
 
 		var dustMotesFramesToDraw = sshipDrawMatrices.map(mm =>{
 			var mat = mat4.create(mm);
@@ -2630,6 +2633,10 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		});
 		drawArrayOfModels2(dustMotesFramesToDraw, cubeFrameBuffers, activeShaderProgram, false);
 	}
+
+	//test objects to show scale
+	drawArrayOfModels2(testObjectsData.forWorldSize(worldSize), cubeBuffers, activeShaderProgram, true);
+
 
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.darkGray);
 	[
@@ -2687,8 +2694,14 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		function drawArrayForFunc(drawFunc2){
 			for (dd in objDataArr){
 				var thisObj = objDataArr[dd];
+
 				var myscale = thisObj.scale;
-				gl.uniform3f(activeShaderProgram.uniforms.uModelScale, myscale,myscale,myscale);
+
+				if (Array.isArray(myscale)){
+					gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, myscale);
+				}else{
+					gl.uniform3f(activeShaderProgram.uniforms.uModelScale, myscale,myscale,myscale);
+				}
 
 				mat4.set(invertedWorldCamera, mvMatrix);
 				mat4.identity(mMatrix);
@@ -3139,8 +3152,12 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);
 		
 		if (rotateBodge){
-			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, 0.8*modelScale,modelScale,modelScale);
+			//gl.uniform3f(activeShaderProgram.uniforms.uModelScale, 0.8*modelScale,modelScale,modelScale);
 				// make spaceship narrower(squarer), length , height (bodge) - TODO scale spaceship properly
+
+
+			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
+
 		}else{
 			gl.uniform3f(activeShaderProgram.uniforms.uModelScale, modelScale,modelScale,modelScale);
 				//for new conv hull obj, width, height, length.
