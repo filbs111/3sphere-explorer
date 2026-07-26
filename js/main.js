@@ -2110,7 +2110,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 	({worldA,worldInfo, localVecFogColor, infoForPortals, sshipDrawMatrices} = wSettings);
 	
-	setUboValsFromWorldSettings(wSettings);	//TODO pull out and set less frequently? (eg for all 4 panels in quadview)
+	setUboValsFromWorldSettingsFast(wSettings);	//TODO pull out and set less frequently? (eg for all 4 panels in quadview)
 	
 	function setupAtmosAndPrepBuffersForDrawing(objBuffer, shaderProg){
 		setupShaderAtmos(shaderProg, worldA);
@@ -3639,7 +3639,7 @@ function drawWorldScene2(frameTime, wSettings, depthMap){	//TODO drawing using r
 	
 	({worldInfo, sshipDrawMatrices, worldA} = wSettings);
 	
-	setUboValsFromWorldSettings(wSettings);	//TODO pull out and set less frequently? (eg for all 4 panels in quadview)
+	setUboValsFromWorldSettingsFast(wSettings);	//TODO pull out and set less frequently? (eg for all 4 panels in quadview)
 
 	var duocylinderSpin = worldInfo.spin;
 

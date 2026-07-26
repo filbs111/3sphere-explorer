@@ -74,6 +74,8 @@ function loadShader(vs_id,fs_id, vs_defines, fs_defines) {
 
 // Create Uniform Buffer to store our data
 var uboBuffer;
+var uboBackingArray = new Float32Array(8*4);
+var blank4VecForNoPortal = new Float32Array([0,0,0,1]);
 
 /*
 uniform Settings {
@@ -175,6 +177,33 @@ uses code from
 
 	setUboVals(valuesToSet);
 }
+
+function setUboValsFromWorldSettingsFast(wSettings){
+	uboBackingArray.set(playerLight, 0);
+	//uboBackingArray[3]=0;
+	uboBackingArray.set(wSettings.localVecFogColor, 4);
+
+	var infoForPortals = wSettings.infoForPortals;
+	for (var ii=0;ii<infoForPortals.length;ii++){
+		uboBackingArray.set(infoForPortals[ii].localVecReflectorDiffColor , 8+ii*4);
+		uboBackingArray[11+ii*4] = infoForPortals[ii].cosReflector;
+		uboBackingArray.set(infoForPortals[ii].reflectorPosTransformed, 20+ii*4);
+	}
+	for (var ii=infoForPortals.length;ii<3;ii++){
+		uboBackingArray.set(blank4VecForNoPortal, 8+ii*4);
+		uboBackingArray.set(blank4VecForNoPortal, 20+ii*4);
+	}
+
+	gl.bindBuffer(gl.UNIFORM_BUFFER, uboBuffer);
+
+	// Push some data to our Uniform Buffer
+	gl.bufferSubData(
+		gl.UNIFORM_BUFFER,
+		0,
+		uboBackingArray
+	);
+}
+
 
 function setUboVals(vec4arr){
 	gl.bindBuffer(gl.UNIFORM_BUFFER, uboBuffer);
