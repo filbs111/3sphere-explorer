@@ -4,7 +4,6 @@
 
 precision mediump float;
 
-
 // THIS IS CALLED A UNIFORM BLOCK
 uniform Settings {
 	vec4 uPlayerLightColor;
@@ -15,6 +14,7 @@ uniform Settings {
 	vec4 uReflectorPos;
 	vec4 uReflectorPos2;
 	vec4 uReflectorPos3;
+	vec4 uDropLightPosn;	//position in camera frame ( 0,0,0,1 if light at camera )
 };
 
 

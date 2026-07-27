@@ -12,6 +12,7 @@ uniform Settings {
 	vec4 uReflectorPos;
 	vec4 uReflectorPos2;
 	vec4 uReflectorPos3;
+	vec4 uDropLightPosn;	//position in camera frame ( 0,0,0,1 if light at camera )
 };
 
     in vec4 aVertexPosition;
@@ -32,7 +33,6 @@ uniform Settings {
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
 	uniform vec4 uCameraWorldPos;	//used for atmos calcs. TODO can this be combined with/ used for eyepos calculation (used for specular)?
-	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 
 #ifdef RECEIVE_SHADOW
 	uniform mat4 uShadowMat;
@@ -78,7 +78,7 @@ uniform Settings {
 		vP = transformedCoord;
 #endif
 		gl_Position = uPMatrix * transformedCoord;
-		vPlayerLightPosTangentSpace = uDropLightPos*vertexMatrix;
+		vPlayerLightPosTangentSpace = uDropLightPosn*vertexMatrix;
 		vPortalLightPosTangentSpace = uReflectorPos*vertexMatrix;
 		vPortalLightPosTangentSpace2 = uReflectorPos2*vertexMatrix;
 		vPortalLightPosTangentSpace3 = uReflectorPos3*vertexMatrix;

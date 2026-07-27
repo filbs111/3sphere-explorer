@@ -11,6 +11,7 @@ uniform Settings {
 	vec4 uReflectorPos;
 	vec4 uReflectorPos2;
 	vec4 uReflectorPos3;
+	vec4 uDropLightPosn;	//position in camera frame ( 0,0,0,1 if light at camera )
 };
 
     in vec3 aVertexPosition;
@@ -44,7 +45,6 @@ uniform Settings {
 #endif
 	uniform mat4 uPMatrix;
 	uniform vec4 uCameraWorldPos;
-	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 	uniform vec3 uModelScale;
 	
 	out vec4 vPlayerLightPosTangentSpace;
@@ -91,7 +91,7 @@ uniform Settings {
 #endif
 		gl_Position = uPMatrix * transformedCoord;
 		
-		vPlayerLightPosTangentSpace = uDropLightPos*vertexMatrix;
+		vPlayerLightPosTangentSpace = uDropLightPosn*vertexMatrix;
 		vPortalLightPosTangentSpace = uReflectorPos*vertexMatrix;
 		vPortalLightPosTangentSpace2 = uReflectorPos2*vertexMatrix;
 		vPortalLightPosTangentSpace3 = uReflectorPos3*vertexMatrix;

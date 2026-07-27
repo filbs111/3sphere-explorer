@@ -11,6 +11,7 @@ uniform Settings {
 	vec4 uReflectorPos;
 	vec4 uReflectorPos2;
 	vec4 uReflectorPos3;
+	vec4 uDropLightPosn;	//position in camera frame ( 0,0,0,1 if light at camera )
 };
 
 //TODO determine whether more efficient to calc aVertexPosition, aVertexNormal from aTriCoord, aTriNormal here in vert shader, or precalc and pass in.
@@ -25,7 +26,6 @@ uniform Settings {
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
 	uniform vec4 uCameraWorldPos;
-	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 	out float fog;
 	out vec3 veclight;
 	out vec3 vPos;		//3vector position (before mapping onto duocyinder)
@@ -134,7 +134,7 @@ uniform Settings {
 		
 		
 		vec4 transformedNormal = uMVMatrix * aVertexNormal;
-		vec4 adjustedPos = transformedCoord - uDropLightPos;
+		vec4 adjustedPos = transformedCoord - uDropLightPosn;
 		float light = -dot( normalize(adjustedPos), transformedNormal);
 		light = max(light,0.0);	//unnecessary if camera pos = light pos
 		light/=1.0 + 4.2*dot(adjustedPos,adjustedPos);		//terms higher than other shaders by sqrt(2) because length

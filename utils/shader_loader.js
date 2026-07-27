@@ -74,7 +74,7 @@ function loadShader(vs_id,fs_id, vs_defines, fs_defines) {
 
 // Create Uniform Buffer to store our data
 var uboBuffer;
-var uboBackingArray = new Float32Array(8*4);
+var uboBackingArray = new Float32Array(9*4);
 var blank4VecForNoPortal = new Float32Array([0,0,0,1]);
 
 /*
@@ -87,6 +87,7 @@ uniform Settings {
 	vec4 uReflectorPos;
 	vec4 uReflectorPos2;
 	vec4 uReflectorPos3;
+	vec4 uDropLightPosn;
 };
 */
 
@@ -94,7 +95,7 @@ function initialiseUbo(){	//to be called once gl initialised
     uboBuffer = gl.createBuffer();
 
 	//block size etc in example is read from shader, but for now, just try assuming given shader code.
-	var blockSize = 8*16;		//8x 4vec floats (16 bytes is 4 bytes per float)
+	var blockSize = 9*16;		//8x 4vec floats (16 bytes is 4 bytes per float)
 
 	// Bind it to tell WebGL we are working on this buffer
     gl.bindBuffer(gl.UNIFORM_BUFFER, uboBuffer);
@@ -164,6 +165,8 @@ function setUboValsFromWorldSettingsFast(wSettings){
 		uboBackingArray.set(blank4VecForNoPortal, 8+ii*4);
 		uboBackingArray.set(blank4VecForNoPortal, 20+ii*4);
 	}
+
+	uboBackingArray.set(wSettings.dropLightPos, 32);
 
 	gl.bindBuffer(gl.UNIFORM_BUFFER, uboBuffer);
 

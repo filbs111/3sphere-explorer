@@ -2017,6 +2017,8 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 		return generalGetWorldSceneSettings(worldA, psides, otherWorlds);
 	}
 
+	//NOTE when calling this for 6 cubemap views, many of the calculations are repeated.
+	//TODO deduplicate.
 	function generalGetWorldSceneSettings(worldA, psides, otherWorlds){
 		returnObj.worldA = worldA;
 
@@ -2096,6 +2098,12 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 								//wSettings, which are particular to the (cubemap) view, eg light position in camera frame.
 								//TODO handle those specific variables separately, to avoid allocation of new objects.
 
+
+		//player light stuff, but for now just bodged to take camera position.
+		// not strictly correct for 3rd person but works ok for both world camera is in and when viewing through portal
+		// TODO rework this with deferred rendering to support many lights, make lights "in" portal more directional/weaker (so don't light world seen through portal when far from it), etc
+		returnObj.dropLightPos = [0,0,0,1];	//AFAIK puts at the camera position.
+
 		return {...returnObj}	//shallow clone
 	}
 
@@ -2108,7 +2116,7 @@ var getWorldSceneSettings = (function generateGetWorldSettings(){
 
 function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
-	({worldA,worldInfo, localVecFogColor, infoForPortals, sshipDrawMatrices} = wSettings);
+	({worldA,worldInfo, localVecFogColor, infoForPortals, sshipDrawMatrices, dropLightPos} = wSettings);
 	
 	setUboValsFromWorldSettingsFast(wSettings);	//TODO pull out and set less frequently? (eg for all 4 panels in quadview)
 	
@@ -2147,35 +2155,6 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	shaderProgramColoredBendy = shaderPrograms.coloredPerPixelDiscardBendy[ guiParams.display.atmosShader ];	//NOTE no non-perpixel option here
 	shaderProgramTexmap = guiParams.display.perPixelLighting?relevantTexmapShader:shaderPrograms.texmapPerVertex;	
 	
-	var dropLightPos;
-	
-	
-	//get light pos in frame of camera. light is at spaceship
-	var lightMat = mat4.create();	//TODO mat*mat is unnecessary - only need to do dropLightPos = sshipMatrix*lightPosInWorld 
-	mat4.set(invertedWorldCamera, lightMat);
-	
-	var sshipMatrixShifted = mat4.create();	//TODO permanent/reuse (code duplicated from elsewhere.
-	mat4.set(sshipMatrix, sshipMatrixShifted)
-	
-	mat4.multiply(lightMat, sshipMatrixShifted);
-	dropLightPos = lightMat.slice(12);
-	
-	wSettings.dropLightPos = dropLightPos;
-	
-	//for debug 
-	window.lmat = lightMat;
-	
-	mat4.set(invertedWorldCamera, lightMat);
-	
-	//only use 1 drop light. should be standard pos'n if drawing same world as light, and reflected pos'n if different
-	//if dropLight in the space that are currently drawing, move it through portal.
-	//TODO /note that 2nd light is relevant if sphere is reflector instead of portal.
-	if (worldA!=sshipWorld){
-		var dropLightReflectionInfo={};
-		calcReflectionInfo(sshipMatrixShifted,dropLightReflectionInfo, 0.123);	//????? pass in what radius??
-		mat4.multiply(lightMat, dropLightReflectionInfo.shaderMatrix2);
-		dropLightPos = lightMat.slice(12);	//todo make light dimmer/directional when "coming out of" portal
-	}
 	
 	var boxSize;
 	var boxRad;
@@ -2191,7 +2170,9 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uFogColor", localVecFogColor);
 		
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
-		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
+		if (activeShaderProgram.uniforms.uDropLightPos){
+			uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
+		}
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.white);
 		
 		//new for this version of shader
@@ -2914,7 +2895,9 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 	
 	gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);	//no emmision
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uFogColor", localVecFogColor);
-	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
+	if (activeShaderProgram.uniforms.uDropLightPos){
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
+	}
 	
 	bvhObjsForWorld[worldA].objList
 		.filter(objInfo=> objInfo.bvh == pillarBvh)	//TODO prefilter
@@ -2964,7 +2947,9 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		gl.useProgram(activeShaderProgram);
 		
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uFogColor", localVecFogColor);
-		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
+		if (activeShaderProgram.uniforms.uDropLightPos){
+			uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
+		}
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uColor", colorArrs.veryDarkGray);
 		gl.uniform3f(activeShaderProgram.uniforms.uEmitColor, 0,0,0);	//no emission
 		modelScale=0.1;
@@ -3113,7 +3098,9 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		//set uniforms - todo generalise this code (using for many shaders)
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uFogColor", localVecFogColor);
 		gl.uniform3f(activeShaderProgram.uniforms.uModelScale, boxSize,boxSize,boxSize);
-		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
+		if (activeShaderProgram.uniforms.uDropLightPos){
+			uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
+		}
 		
 		if (activeShaderProgram.uniforms.uOtherLightAmounts){
 			gl.uniform4f(activeShaderProgram.uniforms.uOtherLightAmounts, 0, 100*(muzzleFlashAmounts[0]+muzzleFlashAmounts[1]), 20*(playerMechanics.currentThrustInput[2]>0 ? 1:0) , 0);
@@ -5596,7 +5583,9 @@ function performCommon4vecShaderSetup(activeShaderProgram, wSettings, logtag){	/
 		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uCameraWorldPos", worldCamera.slice(12));
 	}
 	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uFogColor", localVecFogColor);
-	uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
+	if (activeShaderProgram.uniforms.uDropLightPos){
+		uniform4fvSetter.setIfDifferent(activeShaderProgram, "uDropLightPos", dropLightPos);
+	}
 
 	performGeneralShaderSetup(activeShaderProgram);
 }

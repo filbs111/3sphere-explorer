@@ -11,6 +11,7 @@ uniform Settings {
 	vec4 uReflectorPos;
 	vec4 uReflectorPos2;
 	vec4 uReflectorPos3;
+	vec4 uDropLightPosn;	//position in camera frame ( 0,0,0,1 if light at camera )
 };
 
 //TODO determine whether more efficient to calc aVertexPosition, aVertexNormal from aTriCoord, aTriNormal here in vert shader, or precalc and pass in.
@@ -31,7 +32,6 @@ uniform Settings {
 	uniform mat4 uMMatrix;
 	uniform mat4 uMVMatrix;
 	uniform mat4 uPMatrix;
-	uniform vec4 uDropLightPos;	//position in camera frame ( 0,0,0,1 if light at camera )
 	uniform vec4 uCameraWorldPos;
 
 #ifdef RECEIVE_SHADOW
@@ -94,7 +94,7 @@ uniform Settings {
 #ifdef DEPTH_AWARE
 		vScreenSpaceCoord = gl_Position.xyw;
 #endif		
-		vPlayerLightPosTangentSpace = uDropLightPos*vertexMatrix;
+		vPlayerLightPosTangentSpace = uDropLightPosn*vertexMatrix;
 		vPortalLightPosTangentSpace = uReflectorPos*vertexMatrix;
 		vPortalLightPosTangentSpace2 = uReflectorPos2*vertexMatrix;
 		vPortalLightPosTangentSpace3 = uReflectorPos3*vertexMatrix;

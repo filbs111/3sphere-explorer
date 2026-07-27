@@ -14,6 +14,7 @@ uniform Settings {
 	vec4 uReflectorPos;
 	vec4 uReflectorPos2;
 	vec4 uReflectorPos3;
+	vec4 uDropLightPosn;	//position in camera frame ( 0,0,0,1 if light at camera )
 };
 
 	uniform vec4 uColor;
@@ -202,8 +203,8 @@ float calculateSimpleLightContribution(vec4 normal, float lightRad, vec4 surfPos
 		vec4 norm = normalize(transformedNormal);
 		
 	//improved player light. 
-	// from vert shader 		adjustedPos = transformedCoord - uDropLightPos;
-	// so can get back to uDropLightPos ! TODO if this works just use directly here.
+	// from vert shader 		adjustedPos = transformedCoord - uDropLightPosn;
+	// so can get back to uDropLightPosn ! TODO if this works just use directly here.
 		vec4 recalculatedPlayerLightPos = normalize(normalisedSurfCoord - adjustedPos);
 			//TODO does this work for all vert shaders? 
 

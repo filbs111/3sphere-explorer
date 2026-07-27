@@ -11,6 +11,7 @@ uniform Settings {
 	vec4 uReflectorPos;
 	vec4 uReflectorPos2;
 	vec4 uReflectorPos3;
+	vec4 uDropLightPosn;	//position in camera frame ( 0,0,0,1 if light at camera )
 };
 
 	in vec3 vTextureCoord;
@@ -34,7 +35,7 @@ uniform Settings {
 		vec3 uReflectorDiffColor2 = uReflectorDiffColorAndCos2.xyz;
 		float uReflectorCos2 = uReflectorDiffColorAndCos2.w;
 		
-		
+
 		float posCosDiff = dot(normalize(transformedCoord),uReflectorPos) - uReflectorCos;
 	
 		if (posCosDiff>0.0){
