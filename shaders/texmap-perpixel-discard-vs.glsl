@@ -13,7 +13,12 @@
 #endif
 	uniform float uAtmosContrast;
 	uniform mat4 uMMatrix;
+
+#ifdef VS_MATMULT
+	uniform mat4 uVMatrix;
+#else
 	uniform mat4 uMVMatrix;
+#endif
 
 #ifdef RECEIVE_SHADOW
 	uniform mat4 uShadowMat;
@@ -34,13 +39,20 @@
 #endif
 	void main(void) {
 		
+		#ifdef VS_MATMULT
+			mat4 MVMatrix = uVMatrix * uMMatrix;
+		#else
+			mat4 MVMatrix = uMVMatrix;
+		#endif
+
+
 #ifdef VERTVEL_ACTIVE
 		vec3 scaledPosition = uModelScale*aVertexPosition + aVertexVelocity*uVertexMove;
 #else
 		vec3 scaledPosition = uModelScale*aVertexPosition;
 #endif
 		vec4 aVertexPositionNormalized = normalize(vec4(scaledPosition, 1.0));
-		transformedCoord = uMVMatrix * aVertexPositionNormalized;
+		transformedCoord = MVMatrix * aVertexPositionNormalized;
 
 #ifdef RECEIVE_SHADOW
 	//posInShadowCasterSpace = uShadowMat * vec4(scaledPosition, 1.0);	//suspect this is right, and other bits are wrong!
@@ -54,7 +66,7 @@
 		float distFromOrigin = dot(aVertexNormal, scaledPosition);
 		vec4 norm4Vec = normalize(vec4(aVertexNormal,-distFromOrigin));
 
-		transformedNormal = uMVMatrix * norm4Vec;
+		transformedNormal = MVMatrix * norm4Vec;
 
 		adjustedPos = transformedCoord - uDropLightPos;
 		gl_Position = uPMatrix * transformedCoord;

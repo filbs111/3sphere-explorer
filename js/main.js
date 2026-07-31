@@ -2149,7 +2149,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		
 	var relevantColorShader = shaderPrograms.coloredPerPixelDiscard[ guiParams.display.atmosShader ];
 	//var relevantTexmapShader = shaderPrograms.texmapPerPixelDiscard[ guiParams.display.atmosShader ];
-	var relevantTexmapShader = guiParams.display.useSpecular? shaderPrograms.texmapPerPixelDiscardPhong[ guiParams.display.atmosShader ] : shaderPrograms.texmapPerPixelDiscard[ guiParams.display.atmosShader ];
+	var relevantTexmapShader = guiParams.display.useSpecular? shaderPrograms.texmapPerPixelDiscardPhongVsMatmult[ guiParams.display.atmosShader ] : shaderPrograms.texmapPerPixelDiscard[ guiParams.display.atmosShader ];
 	
 	shaderProgramColored = guiParams.display.perPixelLighting?relevantColorShader:shaderPrograms.coloredPerVertex;
 	shaderProgramColoredBendy = shaderPrograms.coloredPerPixelDiscardBendy[ guiParams.display.atmosShader ];	//NOTE no non-perpixel option here
@@ -2662,9 +2662,16 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 
 		var lastScale=[null, null,null];
 
-		drawArrayForFunc(function(){
-			drawObjectFromPreppedBuffers(buffers, shaderProg);
-			});
+		if (shaderProg.uniforms.uVMatrix){
+			drawArrayForFuncVsMatMult(function(){
+				drawObjectFromPreppedBuffers(buffers, shaderProg);
+				});
+		}else{
+			drawArrayForFunc(function(){
+				drawObjectFromPreppedBuffers(buffers, shaderProg);
+				});
+		}
+
 
 		function drawArrayForFunc(drawFunc2){
 			for (dd in objDataArr){
@@ -2692,6 +2699,36 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 				drawFunc2();
 			}
 		}
+
+		function drawArrayForFuncVsMatMult(drawFunc2){
+			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uVMatrix, false, invertedWorldCamera);
+
+			//gl.uniformMatrix4fv(activeShaderProgram.uniforms.uVMatrix, false, invertedWorldCameraDuocylinderFrame);
+					//TODO do this instead, don't bother with rotating mMatrix?
+
+			for (dd in objDataArr){
+				var thisObj = objDataArr[dd];
+
+				var myscale = thisObj.scale;
+
+				if (!Array.isArray(myscale)){
+					myscale = [myscale,myscale,myscale];
+				}
+
+				if ( (lastScale[0]!=myscale[0]) || (lastScale[1]!=myscale[1]) || (lastScale[2]!=myscale[2])){
+					gl.uniform3fv(activeShaderProgram.uniforms.uModelScale, myscale);
+					lastScale=myscale;
+				}
+
+				mat4.identity(mMatrix);
+				if (applyDuocylinderSpin){
+					rotate4mat(mMatrix, 0, 1, duocylinderSpin);
+				}
+				mat4.multiply(mMatrix, thisObj.mat);	//not needed in all shaders
+				drawFunc2();
+			}
+		}
+
 	}
 	
 	
