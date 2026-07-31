@@ -344,6 +344,7 @@ function initShaders(shaderProgs){
 		texmapPerPixelDiscard:["texmap-perpixel-discard-vs", "texmap-perpixel-discard-fs", [],[],true],
 		texmapPerPixelDiscardForText:["texmap-perpixel-discard-vs", "texmap-perpixel-discard-text-fs", [],[],true],
 		texmapPerPixelDiscardPhong:["texmap-perpixel-discard-vs", "texmap-perpixel-discard-fs", [receiveShadowsString],['SPECULAR_ACTIVE',receiveShadowsString],true],
+		texmapPerPixelDiscardPhongVsMatmult:["texmap-perpixel-discard-vs", "texmap-perpixel-discard-fs", [receiveShadowsString, 'VS_MATMULT'],['SPECULAR_ACTIVE',receiveShadowsString],true],
 
 		texmapPerPixelDiscardNormalmapV1:["texmap-perpixel-discard-normalmap-vs", "texmap-perpixel-discard-normalmap-fs", [],[],true],
 		texmapPerPixelDiscardNormalmap:["texmap-perpixel-discard-normalmap-efficient-vs", "texmap-perpixel-discard-normalmap-efficient-fs", [],[],true],	
