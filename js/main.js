@@ -2701,10 +2701,9 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		}
 
 		function drawArrayForFuncVsMatMult(drawFunc2){
-			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uVMatrix, false, invertedWorldCamera);
-
-			//gl.uniformMatrix4fv(activeShaderProgram.uniforms.uVMatrix, false, invertedWorldCameraDuocylinderFrame);
-					//TODO do this instead, don't bother with rotating mMatrix?
+			gl.uniformMatrix4fv(activeShaderProgram.uniforms.uVMatrix, false, applyDuocylinderSpin? invertedWorldCameraDuocylinderFrame :invertedWorldCamera);
+				//NOTE lighting might not be right here when rotating duocylinder since not modifying mMatrix.
+				//TODO? rotate light positions
 
 			for (dd in objDataArr){
 				var thisObj = objDataArr[dd];
@@ -2720,11 +2719,7 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 					lastScale=myscale;
 				}
 
-				mat4.identity(mMatrix);
-				if (applyDuocylinderSpin){
-					rotate4mat(mMatrix, 0, 1, duocylinderSpin);
-				}
-				mat4.multiply(mMatrix, thisObj.mat);	//not needed in all shaders
+				mat4.set(thisObj.mat, mMatrix);	//not needed in all shaders
 				drawFunc2();
 			}
 		}
