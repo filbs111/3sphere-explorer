@@ -2149,7 +2149,12 @@ function drawWorldScene(frameTime, isCubemapView, viewSettings, wSettings) {
 		
 	var relevantColorShader = shaderPrograms.coloredPerPixelDiscard[ guiParams.display.atmosShader ];
 	//var relevantTexmapShader = shaderPrograms.texmapPerPixelDiscard[ guiParams.display.atmosShader ];
-	var relevantTexmapShader = guiParams.display.useSpecular? shaderPrograms.texmapPerPixelDiscardPhongVsMatmult[ guiParams.display.atmosShader ] : shaderPrograms.texmapPerPixelDiscard[ guiParams.display.atmosShader ];
+	var relevantTexmapShader = guiParams.display.useSpecular? 
+		guiParams.display.useVsMatMult ? 
+			shaderPrograms.texmapPerPixelDiscardPhongVsMatmult[ guiParams.display.atmosShader ] :
+			shaderPrograms.texmapPerPixelDiscardPhong[ guiParams.display.atmosShader ] 
+		
+		: shaderPrograms.texmapPerPixelDiscard[ guiParams.display.atmosShader ];
 	
 	shaderProgramColored = guiParams.display.perPixelLighting?relevantColorShader:shaderPrograms.coloredPerVertex;
 	shaderProgramColoredBendy = shaderPrograms.coloredPerPixelDiscardBendy[ guiParams.display.atmosShader ];	//NOTE no non-perpixel option here

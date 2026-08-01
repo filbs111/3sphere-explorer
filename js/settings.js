@@ -90,6 +90,7 @@ var guiParams={
 		atmosThicknessMultiplier:'#88aaff',
 		culling:true,
 		useSpecular:true,
+		useVsMatMult:true,
 		specularStrength:0.05,
 		specularPower:6.0,
 		quadView:true,
@@ -255,6 +256,7 @@ function setupGui(){
 	displayFolder.addColor(guiParams.display, "atmosThicknessMultiplier").onChange(setAtmosThicknessMultiplier);
 	displayFolder.add(guiParams.display, "culling");
 	displayFolder.add(guiParams.display, "useSpecular");
+	displayFolder.add(guiParams.display, "useVsMatMult");
 	displayFolder.add(guiParams.display, "specularStrength", 0,1,0.05);	//currently diffuse colour and distance attenuation applies to both specular and diffuse, keeping nonnegative by having diffuse multiplier 1-specularStrength. therefore range 0-1. TODO different specular, diffuse colours, (instead of float strength), specular maybe shouldn't have distance attenuation same way - possibly correct for point source but want solution for sphere light...
 	displayFolder.add(guiParams.display, "specularPower", 1,20,0.5);
 	displayFolder.add(guiParams.display, "quadView");
