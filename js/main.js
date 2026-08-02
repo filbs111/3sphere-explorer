@@ -5775,11 +5775,11 @@ function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo
 	}
 
 	if (guiParams.reflector.cmFacesUpdated>0){
-		var cubemapLevel = guiParams.reflector.cubemapDownsize == "auto" ? 
-		(invSizeInScreen< 0.625 ? 0:( invSizeInScreen< 1.25 ? 1:2))	:
-				//todo calculate angular resolution of cubemap in final camera,  
-				//dependent on distance, FOV, blur, screen resolution etc, and choose appropriate detail level
-		guiParams.reflector.cubemapDownsize ;
+
+		var cubemapLevel = calcCubemapLevel(portalInCamera[15], Math.sqrt(totalXYZSq), portalRelativeRad);
+
+		cubemapLevel=Math.max(cubemapLevel,0);
+		cubemapLevel=Math.min(cubemapLevel,3);	// within numLevels in cubemapcache. TODO use same settings
 
 		var shouldDrawCubemap = setCubemapTexForPortalAndLevel(portalNum, cubemapLevel);	//set texture#1. 
 
@@ -5808,6 +5808,52 @@ function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo
 				);
 		}
 	}
+}
+
+//for manual testing
+function calcCubemapLevelForAngles(angleFromPortalToCam, angleOfPortalSurface){
+	var R = Math.tan(angleOfPortalSurface);
+	var p = Math.sin(angleFromPortalToCam);
+	var q = Math.cos(angleFromPortalToCam);
+	return calcCubemapLevel(q, p, R);
+}
+
+function calcCubemapLevel(portalDotCamera, portalCrossCamera, portalRelativeRad){
+	//use variables described in choice_of_portal_cubemap_size.md
+	//TODO check this is sensible, look for approximation/simplification
+	var q = portalDotCamera;
+	var p = portalCrossCamera;
+	var R = portalRelativeRad;
+
+	var s = R*p/(2*p - q*R);
+	var n = Math.sqrt(1+s*s);
+
+	// var magOfSurfPoint = Math.sqrt(1+R*R);
+	// var invSurfSizeFromCamera = (R*q - p)/magOfSurfPoint;
+	// var invSurfSizeFromReflectedPoint = (R - s)/(n*magOfSurfPoint);
+
+	var invSurfSizeFromCamera = (p - R*q);
+	var invSurfSizeFromReflectedPoint = (R - s)/n;
+
+	//console.log(invSurfSizeFromCamera, invSurfSizeFromReflectedPoint);
+		//NOTE goes to 0,0 on surface of portal.
+
+	var ratio1 = invSurfSizeFromReflectedPoint/invSurfSizeFromCamera || 1;
+		//handle 0/0 by || 1
+
+	//goes -ve inside portal. TODO reformulate? square everything?
+	//TODO just use an approximation that gets most of behaviour, assume small portal?
+	ratio1 = Math.abs(ratio1);
+
+	//return ratio1;	//this is 1 at portal and opposite portal, less elsewhere
+
+	var log2 = Math.log2(ratio1);
+
+	//console.log({ratio1, log2});
+
+	var cubemapLevel = Math.floor(-log2);
+
+	return cubemapLevel;
 }
 
 /*
