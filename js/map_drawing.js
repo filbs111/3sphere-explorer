@@ -192,7 +192,7 @@ var drawMapScene = (function(){
 			gl.uniform2fv(activeProg.uniforms.uObjCentreRelativeToCameraAngleCoords, relativeMapAngleCoords);
 
             if (activeProg.uniforms.uModelScale){
-			    gl.uniform3fv(activeProg.uniforms.uModelScale, [objScale,objScale,objScale]);
+			    gl.uniform3f(activeProg.uniforms.uModelScale, objScale,objScale,objScale);
             }
 			uniform4fvSetter.setIfDifferent(activeProg, "uColor", color);
 			mat4.set(objMatrix, mMatrix);	//this is matrix describing object pose in world. drawObjectFromBuffers will send it to v shader
