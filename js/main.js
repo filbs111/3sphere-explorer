@@ -5853,6 +5853,8 @@ function calcCubemapLevel(portalDotCamera, portalCrossCamera, portalRelativeRad)
 
 	//return ratio1;	//this is 1 at portal and opposite portal, less elsewhere
 
+	ratio1*=0.6;	//reduce range so tends to use lower res. TODO choose given camera zoom, screen resolution
+
 	var log2 = Math.log2(ratio1);
 
 	//console.log({ratio1, log2});
