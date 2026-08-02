@@ -7,6 +7,8 @@ var fullCameraTilt=[0,0,0];
 
 var unitWorldRadiusMetres = 10_000;
 
+var cubemapDebugInfo=[];
+
 // TODO adjust for world size - expect loads of changes here...
 
 var quadplane={	//temp...
@@ -791,6 +793,7 @@ var lastSeaTime=0;
 function drawScene(frameTime){
 	flickerFlag = !flickerFlag;
 	cubemapViewCache.clearCache();	//NOTE putting here breaks stereo 3d through portals (will reuse 1st eye)
+	cubemapDebugInfo = [];
 	resizecanvas();
 	heapPerfMon.sample();	//suspect not right place for this, better at end
 	var heapPerfData = heapPerfMon.read();
@@ -5781,7 +5784,10 @@ function drawPortalCubemapAtRuntime(pMatrix, portalInCamera, frameTime, reflInfo
 		cubemapLevel=Math.max(cubemapLevel,0);
 		cubemapLevel=Math.min(cubemapLevel,3);	// within numLevels in cubemapcache. TODO use same settings
 
+
 		var shouldDrawCubemap = setCubemapTexForPortalAndLevel(portalNum, cubemapLevel);	//set texture#1. 
+
+		cubemapDebugInfo.push({portalNum, cubemapLevel,shouldDrawCubemap});
 
 		if (shouldDrawCubemap){
 			gl.cullFace(gl.BACK);	//because might have set to front for mirror reversing/landing camera.

@@ -28,7 +28,7 @@ var cubemapViewCache = (() => {
 
 	var numLevels = 4;
 
-    var pool = Array.from({ length: numLevels }, () => []);
+    var pool = Array.from({ length: numLevels }, () => []); //array of pools for each cubemap level
     var cache = [];
 
     function clearCache(){
@@ -72,14 +72,15 @@ var cubemapViewCache = (() => {
     }
 
     function createNewCubemapView(level){
+        //alert("creating a new cubemap view for level "+ level);
         viewsCreated++;
         return initCubemapFramebuffer(highestCubemapSize >> level);
     }
 
     function printCacheInfo(){
         console.log({
-            pool,
-            cache,
+            pool:pool.map(xx => [...xx]),
+            cache:[...cache],   //shallow copy for snapshot (otherwise hard to compare to pool)
             viewsCreated
         });
     }
