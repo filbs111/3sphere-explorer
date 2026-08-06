@@ -49,6 +49,13 @@ uniform Settings {
 	in vec4 vP;
 #endif
 
+
+#ifdef DEPTH_DEBUG
+	in vec4 vDepthDebug;
+#endif
+
+
+
 out vec4 fragColor;
 
 
@@ -158,6 +165,7 @@ float calculatePortalLightContribution(vec3 vPortalLightPosTangentSpace, vec3 nm
 		vec3 uReflectorDiffColor3 = uReflectorDiffColorAndCos3.xyz;
 		float uReflectorCos3 = uReflectorDiffColorAndCos3.w;
 
+#ifdef CUSTOM_DEPTH
 #ifdef DEPTH_AWARE
 		float currentDepth =  textureProj(uSamplerDepthmap, vec3(.5,.5,1.)*vScreenSpaceCoord.xyz + vec3(.5,.5,0.)*vScreenSpaceCoord.z).r;
 		//float newDepth = .3183*atan((vZW.x*2.)/(vZW.y+1.)) + .5;	//this is duplicate of custom depth calculation
@@ -165,7 +173,8 @@ float calculatePortalLightContribution(vec3 vPortalLightPosTangentSpace, vec3 nm
 		if (newDepth>currentDepth){
 			discard;
 		}
-#endif		
+#endif
+#endif
 
 #ifndef DEPTH_AWARE
 #ifdef CUSTOM_DEPTH
@@ -321,9 +330,38 @@ vec3 texColor = mat3(texture(uSamplerB, texScale*vec2(vPos.x, vPos.z)).xyz, text
 #else
 		fragColor = pow(preGammaFragColor, vec4(0.455));
 #endif	
-		
+
+#ifdef CUSTOM_DEPTH
 		float depthVal = .5*(vZW.x/vZW.y) + .5;
 		fragColor.a = depthVal;
+#else
+		fragColor.a = 1.;
+#endif
+
+
+#ifdef DEPTH_DEBUG
+		//fragColor.r = vDepthDebug.b;
+		//fragColor.r = vDepthDebug.b > 0. ? 1. : 0.;		//seems +ve when on opposite side of world as camera
+		//fragColor.r = vDepthDebug.a > 0. ? 1. : 0.;		//seems always true
+//		fragColor.r = vDepthDebug.z/vDepthDebug.w > 0. ? 1. : 0.;
+#endif
+
+
+#ifdef TRY_REPRODUCE_DEPTH
+	//see whether setting depth to what it should be calculated to without custom depth has the same result
+	// so far unable to do this!!!!!!!!! 
+	//gl_FragDepth = 0.;	//NO
+	//gl_FragDepth = -vDepthDebug.z/vDepthDebug.w;	//NO. backwards
+	//gl_FragDepth = vDepthDebug.z/vDepthDebug.w;	//NO
+	//gl_FragDepth = vDepthDebug.w/vDepthDebug.z;	//NO - right way around on near side
+	//gl_FragDepth = 0.001*vDepthDebug.z;
+	//gl_FragDepth = vDepthDebug.z/vDepthDebug.w + 0.5;	//somewhat ok, still broken
+		//gl_FragDepth = vDepthDebug.z/vDepthDebug.w;
+
+		gl_FragDepth = vDepthDebug.w/vDepthDebug.z+.5;
+
+#endif
+
 
 
 		//fragColor.rgb = vec3(schlick);

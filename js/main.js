@@ -4737,6 +4737,14 @@ function init(){
 	
 	initGL();
 
+	var depthRange = gl.getParameter(gl.DEPTH_RANGE);
+	console.log({depthRange});
+
+	//gl.depthRange(Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY);
+gl.depthRange(-2, 2);
+
+
+
 	initTextureFramebuffer(rttFisheyeRectRenderOutput, false, gl.REPEAT);
 	initTextureFramebuffer(rttFisheyeRectRenderOutput2, false, gl.REPEAT);
 

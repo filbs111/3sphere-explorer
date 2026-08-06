@@ -153,12 +153,18 @@ out vec4 fragColor;
 		//TODO if this works, don't bother creating vZW in vert shader.
 		//if (vZW.y > -1.){discard;} //other side of world. shouldn't happen much with culling. TODO discard earlier?
 		//float depthVal = .3183*atan((vZW.x*2.)/(vZW.y+1.)) + .5;
+		
+
+#ifdef CUSTOM_DEPTH
+
 		float depthVal =-.3183*atan(vP.w/length(vP.xyz)) + .5;
 
 		fragColor.a = depthVal;
-#ifdef CUSTOM_DEPTH
+
 		gl_FragDepth = depthVal;
 		//vec2 normZW=normalize(vZW);
 		//gl_FragDepth = .5*(normZW.x/normZW.y) + .5;
+#else
+		fragColor.a = 1.;
 #endif
 	}

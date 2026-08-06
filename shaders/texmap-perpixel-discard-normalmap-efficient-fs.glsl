@@ -166,14 +166,17 @@ float calculatePortalLightContribution(vec4 vPortalLightPosTangentSpace, vec4 nm
 		vec3 uReflectorDiffColor3 = uReflectorDiffColorAndCos3.xyz;
 		float uReflectorCos3 = uReflectorDiffColorAndCos3.w;
 
+//TODO sort out this logic nested depth_aware, custom depth.
 #ifdef DEPTH_AWARE
+#ifdef CUSTOM_DEPTH
 		float currentDepth =  textureProj(uSamplerDepthmap, vec3(.5,.5,1.)*vScreenSpaceCoord.xyz + vec3(.5,.5,0.)*vScreenSpaceCoord.z).r;
 		//float newDepth = .3183*atan((vZW.x*2.)/(vZW.y+1.)) + .5;	//this is duplicate of custom depth calculation
 		float newDepth =-.3183*atan(vP.w/length(vP.xyz)) + .5;
 		if (newDepth>currentDepth){
 			discard;
 		}
-#endif		
+#endif
+#endif
 
 #ifndef DEPTH_AWARE
 #ifdef CUSTOM_DEPTH
@@ -346,12 +349,19 @@ float calculatePortalLightContribution(vec4 vPortalLightPosTangentSpace, vec4 nm
 		vec4 shadowMultiplier = vec4(vec3(1.0-shadowFactor),1.0);
 
 		fragColor = pow(shadowMultiplier*preGammaFragColor, vec4(0.455));
+
+		// fragColor.g = 0.;	//check this is shader of interest - shows is used for procterrain
+		// fragColor.b = 0.;
+
 #else
 		fragColor = pow(preGammaFragColor, vec4(0.455));
 #endif	
 
+#ifdef CUSTOM_DEPTH
 		float depthVal = .5*(vZW.x/vZW.y) + .5;
 		fragColor.a = depthVal;
-
+#else
+		fragColor.a = 1.;
+#endif
 		//gl_FragDepth = gl_FragCoord.z;	//reproduces standard behaviour. TODO try z/(1+w) for stereographic projection (with some scaling to get inside capped range. 0->1 or -1->1 ?) , to avoid near/far clipping
 	}

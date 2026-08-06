@@ -72,7 +72,6 @@ out vec4 fragColor;
 
 
 
-		float deep = .3183*acos( dot(normalize(posA), normalize(collisonPoint)) );
 
 		//undo tone mapping . y=1/(1+x) => x=y/(1-y)
 		//seems like in practice, undoing, redoing tone mapping has little value, but guess because currently not using very bright lighting.
@@ -88,6 +87,34 @@ out vec4 fragColor;
 		fragColor = vec4( pow(preGammaFragColor, vec3(0.455)), fragColorRGBA.a);	//copy depth info from alpha channel
 		
 
+#ifdef CUSTOM_DEPTH
+		float deep = .3183*acos( dot(normalize(posA), normalize(collisonPoint)) );
 
 		gl_FragDepth = deep;
+#else
+
+/*
+		float angleFromCamera = acos( dot(normalize(posA), normalize(collisonPoint)) );
+		float angleFromHalfway = angleFromCamera + 1.5707963267948966;
+		float tangent = tan(angleFromHalfway);
+
+		//gl_FragDepth = -0.00003* tangent;
+
+		gl_FragDepth = 0.5 + 0.5*0.00003* tangent;
+*/
+
+		float dotAmount = dot(normalize(posA), normalize(collisonPoint));
+		gl_FragDepth = 0.00003* dotAmount;	//seems like maybe 0 is in front of everything else. but with float depth buf, want 0 to be halfway around world.
+											// - guess that other things's depth values not working as expect
+
+fragColor.r = dotAmount > 0. ? 1. : 0.;		// ?? must have some bad assumption about dotAmount - figured went to 0 at equator but guess not! 
+			// +ve when less than half way around world from camera
+
+
+
+
+#endif
+
+//TODO modify this for not custom depth!! 
+
 }

@@ -58,7 +58,12 @@ void main(void){
 
     fragColor = pow(preGammaFragColor, vec4(0.455));
 
+#ifdef CUSTOM_DEPTH
     float depthVal =-.3183*atan(vP.w/length(vP.xyz)) + .5;
     gl_FragDepth = depthVal;
     fragColor.a = depthVal;
+#else
+    fragColor.a = 1.;
+#endif
+
 }

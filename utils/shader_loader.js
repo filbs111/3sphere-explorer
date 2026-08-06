@@ -16,9 +16,9 @@ var getShaderUsingPromises = (function(){
 	return function(gl, id, shaderType, defines = []){	//TODO infer shaderType from -fs / -vs
 		//add custom depth define if not already
 		//requires support in shader code. not applicable to all shaders, but guess negligible cost
-		if (!defines.includes("CUSTOM_DEPTH")){
-			defines.push("CUSTOM_DEPTH");
-		}
+		// if (!defines.includes("CUSTOM_DEPTH")){
+		// 	defines.push("CUSTOM_DEPTH");
+		// }
 
 		var idstring = id + ":" + defines.join(';');
 		compileShaderPromises[idstring] = compileShaderPromises[idstring] || 
@@ -324,7 +324,7 @@ function initShaders(shaderProgs){
 		mapTerrainShader:["map-terrain-vs","flatcolor-fs",[],["DISCARD_OUTSIDE"]],	//if have terrain stored "flat" not mapped onto duocylinder...
 		mapTerrainVertColors:["map-terrain-vs","vertcolor-fs",["VERTCOLORS"],["DISCARD_OUTSIDE"]],
 
-		wrappedDustMotes:["wrapped-dust-mote-vs", "very-simple-fs",['CUSTOM_DEPTH'],['CUSTOM_DEPTH']],
+		wrappedDustMotes:["wrapped-dust-mote-vs", "very-simple-fs"],
 	};
 
 	var receiveShadowsString = "RECEIVE_SHADOW";	//set to "NOTHING" here to turn off
@@ -383,8 +383,20 @@ function initShaders(shaderProgs){
 		//triplanarPerPixel:["texmap-perpixel-color-triplanar-vs-4vec", "texmap-perpixel-triplanar-fs", ['VCOLOR','SPECULAR_ACTIVE'],['VCOLOR','SPECULAR_ACTIVE']],
 		triplanarPerPixel:["texmap-perpixel-color-triplanar-vs-4vec", "texmap-perpixel-triplanar-fs", ['SPECULAR_ACTIVE'],['SPECULAR_ACTIVE']],	//like texmap4VecPerPixelDiscard - vertex position, normal are varyings, light positions are uniform
 		//triplanarPerPixelTwo:["texmap-perpixel-normalmap-color-triplanar-vs-4vec", "texmap-perpixel-normalmap-triplanar-fs-BASIC", ['VCOLOR','SPECULAR_ACTIVE'],['VCOLOR','SPECULAR_ACTIVE']],
-		triplanarPerPixelTwoAndDiffuse:["texmap-perpixel-normalmap-color-triplanar-vs-4vec", "texmap-perpixel-normalmap-triplanar-fs", ['SPECULAR_ACTIVE',receiveShadowsString],['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE',receiveShadowsString],true],	//calculate vertexMatrix, get light positions in this frame (light positions are varyings)	
-		triplanarPerPixelTwoAndDiffuseDepthAware:["texmap-perpixel-normalmap-color-triplanar-vs-4vec", "texmap-perpixel-normalmap-triplanar-fs", ['SPECULAR_ACTIVE','DEPTH_AWARE'],['DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE','DEPTH_AWARE'],true],	//calculate vertexMatrix, get light positions in this frame (light positions are varyings)
+		
+		
+		// without TRY_REPRODUCE_DEPTH
+		// triplanarPerPixelTwoAndDiffuse:["texmap-perpixel-normalmap-color-triplanar-vs-4vec", "texmap-perpixel-normalmap-triplanar-fs", ['DEPTH_DEBUG','SPECULAR_ACTIVE',receiveShadowsString],['DEPTH_DEBUG','DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE',receiveShadowsString],true],	//calculate vertexMatrix, get light positions in this frame (light positions are varyings)	
+		// triplanarPerPixelTwoAndDiffuseDepthAware:["texmap-perpixel-normalmap-color-triplanar-vs-4vec", "texmap-perpixel-normalmap-triplanar-fs", ['DEPTH_DEBUG','SPECULAR_ACTIVE','DEPTH_AWARE'],['DEPTH_DEBUG','DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE','DEPTH_AWARE'],true],	//calculate vertexMatrix, get light positions in this frame (light positions are varyings)
+
+		//TRY_REPRODUCE_DEPTH added
+		triplanarPerPixelTwoAndDiffuse:["texmap-perpixel-normalmap-color-triplanar-vs-4vec", "texmap-perpixel-normalmap-triplanar-fs", ['DEPTH_DEBUG','SPECULAR_ACTIVE',receiveShadowsString],['TRY_REPRODUCE_DEPTH','DEPTH_DEBUG','DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE',receiveShadowsString],true],	//calculate vertexMatrix, get light positions in this frame (light positions are varyings)	
+		triplanarPerPixelTwoAndDiffuseDepthAware:["texmap-perpixel-normalmap-color-triplanar-vs-4vec", "texmap-perpixel-normalmap-triplanar-fs", ['DEPTH_DEBUG','SPECULAR_ACTIVE','DEPTH_AWARE'],['TRY_REPRODUCE_DEPTH','DEPTH_DEBUG','DIFFUSE_TEX_ACTIVE','SPECULAR_ACTIVE','DEPTH_AWARE'],true],	//calculate vertexMatrix, get light positions in this frame (light positions are varyings)
+
+
+	//	triplanarPerPixelTwoAndDiffuse:["texmap-perpixel-normalmap-color-triplanar-vs-4vec", "texmap-perpixel-normalmap-triplanar-fs", [receiveShadowsString],['DIFFUSE_TEX_ACTIVE',receiveShadowsString],true],	//calculate vertexMatrix, get light positions in this frame (light positions are varyings)	
+
+
 
 		//procTerrain shaders
 		texmap4VecMapproject:["texmap-vs-4vec", "texmap-fs", ['MAPPROJECT_ACTIVE'], ['MAPPROJECT_ACTIVE']],	//per vertex lighting

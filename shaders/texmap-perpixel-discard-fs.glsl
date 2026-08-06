@@ -150,6 +150,7 @@ float calculatePortalLightContribution(vec4 normal, float uReflectorCos, vec4 su
 		vec3 uReflectorDiffColor3 = uReflectorDiffColorAndCos3.xyz;
 		float uReflectorCos3 = uReflectorDiffColorAndCos3.w;
 
+#ifdef CUSTOM_DEPTH
 #ifdef DEPTH_AWARE
 		float currentDepth =  textureProj(uSamplerDepthmap, vec3(.5,.5,1.)*vScreenSpaceCoord.xyz + vec3(.5,.5,0.)*vScreenSpaceCoord.z).r;
 		//float newDepth = .3183*atan((vZW.x*2.)/(vZW.y+1.)) + .5;	//this is duplicate of custom depth calculation
@@ -157,6 +158,7 @@ float calculatePortalLightContribution(vec4 normal, float uReflectorCos, vec4 su
 		if (newDepth>currentDepth){
 			discard;
 		}
+#endif
 #endif
 
 //#ifndef DEPTH_AWARE	//other depth aware frag shaders disable depth write, because already done z prepass. 
@@ -282,11 +284,15 @@ float calculatePortalLightContribution(vec4 normal, float uReflectorCos, vec4 su
 		//fragColor = uColor*fog*textureProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		//fragColor = (1.0-fog)*uFogColor;
 
+	
+
 #ifdef DEPTH_AWARE
+#ifdef CUSTOM_DEPTH
 		//preGammaFragColor.rgb = texture(uSamplerDepthmap, gl_FragCoord.xy).rgb;	//just something to show can use texture.
 		float depthDifference = newDepth - currentDepth;	//TODO calculate actual length difference
 		//preGammaFragColor = vec4( vec3(depthDifference) ,1.);	//TODO use coords that project without extra term
 		fragColor.a = 1.-exp(depthDifference*40000.);
+#endif
 #else
 
 	#ifdef CUSTOM_DEPTH

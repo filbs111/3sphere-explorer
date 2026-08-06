@@ -78,7 +78,7 @@ var guiParams={
 		eyeTurnIn:0.003,
 		showHud:true,
 		fisheyeEnabled:true,
-		renderViaTexture:'blur-b-use-alpha',
+		renderViaTexture:'basic',
 		renderLastStage:'fxaa',
 		drawTransparentStuff:true,
 		voxNmapTest:false,	//just show normal map. more efficient pix shader than standard. for performance check

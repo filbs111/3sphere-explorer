@@ -57,6 +57,13 @@ uniform Settings {
 #ifdef DEPTH_AWARE
 	out vec3 vScreenSpaceCoord;
 #endif
+
+
+#ifdef DEPTH_DEBUG
+	out vec4 vDepthDebug;
+#endif
+
+
 	void main(void) {
 		//calculate vectors moved quarter way around world from this vertex, in the direction of each voxel axis. this is like TBNP "vertexMatrix" matrix, for a normal in one of these directions. (true normal is aVertexNormal though)
 		// guess top/bottom world axes x=y=0, z=w=0. up/down turns x,y into z,w. sideways turns x into y and w into z
@@ -195,6 +202,10 @@ uniform Settings {
 #ifdef VCOLOR
 		vColor = aVertexColor;	//TODO multiply by uColor in vert shader
 		//vColor = vec4(aVertexColor,1.);	//TODO multiply by uColor in vert shader
+#endif
+
+#ifdef DEPTH_DEBUG
+	vDepthDebug = gl_Position;
 #endif
 			
 		vPos = aTriCoord;

@@ -35,12 +35,12 @@ out vec4 fragColor;
 	void main(void) {
 		//gl_FragColor = uColor*texture(uSampler, vTextureCoord);
 
+#ifdef CUSTOM_DEPTH
 		// here x=w, y=z, but also confusingly switched by pMatrix ! 
 		//TODO if this works, don't bother creating vZW in vert shader.
 		//if (vZW.y > -1.){discard;} //other side of world. shouldn't happen much with culling. TODO discard earlier?
 		//float depthVal = .3183*atan((vZW.x*2.)/(vZW.y+1.)) + .5;	
 		float depthVal = -.3183*atan(vP.w/length(vP.xyz)) + .5;
-#ifdef CUSTOM_DEPTH
 		gl_FragDepth = depthVal;
 #endif
 
@@ -61,5 +61,6 @@ out vec4 fragColor;
 		//fragColor = uColor*fog*textureProj(uSampler, vTextureCoord) + (1.0-fog)*uFogColor;
 		//fragColor = (1.0-fog)*uFogColor;
 
-		fragColor.a = depthVal;
+		//fragColor.a = depthVal;
+		fragColor.a = 1.;	//TODO why was depth val being set here? for debug feature?
 	}
